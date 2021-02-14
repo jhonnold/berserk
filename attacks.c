@@ -1,6 +1,6 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdint.h>
 
 #include "attacks.h"
 #include "bits.h"
@@ -27,6 +27,20 @@ bb_t BISHOP_MASKS[64];
 
 uint64_t ROOK_MAGICS[64];
 uint64_t BISHOP_MAGICS[64];
+
+inline bb_t shift(bb_t bb, int dir) {
+  return dir == -8    ? bb >> 8
+         : dir == 8   ? bb << 8
+         : dir == -16 ? bb >> 16
+         : dir == 16  ? bb << 16
+         : dir == -1  ? (bb & NOT_A_FILE) >> 1
+         : dir == 1   ? (bb & NOT_H_FILE) << 1
+         : dir == -7  ? (bb & NOT_H_FILE) >> 7
+         : dir == 7   ? (bb & NOT_A_FILE) << 7
+         : dir == -9  ? (bb & NOT_A_FILE) >> 9
+         : dir == 9   ? (bb & NOT_H_FILE) << 9
+                      : 0;
+}
 
 bb_t getGeneratedPawnAttacks(int sq, int color) {
   bb_t attacks = 0, board = 0;

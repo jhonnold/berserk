@@ -14,65 +14,71 @@ const bb_t thirdRanks[] = {280375465082880L, 16711680L};
 
 void addMove(moves_t *moveList, move_t m) { moveList->moves[moveList->count++] = m; }
 
-static inline bb_t shiftUp(bb_t bb) {
-  return side == 0 ? bb >> 8 : bb << 8;
-}
-
 void generatePawnPromotions(moves_t *moveList) {
   bb_t pawns = pieces[side];
-  int dir = pawnDirections[side];
   bb_t promotingPawns = pawns & promotionRanks[side];
 
-  while (promotingPawns) {
-    int start = lsb(promotingPawns);
-    int end = start + dir;
+  bb_t quietPromoters = shift(promotingPawns, pawnDirections[side]) & ~occupancies[2];
+  bb_t capturingPromotersE = shift(promotingPawns, pawnDirections[side] - 1) & occupancies[xside];
+  bb_t capturingPromotersW = shift(promotingPawns, pawnDirections[side] + 1) & occupancies[xside];
 
-    if (!getBit(occupancies[2], end)) {
-      addMove(moveList, buildMove(start, end, side, 8 + side, 0, 0, 0, 0));
-      addMove(moveList, buildMove(start, end, side, 6 + side, 0, 0, 0, 0));
-      addMove(moveList, buildMove(start, end, side, 4 + side, 0, 0, 0, 0));
-      addMove(moveList, buildMove(start, end, side, 2 + side, 0, 0, 0, 0));
-    }
+  while (quietPromoters) {
+    int end = lsb(quietPromoters);
+    int start = end - pawnDirections[side];
 
-    bb_t attacks = getPawnAttacks(start, side) & occupancies[xside];
-    while (attacks) {
-      end = lsb(attacks);
+    addMove(moveList, buildMove(start, end, side, 8 + side, 0, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 6 + side, 0, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 4 + side, 0, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 2 + side, 0, 0, 0, 0));
 
-      addMove(moveList, buildMove(start, end, side, 8 + side, 1, 0, 0, 0));
-      addMove(moveList, buildMove(start, end, side, 6 + side, 1, 0, 0, 0));
-      addMove(moveList, buildMove(start, end, side, 4 + side, 1, 0, 0, 0));
-      addMove(moveList, buildMove(start, end, side, 2 + side, 1, 0, 0, 0));
+    popLsb(quietPromoters);
+  }
 
-      popLsb(attacks);
-    }
+  while (capturingPromotersE) {
+    int end = lsb(capturingPromotersE);
+    int start = end - (pawnDirections[side] - 1);
 
-    popLsb(promotingPawns);
+    addMove(moveList, buildMove(start, end, side, 8 + side, 1, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 6 + side, 1, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 4 + side, 1, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 2 + side, 1, 0, 0, 0));
+
+    popLsb(capturingPromotersE);
+  }
+
+  while (capturingPromotersW) {
+    int end = lsb(capturingPromotersW);
+    int start = end - (pawnDirections[side] + 1);
+
+    addMove(moveList, buildMove(start, end, side, 8 + side, 1, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 6 + side, 1, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 4 + side, 1, 0, 0, 0));
+    addMove(moveList, buildMove(start, end, side, 2 + side, 1, 0, 0, 0));
+
+    popLsb(capturingPromotersW);
   }
 }
 
 void generatePawnCaptures(moves_t *moveList) {
   bb_t pawns = pieces[side];
   bb_t nonPromotingPawns = pawns & ~promotionRanks[side];
+  bb_t capturingE = shift(nonPromotingPawns, pawnDirections[side] - 1) & occupancies[xside];
+  bb_t capturingW = shift(nonPromotingPawns, pawnDirections[side] + 1) & occupancies[xside];
 
-  while (nonPromotingPawns) {
-    int start = lsb(nonPromotingPawns);
+  while (capturingE) {
+    int end = lsb(capturingE);
 
-    bb_t attacks = getPawnAttacks(start, side) & occupancies[xside];
-    while (attacks) {
-      int end = lsb(attacks);
+    addMove(moveList, buildMove(end - (pawnDirections[side] - 1), end, side, 0, 1, 0, 0, 0));
 
-      addMove(moveList, buildMove(start, end, side, 0, 1, 0, 0, 0));
+    popLsb(capturingE);
+  }
 
-      popLsb(attacks);
-    }
+  while (capturingW) {
+    int end = lsb(capturingW);
 
-    if (epSquare) {
-      attacks = getPawnAttacks(start, side) & (1ULL << epSquare);
-      if (attacks)
-        addMove(moveList, buildMove(start, epSquare, side, 0, 1, 0, 1, 0));
-    }
+    addMove(moveList, buildMove(end - (pawnDirections[side] + 1), end, side, 0, 1, 0, 0, 0));
 
-    popLsb(nonPromotingPawns);
+    popLsb(capturingW);
   }
 }
 
@@ -81,8 +87,8 @@ void generatePawnQuiets(moves_t *moveList) {
   bb_t pawns = pieces[side];
   bb_t nonPromotingPawns = pawns & ~promotionRanks[side];
 
-  bb_t singlePush = shiftUp(nonPromotingPawns) & empty;
-  bb_t doublePush = shiftUp(singlePush & thirdRanks[side]) & empty;
+  bb_t singlePush = shift(nonPromotingPawns, pawnDirections[side]) & empty;
+  bb_t doublePush = shift(singlePush & thirdRanks[side], pawnDirections[side]) & empty;
 
   while (singlePush) {
     int end = lsb(singlePush);
