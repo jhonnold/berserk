@@ -10,8 +10,13 @@ const int pawnDirections[] = {-8, 8};
 const bb_t middleFour = 281474976645120UL;
 const bb_t promotionRanks[] = {65280UL, 71776119061217280L};
 const bb_t homeRanks[] = {71776119061217280L, 65280UL};
+const bb_t thirdRanks[] = {280375465082880L, 16711680L};
 
 void addMove(moves_t *moveList, move_t m) { moveList->moves[moveList->count++] = m; }
+
+static inline bb_t shiftUp(bb_t bb) {
+  return side == 0 ? bb >> 8 : bb << 8;
+}
 
 void generatePawnPromotions(moves_t *moveList) {
   bb_t pawns = pieces[side];
@@ -72,34 +77,23 @@ void generatePawnCaptures(moves_t *moveList) {
 }
 
 void generatePawnQuiets(moves_t *moveList) {
+  bb_t empty = ~occupancies[2];
   bb_t pawns = pieces[side];
-  int dir = pawnDirections[side];
-  bb_t middlePawns = pawns & middleFour;
+  bb_t nonPromotingPawns = pawns & ~promotionRanks[side];
 
-  while (middlePawns) {
-    int start = lsb(middlePawns);
-    int end = start + dir;
+  bb_t singlePush = shiftUp(nonPromotingPawns) & empty;
+  bb_t doublePush = shiftUp(singlePush & thirdRanks[side]) & empty;
 
-    if (!getBit(occupancies[2], end))
-      addMove(moveList, buildMove(start, end, side, 0, 0, 0, 0, 0));
-
-    popLsb(middlePawns);
+  while (singlePush) {
+    int end = lsb(singlePush);
+    addMove(moveList, buildMove(end - pawnDirections[side], end, side, 0, 0, 0, 0, 0));
+    popLsb(singlePush);
   }
 
-  bb_t homePawns = pawns & homeRanks[side];
-  while (homePawns) {
-    int start = lsb(homePawns);
-    int end = start + dir;
-
-    if (!getBit(occupancies[2], end)) {
-      addMove(moveList, buildMove(start, end, side, 0, 0, 0, 0, 0));
-
-      end += dir;
-      if (!getBit(occupancies[2], end))
-        addMove(moveList, buildMove(start, end, side, 0, 0, 1, 0, 0));
-    }
-
-    popLsb(homePawns);
+  while (doublePush) {
+    int end = lsb(doublePush);
+    addMove(moveList, buildMove(end - pawnDirections[side] - pawnDirections[side], end, side, 0, 0, 1, 0, 0));
+    popLsb(doublePush);
   }
 }
 
