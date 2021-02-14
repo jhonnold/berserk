@@ -34,7 +34,7 @@ void generatePawnPromotions(moves_t *moveList) {
       addMove(moveList, buildMove(start, end, side, 2 + side, 0, 0, 0, 0));
     }
 
-    long attacks = getPawnAttacks(start, side) & occupancies[xside];
+    bb_t attacks = getPawnAttacks(start, side) & occupancies[xside];
     while (attacks) {
       end = lsb(attacks);
 
@@ -57,7 +57,7 @@ void generatePawnCaptures(moves_t *moveList) {
   while (nonPromotingPawns) {
     int start = lsb(nonPromotingPawns);
 
-    long attacks = getPawnAttacks(start, side) & occupancies[xside];
+    bb_t attacks = getPawnAttacks(start, side) & occupancies[xside];
     while (attacks) {
       int end = lsb(attacks);
 
@@ -67,7 +67,7 @@ void generatePawnCaptures(moves_t *moveList) {
     }
 
     if (epSquare) {
-      attacks = getPawnAttacks(start, side) & (1UL << epSquare);
+      attacks = getPawnAttacks(start, side) & (1ULL << epSquare);
       if (attacks)
         addMove(moveList, buildMove(start, epSquare, side, 0, 1, 0, 1, 0));
     }

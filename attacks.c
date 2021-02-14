@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "attacks.h"
 #include "bits.h"
 #include "random.h"
 
-const bb_t NOT_A_FILE = 18374403900871474942UL;
-const bb_t NOT_H_FILE = 9187201950435737471UL;
-const bb_t NOT_AB_FILE = 18229723555195321596UL;
-const bb_t NOT_GH_FILE = 4557430888798830399UL;
+const bb_t NOT_A_FILE = 18374403900871474942ULL;
+const bb_t NOT_H_FILE = 9187201950435737471ULL;
+const bb_t NOT_AB_FILE = 18229723555195321596ULL;
+const bb_t NOT_GH_FILE = 4557430888798830399ULL;
 
 const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 7, 9, 9, 7, 5, 5,
                                       5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 6};
@@ -24,8 +25,8 @@ bb_t KING_ATTACKS[64];
 bb_t ROOK_MASKS[64];
 bb_t BISHOP_MASKS[64];
 
-unsigned long ROOK_MAGICS[64];
-unsigned long BISHOP_MAGICS[64];
+uint64_t ROOK_MAGICS[64];
+uint64_t BISHOP_MAGICS[64];
 
 bb_t getGeneratedPawnAttacks(int sq, int color) {
   bb_t attacks = 0, board = 0;
@@ -122,13 +123,13 @@ bb_t getBishopMask(int sq) {
   int sf = sq & 7;
 
   for (int r = sr + 1, f = sf + 1; r <= 6 && f <= 6; r++, f++)
-    attacks |= (1UL << (r * 8 + f));
+    attacks |= (1ULL << (r * 8 + f));
   for (int r = sr - 1, f = sf + 1; r >= 1 && f <= 6; r--, f++)
-    attacks |= (1UL << (r * 8 + f));
+    attacks |= (1ULL << (r * 8 + f));
   for (int r = sr + 1, f = sf - 1; r <= 6 && f >= 1; r++, f--)
-    attacks |= (1UL << (r * 8 + f));
+    attacks |= (1ULL << (r * 8 + f));
   for (int r = sr - 1, f = sf - 1; r >= 1 && f >= 1; r--, f--)
-    attacks |= (1UL << (r * 8 + f));
+    attacks |= (1ULL << (r * 8 + f));
 
   return attacks;
 }
@@ -146,25 +147,25 @@ bb_t getBishopAttacksOTF(int sq, bb_t blockers) {
   int sf = sq & 7;
 
   for (int r = sr + 1, f = sf + 1; r <= 7 && f <= 7; r++, f++) {
-    attacks |= (1UL << (r * 8 + f));
+    attacks |= (1ULL << (r * 8 + f));
     if (getBit(blockers, r * 8 + f))
       break;
   }
 
   for (int r = sr - 1, f = sf + 1; r >= 0 && f <= 7; r--, f++) {
-    attacks |= (1UL << (r * 8 + f));
+    attacks |= (1ULL << (r * 8 + f));
     if (getBit(blockers, r * 8 + f))
       break;
   }
 
   for (int r = sr + 1, f = sf - 1; r <= 7 && f >= 0; r++, f--) {
-    attacks |= (1UL << (r * 8 + f));
+    attacks |= (1ULL << (r * 8 + f));
     if (getBit(blockers, r * 8 + f))
       break;
   }
 
   for (int r = sr - 1, f = sf - 1; r >= 0 && f >= 0; r--, f--) {
-    attacks |= (1UL << (r * 8 + f));
+    attacks |= (1ULL << (r * 8 + f));
     if (getBit(blockers, r * 8 + f))
       break;
   }
@@ -179,13 +180,13 @@ bb_t getRookMask(int sq) {
   int sf = sq & 7;
 
   for (int r = sr + 1; r <= 6; r++)
-    attacks |= (1UL << (r * 8 + sf));
+    attacks |= (1ULL << (r * 8 + sf));
   for (int r = sr - 1; r >= 1; r--)
-    attacks |= (1UL << (r * 8 + sf));
+    attacks |= (1ULL << (r * 8 + sf));
   for (int f = sf + 1; f <= 6; f++)
-    attacks |= (1UL << (sr * 8 + f));
+    attacks |= (1ULL << (sr * 8 + f));
   for (int f = sf - 1; f >= 1; f--)
-    attacks |= (1UL << (sr * 8 + f));
+    attacks |= (1ULL << (sr * 8 + f));
 
   return attacks;
 }
@@ -202,25 +203,25 @@ bb_t getRookAttacksOTF(int sq, bb_t blockers) {
   int sf = sq & 7;
 
   for (int r = sr + 1; r <= 7; r++) {
-    attacks |= (1UL << (r * 8 + sf));
+    attacks |= (1ULL << (r * 8 + sf));
     if (getBit(blockers, r * 8 + sf))
       break;
   }
 
   for (int r = sr - 1; r >= 0; r--) {
-    attacks |= (1UL << (r * 8 + sf));
+    attacks |= (1ULL << (r * 8 + sf));
     if (getBit(blockers, r * 8 + sf))
       break;
   }
 
   for (int f = sf + 1; f <= 7; f++) {
-    attacks |= (1UL << (sr * 8 + f));
+    attacks |= (1ULL << (sr * 8 + f));
     if (getBit(blockers, sr * 8 + f))
       break;
   }
 
   for (int f = sf - 1; f >= 0; f--) {
-    attacks |= (1UL << (sr * 8 + f));
+    attacks |= (1ULL << (sr * 8 + f));
     if (getBit(blockers, sr * 8 + f))
       break;
   }
@@ -236,20 +237,20 @@ bb_t setOccupancy(int idx, int bits, bb_t attacks) {
     popLsb(attacks);
 
     if (idx & (1 << i))
-      occupany |= (1UL << sq);
+      occupany |= (1ULL << sq);
   }
 
   return occupany;
 }
 
-unsigned long findMagicNumber(int sq, int n, int bishop) {
+uint64_t findMagicNumber(int sq, int n, int bishop) {
   int numOccupancies = 1 << n;
 
-  long occupancies[4096];
-  long attacks[4096];
-  long usedAttacks[4096];
+  bb_t occupancies[4096];
+  bb_t attacks[4096];
+  bb_t usedAttacks[4096];
 
-  long mask = bishop ? BISHOP_MASKS[sq] : ROOK_MASKS[sq];
+  bb_t mask = bishop ? BISHOP_MASKS[sq] : ROOK_MASKS[sq];
 
   for (int i = 0; i < numOccupancies; i++) {
     occupancies[i] = setOccupancy(i, n, mask);
@@ -257,7 +258,7 @@ unsigned long findMagicNumber(int sq, int n, int bishop) {
   }
 
   for (int count = 0; count < 10000000; count++) {
-    unsigned long magic = randomMagic();
+    uint64_t magic = randomMagic();
 
     if (bits((mask * magic) & 0xFF00000000000000) < 6)
       continue;
