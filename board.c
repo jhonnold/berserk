@@ -31,6 +31,44 @@ void clear() {
   castling = 0;
 }
 
+inline void setOccupancies() {
+  memset(occupancies, 0UL, sizeof(occupancies));
+  for (int i = 0; i < 12; i++)
+    occupancies[i & 1] |= pieces[i];
+  occupancies[2] = occupancies[0] | occupancies[1];
+}
+
+inline void setSpecialPieces() {
+  int kingSq = lsb(pieces[10 + side]);
+
+  pinned = 0ULL;
+  discoverers = 0ULL;
+
+  // start looking at knights/pawns
+  checkers = (getKnightAttacks(kingSq) & pieces[2 + xside]) | (getPawnAttacks(kingSq, side) & pieces[xside]);
+  for (int kingC = 0; kingC <= 1; kingC++) {
+    int enemyC = 1 - kingC;
+    kingSq = lsb(pieces[10 + kingC]);
+
+    bb_t enemyPiece = ((pieces[4 + enemyC] | pieces[8 + enemyC]) & getBishopAttacks(kingSq, 0)) | ((pieces[6 + enemyC] | pieces[8 + enemyC]) & getRookAttacks(kingSq, 0));
+
+    while (enemyPiece) {
+      int sq = lsb(enemyPiece);
+
+      bb_t blockers = getInBetween(kingSq, sq) & occupancies[2];
+
+      if (!blockers) {
+        checkers |= (enemyPiece & -enemyPiece);
+      } else if (bits(blockers) == 1) { // pinned
+        pinned |= (blockers & occupancies[kingC]);
+        discoverers |= (blockers & occupancies[enemyC]);
+      }
+
+      popLsb(enemyPiece);
+    }
+  }
+}
+
 void parseFen(char *fen) {
   clear();
 
@@ -51,6 +89,7 @@ void parseFen(char *fen) {
   fen++;
 
   side = (*fen++ == 'w' ? 0 : 1);
+  xside = side ^ 1;
 
   fen++;
 
@@ -79,11 +118,8 @@ void parseFen(char *fen) {
     epSquare = 0;
   }
 
-  for (int i = 0; i < 12; i++) {
-    occupancies[i & 1] |= pieces[i];
-  }
-
-  occupancies[2] = occupancies[0] | occupancies[1];
+  setOccupancies();
+  setSpecialPieces();
 }
 
 void printBoard() {
@@ -127,16 +163,10 @@ int isSquareAttacked(int sq, int attacker) {
 }
 
 int inCheck() {
-  int kingSq = lsb(pieces[10 + side]);
-
-  return isSquareAttacked(kingSq, xside);
+  return checkers ? 1 : 0;
 }
 
-int makeMove(move_t m) {
-  castlingHistory[move] = castling;
-  epSquareHistory[move] = epSquare;
-  captureHistory[move] = -1;
-
+void makeMove(move_t m) {
   int start = moveStart(m);
   int end = moveEnd(m);
   int piece = movePiece(m);
@@ -145,6 +175,10 @@ int makeMove(move_t m) {
   int dub = moveDouble(m);
   int ep = moveEP(m);
   int castle = moveCastle(m);
+
+  castlingHistory[move] = castling;
+  epSquareHistory[move] = epSquare;
+  captureHistory[move] = -1;
 
   popBit(pieces[piece], start);
   setBit(pieces[piece], end);
@@ -167,7 +201,7 @@ int makeMove(move_t m) {
   if (ep)
     popBit(pieces[xside], end - pawnDirections[side]);
 
-  epSquare = -1;
+  epSquare = 0;
   if (dub)
     epSquare = end - pawnDirections[side];
 
@@ -190,18 +224,13 @@ int makeMove(move_t m) {
   castling &= castlingRights[start];
   castling &= castlingRights[end];
 
-  memset(occupancies, 0UL, sizeof(occupancies));
-  for (int i = 0; i < 12; i++)
-    occupancies[i & 1] |= pieces[i];
-  occupancies[2] = occupancies[0] | occupancies[1];
-
-  int validMove = !inCheck();
+  setOccupancies();
 
   move++;
   xside = side;
   side ^= 1;
 
-  return validMove;
+  setSpecialPieces();
 }
 
 void undoMove(move_t m) {
@@ -210,7 +239,6 @@ void undoMove(move_t m) {
   int piece = movePiece(m);
   int promoted = movePromo(m);
   int capture = moveCapture(m);
-  int dub = moveDouble(m);
   int ep = moveEP(m);
   int castle = moveCastle(m);
 
@@ -224,25 +252,14 @@ void undoMove(move_t m) {
   popBit(pieces[piece], end);
   setBit(pieces[piece], start);
 
-  popBit(occupancies[side], end);
-  popBit(occupancies[2], end);
-  setBit(occupancies[side], start);
-  setBit(occupancies[2], start);
-
-  if (capture) {
+  if (capture)
     setBit(pieces[captureHistory[move]], end);
-    setBit(occupancies[xside], end);
-    setBit(occupancies[2], end);
-  }
 
   if (promoted)
     popBit(pieces[promoted], end);
 
-  if (ep) {
+  if (ep)
     setBit(pieces[xside], end - pawnDirections[side]);
-    setBit(occupancies[xside], end - pawnDirections[side]);
-    setBit(occupancies[2], end - pawnDirections[side]);
-  }
 
   if (castle) {
     if (end == 62) {
@@ -260,8 +277,35 @@ void undoMove(move_t m) {
     }
   }
 
-  memset(occupancies, 0UL, sizeof(occupancies));
-  for (int i = 0; i < 12; i++)
-    occupancies[i & 1] |= pieces[i];
-  occupancies[2] = occupancies[0] | occupancies[1];
+  setOccupancies();
+  setSpecialPieces();
+}
+
+int isLegal(move_t m) {
+  int start = moveStart(m);
+  int end = moveEnd(m);
+
+  if (moveEP(m)) {
+    // TODO: Speed this up
+    makeMove(m);
+    int valid = !isSquareAttacked(lsb(pieces[10 + xside]), side); 
+    undoMove(m);
+
+    return valid;
+  } else if (moveCastle(m)) {
+    int step = (end > start) ? 1 : -1;
+
+    for (int i = start + step; i != end; i += step)
+      if (isSquareAttacked(i, xside))
+        return 0;
+    
+    return 1;
+  } else if (movePiece(m) > 9) {
+    popBit(occupancies[2], start); // take king off the board and see if that square is attacked
+    int valid = !isSquareAttacked(end, xside);
+    setBit(occupancies[2], start);
+    return valid;
+  }
+
+  return 1;
 }

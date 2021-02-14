@@ -17,6 +17,9 @@ const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 
 const int ROOK_RELEVANT_BITS[64] = {12, 11, 11, 11, 11, 11, 11, 12, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
                                     11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 12, 11, 11, 11, 11, 11, 11, 12};
 
+bb_t BETWEEN_SQS[64][64];
+bb_t PINNED_MOVES[64][64];
+
 bb_t PAWN_ATTACKS[2][64];
 bb_t KNIGHT_ATTACKS[64];
 bb_t BISHOP_ATTACKS[64][512];
@@ -41,6 +44,90 @@ inline bb_t shift(bb_t bb, int dir) {
          : dir == 9   ? (bb & NOT_H_FILE) << 9
                       : 0;
 }
+
+void initBetween() {
+  int i;
+  for (int f = 0; f < 64; f++) {
+    for (int t = f + 1; t < 64; t++) {
+      if ((f >> 3) == (t >> 3)) {
+        i = t - 1;
+        while (i > f) {
+          BETWEEN_SQS[f][t] |= (1ULL << i);
+          i--;
+        }
+      } else if ((f & 7) == (t & 7)) {
+        i = t - 8;
+        while (i > f) {
+          BETWEEN_SQS[f][t] |= (1ULL << i);
+          i -= 8;
+        }
+      } else if ((t - f) % 9 == 0 && ((t & 7) > (f & 7))) {
+        i = t - 9;
+        while (i > f) {
+          BETWEEN_SQS[f][t] |= (1ULL << i);
+          i -= 9;
+        }
+      } else if ((t - f) % 7 == 0 && ((t & 7) < (f & 7))) {
+        i = t - 7;
+        while (i > f) {
+          BETWEEN_SQS[f][t] |= (1ULL << i);
+          i -= 7;
+        }
+      }
+    }
+  }
+
+  for (int f = 0; f < 64; f++)
+    for (int t = 0; t < f; t++)
+      BETWEEN_SQS[f][t] = BETWEEN_SQS[t][f];
+}
+
+void initPinnedMovement() {
+  int dirs[] = {-1, -7, -8, -9, 1, 7, 8, 9};
+
+  for (int pSq = 0; pSq < 64; pSq++) {
+    for (int kSq = 0; kSq < 64; kSq++) {
+      int dir = 0;
+      for (int i = 0; i < 8; i++) {
+        if (dir)
+          break;
+
+        for (int xray = kSq + dirs[i]; xray >= 0 && xray < 64; xray += dirs[i]) {
+          if (dirs[i] == 1 || dirs[i] == 9 || dirs[i] == -7)
+            if ((xray & 7) == 0)
+              break;
+
+          if (dirs[i] == -1 || dirs[i] == -9 || dirs[i] == 7)
+            if ((xray & 7) == 7)
+              break;
+
+          if (xray == pSq) {
+            dir = dirs[i];
+            break;
+          }
+        }
+      }
+
+      if (dir) {
+        for (int xray = kSq + dir; xray >= 0 && xray < 64; xray += dir) {
+          PINNED_MOVES[pSq][kSq] |= (1ULL << xray);
+
+          if (dir == 1 || dir == 9 || dir == -7)
+            if ((xray & 7) == 7)
+              break;
+
+          if (dir == -1 || dir == -9 || dir == 7)
+            if ((xray & 7) == 0)
+              break;
+        }
+      }
+    }
+  }
+}
+
+bb_t getInBetween(int from, int to) { return BETWEEN_SQS[from][to]; }
+
+bb_t getPinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
 
 bb_t getGeneratedPawnAttacks(int sq, int color) {
   bb_t attacks = 0, board = 0;
@@ -338,6 +425,9 @@ void initRookAttacks() {
 }
 
 void initAttacks() {
+  initBetween();
+  initPinnedMovement();
+
   initPawnAttacks();
   initKnightAttacks();
   initKingAttacks();

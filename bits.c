@@ -15,4 +15,5 @@ void printBB(bb_t bb) {
   }
 
   printf("\n    a b c d e f g h\n\n");
+  printf(" Value: %llu\n\n", bb);
 }

@@ -11,16 +11,16 @@ const bb_t middleFour = 281474976645120UL;
 const bb_t promotionRanks[] = {65280UL, 71776119061217280L};
 const bb_t homeRanks[] = {71776119061217280L, 65280UL};
 const bb_t thirdRanks[] = {280375465082880L, 16711680L};
+const bb_t filled = -1ULL;
 
 void addMove(moves_t *moveList, move_t m) { moveList->moves[moveList->count++] = m; }
 
-void generatePawnPromotions(moves_t *moveList) {
-  bb_t pawns = pieces[side];
+void generatePawnPromotions(moves_t *moveList, bb_t pawns, bb_t possibilities) {
   bb_t promotingPawns = pawns & promotionRanks[side];
 
-  bb_t quietPromoters = shift(promotingPawns, pawnDirections[side]) & ~occupancies[2];
-  bb_t capturingPromotersE = shift(promotingPawns, pawnDirections[side] - 1) & occupancies[xside];
-  bb_t capturingPromotersW = shift(promotingPawns, pawnDirections[side] + 1) & occupancies[xside];
+  bb_t quietPromoters = shift(promotingPawns, pawnDirections[side]) & ~occupancies[2] & possibilities;
+  bb_t capturingPromotersE = shift(promotingPawns, pawnDirections[side] - 1) & occupancies[xside] & possibilities;
+  bb_t capturingPromotersW = shift(promotingPawns, pawnDirections[side] + 1) & occupancies[xside] & possibilities;
 
   while (quietPromoters) {
     int end = lsb(quietPromoters);
@@ -59,11 +59,10 @@ void generatePawnPromotions(moves_t *moveList) {
   }
 }
 
-void generatePawnCaptures(moves_t *moveList) {
-  bb_t pawns = pieces[side];
+void generatePawnCaptures(moves_t *moveList, bb_t pawns, bb_t possibilities) {
   bb_t nonPromotingPawns = pawns & ~promotionRanks[side];
-  bb_t capturingE = shift(nonPromotingPawns, pawnDirections[side] - 1) & occupancies[xside];
-  bb_t capturingW = shift(nonPromotingPawns, pawnDirections[side] + 1) & occupancies[xside];
+  bb_t capturingE = shift(nonPromotingPawns, pawnDirections[side] - 1) & occupancies[xside] & possibilities;
+  bb_t capturingW = shift(nonPromotingPawns, pawnDirections[side] + 1) & occupancies[xside] & possibilities;
 
   while (capturingE) {
     int end = lsb(capturingE);
@@ -75,20 +74,30 @@ void generatePawnCaptures(moves_t *moveList) {
 
   while (capturingW) {
     int end = lsb(capturingW);
-
     addMove(moveList, buildMove(end - (pawnDirections[side] + 1), end, side, 0, 1, 0, 0, 0));
-
     popLsb(capturingW);
+  }
+
+  if (epSquare) {
+    bb_t epPawns = getPawnAttacks(epSquare, xside) & nonPromotingPawns;
+
+    while (epPawns) {
+      int start = lsb(epPawns);
+      addMove(moveList, buildMove(start, epSquare, side, 0, 1, 0, 1, 0));
+      popLsb(epPawns);
+    }
   }
 }
 
-void generatePawnQuiets(moves_t *moveList) {
+void generatePawnQuiets(moves_t *moveList, bb_t pawns, bb_t possibilities) {
   bb_t empty = ~occupancies[2];
-  bb_t pawns = pieces[side];
   bb_t nonPromotingPawns = pawns & ~promotionRanks[side];
 
   bb_t singlePush = shift(nonPromotingPawns, pawnDirections[side]) & empty;
   bb_t doublePush = shift(singlePush & thirdRanks[side], pawnDirections[side]) & empty;
+
+  singlePush &= possibilities;
+  doublePush &= possibilities;
 
   while (singlePush) {
     int end = lsb(singlePush);
@@ -103,20 +112,19 @@ void generatePawnQuiets(moves_t *moveList) {
   }
 }
 
-void generatePawnMoves(moves_t *moveList) {
-  generatePawnPromotions(moveList);
-  generatePawnCaptures(moveList);
-  generatePawnQuiets(moveList);
+void generatePawnMoves(moves_t *moveList, bb_t pawns, bb_t possibilities) {
+  generatePawnPromotions(moveList, pawns, possibilities);
+  generatePawnCaptures(moveList, pawns, possibilities);
+  generatePawnQuiets(moveList, pawns, possibilities);
 }
 
-void generateKnightCaptures(moves_t *moveList) {
+void generateKnightCaptures(moves_t *moveList, bb_t knights, bb_t possibilities) {
   int piece = 2 + side;
-  bb_t knights = pieces[piece];
 
   while (knights) {
     int start = lsb(knights);
 
-    bb_t attacks = getKnightAttacks(start) & occupancies[xside];
+    bb_t attacks = getKnightAttacks(start) & occupancies[xside] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -129,14 +137,13 @@ void generateKnightCaptures(moves_t *moveList) {
   }
 }
 
-void generateKnightQuiets(moves_t *moveList) {
+void generateKnightQuiets(moves_t *moveList, bb_t knights, bb_t possibilities) {
   int piece = 2 + side;
-  bb_t knights = pieces[piece];
 
   while (knights) {
     int start = lsb(knights);
 
-    bb_t attacks = getKnightAttacks(start) & ~occupancies[2];
+    bb_t attacks = getKnightAttacks(start) & ~occupancies[2] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -149,19 +156,18 @@ void generateKnightQuiets(moves_t *moveList) {
   }
 }
 
-void generateKnightMoves(moves_t *moveList) {
-  generateKnightCaptures(moveList);
-  generateKnightQuiets(moveList);
+void generateKnightMoves(moves_t *moveList, bb_t knights, bb_t possibilities) {
+  generateKnightCaptures(moveList, knights, possibilities);
+  generateKnightQuiets(moveList, knights, possibilities);
 }
 
-void generateBishopCaptures(moves_t *moveList) {
+void generateBishopCaptures(moves_t *moveList, bb_t bishops, bb_t possibilities) {
   int piece = 4 + side;
-  bb_t bishops = pieces[piece];
 
   while (bishops) {
     int start = lsb(bishops);
 
-    bb_t attacks = getBishopAttacks(start, occupancies[2]) & occupancies[xside];
+    bb_t attacks = getBishopAttacks(start, occupancies[2]) & occupancies[xside] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -174,14 +180,13 @@ void generateBishopCaptures(moves_t *moveList) {
   }
 }
 
-void generateBishopQuiets(moves_t *moveList) {
+void generateBishopQuiets(moves_t *moveList, bb_t bishops, bb_t possibilities) {
   int piece = 4 + side;
-  bb_t bishops = pieces[piece];
 
   while (bishops) {
     int start = lsb(bishops);
 
-    bb_t attacks = getBishopAttacks(start, occupancies[2]) & ~occupancies[2];
+    bb_t attacks = getBishopAttacks(start, occupancies[2]) & ~occupancies[2] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -194,19 +199,18 @@ void generateBishopQuiets(moves_t *moveList) {
   }
 }
 
-void generateBishopMoves(moves_t *moveList) {
-  generateBishopCaptures(moveList);
-  generateBishopQuiets(moveList);
+void generateBishopMoves(moves_t *moveList, bb_t bishops, bb_t possibilities) {
+  generateBishopCaptures(moveList, bishops, possibilities);
+  generateBishopQuiets(moveList, bishops, possibilities);
 }
 
-void generateRookCaptures(moves_t *moveList) {
+void generateRookCaptures(moves_t *moveList, bb_t rooks, bb_t possibilities) {
   int piece = 6 + side;
-  bb_t rooks = pieces[piece];
 
   while (rooks) {
     int start = lsb(rooks);
 
-    bb_t attacks = getRookAttacks(start, occupancies[2]) & occupancies[xside];
+    bb_t attacks = getRookAttacks(start, occupancies[2]) & occupancies[xside] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -219,14 +223,13 @@ void generateRookCaptures(moves_t *moveList) {
   }
 }
 
-void generateRookQuiets(moves_t *moveList) {
+void generateRookQuiets(moves_t *moveList, bb_t rooks, bb_t possibilities) {
   int piece = 6 + side;
-  bb_t rooks = pieces[piece];
 
   while (rooks) {
     int start = lsb(rooks);
 
-    bb_t attacks = getRookAttacks(start, occupancies[2]) & ~occupancies[2];
+    bb_t attacks = getRookAttacks(start, occupancies[2]) & ~occupancies[2] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -239,19 +242,18 @@ void generateRookQuiets(moves_t *moveList) {
   }
 }
 
-void generateRookMoves(moves_t *moveList) {
-  generateRookCaptures(moveList);
-  generateRookQuiets(moveList);
+void generateRookMoves(moves_t *moveList, bb_t rooks, bb_t possibilities) {
+  generateRookCaptures(moveList, rooks, possibilities);
+  generateRookQuiets(moveList, rooks, possibilities);
 }
 
-void generateQueenCaptures(moves_t *moveList) {
+void generateQueenCaptures(moves_t *moveList, bb_t queens, bb_t possibilities) {
   int piece = 8 + side;
-  bb_t queens = pieces[piece];
 
   while (queens) {
     int start = lsb(queens);
 
-    bb_t attacks = getQueenAttacks(start, occupancies[2]) & occupancies[xside];
+    bb_t attacks = getQueenAttacks(start, occupancies[2]) & occupancies[xside] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -264,14 +266,13 @@ void generateQueenCaptures(moves_t *moveList) {
   }
 }
 
-void generateQueenQuiets(moves_t *moveList) {
+void generateQueenQuiets(moves_t *moveList, bb_t queens, bb_t possibilities) {
   int piece = 8 + side;
-  bb_t queens = pieces[piece];
 
   while (queens) {
     int start = lsb(queens);
 
-    bb_t attacks = getQueenAttacks(start, occupancies[2]) & ~occupancies[2];
+    bb_t attacks = getQueenAttacks(start, occupancies[2]) & ~occupancies[2] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -284,9 +285,9 @@ void generateQueenQuiets(moves_t *moveList) {
   }
 }
 
-void generateQueenMoves(moves_t *moveList) {
-  generateQueenCaptures(moveList);
-  generateQueenQuiets(moveList);
+void generateQueenMoves(moves_t *moveList, bb_t queens, bb_t possibilities) {
+  generateQueenCaptures(moveList, queens, possibilities);
+  generateQueenQuiets(moveList, queens, possibilities);
 }
 
 void generateKingCaptures(moves_t *moveList) {
@@ -302,6 +303,7 @@ void generateKingCaptures(moves_t *moveList) {
 
       addMove(moveList, buildMove(start, end, piece, 0, 1, 0, 0, 0));
 
+
       popLsb(attacks);
     }
 
@@ -312,7 +314,7 @@ void generateKingCaptures(moves_t *moveList) {
 void generateKingCastles(moves_t *moveList) {
   int piece = 10 + side;
 
-  if (inCheck())
+  if (checkers)
     return;
 
   if (side == 0) {
@@ -356,13 +358,67 @@ void generateKingMoves(moves_t *moveList) {
 
 void generateMoves(moves_t *moveList) {
   moveList->count = 0;
+  int kingSq = lsb(pieces[10 + side]);
 
-  generatePawnMoves(moveList);
-  generateKnightMoves(moveList);
-  generateBishopMoves(moveList);
-  generateRookMoves(moveList);
-  generateQueenMoves(moveList);
-  generateKingMoves(moveList);
+  if (bits(checkers) > 1) {
+    generateKingMoves(moveList);
+  } else if (checkers) {
+    bb_t betweens = getInBetween(kingSq, lsb(checkers));
+
+    bb_t nonPinned = ~pinned;
+    generatePawnMoves(moveList, pieces[side] & nonPinned, betweens | checkers);
+    generateKnightMoves(moveList, pieces[2 + side] & nonPinned, betweens | checkers);
+    generateBishopMoves(moveList, pieces[4 + side] & nonPinned, betweens | checkers);
+    generateRookMoves(moveList, pieces[6 + side] & nonPinned, betweens | checkers);
+    generateQueenMoves(moveList, pieces[8 + side] & nonPinned, betweens | checkers);
+    generateKingMoves(moveList);
+  } else {
+    bb_t nonPinned = ~pinned;
+    generatePawnMoves(moveList, pieces[side] & nonPinned, -1ULL);
+    generateKnightMoves(moveList, pieces[2 + side] & nonPinned, -1ULL);
+    generateBishopMoves(moveList, pieces[4 + side] & nonPinned, -1ULL);
+    generateRookMoves(moveList, pieces[6 + side] & nonPinned, -1ULL);
+    generateQueenMoves(moveList, pieces[8 + side] & nonPinned, -1ULL);
+    generateKingMoves(moveList);
+
+    // TODO: Clean this up?
+    bb_t pinnedPawns = pieces[side] & pinned;
+    bb_t pinnedBishops = pieces[4 + side] & pinned;
+    bb_t pinnedRooks = pieces[6 + side] & pinned;
+    bb_t pinnedQueens = pieces[8 + side] & pinned;
+
+    while (pinnedPawns) {
+      int sq = lsb(pinnedPawns);
+      generatePawnMoves(moveList, pinnedPawns & -pinnedPawns, getPinnedMoves(sq, kingSq));
+      popLsb(pinnedPawns);
+    }
+
+    while (pinnedBishops) {
+      int sq = lsb(pinnedBishops);
+      generateBishopMoves(moveList, pinnedBishops & -pinnedBishops, getPinnedMoves(sq, kingSq));
+      popLsb(pinnedBishops);
+    }
+
+    while (pinnedRooks) {
+      int sq = lsb(pinnedRooks);
+      generateRookMoves(moveList, pinnedRooks & -pinnedRooks, getPinnedMoves(sq, kingSq));
+      popLsb(pinnedRooks);
+    }
+
+    while (pinnedQueens) {
+      int sq = lsb(pinnedQueens);
+      generateQueenMoves(moveList, pinnedQueens & -pinnedQueens, getPinnedMoves(sq, kingSq));
+      popLsb(pinnedQueens);
+    }
+  }
+
+  move_t *curr = moveList->moves;
+  while (curr != moveList->moves + moveList->count) {
+    if ((moveStart(*curr) == kingSq || moveEP(*curr)) && !isLegal(*curr))
+      *curr = moveList->moves[--moveList->count];
+    else
+      ++curr;
+  }
 }
 
 void printMoves(moves_t *moveList) {

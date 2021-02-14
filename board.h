@@ -9,6 +9,9 @@ extern const char *pieceChars;
 
 bb_t pieces[12];
 bb_t occupancies[3];
+bb_t checkers;
+bb_t pinned;
+bb_t discoverers;
 
 int side;
 int xside;
@@ -25,9 +28,12 @@ int captureHistory[512];
 void clear();
 void parseFen(char *fen);
 void printBoard();
-int makeMove(move_t m);
+void makeMove(move_t m);
 void undoMove(move_t m);
 int isSquareAttacked(int sq, int attacker);
 int inCheck();
+int isLegal(move_t m);
+void setOccupancies();
+void setSpecialPieces();
 
 #endif
