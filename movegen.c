@@ -303,7 +303,6 @@ void generateKingCaptures(moves_t *moveList) {
 
       addMove(moveList, buildMove(start, end, piece, 0, 1, 0, 0, 0));
 
-
       popLsb(attacks);
     }
 
@@ -429,4 +428,29 @@ void printMoves(moves_t *moveList) {
     printf("%s%s%c %c %d %d %d %d\n", idxToCord[moveStart(m)], idxToCord[moveEnd(m)], movePromo(m) ? pieceChars[movePromo(m)] : ' ', pieceChars[movePiece(m)], moveCapture(m),
            moveDouble(m), moveEP(m), moveCastle(m));
   }
+}
+
+const char *promotionChars = "nbrq";
+
+move_t parseMove(char *moveStr) {
+  moves_t moveList[1];
+  generateMoves(moveList);
+
+  int start = (moveStr[0] - 'a') + (8 - (moveStr[1] - '0')) * 8;
+  int end = (moveStr[2] - 'a') + (8 - (moveStr[3] - '0')) * 8;
+
+  for (int i = 0; i < moveList->count; i++) {
+    move_t match = moveList->moves[i];
+    if (start != moveStart(match) || end != moveEnd(match))
+      continue;
+
+    int promotedPiece = movePromo(match);
+    if (!promotedPiece)
+      return match;
+
+    if (promotionChars[promotedPiece >> 1] == moveStr[4])
+      return match;
+  }
+
+  return 0;
 }

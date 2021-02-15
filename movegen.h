@@ -18,5 +18,6 @@ extern const int pawnDirections[];
 void addMove(moves_t *moveList, move_t m);
 void generateMoves(moves_t *moveList);
 void printMoves(moves_t *moveList);
+move_t parseMove(char* moveStr);
 
 #endif

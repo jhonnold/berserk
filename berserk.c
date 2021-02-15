@@ -7,6 +7,7 @@
 #include "board.h"
 #include "movegen.h"
 #include "types.h"
+#include "uci.h"
 
 int64_t perft(int depth) {
   int64_t nodes = 0;
@@ -60,28 +61,9 @@ int64_t perftStart(char *fen, int depth) {
 
 int main() {
   initAttacks();
+  parseFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-  // 699.955ms
-  int64_t nodes = perftStart("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 6);
-  assert(nodes == 119060324);
+  uciLoop();
 
-  // 918.733ms
-  nodes = perftStart("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", 5);
-  assert(nodes == 193690690);
-
-  // 107.000ms
-  nodes = perftStart("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -", 6);
-  assert(nodes == 11030083);
-
-  // 89.512ms
-  nodes = perftStart("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", 5);
-  assert(nodes == 15833292);
-
-  // 464.000ms
-  nodes = perftStart("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 5);
-  assert(nodes == 89941194);
-
-  // 783.999ms
-  nodes = perftStart("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", 5);
-  assert(nodes == 164075551);
+  return 0;
 }
