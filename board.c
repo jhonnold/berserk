@@ -42,7 +42,6 @@ inline void setSpecialPieces() {
   int kingSq = lsb(pieces[10 + side]);
 
   pinned = 0ULL;
-  discoverers = 0ULL;
 
   // start looking at knights/pawns
   checkers = (getKnightAttacks(kingSq) & pieces[2 + xside]) | (getPawnAttacks(kingSq, side) & pieces[xside]);
@@ -61,7 +60,6 @@ inline void setSpecialPieces() {
         checkers |= (enemyPiece & -enemyPiece);
       } else if (bits(blockers) == 1) { // pinned
         pinned |= (blockers & occupancies[kingC]);
-        discoverers |= (blockers & occupancies[enemyC]);
       }
 
       popLsb(enemyPiece);
@@ -145,16 +143,16 @@ void printBoard() {
   printf("\n    a b c d e f g h\n\n");
 }
 
-int isSquareAttacked(int sq, int attacker) {
+inline int isSquareAttacked(int sq, int attacker, bb_t occupancy) {
   if (getPawnAttacks(sq, attacker ^ 1) & pieces[attacker])
     return 1;
   if (getKnightAttacks(sq) & pieces[2 + attacker])
     return 1;
-  if (getBishopAttacks(sq, occupancies[2]) & pieces[4 + attacker])
+  if (getBishopAttacks(sq, occupancy) & pieces[4 + attacker])
     return 1;
-  if (getRookAttacks(sq, occupancies[2]) & pieces[6 + attacker])
+  if (getRookAttacks(sq, occupancy) & pieces[6 + attacker])
     return 1;
-  if (getQueenAttacks(sq, occupancies[2]) & pieces[8 + attacker])
+  if (getQueenAttacks(sq, occupancy) & pieces[8 + attacker])
     return 1;
   if (getKingAttacks(sq) & pieces[10 + attacker])
     return 1;
@@ -162,9 +160,7 @@ int isSquareAttacked(int sq, int attacker) {
   return 0;
 }
 
-int inCheck() {
-  return checkers ? 1 : 0;
-}
+inline int inCheck() { return checkers ? 1 : 0; }
 
 void makeMove(move_t m) {
   int start = moveStart(m);
@@ -286,25 +282,29 @@ int isLegal(move_t m) {
   int end = moveEnd(m);
 
   if (moveEP(m)) {
-    // TODO: Speed this up
-    makeMove(m);
-    int valid = !isSquareAttacked(lsb(pieces[10 + xside]), side); 
-    undoMove(m);
+    int kingSq = lsb(pieces[10 + side]);
+    int captureSq = end - pawnDirections[side];
+    bb_t newOccupancy = occupancies[2];
+    popBit(newOccupancy, start);
+    popBit(newOccupancy, captureSq);
+    setBit(newOccupancy, end);
 
-    return valid;
+    // EP can only be illegal due to crazy discover checks
+    return !(getBishopAttacks(kingSq, newOccupancy) & (pieces[4 + xside] | pieces[8 + xside])) && !(getRookAttacks(kingSq, newOccupancy) & (pieces[6 + xside] | pieces[8 + xside]));
   } else if (moveCastle(m)) {
-    int step = (end > start) ? 1 : -1;
+    int step = (end > start) ? -1 : 1;
 
-    for (int i = start + step; i != end; i += step)
-      if (isSquareAttacked(i, xside))
+    for (int i = end; i != start; i += step) {
+      if (isSquareAttacked(i, xside, occupancies[2]))
         return 0;
-    
+    }
+
     return 1;
   } else if (movePiece(m) > 9) {
-    popBit(occupancies[2], start); // take king off the board and see if that square is attacked
-    int valid = !isSquareAttacked(end, xside);
-    setBit(occupancies[2], start);
-    return valid;
+    bb_t kingOff = occupancies[2];
+    popBit(kingOff, start);
+    // check king attacks with it off board, because it may move along the checking line
+    return !isSquareAttacked(end, xside, kingOff);
   }
 
   return 1;

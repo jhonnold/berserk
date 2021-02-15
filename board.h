@@ -11,7 +11,6 @@ bb_t pieces[12];
 bb_t occupancies[3];
 bb_t checkers;
 bb_t pinned;
-bb_t discoverers;
 
 int side;
 int xside;
@@ -30,7 +29,7 @@ void parseFen(char *fen);
 void printBoard();
 void makeMove(move_t m);
 void undoMove(move_t m);
-int isSquareAttacked(int sq, int attacker);
+int isSquareAttacked(int sq, int attacker, bb_t occupancy);
 int inCheck();
 int isLegal(move_t m);
 void setOccupancies();

@@ -13,7 +13,7 @@ const bb_t homeRanks[] = {71776119061217280L, 65280UL};
 const bb_t thirdRanks[] = {280375465082880L, 16711680L};
 const bb_t filled = -1ULL;
 
-void addMove(moves_t *moveList, move_t m) { moveList->moves[moveList->count++] = m; }
+inline void addMove(moves_t *moveList, move_t m) { moveList->moves[moveList->count++] = m; }
 
 void generatePawnPromotions(moves_t *moveList, bb_t pawns, bb_t possibilities) {
   bb_t promotingPawns = pawns & promotionRanks[side];
@@ -314,18 +314,18 @@ void generateKingCaptures(moves_t *moveList) {
 void generateKingCastles(moves_t *moveList) {
   int piece = 10 + side;
 
-  if (checkers)
+  if (inCheck())
     return;
 
   if (side == 0) {
-    if ((castling & 0x8) && !getBit(occupancies[2], 61) && !getBit(occupancies[2], 62) && !isSquareAttacked(61, 1) && !isSquareAttacked(62, 1))
+    if ((castling & 0x8) && !(occupancies[2] & getInBetween(60, 63)))
       addMove(moveList, buildMove(60, 62, piece, 0, 0, 0, 0, 1));
-    if ((castling & 0x4) && !getBit(occupancies[2], 57) && !getBit(occupancies[2], 58) && !getBit(occupancies[2], 59) && !isSquareAttacked(59, 1) && !isSquareAttacked(58, 1))
+    if ((castling & 0x4) && !(occupancies[2] & getInBetween(60, 56)))
       addMove(moveList, buildMove(60, 58, piece, 0, 0, 0, 0, 1));
   } else {
-    if ((castling & 0x2) && !getBit(occupancies[2], 5) && !getBit(occupancies[2], 6) && !isSquareAttacked(5, 0) && !isSquareAttacked(6, 0))
+    if ((castling & 0x2) && !(occupancies[2] & getInBetween(4, 7)))
       addMove(moveList, buildMove(4, 6, piece, 0, 0, 0, 0, 1));
-    if ((castling & 0x1) && !getBit(occupancies[2], 1) && !getBit(occupancies[2], 2) && !getBit(occupancies[2], 3) && !isSquareAttacked(3, 0) && !isSquareAttacked(2, 0))
+    if ((castling & 0x1) && !(occupancies[2] & getInBetween(4, 0)))
       addMove(moveList, buildMove(4, 2, piece, 0, 0, 0, 0, 1));
   }
 }

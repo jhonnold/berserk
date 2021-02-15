@@ -125,9 +125,9 @@ void initPinnedMovement() {
   }
 }
 
-bb_t getInBetween(int from, int to) { return BETWEEN_SQS[from][to]; }
+inline bb_t getInBetween(int from, int to) { return BETWEEN_SQS[from][to]; }
 
-bb_t getPinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
+inline bb_t getPinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
 
 bb_t getGeneratedPawnAttacks(int sq, int color) {
   bb_t attacks = 0, board = 0;
@@ -442,11 +442,11 @@ void initAttacks() {
   initRookAttacks();
 }
 
-bb_t getPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][sq]; }
+inline bb_t getPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][sq]; }
 
-bb_t getKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
+inline bb_t getKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
 
-bb_t getBishopAttacks(int sq, bb_t occupancy) {
+inline bb_t getBishopAttacks(int sq, bb_t occupancy) {
   occupancy &= BISHOP_MASKS[sq];
   occupancy *= BISHOP_MAGICS[sq];
   occupancy >>= 64 - BISHOP_RELEVANT_BITS[sq];
@@ -454,7 +454,7 @@ bb_t getBishopAttacks(int sq, bb_t occupancy) {
   return BISHOP_ATTACKS[sq][occupancy];
 }
 
-bb_t getRookAttacks(int sq, bb_t occupancy) {
+inline bb_t getRookAttacks(int sq, bb_t occupancy) {
   occupancy &= ROOK_MASKS[sq];
   occupancy *= ROOK_MAGICS[sq];
   occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];
@@ -462,6 +462,6 @@ bb_t getRookAttacks(int sq, bb_t occupancy) {
   return ROOK_ATTACKS[sq][occupancy];
 }
 
-bb_t getQueenAttacks(int sq, bb_t occupancy) { return getBishopAttacks(sq, occupancy) | getRookAttacks(sq, occupancy); }
+inline bb_t getQueenAttacks(int sq, bb_t occupancy) { return getBishopAttacks(sq, occupancy) | getRookAttacks(sq, occupancy); }
 
-bb_t getKingAttacks(int sq) { return KING_ATTACKS[sq]; }
+inline bb_t getKingAttacks(int sq) { return KING_ATTACKS[sq]; }
