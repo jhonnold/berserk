@@ -3,7 +3,8 @@
 
 #include "types.h"
 
-#define buildMove(start, end, piece, promo, cap, dub, ep, castle) (start) | (end << 6) | (piece << 12) | ((promo) << 16) | (cap << 20) | (dub << 21) | (ep << 22) | (castle << 23)
+#define buildMove(start, end, piece, promo, cap, dub, ep, castle)                                                      \
+  (start) | (end << 6) | (piece << 12) | ((promo) << 16) | (cap << 20) | (dub << 21) | (ep << 22) | (castle << 23)
 #define moveStart(m) (m & 0x3f)
 #define moveEnd(m) ((m & 0xfc0) >> 6)
 #define movePiece(m) ((m & 0xf000) >> 12)
@@ -15,9 +16,9 @@
 
 extern const int pawnDirections[];
 
-void addMove(moves_t *moveList, move_t m);
-void generateMoves(moves_t *moveList);
-void printMoves(moves_t *moveList);
-move_t parseMove(char* moveStr);
+void addMove(MoveList* moveList, Move move);
+void generateMoves(MoveList* moveList, Board* board);
+void printMoves(MoveList* moveList);
+Move parseMove(char* moveStr, Board* board);
 
 #endif

@@ -1,6 +1,8 @@
 #ifndef PERFT_H
 #define PERFT_H
 
-void Perft(int depth);
+#include "types.h"
+
+void PerftTest(int depth, Board* board);
 
 #endif

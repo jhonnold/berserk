@@ -3,66 +3,66 @@
 #include <string.h>
 
 #include "board.h"
-#include "uci.h"
 #include "movegen.h"
 #include "perft.h"
+#include "uci.h"
 
-#define START_FEN  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+#define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 // thanks to vice for this
-void parseGo(char* in) {
+void parseGo(char* in, Board* board) {
   in += 3;
 
-  char *ptrChar = in;
+  char* ptrChar = in;
   int perft = 0;
 
   if ((ptrChar = strstr(in, "perft")))
     perft = atoi(ptrChar + 6);
 
   if (perft)
-    Perft(perft);
+    PerftTest(perft, board);
 }
 
-void parsePosition(char* in) {
+void parsePosition(char* in, Board* board) {
   in += 9;
-  char *ptrChar = in;
+  char* ptrChar = in;
 
   if (strncmp(in, "startpos", 8) == 0) {
-    parseFen(START_FEN);
+    parseFen(START_FEN, board);
   } else {
     ptrChar = strstr(in, "fen");
     if (ptrChar == NULL)
-      parseFen(START_FEN);
+      parseFen(START_FEN, board);
     else {
       ptrChar += 4;
-      parseFen(ptrChar);
+      parseFen(ptrChar, board);
     }
   }
 
   ptrChar = strstr(in, "moves");
-  move_t enteredMove;
+  Move enteredMove;
 
   if (ptrChar == NULL) {
-    printBoard();
+    printBoard(board);
     return;
   }
 
   ptrChar += 6;
   while (*ptrChar) {
-    enteredMove = parseMove(ptrChar);
-    if (!enteredMove) break;
+    enteredMove = parseMove(ptrChar, board);
+    if (!enteredMove)
+      break;
 
-    makeMove(enteredMove);
+    makeMove(enteredMove, board);
     while (*ptrChar && *ptrChar != ' ')
       ptrChar++;
     ptrChar++;
   }
 
-  printBoard();
+  printBoard(board);
 }
 
-
-void uciLoop() {
+void UCI(Board* board) {
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
@@ -87,11 +87,11 @@ void uciLoop() {
       printf("readyok\n");
       continue;
     } else if (!strncmp(in, "position", 8)) {
-      parsePosition(in);
+      parsePosition(in, board);
     } else if (!strncmp(in, "ucinewgame", 10)) {
-      parsePosition("position startpos\n");
+      parsePosition("position startpos\n", board);
     } else if (!strncmp(in, "go", 2)) {
-      parseGo(in);
+      parseGo(in, board);
     } else if (!strncmp(in, "quit", 4)) {
       break;
     } else if (!strncmp(in, "uci", 3)) {

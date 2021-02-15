@@ -6,32 +6,35 @@
 #include "bits.h"
 #include "random.h"
 
-const bb_t NOT_A_FILE = 18374403900871474942ULL;
-const bb_t NOT_H_FILE = 9187201950435737471ULL;
-const bb_t NOT_AB_FILE = 18229723555195321596ULL;
-const bb_t NOT_GH_FILE = 4557430888798830399ULL;
+const BitBoard NOT_A_FILE = 18374403900871474942ULL;
+const BitBoard NOT_H_FILE = 9187201950435737471ULL;
+const BitBoard NOT_AB_FILE = 18229723555195321596ULL;
+const BitBoard NOT_GH_FILE = 4557430888798830399ULL;
 
-const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 7, 9, 9, 7, 5, 5,
-                                      5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 7, 7, 7, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 6};
+const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 7, 7, 7, 7,
+                                      5, 5, 5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 7,
+                                      7, 7, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 6};
 
-const int ROOK_RELEVANT_BITS[64] = {12, 11, 11, 11, 11, 11, 11, 12, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11, 12, 11, 11, 11, 11, 11, 11, 12};
+const int ROOK_RELEVANT_BITS[64] = {12, 11, 11, 11, 11, 11, 11, 12, 11, 10, 10, 10, 10, 10, 10, 11,
+                                    11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
+                                    11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
+                                    11, 10, 10, 10, 10, 10, 10, 11, 12, 11, 11, 11, 11, 11, 11, 12};
 
-bb_t BETWEEN_SQS[64][64];
-bb_t PINNED_MOVES[64][64];
+BitBoard BETWEEN_SQS[64][64];
+BitBoard PINNED_MOVES[64][64];
 
-bb_t PAWN_ATTACKS[2][64];
-bb_t KNIGHT_ATTACKS[64];
-bb_t BISHOP_ATTACKS[64][512];
-bb_t ROOK_ATTACKS[64][4096];
-bb_t KING_ATTACKS[64];
-bb_t ROOK_MASKS[64];
-bb_t BISHOP_MASKS[64];
+BitBoard PAWN_ATTACKS[2][64];
+BitBoard KNIGHT_ATTACKS[64];
+BitBoard BISHOP_ATTACKS[64][512];
+BitBoard ROOK_ATTACKS[64][4096];
+BitBoard KING_ATTACKS[64];
+BitBoard ROOK_MASKS[64];
+BitBoard BISHOP_MASKS[64];
 
 uint64_t ROOK_MAGICS[64];
 uint64_t BISHOP_MAGICS[64];
 
-inline bb_t shift(bb_t bb, int dir) {
+inline BitBoard shift(BitBoard bb, int dir) {
   return dir == -8    ? bb >> 8
          : dir == 8   ? bb << 8
          : dir == -16 ? bb >> 16
@@ -125,12 +128,12 @@ void initPinnedMovement() {
   }
 }
 
-inline bb_t getInBetween(int from, int to) { return BETWEEN_SQS[from][to]; }
+inline BitBoard getInBetween(int from, int to) { return BETWEEN_SQS[from][to]; }
 
-inline bb_t getPinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
+inline BitBoard getPinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
 
-bb_t getGeneratedPawnAttacks(int sq, int color) {
-  bb_t attacks = 0, board = 0;
+BitBoard getGeneratedPawnAttacks(int sq, int color) {
+  BitBoard attacks = 0, board = 0;
 
   setBit(board, sq);
 
@@ -157,8 +160,8 @@ void initPawnAttacks() {
   }
 }
 
-bb_t getGeneratedKnightAttacks(int sq) {
-  bb_t attacks = 0, board = 0;
+BitBoard getGeneratedKnightAttacks(int sq) {
+  BitBoard attacks = 0, board = 0;
 
   setBit(board, sq);
 
@@ -188,8 +191,8 @@ void initKnightAttacks() {
     KNIGHT_ATTACKS[i] = getGeneratedKnightAttacks(i);
 }
 
-bb_t getGeneratedKingAttacks(int sq) {
-  bb_t attacks = 0, board = 0;
+BitBoard getGeneratedKingAttacks(int sq) {
+  BitBoard attacks = 0, board = 0;
 
   setBit(board, sq);
 
@@ -217,8 +220,8 @@ void initKingAttacks() {
     KING_ATTACKS[i] = getGeneratedKingAttacks(i);
 }
 
-bb_t getBishopMask(int sq) {
-  bb_t attacks = 0;
+BitBoard getBishopMask(int sq) {
+  BitBoard attacks = 0;
 
   int sr = sq >> 3;
   int sf = sq & 7;
@@ -241,8 +244,8 @@ void initBishopMasks() {
   }
 }
 
-bb_t getBishopAttacksOTF(int sq, bb_t blockers) {
-  bb_t attacks = 0;
+BitBoard getBishopAttacksOTF(int sq, BitBoard blockers) {
+  BitBoard attacks = 0;
 
   int sr = sq >> 3;
   int sf = sq & 7;
@@ -274,8 +277,8 @@ bb_t getBishopAttacksOTF(int sq, bb_t blockers) {
   return attacks;
 }
 
-bb_t getRookMask(int sq) {
-  bb_t attacks = 0;
+BitBoard getRookMask(int sq) {
+  BitBoard attacks = 0;
 
   int sr = sq >> 3;
   int sf = sq & 7;
@@ -297,8 +300,8 @@ void initRookMasks() {
     ROOK_MASKS[i] = getRookMask(i);
 }
 
-bb_t getRookAttacksOTF(int sq, bb_t blockers) {
-  bb_t attacks = 0;
+BitBoard getRookAttacksOTF(int sq, BitBoard blockers) {
+  BitBoard attacks = 0;
 
   int sr = sq >> 3;
   int sf = sq & 7;
@@ -330,8 +333,8 @@ bb_t getRookAttacksOTF(int sq, bb_t blockers) {
   return attacks;
 }
 
-bb_t setOccupancy(int idx, int bits, bb_t attacks) {
-  bb_t occupany = 0;
+BitBoard setOccupancy(int idx, int bits, BitBoard attacks) {
+  BitBoard occupany = 0;
 
   for (int i = 0; i < bits; i++) {
     int sq = lsb(attacks);
@@ -347,11 +350,11 @@ bb_t setOccupancy(int idx, int bits, bb_t attacks) {
 uint64_t findMagicNumber(int sq, int n, int bishop) {
   int numOccupancies = 1 << n;
 
-  bb_t occupancies[4096];
-  bb_t attacks[4096];
-  bb_t usedAttacks[4096];
+  BitBoard occupancies[4096];
+  BitBoard attacks[4096];
+  BitBoard usedAttacks[4096];
 
-  bb_t mask = bishop ? BISHOP_MASKS[sq] : ROOK_MASKS[sq];
+  BitBoard mask = bishop ? BISHOP_MASKS[sq] : ROOK_MASKS[sq];
 
   for (int i = 0; i < numOccupancies; i++) {
     occupancies[i] = setOccupancy(i, n, mask);
@@ -396,12 +399,12 @@ void initRookMagics() {
 
 void initBishopAttacks() {
   for (int sq = 0; sq < 64; sq++) {
-    bb_t mask = BISHOP_MASKS[sq];
+    BitBoard mask = BISHOP_MASKS[sq];
     int bits = BISHOP_RELEVANT_BITS[sq];
     int n = (1 << bits);
 
     for (int i = 0; i < n; i++) {
-      bb_t occupancy = setOccupancy(i, bits, mask);
+      BitBoard occupancy = setOccupancy(i, bits, mask);
       int idx = (occupancy * BISHOP_MAGICS[sq]) >> (64 - bits);
 
       BISHOP_ATTACKS[sq][idx] = getBishopAttacksOTF(sq, occupancy);
@@ -411,12 +414,12 @@ void initBishopAttacks() {
 
 void initRookAttacks() {
   for (int sq = 0; sq < 64; sq++) {
-    bb_t mask = ROOK_MASKS[sq];
+    BitBoard mask = ROOK_MASKS[sq];
     int bits = ROOK_RELEVANT_BITS[sq];
     int n = (1 << bits);
 
     for (int i = 0; i < n; i++) {
-      bb_t occupancy = setOccupancy(i, bits, mask);
+      BitBoard occupancy = setOccupancy(i, bits, mask);
       int idx = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
 
       ROOK_ATTACKS[sq][idx] = getRookAttacksOTF(sq, occupancy);
@@ -442,11 +445,11 @@ void initAttacks() {
   initRookAttacks();
 }
 
-inline bb_t getPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][sq]; }
+inline BitBoard getPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][sq]; }
 
-inline bb_t getKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
+inline BitBoard getKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
 
-inline bb_t getBishopAttacks(int sq, bb_t occupancy) {
+inline BitBoard getBishopAttacks(int sq, BitBoard occupancy) {
   occupancy &= BISHOP_MASKS[sq];
   occupancy *= BISHOP_MAGICS[sq];
   occupancy >>= 64 - BISHOP_RELEVANT_BITS[sq];
@@ -454,7 +457,7 @@ inline bb_t getBishopAttacks(int sq, bb_t occupancy) {
   return BISHOP_ATTACKS[sq][occupancy];
 }
 
-inline bb_t getRookAttacks(int sq, bb_t occupancy) {
+inline BitBoard getRookAttacks(int sq, BitBoard occupancy) {
   occupancy &= ROOK_MASKS[sq];
   occupancy *= ROOK_MAGICS[sq];
   occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];
@@ -462,6 +465,8 @@ inline bb_t getRookAttacks(int sq, bb_t occupancy) {
   return ROOK_ATTACKS[sq][occupancy];
 }
 
-inline bb_t getQueenAttacks(int sq, bb_t occupancy) { return getBishopAttacks(sq, occupancy) | getRookAttacks(sq, occupancy); }
+inline BitBoard getQueenAttacks(int sq, BitBoard occupancy) {
+  return getBishopAttacks(sq, occupancy) | getRookAttacks(sq, occupancy);
+}
 
-inline bb_t getKingAttacks(int sq) { return KING_ATTACKS[sq]; }
+inline BitBoard getKingAttacks(int sq) { return KING_ATTACKS[sq]; }

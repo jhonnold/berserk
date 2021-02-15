@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-unsigned int randomInt();
+uint32_t randomInt();
 uint64_t randomLong();
 uint64_t randomMagic();
 

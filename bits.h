@@ -10,6 +10,6 @@
 #define bits(bb) __builtin_popcountll(bb)
 #define lsb(bb) (__builtin_ctzll(bb))
 
-void printBB(bb_t bb);
+void printBB(BitBoard bb);
 
 #endif

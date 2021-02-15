@@ -1,9 +1,9 @@
 #include "random.h"
 
-unsigned int randomState = 234;
+uint32_t randomState = 234;
 
-unsigned int randomInt() {
-  unsigned int result = randomState;
+uint32_t randomInt() {
+  uint32_t result = randomState;
 
   result ^= (result << 13);
   result ^= (result >> 17);
@@ -23,6 +23,4 @@ uint64_t randomLong() {
   return n1 | (n2 << 16) | (n3 << 32) | (n4 << 48);
 }
 
-uint64_t randomMagic() {
-  return randomLong() & randomLong() & randomLong();
-}
+uint64_t randomMagic() { return randomLong() & randomLong() & randomLong(); }

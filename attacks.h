@@ -5,16 +5,16 @@
 
 void initAttacks();
 
-bb_t shift(bb_t bb, int dir);
+BitBoard shift(BitBoard bb, int dir);
 
-bb_t getInBetween(int from, int to);
-bb_t getPinnedMoves(int p, int k);
+BitBoard getInBetween(int from, int to);
+BitBoard getPinnedMoves(int p, int k);
 
-bb_t getPawnAttacks(int sq, int color);
-bb_t getKnightAttacks(int sq);
-bb_t getBishopAttacks(int sq, bb_t occupancy);
-bb_t getRookAttacks(int sq, bb_t occupancy);
-bb_t getQueenAttacks(int sq, bb_t occupancy);
-bb_t getKingAttacks(int sq);
+BitBoard getPawnAttacks(int sq, int color);
+BitBoard getKnightAttacks(int sq);
+BitBoard getBishopAttacks(int sq, BitBoard occupancy);
+BitBoard getRookAttacks(int sq, BitBoard occupancy);
+BitBoard getQueenAttacks(int sq, BitBoard occupancy);
+BitBoard getKingAttacks(int sq);
 
 #endif
