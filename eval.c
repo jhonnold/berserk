@@ -130,15 +130,6 @@ void initPositionValues() {
     baseMaterialValues[11][mirror[sq]] =
         S(scoreMG(kingValue) + scoreMG(kingPositionValues[sq]), scoreEG(kingValue) + scoreEG(kingPositionValues[sq]));
   }
-
-  for (int i = 0; i < 12; i++) {
-    for (int j = 0; j < 64; j++) {
-      printf(" S(%4d,%4d),", scoreMG(baseMaterialValues[i][j]), scoreEG(baseMaterialValues[i][j]));
-
-      if ((j & 7) == 7) printf("\n");
-    }
-    printf("\n");
-  }
 }
 // clang-format on
 

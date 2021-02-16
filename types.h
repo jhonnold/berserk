@@ -32,6 +32,19 @@ typedef struct {
   int captureHistory[512];
 } Board;
 
+typedef struct {
+  long startTime;
+  long endTime;
+  int depth;
+  int timeset;
+  int movesToGo;
+
+  long nodes;
+
+  int stopped;
+  int quit;
+} SearchParams;
+
 extern const BitBoard EMPTY;
 
 extern const int PAWN[];

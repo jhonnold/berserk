@@ -8,26 +8,72 @@
 #include "perft.h"
 #include "search.h"
 #include "uci.h"
+#include "util.h"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 // thanks to vice for this
-void parseGo(char* in, Board* board) {
+void parseGo(char* in, SearchParams* params, Board* board) {
   in += 3;
 
+  params->depth = 64;
+  params->timeset = 0;
+  params->stopped = 0;
+  params->quit = 0;
+
   char* ptrChar = in;
-  int perft = 0;
+  int perft = 0, movesToGo = 30, moveTime = -1, time = -1, inc = 0, depth = -1;
 
   if ((ptrChar = strstr(in, "perft")))
     perft = atoi(ptrChar + 6);
 
+  if ((ptrChar = strstr(in, "binc")) && board->side == BLACK)
+    inc = atoi(ptrChar + 5);
+
+  if ((ptrChar = strstr(in, "winc")) && board->side == WHITE)
+    inc = atoi(ptrChar + 5);
+
+  if ((ptrChar = strstr(in, "wtime")) && board->side == WHITE)
+    time = atoi(ptrChar + 6);
+
+  if ((ptrChar = strstr(in, "btime")) && board->side == BLACK)
+    time = atoi(ptrChar + 6);
+
+  if ((ptrChar = strstr(in, "movestogo")))
+    movesToGo = atoi(ptrChar + 10);
+
+  if ((ptrChar = strstr(in, "movetime")))
+    moveTime = atoi(ptrChar + 9);
+
+  if ((ptrChar = strstr(in, "depth")))
+    depth = atoi(ptrChar + 6);
+
+  if (moveTime != -1) {
+    time = moveTime;
+    movesToGo = 1;
+  }
+
   if (perft)
     PerftTest(perft, board);
   else {
-    Move bestMove = 0;
-    Search(board, &bestMove);
+    params->startTime = getTimeMs();
+    params->depth = depth;
 
-    printf("bestmove %s\n", moveStr(bestMove));
+    if (time != -1) {
+      params->timeset = 1;
+      time /= movesToGo;
+      time -= 50;
+      time += inc;
+      params->endTime = params->startTime + time;
+    }
+
+    if (depth == -1)
+      params->depth = 64;
+
+    printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
+           params->timeset);
+
+    Search(board, params);
   }
 }
 
@@ -75,12 +121,13 @@ void UCI(Board* board) {
   setbuf(stdout, NULL);
 
   char in[2048];
+  SearchParams searchParams[1];
 
   printf("id name Berserk 0.1.0\n");
   printf("id author Jay Honnold\n");
   printf("uciok\n");
 
-  while (1) {
+  while (!searchParams->quit) {
     memset(&in[0], 0, sizeof(in));
 
     fflush(stdout);
@@ -99,9 +146,9 @@ void UCI(Board* board) {
     } else if (!strncmp(in, "ucinewgame", 10)) {
       parsePosition("position startpos\n", board);
     } else if (!strncmp(in, "go", 2)) {
-      parseGo(in, board);
+      parseGo(in, searchParams, board);
     } else if (!strncmp(in, "quit", 4)) {
-      break;
+      searchParams->quit = 1;
     } else if (!strncmp(in, "uci", 3)) {
       printf("id name Berserk 0.1.0\n");
       printf("id author Jay Honnold\n");
