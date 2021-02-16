@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -6,6 +7,7 @@
 #include "board.h"
 #include "movegen.h"
 #include "types.h"
+#include "zobrist.h"
 
 const int charToPieceIdx[] = {['P'] = 0, ['N'] = 2, ['B'] = 4, ['R'] = 6, ['Q'] = 8, ['K'] = 10,
                               ['p'] = 1, ['n'] = 3, ['b'] = 5, ['r'] = 7, ['q'] = 9, ['k'] = 11};
@@ -74,6 +76,30 @@ void setSpecialPieces(Board* board) {
   }
 }
 
+uint64_t zobrist(Board* board) {
+  uint64_t hash = 0;
+
+  for (int piece = 0; piece < 12; piece++) {
+    BitBoard pieces = board->pieces[piece];
+
+    while (pieces) {
+      int sq = lsb(pieces);
+      hash ^= zobristPieces[piece][sq];
+      popLsb(pieces);
+    }
+  }
+
+  if (board->epSquare)
+    hash ^= zobristEpKeys[board->epSquare];
+
+  hash ^= zobristCastleKeys[board->castling];
+
+  if (board->side)
+    hash ^= zobristSideKey;
+
+  return hash;
+}
+
 void parseFen(char* fen, Board* board) {
   clear(board);
 
@@ -125,6 +151,8 @@ void parseFen(char* fen, Board* board) {
 
   setOccupancies(board);
   setSpecialPieces(board);
+
+  board->zobrist = zobrist(board);
 }
 
 void printBoard(Board* board) {
@@ -179,6 +207,7 @@ void makeMove(Move move, Board* board) {
   int ep = moveEP(move);
   int castle = moveCastle(move);
 
+  board->zobristHistory[board->moveNo] = board->zobrist;
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->captureHistory[board->moveNo] = -1;
@@ -186,11 +215,15 @@ void makeMove(Move move, Board* board) {
   popBit(board->pieces[piece], start);
   setBit(board->pieces[piece], end);
 
+  board->zobrist ^= zobristPieces[piece][start];
+  board->zobrist ^= zobristPieces[piece][end];
+
   if (capture && !ep) {
     for (int i = board->xside; i < 12; i += 2) {
       if (getBit(board->pieces[i], end)) {
         board->captureHistory[board->moveNo] = i;
         popBit(board->pieces[i], end);
+        board->zobrist ^= zobristPieces[i][end];
         break;
       }
     }
@@ -199,40 +232,66 @@ void makeMove(Move move, Board* board) {
   if (promoted) {
     popBit(board->pieces[piece], end);
     setBit(board->pieces[promoted], end);
+
+    board->zobrist ^= zobristPieces[piece][end];
+    board->zobrist ^= zobristPieces[promoted][end];
   }
 
-  if (ep)
+  if (ep) {
     popBit(board->pieces[board->xside], end - pawnDirections[board->side]);
+    board->zobrist ^= zobristPieces[board->xside][end - pawnDirections[board->side]];
+  }
 
-  board->epSquare = 0;
-  if (dub)
+  if (board->epSquare) {
+    board->zobrist ^= zobristEpKeys[board->epSquare];
+    board->epSquare = 0;
+  }
+
+  if (dub) {
     board->epSquare = end - pawnDirections[board->side];
+    board->zobrist ^= zobristEpKeys[board->epSquare];
+  }
 
   if (castle) {
     // TODO: Remove these "magic" constants
     if (end == 62) {
-      popBit(board->pieces[6], 63);
-      setBit(board->pieces[6], 61);
+      popBit(board->pieces[ROOK[WHITE]], 63);
+      setBit(board->pieces[ROOK[WHITE]], 61);
+
+      board->zobrist ^= zobristPieces[ROOK[WHITE]][63];
+      board->zobrist ^= zobristPieces[ROOK[WHITE]][61];
     } else if (end == 58) {
-      popBit(board->pieces[6], 56);
-      setBit(board->pieces[6], 59);
+      popBit(board->pieces[ROOK[WHITE]], 56);
+      setBit(board->pieces[ROOK[WHITE]], 59);
+
+      board->zobrist ^= zobristPieces[ROOK[WHITE]][56];
+      board->zobrist ^= zobristPieces[ROOK[WHITE]][59];
     } else if (end == 6) {
-      popBit(board->pieces[7], 7);
-      setBit(board->pieces[7], 5);
+      popBit(board->pieces[ROOK[BLACK]], 7);
+      setBit(board->pieces[ROOK[BLACK]], 5);
+
+      board->zobrist ^= zobristPieces[ROOK[BLACK]][7];
+      board->zobrist ^= zobristPieces[ROOK[BLACK]][5];
     } else if (end == 2) {
-      popBit(board->pieces[7], 0);
-      setBit(board->pieces[7], 3);
+      popBit(board->pieces[ROOK[BLACK]], 0);
+      setBit(board->pieces[ROOK[BLACK]], 3);
+
+      board->zobrist ^= zobristPieces[ROOK[BLACK]][0];
+      board->zobrist ^= zobristPieces[ROOK[BLACK]][3];
     }
   }
 
+  board->zobrist ^= zobristCastleKeys[board->castling];
   board->castling &= castlingRights[start];
   board->castling &= castlingRights[end];
+  board->zobrist ^= zobristCastleKeys[board->castling];
 
   setOccupancies(board);
 
   board->moveNo++;
   board->xside = board->side;
   board->side ^= 1;
+  board->zobrist ^= zobristSideKey;
 
   setSpecialPieces(board);
 }
@@ -252,6 +311,7 @@ void undoMove(Move move, Board* board) {
 
   board->epSquare = board->epSquareHistory[board->moveNo];
   board->castling = board->castlingHistory[board->moveNo];
+  board->zobrist = board->zobristHistory[board->moveNo];
 
   popBit(board->pieces[piece], end);
   setBit(board->pieces[piece], start);

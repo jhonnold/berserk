@@ -7,6 +7,8 @@ typedef uint64_t BitBoard;
 
 typedef int Move;
 
+typedef uint64_t TTValue;
+
 typedef struct {
   Move moves[256];
   int count;
@@ -25,6 +27,9 @@ typedef struct {
   int epSquare;
   int castling;
   int moveNo;
+
+  uint64_t zobrist;
+  uint64_t zobristHistory[512];
 
   // history
   int castlingHistory[512];

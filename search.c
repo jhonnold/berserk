@@ -4,6 +4,7 @@
 #include "eval.h"
 #include "movegen.h"
 #include "search.h"
+#include "transposition.h"
 #include "types.h"
 #include "util.h"
 
@@ -12,40 +13,16 @@ const int MATE_BOUND = 30000;
 
 void Search(Board* board, SearchParams* params) {
   params->nodes = 0;
+  ttClear();
 
-  Move bestMove = 0;
   int alpha = -CHECKMATE;
+  int beta = CHECKMATE;
 
-  MoveList moveList[1];
-  generateMoves(moveList, board);
-
-  for (int i = 0; i < moveList->count; i++) {
-    Move move = moveList->moves[i];
-    params->nodes++;
-
-    makeMove(move, board);
-    int score = -negamax(-CHECKMATE, -alpha, 4, 1, board, params);
-
-    undoMove(move, board);
-
-    if (score > alpha) {
-      alpha = score;
-      bestMove = move;
-
-      if (score > MATE_BOUND) {
-        printf("info depth 4 score mate %d pv %s\n", CHECKMATE - score, moveStr(bestMove));
-      } else if (score < -MATE_BOUND) {
-        printf("info depth 4 score mate -%d pv %s\n", score + CHECKMATE, moveStr(bestMove));
-      } else {
-        printf("info depth 4 score cp %d pv %s\n", score, moveStr(bestMove));
-      }
-    }
+  for (int i = 1; i <= params->depth; i++) {
+    negamax(alpha, beta, params->depth, 0, board, params);
   }
 
-  if (!bestMove)
-    printf("bestmove %s\n", moveStr(moveList->moves[0]));
-  else
-    printf("bestmove %s\n", moveStr(bestMove));
+  printf("bestmove %s\n", moveStr(ttMove(ttProbe(board->zobrist))));
 }
 
 int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams* params) {
@@ -55,13 +32,43 @@ int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams*
   if ((params->nodes & 2047) == 0)
     communicate(params);
 
+  TTValue ttValue = ttProbe(board->zobrist);
+  if (ttValue) {
+    if (ttDepth(ttValue) >= depth) {
+      int score = ttScore(ttValue, ply);
+      int flag = ttFlag(ttValue);
+
+      if (flag == TT_EXACT)
+        return score;
+      if (flag == TT_LOWER && score >= beta)
+        return score;
+      if (flag == TT_UPPER && score <= alpha)
+        return score;
+    }
+  }
+
   params->nodes++;
+
+  int bestScore = -CHECKMATE, a0 = alpha;
+  Move bestMove = 0;
 
   MoveList moveList[1];
   generateMoves(moveList, board);
 
   if (!moveList->count)
     return inCheck(board) ? -CHECKMATE + ply : 0;
+
+  if (ttValue) {
+    Move refutationMove = ttMove(ttValue);
+
+    for (int i = 0; i < moveList->count; i++) {
+      if (moveList->moves[i] == refutationMove) {
+        moveList->moves[i] = moveList->moves[0];
+        moveList->moves[0] = refutationMove;
+        break;
+      }
+    }
+  }
 
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
@@ -73,13 +80,34 @@ int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams*
     if (params->stopped)
       return 0;
 
-    if (score >= beta)
-      return beta;
-    if (score > alpha)
-      alpha = score;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = move;
+
+      if (score > alpha)
+        alpha = score;
+
+      if (alpha >= beta)
+        break;
+    }
   }
 
-  return alpha;
+  if (!ply && !params->stopped) {
+    if (bestScore > MATE_BOUND) {
+      printf("info depth %d nodes %ld score mate %d pv %s\n", depth, params->nodes, CHECKMATE - bestScore,
+             moveStr(bestMove));
+    } else if (bestScore < -MATE_BOUND) {
+      printf("info depth %d nodes %ld score mate -%d pv %s\n", depth, params->nodes, bestScore + CHECKMATE,
+             moveStr(bestMove));
+    } else {
+      printf("info depth %d nodes %ld score cp %d pv %s\n", depth, params->nodes, bestScore, moveStr(bestMove));
+    }
+  }
+
+  int ttFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
+  ttPut(board->zobrist, depth, bestScore, ttFlag, bestMove);
+
+  return bestScore;
 }
 
 int quiesce(int alpha, int beta, Board* board, SearchParams* params) {
