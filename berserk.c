@@ -4,10 +4,12 @@
 
 #include "attacks.h"
 #include "board.h"
+#include "eval.h"
 #include "types.h"
 #include "uci.h"
 
 int main() {
+  initPositionValues();
   initAttacks();
 
   Board board[1];

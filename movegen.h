@@ -15,10 +15,12 @@
 #define moveCastle(m) ((m & 0x800000) >> 23)
 
 extern const int pawnDirections[];
+extern const char* promotionChars;
 
 void addMove(MoveList* moveList, Move move);
 void generateMoves(MoveList* moveList, Board* board);
 void printMoves(MoveList* moveList);
 Move parseMove(char* moveStr, Board* board);
+char* moveStr(Move move);
 
 #endif

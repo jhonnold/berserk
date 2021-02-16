@@ -6,7 +6,7 @@
 #include "movegen.h"
 #include "types.h"
 
-const char* promotionChars = "nbrq";
+const char* promotionChars = "ppnnbbrrqqkk";
 const int pawnDirections[] = {-8, 8};
 const BitBoard middleFour = 281474976645120UL;
 const BitBoard promotionRanks[] = {65280UL, 71776119061217280L};
@@ -437,9 +437,21 @@ Move parseMove(char* moveStr, Board* board) {
     if (!promotedPiece)
       return match;
 
-    if (promotionChars[promotedPiece >> 1] == moveStr[4])
+    if (promotionChars[promotedPiece] == moveStr[4])
       return match;
   }
 
   return 0;
+}
+
+char* moveStr(Move move) {
+  static char buffer[6];
+
+  if (movePromo(move)) {
+    sprintf(buffer, "%s%s%c", idxToCord[moveStart(move)], idxToCord[moveEnd(move)], promotionChars[movePromo(move)]);
+  } else {
+    sprintf(buffer, "%s%s", idxToCord[moveStart(move)], idxToCord[moveEnd(move)]);
+  }
+
+  return buffer;
 }

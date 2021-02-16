@@ -3,8 +3,10 @@
 #include <string.h>
 
 #include "board.h"
+#include "eval.h"
 #include "movegen.h"
 #include "perft.h"
+#include "search.h"
 #include "uci.h"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -21,6 +23,12 @@ void parseGo(char* in, Board* board) {
 
   if (perft)
     PerftTest(perft, board);
+  else {
+    Move bestMove = 0;
+    Search(board, &bestMove);
+
+    printf("bestmove %s\n", moveStr(bestMove));
+  }
 }
 
 void parsePosition(char* in, Board* board) {
@@ -98,6 +106,8 @@ void UCI(Board* board) {
       printf("id name Berserk 0.1.0\n");
       printf("id author Jay Honnold\n");
       printf("uciok\n");
+    } else if (!strncmp(in, "eval", 4)) {
+      printf("score cp %d\n", TraceEvaluate(board));
     }
   }
 }
