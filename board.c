@@ -380,3 +380,12 @@ int isLegal(Move move, Board* board) {
 
   return 1;
 }
+
+inline int isRepetition(Board* board) {
+  for (int i = 0; i < board->moveNo; i++) {
+    if (board->zobristHistory[i] == board->zobrist)
+      return 1;
+  }
+
+  return 0;
+}

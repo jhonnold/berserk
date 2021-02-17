@@ -47,6 +47,9 @@ void Search(Board* board, SearchParams* params) {
 }
 
 int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams* params) {
+  if (ply && isRepetition(board))
+    return 0;
+
   if (depth == 0)
     return quiesce(alpha, beta, board, params);
 
