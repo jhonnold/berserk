@@ -344,6 +344,74 @@ void generateKingMoves(MoveList* moveList, Board* board) {
   generateKingQuiets(moveList, board);
 }
 
+// captures and promotions
+void generateQuiesceMoves(MoveList* moveList, Board* board) {
+  moveList->count = 0;
+  int kingSq = lsb(board->pieces[KING[board->side]]);
+
+  if (bits(board->checkers) > 1) {
+    generateKingCaptures(moveList, board);
+  } else if (board->checkers) {
+    BitBoard nonPinned = ~board->pinners;
+    generatePawnCaptures(moveList, board->pieces[PAWN[board->side]] & nonPinned, board->checkers, board);
+    generatePawnPromotions(moveList, board->pieces[PAWN[board->side]] & nonPinned, board->checkers, board);
+    generateKnightCaptures(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, board->checkers, board);
+    generateBishopCaptures(moveList, board->pieces[BISHOP[board->side]] & nonPinned, board->checkers, board);
+    generateRookCaptures(moveList, board->pieces[ROOK[board->side]] & nonPinned, board->checkers, board);
+    generateQueenCaptures(moveList, board->pieces[QUEEN[board->side]] & nonPinned, board->checkers, board);
+    generateKingCaptures(moveList, board);
+  } else {
+    BitBoard nonPinned = ~board->pinners;
+    generatePawnCaptures(moveList, board->pieces[PAWN[board->side]] & nonPinned, -1ULL, board);
+    generatePawnPromotions(moveList, board->pieces[PAWN[board->side]] & nonPinned, -1ULL, board);
+    generateKnightCaptures(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, -1ULL, board);
+    generateBishopCaptures(moveList, board->pieces[BISHOP[board->side]] & nonPinned, -1ULL, board);
+    generateRookCaptures(moveList, board->pieces[ROOK[board->side]] & nonPinned, -1ULL, board);
+    generateQueenCaptures(moveList, board->pieces[QUEEN[board->side]] & nonPinned, -1ULL, board);
+    generateKingCaptures(moveList, board);
+
+    // TODO: Clean this up?
+    // Could implement like stockfish and eliminate illegal pinned moves after the fact
+    BitBoard pinnedPawns = board->pieces[PAWN[board->side]] & board->pinners;
+    BitBoard pinnedBishops = board->pieces[BISHOP[board->side]] & board->pinners;
+    BitBoard pinnedRooks = board->pieces[ROOK[board->side]] & board->pinners;
+    BitBoard pinnedQueens = board->pieces[QUEEN[board->side]] & board->pinners;
+
+    while (pinnedPawns) {
+      int sq = lsb(pinnedPawns);
+      generatePawnCaptures(moveList, pinnedPawns & -pinnedPawns, getPinnedMoves(sq, kingSq), board);
+      generatePawnPromotions(moveList, pinnedPawns & -pinnedPawns, getPinnedMoves(sq, kingSq), board);
+      popLsb(pinnedPawns);
+    }
+
+    while (pinnedBishops) {
+      int sq = lsb(pinnedBishops);
+      generateBishopCaptures(moveList, pinnedBishops & -pinnedBishops, getPinnedMoves(sq, kingSq), board);
+      popLsb(pinnedBishops);
+    }
+
+    while (pinnedRooks) {
+      int sq = lsb(pinnedRooks);
+      generateRookCaptures(moveList, pinnedRooks & -pinnedRooks, getPinnedMoves(sq, kingSq), board);
+      popLsb(pinnedRooks);
+    }
+
+    while (pinnedQueens) {
+      int sq = lsb(pinnedQueens);
+      generateQueenCaptures(moveList, pinnedQueens & -pinnedQueens, getPinnedMoves(sq, kingSq), board);
+      popLsb(pinnedQueens);
+    }
+  }
+
+  Move* curr = moveList->moves;
+  while (curr != moveList->moves + moveList->count) {
+    if ((moveStart(*curr) == kingSq || moveEP(*curr)) && !isLegal(*curr, board))
+      *curr = moveList->moves[--moveList->count];
+    else
+      ++curr;
+  }
+}
+
 void generateMoves(MoveList* moveList, Board* board) {
   moveList->count = 0;
   int kingSq = lsb(board->pieces[KING[board->side]]);

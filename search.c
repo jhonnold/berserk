@@ -151,12 +151,10 @@ int quiesce(int alpha, int beta, Board* board, SearchParams* params) {
     alpha = eval;
 
   MoveList moveList[1];
-  generateMoves(moveList, board);
+  generateQuiesceMoves(moveList, board);
 
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
-    if (!moveCapture(move))
-      continue;
 
     makeMove(move, board);
     int score = -quiesce(-beta, -alpha, board, params);
