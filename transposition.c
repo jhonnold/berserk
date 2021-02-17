@@ -26,7 +26,7 @@ inline int ttDepth(TTValue value) { return (int)((value & 0x3F000000) >> 24); }
 inline int ttScore(TTValue value, int ply) {
   int score = (int)(value >> 32);
 
-  return score > MATE_BOUND ? CHECKMATE - ply : score < -MATE_BOUND ? -CHECKMATE + ply : score;
+  return score > MATE_BOUND ? score - ply : score < -MATE_BOUND ? score + ply : score;
 }
 
 inline TTValue ttProbe(uint64_t hash) {

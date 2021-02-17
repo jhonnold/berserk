@@ -31,10 +31,10 @@ void Search(Board* board, SearchParams* params) {
     while (!params->stopped) {
       score = negamax(alpha, beta, depth, 0, board, params);
 
-      if (score <= alpha) {
+      if (score <= alpha && score > -MATE_BOUND) {
         alpha = max(alpha - delta, -CHECKMATE);
         delta *= 2;
-      } else if (score >= beta) {
+      } else if (score >= beta && score < MATE_BOUND) {
         beta = min(beta + delta, CHECKMATE);
         delta *= 2;
       } else {
@@ -115,11 +115,15 @@ int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams*
 
   if (!ply && !params->stopped) {
     if (bestScore > MATE_BOUND) {
+      int movesToMate = (CHECKMATE - bestScore) / 2 + ((CHECKMATE - bestScore) & 1);
+
       printf("info depth %d nodes %ld time %ld score mate %d pv %s\n", depth, params->nodes,
-             getTimeMs() - params->startTime, CHECKMATE - bestScore, moveStr(bestMove));
+             getTimeMs() - params->startTime, movesToMate, moveStr(bestMove));
     } else if (bestScore < -MATE_BOUND) {
+      int movesToMate = (CHECKMATE + bestScore) / 2 - ((CHECKMATE - bestScore) & 1);
+
       printf("info depth %d nodes %ld time %ld score mate -%d pv %s\n", depth, params->nodes,
-             getTimeMs() - params->startTime, bestScore + CHECKMATE, moveStr(bestMove));
+             getTimeMs() - params->startTime, movesToMate, moveStr(bestMove));
     } else {
       printf("info depth %d nodes %ld time %ld score cp %d pv %s\n", depth, params->nodes,
              getTimeMs() - params->startTime, bestScore, moveStr(bestMove));
