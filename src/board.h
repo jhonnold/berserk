@@ -17,5 +17,7 @@ int isSquareAttacked(int sq, int attacker, BitBoard occupancy, Board* board);
 int inCheck(Board* board);
 int isLegal(Move move, Board* board);
 int isRepetition(Board* board);
+void nullMove(Board* board);
+void undoNullMove(Board* board);
 
 #endif

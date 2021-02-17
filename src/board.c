@@ -389,3 +389,30 @@ inline int isRepetition(Board* board) {
 
   return 0;
 }
+
+void nullMove(Board* board) {
+  board->zobristHistory[board->moveNo] = board->zobrist;
+  board->castlingHistory[board->moveNo] = board->castling;
+  board->epSquareHistory[board->moveNo] = board->epSquare;
+  board->captureHistory[board->moveNo] = -1;
+
+  if (board->epSquare)
+    board->zobrist ^= zobristEpKeys[board->epSquare];
+  board->epSquare = 0;
+
+  board->zobrist ^= zobristSideKey;
+
+  board->moveNo++;
+  board->side = board->xside;
+  board->xside ^= 1;
+}
+
+void undoNullMove(Board* board) {
+  board->side = board->xside;
+  board->xside ^= 1;
+  board->moveNo--;
+
+  board->zobrist = board->zobristHistory[board->moveNo];
+  board->castling = board->castlingHistory[board->moveNo];
+  board->epSquare = board->epSquareHistory[board->moveNo];
+}

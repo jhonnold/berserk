@@ -7,7 +7,7 @@ extern const int CHECKMATE;
 extern const int MATE_BOUND;
 
 void Search(Board* board, SearchParams* params);
-int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams* params);
+int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, SearchParams* params);
 int quiesce(int alpha, int beta, Board* board, SearchParams* params);
 
 #endif

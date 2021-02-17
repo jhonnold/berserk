@@ -21,15 +21,15 @@ void Search(Board* board, SearchParams* params) {
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
 
-  int score = negamax(alpha, beta, 1, 0, board, params);
+  int score = negamax(alpha, beta, 1, 0, 1, board, params);
 
   for (int depth = 2; depth <= params->depth && !params->stopped; depth++) {
-    int delta = depth >= 4 ? 25 : CHECKMATE;
+    int delta = depth >= 4 ? 50 : CHECKMATE;
     alpha = max(score - delta, -CHECKMATE);
     beta = min(score + delta, CHECKMATE);
 
     while (!params->stopped) {
-      score = negamax(alpha, beta, depth, 0, board, params);
+      score = negamax(alpha, beta, depth, 0, 1, board, params);
 
       if (score <= alpha && score > -MATE_BOUND) {
         alpha = max(alpha - delta, -CHECKMATE);
@@ -46,7 +46,7 @@ void Search(Board* board, SearchParams* params) {
   printf("bestmove %s\n", moveStr(ttMove(ttProbe(board->zobrist))));
 }
 
-int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams* params) {
+int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, SearchParams* params) {
   if (ply && isRepetition(board))
     return 0;
 
@@ -73,6 +73,18 @@ int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams*
 
   params->nodes++;
 
+  if (depth > 3 && canNull && !inCheck(board)) {
+    nullMove(board);
+    int score = -negamax(-beta, -beta + 1, depth - 3, ply + 1, 0, board, params);
+    undoNullMove(board);
+
+    if (params->stopped)
+      return 0;
+
+    if (score >= beta)
+      return beta;
+  }
+
   int bestScore = -CHECKMATE, a0 = alpha;
   Move bestMove = 0;
 
@@ -84,7 +96,7 @@ int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams*
     Move move = moveList->moves[i];
 
     makeMove(move, board);
-    int score = -negamax(-beta, -alpha, depth - 1, ply + 1, board, params);
+    int score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params);
     undoMove(move, board);
 
     if (params->stopped)
