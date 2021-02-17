@@ -79,22 +79,8 @@ int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams*
   MoveList moveList[1];
   generateMoves(moveList, board);
 
-  if (!moveList->count)
-    return inCheck(board) ? -CHECKMATE + ply : 0;
-
-  if (ttValue) {
-    Move refutationMove = ttMove(ttValue);
-
-    for (int i = 0; i < moveList->count; i++) {
-      if (moveList->moves[i] == refutationMove) {
-        moveList->moves[i] = moveList->moves[0];
-        moveList->moves[0] = refutationMove;
-        break;
-      }
-    }
-  }
-
   for (int i = 0; i < moveList->count; i++) {
+    bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
     makeMove(move, board);
@@ -115,6 +101,10 @@ int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams*
         break;
     }
   }
+
+  // Checkmate detection
+  if (!moveList->count)
+    return inCheck(board) ? -CHECKMATE + ply : 0;
 
   if (!ply && !params->stopped) {
     if (bestScore > MATE_BOUND) {
@@ -157,6 +147,7 @@ int quiesce(int alpha, int beta, Board* board, SearchParams* params) {
   generateQuiesceMoves(moveList, board);
 
   for (int i = 0; i < moveList->count; i++) {
+    bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
     makeMove(move, board);

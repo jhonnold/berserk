@@ -23,5 +23,6 @@ void generateQuiesceMoves(MoveList* moveList, Board* board);
 void printMoves(MoveList* moveList);
 Move parseMove(char* moveStr, Board* board);
 char* moveStr(Move move);
+void bubbleTopMove(MoveList* moveList, int from);
 
 #endif

@@ -4,7 +4,21 @@
 #include "bits.h"
 #include "board.h"
 #include "movegen.h"
+#include "transposition.h"
 #include "types.h"
+
+const int mvvLva[12][12] = {{105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
+                            {105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
+                            {104, 104, 204, 204, 304, 304, 404, 404, 504, 504, 604, 604},
+                            {104, 104, 204, 204, 304, 304, 404, 404, 504, 504, 604, 604},
+                            {103, 103, 203, 203, 303, 303, 403, 403, 503, 503, 603, 603},
+                            {103, 103, 203, 203, 303, 303, 403, 403, 503, 503, 603, 603},
+                            {102, 102, 202, 202, 302, 302, 402, 402, 502, 502, 602, 602},
+                            {102, 102, 202, 202, 302, 302, 402, 402, 502, 502, 602, 602},
+                            {101, 101, 201, 201, 301, 301, 401, 401, 501, 501, 601, 601},
+                            {101, 101, 201, 201, 301, 301, 401, 401, 501, 501, 601, 601},
+                            {100, 100, 200, 200, 300, 300, 400, 400, 500, 500, 600, 600},
+                            {100, 100, 200, 200, 300, 300, 400, 400, 500, 500, 600, 600}};
 
 const char* promotionChars = "ppnnbbrrqqkk";
 const int pawnDirections[] = {-8, 8};
@@ -476,6 +490,22 @@ void generateMoves(MoveList* moveList, Board* board) {
     else
       ++curr;
   }
+
+  TTValue ttValue = ttProbe(board->zobrist);
+  Move hashMove = ttMove(ttValue);
+  for (int i = 0; i < moveList->count; i++) {
+    if (moveList->moves[i] == hashMove) {
+      moveList->scores[i] = INT32_MAX;
+    } else if (moveCapture(moveList->moves[i])) {
+      for (int j = board->xside; j < 12; j += 2)
+        if (getBit(board->pieces[j], moveEnd(moveList->moves[i]))) {
+          moveList->scores[i] = mvvLva[movePiece(moveList->moves[i])][j];
+          break;
+        }
+    } else {
+      moveList->scores[i] = 0;
+    }
+  }
 }
 
 void printMoves(MoveList* moveList) {
@@ -522,4 +552,23 @@ char* moveStr(Move move) {
   }
 
   return buffer;
+}
+
+void bubbleTopMove(MoveList* moveList, int from) {
+  int max = moveList->scores[from];
+  int idx = from;
+
+  for (int i = from + 1; i < moveList->count; i++) {
+    if (moveList->scores[i] > max) {
+      idx = i;
+      max = moveList->scores[i];
+    }
+  }
+
+  // We don't have to swap
+  if (idx != from) {
+    Move temp = moveList->moves[from];
+    moveList->moves[from] = moveList->moves[idx];
+    moveList->moves[idx] = temp;
+  }
 }
