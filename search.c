@@ -8,6 +8,9 @@
 #include "types.h"
 #include "util.h"
 
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+
 const int CHECKMATE = 32767;
 const int MATE_BOUND = 30000;
 
@@ -18,8 +21,26 @@ void Search(Board* board, SearchParams* params) {
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
 
-  for (int i = 1; i <= params->depth; i++) {
-    negamax(alpha, beta, params->depth, 0, board, params);
+  int score = negamax(alpha, beta, 1, 0, board, params);
+
+  for (int depth = 2; depth <= params->depth && !params->stopped; depth++) {
+    int delta = depth >= 4 ? 25 : CHECKMATE;
+    alpha = max(score - delta, -CHECKMATE);
+    beta = min(score + delta, CHECKMATE);
+
+    while (!params->stopped) {
+      score = negamax(alpha, beta, depth, 0, board, params);
+
+      if (score <= alpha) {
+        alpha = max(alpha - delta, -CHECKMATE);
+        delta *= 2;
+      } else if (score >= beta) {
+        beta = min(beta + delta, CHECKMATE);
+        delta *= 2;
+      } else {
+        break;
+      }
+    }
   }
 
   printf("bestmove %s\n", moveStr(ttMove(ttProbe(board->zobrist))));
@@ -94,13 +115,14 @@ int negamax(int alpha, int beta, int depth, int ply, Board* board, SearchParams*
 
   if (!ply && !params->stopped) {
     if (bestScore > MATE_BOUND) {
-      printf("info depth %d nodes %ld score mate %d pv %s\n", depth, params->nodes, CHECKMATE - bestScore,
-             moveStr(bestMove));
+      printf("info depth %d nodes %ld time %ld score mate %d pv %s\n", depth, params->nodes,
+             getTimeMs() - params->startTime, CHECKMATE - bestScore, moveStr(bestMove));
     } else if (bestScore < -MATE_BOUND) {
-      printf("info depth %d nodes %ld score mate -%d pv %s\n", depth, params->nodes, bestScore + CHECKMATE,
-             moveStr(bestMove));
+      printf("info depth %d nodes %ld time %ld score mate -%d pv %s\n", depth, params->nodes,
+             getTimeMs() - params->startTime, bestScore + CHECKMATE, moveStr(bestMove));
     } else {
-      printf("info depth %d nodes %ld score cp %d pv %s\n", depth, params->nodes, bestScore, moveStr(bestMove));
+      printf("info depth %d nodes %ld time %ld score cp %d pv %s\n", depth, params->nodes,
+             getTimeMs() - params->startTime, bestScore, moveStr(bestMove));
     }
   }
 
