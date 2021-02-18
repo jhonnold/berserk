@@ -14,6 +14,8 @@
 const int CHECKMATE = 32767;
 const int MATE_BOUND = 30000;
 
+const int FUTILITY_MARGINS[] = {0, 90, 180, 280, 380, 490, 600};
+
 void Search(Board* board, SearchParams* params) {
   params->nodes = 0;
   ttClear();
@@ -47,11 +49,21 @@ void Search(Board* board, SearchParams* params) {
 }
 
 int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, SearchParams* params) {
+  // Repetition detection
   if (ply && isRepetition(board))
     return 0;
 
+  // Mate distance pruning
+  alpha = max(alpha, -CHECKMATE + ply);
+  beta = min(beta, CHECKMATE - ply - 1);
+  if (alpha >= beta)
+    return alpha;
+
+  // Check extension
+  if (inCheck(board))
+    depth++;
   if (depth == 0)
-    return quiesce(alpha, beta, board, params);
+    return quiesce(alpha, beta, ply, board, params);
 
   if ((params->nodes & 2047) == 0)
     communicate(params);
@@ -73,20 +85,33 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
   params->nodes++;
 
-  if (depth > 3 && canNull && !inCheck(board)) {
-    nullMove(board);
-    int score = -negamax(-beta, -beta + 1, depth - 3, ply + 1, 0, board, params);
-    undoNullMove(board);
-
-    if (params->stopped)
-      return 0;
-
-    if (score >= beta)
-      return beta;
-  }
-
+  int isPV = beta - alpha != 1 ? 1 : 0;
   int bestScore = -CHECKMATE, a0 = alpha;
   Move bestMove = 0;
+
+  int staticEval = Evaluate(board);
+  if (!isPV && !inCheck(board)) {
+    // Reverse Futility Pruning
+    if (depth <= 6 && staticEval - FUTILITY_MARGINS[depth] >= beta && staticEval < MATE_BOUND)
+      return staticEval;
+
+    // Null move pruning
+    if (depth > 3 && canNull) {
+      int R = 3;
+      if (depth >= 6)
+        R++;
+
+      nullMove(board);
+      int score = -negamax(-beta, -beta + 1, depth - R, ply + 1, 0, board, params);
+      undoNullMove(board);
+
+      if (params->stopped)
+        return 0;
+
+      if (score >= beta)
+        return beta;
+    }
+  }
 
   MoveList moveList[1];
   generateMoves(moveList, board);
@@ -96,7 +121,20 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     Move move = moveList->moves[i];
 
     makeMove(move, board);
-    int score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params);
+
+    int score;
+    if (i == 0) {
+      // search first move at full window
+      score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params);
+    } else {
+      // other moves at zws
+      score = -negamax(-alpha - 1, -alpha, depth - 1, ply + 1, 1, board, params);
+
+      // fallback if we find a better PV
+      if (score > alpha && score < beta)
+        score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params);
+    }
+
     undoMove(move, board);
 
     if (params->stopped)
@@ -141,9 +179,22 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   return bestScore;
 }
 
-int quiesce(int alpha, int beta, Board* board, SearchParams* params) {
+int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params) {
   if ((params->nodes & 2047) == 0)
     communicate(params);
+
+  TTValue ttValue = ttProbe(board->zobrist);
+  if (ttValue) {
+    int score = ttScore(ttValue, ply);
+    int flag = ttFlag(ttValue);
+
+    if (flag == TT_EXACT)
+      return score;
+    if (flag == TT_LOWER && score >= beta)
+      return score;
+    if (flag == TT_UPPER && score <= alpha)
+      return score;
+  }
 
   params->nodes++;
 
@@ -170,7 +221,7 @@ int quiesce(int alpha, int beta, Board* board, SearchParams* params) {
       continue;
 
     makeMove(move, board);
-    int score = -quiesce(-beta, -alpha, board, params);
+    int score = -quiesce(-beta, -alpha, ply + 1, board, params);
     undoMove(move, board);
 
     if (params->stopped)

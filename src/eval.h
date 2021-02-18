@@ -9,6 +9,12 @@
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 
+extern const int pawnValue;
+extern const int knightValue;
+extern const int bishopValue;
+extern const int rookValue;
+extern const int queenValue;
+extern const int kingValue;
 extern const int materialValues[];
 
 void initPositionValues();
