@@ -9,4 +9,4 @@ all:
 	$(CC) $(CFLAGS) $(SRC) -o $(EXE)
 
 clean:
-	rm -rf berserk
+	rm -rf $(EXE)

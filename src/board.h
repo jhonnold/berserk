@@ -19,5 +19,6 @@ int isLegal(Move move, Board* board);
 int isRepetition(Board* board);
 void nullMove(Board* board);
 void undoNullMove(Board* board);
+int capturedPiece(Move move, Board* board);
 
 #endif

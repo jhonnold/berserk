@@ -162,6 +162,13 @@ int quiesce(int alpha, int beta, Board* board, SearchParams* params) {
     bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
+    if (movePromo(move) && movePromo(move) < QUEEN[WHITE])
+      continue;
+
+    int captured = capturedPiece(move, board);
+    if (eval + 200 + scoreMG(materialValues[captured]) < alpha)
+      continue;
+
     makeMove(move, board);
     int score = -quiesce(-beta, -alpha, board, params);
     undoMove(move, board);

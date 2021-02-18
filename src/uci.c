@@ -10,6 +10,9 @@
 #include "uci.h"
 #include "util.h"
 
+#define NAME "Berserk"
+#define VERSION "1.1.0"
+
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 // thanks to vice for this
@@ -123,7 +126,7 @@ void UCI(Board* board) {
   char in[2048];
   SearchParams searchParams[1];
 
-  printf("id name Berserk 0.1.0\n");
+  printf("id name " NAME " " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("uciok\n");
 
@@ -150,7 +153,7 @@ void UCI(Board* board) {
     } else if (!strncmp(in, "quit", 4)) {
       searchParams->quit = 1;
     } else if (!strncmp(in, "uci", 3)) {
-      printf("id name Berserk 0.1.0\n");
+      printf("id name " NAME " " VERSION "\n");
       printf("id author Jay Honnold\n");
       printf("uciok\n");
     } else if (!strncmp(in, "eval", 4)) {

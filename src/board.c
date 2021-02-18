@@ -197,6 +197,14 @@ inline int isSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* 
 
 inline int inCheck(Board* board) { return board->checkers ? 1 : 0; }
 
+inline int capturedPiece(Move move, Board* board) {
+  for (int i = board->xside; i < 12; i += 2)
+    if (getBit(board->pieces[i], moveEnd(move)))
+      return i;
+
+  return -1;
+}
+
 void makeMove(Move move, Board* board) {
   int start = moveStart(move);
   int end = moveEnd(move);
@@ -219,14 +227,10 @@ void makeMove(Move move, Board* board) {
   board->zobrist ^= zobristPieces[piece][end];
 
   if (capture && !ep) {
-    for (int i = board->xside; i < 12; i += 2) {
-      if (getBit(board->pieces[i], end)) {
-        board->captureHistory[board->moveNo] = i;
-        popBit(board->pieces[i], end);
-        board->zobrist ^= zobristPieces[i][end];
-        break;
-      }
-    }
+    int captured = capturedPiece(move, board);
+    board->captureHistory[board->moveNo] = captured;
+    popBit(board->pieces[captured], end);
+    board->zobrist ^= zobristPieces[captured][end];
   }
 
   if (promoted) {

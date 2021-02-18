@@ -497,11 +497,7 @@ void generateMoves(MoveList* moveList, Board* board) {
     if (moveList->moves[i] == hashMove) {
       moveList->scores[i] = INT32_MAX;
     } else if (moveCapture(moveList->moves[i])) {
-      for (int j = board->xside; j < 12; j += 2)
-        if (getBit(board->pieces[j], moveEnd(moveList->moves[i]))) {
-          moveList->scores[i] = mvvLva[movePiece(moveList->moves[i])][j];
-          break;
-        }
+      moveList->scores[i] = mvvLva[movePiece(moveList->moves[i])][capturedPiece(moveList->moves[i], board)];
     } else {
       moveList->scores[i] = 0;
     }
