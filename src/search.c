@@ -116,24 +116,38 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   MoveList moveList[1];
   generateMoves(moveList, board);
 
+  int numMoves = 0;
   for (int i = 0; i < moveList->count; i++) {
     bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
+    numMoves++;
     makeMove(move, board);
 
-    int score;
-    if (i == 0) {
-      // search first move at full window
-      score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params);
-    } else {
-      // other moves at zws
+    // LMR
+    int score = alpha + 1;
+    int newDepth = depth - 1;
+
+    // Start LMR
+    int doZws = (!isPV || numMoves > 1) ? 1 : 0;
+
+    if (depth >= 3 && numMoves > (!ply ? 3 : 1) && !moveCapture(move) && !movePromo(move)) {
+      // Senpai logic
+      if (numMoves <= 6)
+        newDepth--;
+      else
+        newDepth -= depth / 2;
+
+      score = -negamax(-alpha - 1, -alpha, newDepth, ply + 1, 1, board, params);
+
+      doZws = (score > alpha) ? 1 : 0;
+    }
+
+    if (doZws)
       score = -negamax(-alpha - 1, -alpha, depth - 1, ply + 1, 1, board, params);
 
-      // fallback if we find a better PV
-      if (score > alpha && score < beta)
-        score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params);
-    }
+    if (isPV && (numMoves == 1 || (score > alpha && (!ply || score < beta))))
+      score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params);
 
     undoMove(move, board);
 
