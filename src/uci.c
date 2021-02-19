@@ -11,7 +11,7 @@
 #include "util.h"
 
 #define NAME "Berserk"
-#define VERSION "1.1.0"
+#define VERSION "1.2.0"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
