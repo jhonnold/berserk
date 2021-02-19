@@ -65,7 +65,9 @@ int see(Board* board, int side, Move move) {
   int end = moveEnd(move);
 
   BitBoard attackers = attacksTo(board, end);
-  int attackedPieceVal = scoreMG(materialValues[capturedPiece(move, board)]);
+  int captured = capturedPiece(move, board);
+  // We can run see against a non-capture
+  int attackedPieceVal = captured >= 0 ? scoreMG(materialValues[captured]) : 0;
 
   side = board->xside;
   gain[0] = attackedPieceVal;
@@ -618,6 +620,7 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
     Move move = moveList->moves[i];
 
     if (move == hashMove) {
+      moveList->scores[i] = HASH;
     } else if (moveCapture(move)) {
       int mover = movePiece(move);
       int captured = capturedPiece(move, board);

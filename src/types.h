@@ -44,14 +44,16 @@ typedef struct {
 } Board;
 
 typedef struct {
+  int nodes;
+  int seldepth;
+} SearchData;
+
+typedef struct {
   long startTime;
   long endTime;
   int depth;
   int timeset;
   int movesToGo;
-
-  long nodes;
-
   int stopped;
   int quit;
 } SearchParams;
