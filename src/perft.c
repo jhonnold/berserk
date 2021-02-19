@@ -11,7 +11,7 @@ int64_t perft(int depth, Board* board) {
     return 1;
 
   MoveList moveList[1];
-  generateMoves(moveList, board);
+  generateMoves(moveList, board, 0);
 
   if (depth == 1)
     return moveList->count;
@@ -37,7 +37,7 @@ void PerftTest(int depth, Board* board) {
   gettimeofday(&start, NULL);
 
   MoveList moveList[1];
-  generateMoves(moveList, board);
+  generateMoves(moveList, board, 0);
 
   for (int i = 0; i < moveList->count; i++) {
     Move m = moveList->moves[i];

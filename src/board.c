@@ -218,6 +218,7 @@ void makeMove(Move move, Board* board) {
   board->zobristHistory[board->moveNo] = board->zobrist;
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
+  board->gameMoves[board->moveNo] = move;
   board->captureHistory[board->moveNo] = -1;
 
   popBit(board->pieces[piece], start);

@@ -3,9 +3,21 @@
 #include "attacks.h"
 #include "bits.h"
 #include "board.h"
+#include "eval.h"
 #include "movegen.h"
+#include "search.h"
 #include "transposition.h"
 #include "types.h"
+
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+const int HASH = INT32_MAX;
+const int GOOD_CAPTURE = INT32_MAX - INT16_MAX;
+const int BAD_CAPTURE = -INT32_MAX + INT16_MAX;
+const int KILLER1 = INT32_MAX - 2 * INT16_MAX;
+const int KILLER2 = INT32_MAX - 2 * INT16_MAX - 1;
+const int COUNTER1 = INT32_MAX - 2 * INT16_MAX - 10;
 
 const int mvvLva[12][12] = {{105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
                             {105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
@@ -27,6 +39,102 @@ const BitBoard promotionRanks[] = {65280UL, 71776119061217280L};
 const BitBoard homeRanks[] = {71776119061217280L, 65280UL};
 const BitBoard thirdRanks[] = {280375465082880L, 16711680L};
 const BitBoard filled = -1ULL;
+
+BitBoard attacksTo(Board* board, int sq) {
+  BitBoard attacks = (getPawnAttacks(sq, WHITE) & board->pieces[PAWN[BLACK]]) |
+                     (getPawnAttacks(sq, BLACK) & board->pieces[PAWN[WHITE]]) |
+                     (getKnightAttacks(sq) & (board->pieces[KNIGHT[WHITE]] | board->pieces[KNIGHT[BLACK]])) |
+                     (getKingAttacks(sq) & (board->pieces[KING[WHITE]] | board->pieces[KING[BLACK]]));
+
+  attacks |=
+      getBishopAttacks(sq, board->occupancies[2]) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+  attacks |= getRookAttacks(sq, board->occupancies[2]) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+                                                          board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+  return attacks;
+}
+
+int see(Board* board, int side, Move move) {
+  BitBoard occupied = board->occupancies[2];
+
+  int gain[32];
+  int captureCount = 1;
+
+  int start = moveStart(move);
+  int end = moveEnd(move);
+
+  BitBoard attackers = attacksTo(board, end);
+  int attackedPieceVal = scoreMG(materialValues[capturedPiece(move, board)]);
+
+  side = board->xside;
+  gain[0] = attackedPieceVal;
+
+  int piece = movePiece(move);
+  attackedPieceVal = scoreMG(materialValues[piece]);
+  popBit(occupied, start);
+
+  // If pawn/bishop/queen captures
+  if (piece == 0 || piece == 1 || piece == 4 || piece == 5 || piece == 8 || piece == 9)
+    attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+                                                    board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+  // If pawn/rook/queen captures (ep)
+  if (piece == 0 || piece == 1 || (piece >= 6 && piece <= 9))
+    attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+                                                  board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+  BitBoard attackee = 0;
+  attackers &= occupied;
+
+  while (attackers) {
+    for (piece = side; piece <= KING[side]; piece += 2)
+      if ((attackee = board->pieces[piece] & attackers))
+        break;
+
+    if (piece >= 12)
+      break;
+
+    occupied ^= (attackee & -attackee);
+
+    // If pawn/bishop/queen captures
+    if (piece == 0 || piece == 1 || piece == 4 || piece == 5 || piece == 8 || piece == 9)
+      attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+                                                      board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+    // If pawn/rook/queen captures (ep)
+    if (piece == 0 || piece == 1 || (piece >= 6 && piece <= 9))
+      attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+                                                    board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+    gain[captureCount] = -gain[captureCount - 1] + attackedPieceVal;
+    attackedPieceVal = scoreMG(materialValues[piece]);
+    if (gain[captureCount++] - attackedPieceVal > 0)
+      break;
+
+    side ^= 1;
+    attackers &= occupied;
+  }
+
+  while (--captureCount)
+    gain[captureCount - 1] = -MAX(-gain[captureCount - 1], gain[captureCount]);
+
+  return gain[0];
+}
+
+inline void addKiller(Board* board, Move move, int ply) {
+  if (board->killers[ply][0] == move)
+    board->killers[ply][1] = board->killers[ply][0];
+  board->killers[ply][0] = move;
+}
+
+inline void addHistory(Board* board, Move move, int depth) {
+  board->history[board->side][moveSE(move)] += (depth * depth);
+}
+
+inline void addBf(Board* board, Move move, int depth) { board->bf[board->side][moveSE(move)] += (depth * depth); }
+
+inline void addCounter(Board* board, Move move, Move parent) { board->counters[moveSE(parent)] = move; }
 
 inline void addMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
 
@@ -359,7 +467,7 @@ void generateKingMoves(MoveList* moveList, Board* board) {
 }
 
 // captures and promotions
-void generateQuiesceMoves(MoveList* moveList, Board* board) {
+void generateQuiesceMoves(MoveList* moveList, Board* board, int ply) {
   moveList->count = 0;
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
@@ -424,9 +532,41 @@ void generateQuiesceMoves(MoveList* moveList, Board* board) {
     else
       ++curr;
   }
+
+  // TODO: this seems inefficient
+  TTValue ttValue = ttProbe(board->zobrist);
+  Move hashMove = ttMove(ttValue);
+  for (int i = 0; i < moveList->count; i++) {
+    Move move = moveList->moves[i];
+
+    if (move == hashMove) {
+      moveList->scores[i] = HASH;
+    } else if (moveCapture(move)) {
+      int mover = movePiece(move);
+      int captured = capturedPiece(move, board);
+
+      int seeScore = 0;
+      if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, board->side, move)) < 0) {
+        moveList->scores[i] = BAD_CAPTURE + seeScore;
+      } else {
+        moveList->scores[i] = GOOD_CAPTURE + mvvLva[movePiece(move)][capturedPiece(move, board)];
+      }
+    } else if (movePromo(move) >= 8) {
+      moveList->scores[i] = GOOD_CAPTURE + scoreMG(queenValue);
+    } else if (move == board->killers[ply][0]) {
+      moveList->scores[i] = KILLER1;
+    } else if (move == board->killers[ply][1]) {
+      moveList->scores[i] = KILLER2;
+    } else if (board->moveNo && move == board->counters[moveSE(board->gameMoves[board->moveNo - 1])]) {
+      moveList->scores[i] = COUNTER1;
+    } else {
+      moveList->scores[i] =
+          128 * board->history[board->side][moveSE(move)] / (MAX(1, board->bf[board->side][moveSE(move)]));
+    }
+  }
 }
 
-void generateMoves(MoveList* moveList, Board* board) {
+void generateMoves(MoveList* moveList, Board* board, int ply) {
   moveList->count = 0;
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
@@ -491,33 +631,41 @@ void generateMoves(MoveList* moveList, Board* board) {
       ++curr;
   }
 
+  // TODO: this seems inefficient
   TTValue ttValue = ttProbe(board->zobrist);
   Move hashMove = ttMove(ttValue);
   for (int i = 0; i < moveList->count; i++) {
-    if (moveList->moves[i] == hashMove) {
-      moveList->scores[i] = INT32_MAX;
-    } else if (moveCapture(moveList->moves[i])) {
-      moveList->scores[i] = mvvLva[movePiece(moveList->moves[i])][capturedPiece(moveList->moves[i], board)];
-    } else {
-      moveList->scores[i] = 0;
-    }
-  }
-}
-
-void printMoves(MoveList* moveList) {
-  printf("move  p c d e t\n");
-
-  for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
-    printf("%s%s%c %c %d %d %d %d\n", idxToCord[moveStart(move)], idxToCord[moveEnd(move)],
-           movePromo(move) ? pieceChars[movePromo(move)] : ' ', pieceChars[movePiece(move)], moveCapture(move),
-           moveDouble(move), moveEP(move), moveCastle(move));
+
+    if (move == hashMove) {
+    } else if (moveCapture(move)) {
+      int mover = movePiece(move);
+      int captured = capturedPiece(move, board);
+
+      int seeScore = 0;
+      if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, board->side, move)) < 0) {
+        moveList->scores[i] = BAD_CAPTURE + seeScore;
+      } else {
+        moveList->scores[i] = GOOD_CAPTURE + mvvLva[movePiece(move)][capturedPiece(move, board)];
+      }
+    } else if (movePromo(move) >= 8) {
+      moveList->scores[i] = GOOD_CAPTURE + scoreMG(queenValue);
+    } else if (move == board->killers[ply][0]) {
+      moveList->scores[i] = KILLER1;
+    } else if (move == board->killers[ply][1]) {
+      moveList->scores[i] = KILLER2;
+    } else if (board->moveNo && move == board->counters[moveSE(board->gameMoves[board->moveNo - 1])]) {
+      moveList->scores[i] = COUNTER1;
+    } else {
+      moveList->scores[i] =
+          128 * board->history[board->side][moveSE(move)] / (MAX(1, board->bf[board->side][moveSE(move)]));
+    }
   }
 }
 
 Move parseMove(char* moveStr, Board* board) {
   MoveList moveList[1];
-  generateMoves(moveList, board);
+  generateMoves(moveList, board, 0);
 
   int start = (moveStr[0] - 'a') + (8 - (moveStr[1] - '0')) * 8;
   int end = (moveStr[2] - 'a') + (8 - (moveStr[3] - '0')) * 8;
@@ -566,5 +714,21 @@ void bubbleTopMove(MoveList* moveList, int from) {
     Move temp = moveList->moves[from];
     moveList->moves[from] = moveList->moves[idx];
     moveList->moves[idx] = temp;
+
+    temp = moveList->scores[from];
+    moveList->scores[from] = moveList->scores[idx];
+    moveList->scores[idx] = temp;
+  }
+}
+
+void printMoves(MoveList* moveList) {
+  printf("move  score p c d e t\n");
+
+  for (int i = 0; i < moveList->count; i++) {
+    bubbleTopMove(moveList, i);
+    Move move = moveList->moves[i];
+    printf("%s%s%c %5d %c %d %d %d %d\n", idxToCord[moveStart(move)], idxToCord[moveEnd(move)],
+           movePromo(move) ? pieceChars[movePromo(move)] : ' ', moveList->scores[i], pieceChars[movePiece(move)],
+           moveCapture(move), moveDouble(move), moveEP(move), moveCastle(move));
   }
 }

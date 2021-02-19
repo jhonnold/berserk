@@ -5,7 +5,7 @@
 #include "transposition.h"
 #include "types.h"
 
-#define POWER 16
+#define POWER 18
 #define BUCKET_SIZE 2
 
 const int TT_EXACT = 2;

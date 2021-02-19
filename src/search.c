@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "board.h"
 #include "eval.h"
@@ -19,6 +20,10 @@ const int FUTILITY_MARGINS[] = {0, 90, 180, 280, 380, 490, 600};
 void Search(Board* board, SearchParams* params) {
   params->nodes = 0;
   ttClear();
+  memset(board->killers, 0, sizeof(board->history));
+  memset(board->history, 0, sizeof(board->history));
+  memset(board->bf, 0, sizeof(board->history));
+  memset(board->counters, 0, sizeof(board->counters));
 
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
@@ -114,7 +119,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   }
 
   MoveList moveList[1];
-  generateMoves(moveList, board);
+  generateMoves(moveList, board, ply);
 
   int numMoves = 0;
   for (int i = 0; i < moveList->count; i++) {
@@ -161,8 +166,18 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       if (score > alpha)
         alpha = score;
 
-      if (alpha >= beta)
+      if (alpha >= beta) {
+        if (!moveCapture(move) && !movePromo(move)) {
+          addKiller(board, move, ply);
+          addHistory(board, move, depth);
+          addCounter(board, move, board->gameMoves[board->moveNo - 1]);
+        }
+
         break;
+      }
+
+      if (!moveCapture(move) && !movePromo(move))
+        addBf(board, move, depth);
     }
   }
 
@@ -221,7 +236,7 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params) {
     alpha = eval;
 
   MoveList moveList[1];
-  generateQuiesceMoves(moveList, board);
+  generateQuiesceMoves(moveList, board, ply);
 
   for (int i = 0; i < moveList->count; i++) {
     bubbleTopMove(moveList, i);
