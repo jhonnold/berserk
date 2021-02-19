@@ -55,8 +55,9 @@ BitBoard attacksTo(Board* board, int sq) {
   return attacks;
 }
 
-int see(Board* board, int side, Move move) {
+int see(Board* board, Move move) {
   BitBoard occupied = board->occupancies[2];
+  int side = board->side;
 
   int gain[32];
   int captureCount = 1;
@@ -69,7 +70,7 @@ int see(Board* board, int side, Move move) {
   // We can run see against a non-capture
   int attackedPieceVal = captured >= 0 ? scoreMG(materialValues[captured]) : 0;
 
-  side = board->xside;
+  side ^= 1;
   gain[0] = attackedPieceVal;
 
   int piece = movePiece(move);
@@ -82,7 +83,7 @@ int see(Board* board, int side, Move move) {
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
   // If pawn/rook/queen captures (ep)
-  if (piece == 0 || piece == 1 || (piece >= 6 && piece <= 9))
+  if (piece >= 6 && piece <= 9)
     attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                   board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
@@ -105,7 +106,81 @@ int see(Board* board, int side, Move move) {
                                                       board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
     // If pawn/rook/queen captures (ep)
-    if (piece == 0 || piece == 1 || (piece >= 6 && piece <= 9))
+    if (piece >= 6 && piece <= 9)
+      attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+                                                    board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+    gain[captureCount] = -gain[captureCount - 1] + attackedPieceVal;
+    attackedPieceVal = scoreMG(materialValues[piece]);
+    if (gain[captureCount++] - attackedPieceVal > 0)
+      break;
+
+    side ^= 1;
+    attackers &= occupied;
+  }
+
+  while (--captureCount)
+    gain[captureCount - 1] = -MAX(-gain[captureCount - 1], gain[captureCount]);
+
+  return gain[0];
+}
+
+int seeATF(Board* board, Move move) {
+  BitBoard occupied = board->occupancies[2];
+  int side = board->side;
+
+  int gain[32];
+  int captureCount = 1;
+
+  int end = moveEnd(move);
+
+  BitBoard attackers = attacksTo(board, end);
+  int attackedPieceVal = scoreMG(materialValues[movePiece(move)]);
+
+  gain[0] = attackedPieceVal;
+
+  int piece = 0;
+  BitBoard attackee = 0;
+  for (piece = side; piece <= KING[side]; piece += 2)
+    if ((attackee = board->pieces[piece] & attackers))
+      break;
+
+  if (piece >= 12)
+    return 0;
+
+  occupied ^= (attackee & -attackee);
+
+  // If pawn/bishop/queen captures
+  if (piece == 0 || piece == 1 || piece == 4 || piece == 5 || piece == 8 || piece == 9)
+    attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+                                                    board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+  // If pawn/rook/queen captures (ep)
+  if (piece >= 6 && piece <= 9)
+    attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+                                                  board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+  attackedPieceVal = scoreMG(materialValues[piece]);
+  side ^= 1;
+
+  attackers &= occupied;
+  while (attackers) {
+    for (piece = side; piece <= KING[side]; piece += 2)
+      if ((attackee = board->pieces[piece] & attackers))
+        break;
+
+    if (piece >= 12)
+      break;
+
+    occupied ^= (attackee & -attackee);
+
+    // If pawn/bishop/queen captures
+    if (piece == 0 || piece == 1 || piece == 4 || piece == 5 || piece == 8 || piece == 9)
+      attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+                                                      board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+    // If rook/queen captures
+    if (piece >= 6 && piece <= 9)
       attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
@@ -539,7 +614,7 @@ void generateQuiesceMoves(MoveList* moveList, Board* board) {
       int captured = capturedPiece(move, board);
 
       int seeScore = 0;
-      if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, board->side, move)) < 0) {
+      if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
         moveList->scores[i] = seeScore;
       } else {
         moveList->scores[i] = mvvLva[movePiece(move)][capturedPiece(move, board)];
@@ -626,7 +701,7 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
       int captured = capturedPiece(move, board);
 
       int seeScore = 0;
-      if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, board->side, move)) < 0) {
+      if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
         moveList->scores[i] = BAD_CAPTURE + seeScore;
       } else {
         moveList->scores[i] = GOOD_CAPTURE + mvvLva[movePiece(move)][capturedPiece(move, board)];

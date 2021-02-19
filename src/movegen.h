@@ -26,7 +26,8 @@ void printMoves(MoveList* moveList);
 Move parseMove(char* moveStr, Board* board);
 char* moveStr(Move move);
 void bubbleTopMove(MoveList* moveList, int from);
-int see(Board* board, int side, Move move);
+int see(Board* board, Move move);
+int seeATF(Board* board, Move move);
 void addKiller(Board* board, Move move, int ply);
 void addCounter(Board* board, Move move, Move parent);
 

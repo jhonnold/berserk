@@ -86,6 +86,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   // Check extension
   if (inCheck(board))
     depth++;
+
   if (depth == 0)
     return quiesce(alpha, beta, ply, board, params, data);
 
@@ -158,7 +159,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       int seeCutoff = moveCapture(move) ? (-80 * depth) : (-25 * lmrDepth * lmrDepth);
 
       // SEE pruning
-      if (see(board, board->side, move) < seeCutoff)
+      if (see(board, move) < seeCutoff)
         continue;
     }
 
@@ -170,22 +171,18 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
     if (depth >= 3 && numMoves > (!ply ? 3 : 1) && !moveCapture(move) && !movePromo(move)) {
       // Senpai logic
-      if (numMoves <= 6)
-        newDepth--;
-      else
-        newDepth -= depth / 2;
-      newDepth = max(0, newDepth);
+      int R = numMoves <= 6 ? 1 : depth / 2;
+      R = max(newDepth, R);
 
-      score = -negamax(-alpha - 1, -alpha, newDepth, ply + 1, 1, board, params, data);
-
+      score = -negamax(-alpha - 1, -alpha, newDepth - R, ply + 1, 1, board, params, data);
       doZws = (score > alpha) ? 1 : 0;
     }
 
     if (doZws)
-      score = -negamax(-alpha - 1, -alpha, depth - 1, ply + 1, 1, board, params, data);
+      score = -negamax(-alpha - 1, -alpha, newDepth, ply + 1, 1, board, params, data);
 
     if (isPV && (numMoves == 1 || (score > alpha && (!ply || score < beta))))
-      score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params, data);
+      score = -negamax(-beta, -alpha, newDepth, ply + 1, 1, board, params, data);
 
     undoMove(move, board);
 
