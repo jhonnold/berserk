@@ -41,8 +41,6 @@ typedef struct {
   Move gameMoves[512];
   Move killers[64][2];
   Move counters[64 * 64];
-  Move history[2][64 * 64];
-  Move bf[2][64 * 64];
 } Board;
 
 typedef struct {

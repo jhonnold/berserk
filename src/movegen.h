@@ -21,15 +21,13 @@ extern const char* promotionChars;
 
 void addMove(MoveList* moveList, Move move);
 void generateMoves(MoveList* moveList, Board* board, int ply);
-void generateQuiesceMoves(MoveList* moveList, Board* board, int ply);
+void generateQuiesceMoves(MoveList* moveList, Board* board);
 void printMoves(MoveList* moveList);
 Move parseMove(char* moveStr, Board* board);
 char* moveStr(Move move);
 void bubbleTopMove(MoveList* moveList, int from);
 int see(Board* board, int side, Move move);
 void addKiller(Board* board, Move move, int ply);
-void addHistory(Board* board, Move move, int depth);
-void addBf(Board* board, Move move, int depth);
 void addCounter(Board* board, Move move, Move parent);
 
 #endif

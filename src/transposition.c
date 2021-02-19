@@ -41,7 +41,7 @@ inline TTValue ttProbe(uint64_t hash) {
   return 0;
 }
 
-inline void ttPut(uint64_t hash, int depth, int score, int flag, Move move) {
+inline void ttPut(uint64_t hash, int depth, int score, int flag, Move move, int ply) {
   int idx = ttIdx(hash);
   int replacementDepth = INT32_MAX;
   int replacementIdx = idx;
@@ -67,6 +67,11 @@ inline void ttPut(uint64_t hash, int depth, int score, int flag, Move move) {
       replacementDepth = currDepth;
     }
   }
+
+  if (score > MATE_BOUND)
+    score += ply;
+  else if (score < -MATE_BOUND)
+    score -= ply;
 
   transpositionEntries[replacementIdx] = hash;
   transpositionEntries[replacementIdx + 1] = createValue(score, flag, depth, move);

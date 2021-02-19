@@ -14,7 +14,7 @@ Move ttMove(TTValue value);
 int ttDepth(TTValue value);
 int ttScore(TTValue value, int ply);
 TTValue ttProbe(uint64_t hash);
-void ttPut(uint64_t hash, int depth, int score, int flag, Move move);
+void ttPut(uint64_t hash, int depth, int score, int flag, Move move, int ply);
 void ttClear();
 
 #endif

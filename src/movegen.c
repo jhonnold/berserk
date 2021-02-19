@@ -14,10 +14,10 @@
 
 const int HASH = INT32_MAX;
 const int GOOD_CAPTURE = INT32_MAX - INT16_MAX;
-const int BAD_CAPTURE = -INT32_MAX + INT16_MAX;
+const int BAD_CAPTURE = -INT32_MAX + 2 * INT16_MAX;
 const int KILLER1 = INT32_MAX - 2 * INT16_MAX;
 const int KILLER2 = INT32_MAX - 2 * INT16_MAX - 1;
-const int COUNTER1 = INT32_MAX - 2 * INT16_MAX - 10;
+const int COUNTER = INT32_MAX - 2 * INT16_MAX - 10;
 
 const int mvvLva[12][12] = {{105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
                             {105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
@@ -127,12 +127,6 @@ inline void addKiller(Board* board, Move move, int ply) {
     board->killers[ply][1] = board->killers[ply][0];
   board->killers[ply][0] = move;
 }
-
-inline void addHistory(Board* board, Move move, int depth) {
-  board->history[board->side][moveSE(move)] += (depth * depth);
-}
-
-inline void addBf(Board* board, Move move, int depth) { board->bf[board->side][moveSE(move)] += (depth * depth); }
 
 inline void addCounter(Board* board, Move move, Move parent) { board->counters[moveSE(parent)] = move; }
 
@@ -467,7 +461,7 @@ void generateKingMoves(MoveList* moveList, Board* board) {
 }
 
 // captures and promotions
-void generateQuiesceMoves(MoveList* moveList, Board* board, int ply) {
+void generateQuiesceMoves(MoveList* moveList, Board* board) {
   moveList->count = 0;
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
@@ -533,35 +527,21 @@ void generateQuiesceMoves(MoveList* moveList, Board* board, int ply) {
       ++curr;
   }
 
-  // TODO: this seems inefficient
-  TTValue ttValue = ttProbe(board->zobrist);
-  Move hashMove = ttMove(ttValue);
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
 
-    if (move == hashMove) {
-      moveList->scores[i] = HASH;
-    } else if (moveCapture(move)) {
+    if (movePromo(move)) {
+      moveList->scores[i] = scoreMG(materialValues[movePromo(move)]);
+    } else {
       int mover = movePiece(move);
       int captured = capturedPiece(move, board);
 
       int seeScore = 0;
       if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, board->side, move)) < 0) {
-        moveList->scores[i] = BAD_CAPTURE + seeScore;
+        moveList->scores[i] = seeScore;
       } else {
-        moveList->scores[i] = GOOD_CAPTURE + mvvLva[movePiece(move)][capturedPiece(move, board)];
+        moveList->scores[i] = mvvLva[movePiece(move)][capturedPiece(move, board)];
       }
-    } else if (movePromo(move) >= 8) {
-      moveList->scores[i] = GOOD_CAPTURE + scoreMG(queenValue);
-    } else if (move == board->killers[ply][0]) {
-      moveList->scores[i] = KILLER1;
-    } else if (move == board->killers[ply][1]) {
-      moveList->scores[i] = KILLER2;
-    } else if (board->moveNo && move == board->counters[moveSE(board->gameMoves[board->moveNo - 1])]) {
-      moveList->scores[i] = COUNTER1;
-    } else {
-      moveList->scores[i] =
-          128 * board->history[board->side][moveSE(move)] / (MAX(1, board->bf[board->side][moveSE(move)]));
     }
   }
 }
@@ -655,10 +635,9 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
     } else if (move == board->killers[ply][1]) {
       moveList->scores[i] = KILLER2;
     } else if (board->moveNo && move == board->counters[moveSE(board->gameMoves[board->moveNo - 1])]) {
-      moveList->scores[i] = COUNTER1;
+      moveList->scores[i] = COUNTER;
     } else {
-      moveList->scores[i] =
-          128 * board->history[board->side][moveSE(move)] / (MAX(1, board->bf[board->side][moveSE(move)]));
+      moveList->scores[i] = 0;
     }
   }
 }

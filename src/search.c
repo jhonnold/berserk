@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "board.h"
@@ -20,9 +21,7 @@ const int FUTILITY_MARGINS[] = {0, 90, 180, 280, 380, 490, 600};
 void Search(Board* board, SearchParams* params) {
   params->nodes = 0;
   ttClear();
-  memset(board->killers, 0, sizeof(board->history));
-  memset(board->history, 0, sizeof(board->history));
-  memset(board->bf, 0, sizeof(board->history));
+  memset(board->killers, 0, sizeof(board->killers));
   memset(board->counters, 0, sizeof(board->counters));
 
   int alpha = -CHECKMATE;
@@ -31,7 +30,7 @@ void Search(Board* board, SearchParams* params) {
   int score = negamax(alpha, beta, 1, 0, 1, board, params);
 
   for (int depth = 2; depth <= params->depth && !params->stopped; depth++) {
-    int delta = depth >= 4 ? 50 : CHECKMATE;
+    int delta = depth >= 5 && abs(score) < 1500 ? 50 : CHECKMATE;
     alpha = max(score - delta, -CHECKMATE);
     beta = min(score + delta, CHECKMATE);
 
@@ -169,15 +168,11 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       if (alpha >= beta) {
         if (!moveCapture(move) && !movePromo(move)) {
           addKiller(board, move, ply);
-          addHistory(board, move, depth);
           addCounter(board, move, board->gameMoves[board->moveNo - 1]);
         }
 
         break;
       }
-
-      if (!moveCapture(move) && !movePromo(move))
-        addBf(board, move, depth);
     }
   }
 
@@ -203,7 +198,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   }
 
   int ttFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
-  ttPut(board->zobrist, depth, bestScore, ttFlag, bestMove);
+  ttPut(board->zobrist, depth, bestScore, ttFlag, bestMove, ply);
 
   return bestScore;
 }
@@ -236,7 +231,7 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params) {
     alpha = eval;
 
   MoveList moveList[1];
-  generateQuiesceMoves(moveList, board, ply);
+  generateQuiesceMoves(moveList, board);
 
   for (int i = 0; i < moveList->count; i++) {
     bubbleTopMove(moveList, i);
