@@ -172,7 +172,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     if (depth >= 3 && numMoves > (!ply ? 3 : 1) && !moveCapture(move) && !movePromo(move)) {
       // Senpai logic
       int R = numMoves <= 6 ? 1 : depth / 2;
-      R = max(newDepth, R);
+      R = min(newDepth, R);
 
       score = -negamax(-alpha - 1, -alpha, newDepth - R, ply + 1, 1, board, params, data);
       doZws = (score > alpha) ? 1 : 0;
