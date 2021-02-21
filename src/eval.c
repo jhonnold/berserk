@@ -1,14 +1,16 @@
 #include <stdio.h>
 
+#include "attacks.h"
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
+#include "movegen.h"
 #include "types.h"
 
 #define S(mg, eg) (makeScore((mg), (eg)))
 
 const int pawnValue = S(100, 150);
-const int knightValue = S(500, 400);
+const int knightValue = S(475, 400);
 const int bishopValue = S(500, 450);
 const int rookValue = S(700, 775);
 const int queenValue = S(1600, 1450);
@@ -93,6 +95,26 @@ const int materialValues[12] = {
 
 // clang-format on
 
+const int knightMobilities[] = {
+    S(-50, -75), S(-30, -60), S(-10, -45), S(0, -30), S(0, -15), S(0, 0), S(10, 0), S(30, 0), S(50, 0),
+};
+
+const int bishopMobilities[] = {
+    S(-50, -75), S(-25, -50), S(0, -25), S(10, 0),  S(20, 15), S(30, 30), S(40, 40),
+    S(50, 50),   S(55, 55),   S(60, 60), S(65, 65), S(70, 70), S(75, 75), S(80, 80),
+};
+
+const int rookMobilities[] = {
+    S(0, -60), S(0, -45), S(0, -30), S(0, -15), S(0, 0),  S(1, 5),  S(2, 10),  S(3, 15),
+    S(4, 20),  S(5, 25),  S(6, 30),  S(7, 40),  S(8, 50), S(9, 60), S(10, 70),
+};
+
+const int queenMobilities[] = {
+    S(-10, -75), S(-7, -50), S(-4, -25), S(-1, 0),  S(2, 2),   S(5, 5),   S(10, 10), S(15, 15), S(20, 20), S(25, 12),
+    S(30, 30),   S(35, 35),  S(36, 36),  S(37, 37), S(38, 38), S(39, 39), S(40, 42), S(41, 45), S(42, 48), S(43, 51),
+    S(44, 54),   S(45, 57),  S(46, 60),  S(47, 63), S(48, 66), S(49, 69), S(50, 72), S(51, 75),
+};
+
 const int MAX_PHASE = 24;
 const int phaseMultipliers[] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
 
@@ -167,6 +189,116 @@ int Evaluate(Board* board) {
       score -= taper(baseMaterialValues[i][sq], phase);
       popLsb(pieces);
     }
+  }
+
+  BitBoard myPawns = board->pieces[PAWN[board->side]];
+  BitBoard opponentPawns = board->pieces[PAWN[board->xside]];
+
+  BitBoard myPawnAttacks =
+      shift(myPawns, pawnDirections[board->side] + 1) | shift(myPawns, pawnDirections[board->side] - 1);
+  BitBoard myBlockedAndHomePawns = (shift(board->occupancies[BOTH], pawnDirections[board->xside]) |
+                                    homeRanks[board->side] | thirdRanks[board->side]) &
+                                   board->pieces[PAWN[board->side]];
+  BitBoard oppoPawnAttacks =
+      shift(opponentPawns, pawnDirections[board->xside] + 1) | shift(opponentPawns, pawnDirections[board->xside] - 1);
+  BitBoard opponentBlockedAndHomePawns = (shift(board->occupancies[BOTH], pawnDirections[board->side]) |
+                                          homeRanks[board->xside] | thirdRanks[board->xside]) &
+                                         board->pieces[PAWN[board->xside]];
+
+  // KNIGHTS
+  BitBoard myKnights = board->pieces[KNIGHT[board->side]];
+  BitBoard oppoKnights = board->pieces[KNIGHT[board->xside]];
+
+  while (myKnights) {
+    int sq = lsb(myKnights);
+
+    BitBoard mobilitySquares = getKnightAttacks(sq) & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
+    score += taper(knightMobilities[bits(mobilitySquares)], phase);
+
+    popLsb(myKnights);
+  }
+
+  while (oppoKnights) {
+    int sq = lsb(oppoKnights);
+
+    BitBoard mobilitySquares = getKnightAttacks(sq) & ~myPawnAttacks & ~opponentBlockedAndHomePawns;
+    score -= taper(knightMobilities[bits(mobilitySquares)], phase);
+
+    popLsb(oppoKnights);
+  }
+
+  // Bishops
+  BitBoard myBishops = board->pieces[BISHOP[board->side]];
+  BitBoard opponentBishops = board->pieces[BISHOP[board->xside]];
+
+  while (myBishops) {
+    int sq = lsb(myBishops);
+
+    BitBoard mobilitySquares = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[board->side]]) &
+                               ~oppoPawnAttacks & ~myBlockedAndHomePawns;
+    score += taper(bishopMobilities[bits(mobilitySquares)], phase);
+
+    popLsb(myBishops);
+  }
+
+  while (opponentBishops) {
+    int sq = lsb(opponentBishops);
+
+    BitBoard mobilitySquares = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[board->xside]]) &
+                               ~myPawnAttacks & ~opponentBlockedAndHomePawns;
+    score -= taper(bishopMobilities[bits(mobilitySquares)], phase);
+
+    popLsb(opponentBishops);
+  }
+
+  // Rooks
+  BitBoard myRooks = board->pieces[ROOK[board->side]];
+  BitBoard opponentRooks = board->pieces[ROOK[board->xside]];
+
+  while (myRooks) {
+    int sq = lsb(myRooks);
+
+    BitBoard mobilitySquares = getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[board->side]]) &
+                               ~oppoPawnAttacks & ~myBlockedAndHomePawns;
+    score += taper(rookMobilities[bits(mobilitySquares)], phase);
+
+    popLsb(myRooks);
+  }
+
+  while (opponentRooks) {
+    int sq = lsb(opponentRooks);
+
+    BitBoard mobilitySquares = getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[board->xside]]) &
+                               ~myPawnAttacks & ~opponentBlockedAndHomePawns;
+    score -= taper(rookMobilities[bits(mobilitySquares)], phase);
+
+    popLsb(opponentRooks);
+  }
+
+  // Queens
+  BitBoard myQueens = board->pieces[QUEEN[board->side]];
+  BitBoard opponentQueens = board->pieces[QUEEN[board->xside]];
+
+  while (myQueens) {
+    int sq = lsb(myQueens);
+
+    BitBoard mobilitySquares = getQueenAttacks(sq, board->occupancies[BOTH] ^ (board->pieces[BISHOP[board->side]] |
+                                                                               board->pieces[ROOK[board->side]])) &
+                               ~oppoPawnAttacks & ~myBlockedAndHomePawns;
+    score += taper(queenMobilities[bits(mobilitySquares)], phase);
+
+    popLsb(myQueens);
+  }
+
+  while (opponentQueens) {
+    int sq = lsb(opponentQueens);
+
+    BitBoard mobilitySquares = getQueenAttacks(sq, board->occupancies[BOTH] ^ (board->pieces[BISHOP[board->xside]] |
+                                                                               board->pieces[ROOK[board->xside]])) &
+                               ~myPawnAttacks & ~opponentBlockedAndHomePawns;
+    score -= taper(queenMobilities[bits(mobilitySquares)], phase);
+
+    popLsb(opponentQueens);
   }
 
   return score;
