@@ -96,6 +96,8 @@ const int MAX_PHASE = 24;
 const int phaseMultipliers[] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
 
 // clang-format off
+int baseMaterialValues[12][64];
+
 void initPositionValues() {
   for (int sq = 0; sq < 64; sq++) {
     baseMaterialValues[0][sq] =

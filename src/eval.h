@@ -17,7 +17,7 @@ extern const int queenValue;
 extern const int kingValue;
 extern const int materialValues[];
 
-int baseMaterialValues[12][64];
+extern int baseMaterialValues[12][64];
 
 void initPositionValues();
 

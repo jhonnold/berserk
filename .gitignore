@@ -52,4 +52,5 @@ Mkfile.old
 dkms.conf
 
 berserk
+berserk-popcnt
 .vscode

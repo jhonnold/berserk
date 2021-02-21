@@ -3,10 +3,10 @@
 
 #include <inttypes.h>
 
-uint64_t zobristPieces[12][64];
-uint64_t zobristEpKeys[64];
-uint64_t zobristCastleKeys[16];
-uint64_t zobristSideKey;
+extern uint64_t zobristPieces[12][64];
+extern uint64_t zobristEpKeys[64];
+extern uint64_t zobristCastleKeys[16];
+extern uint64_t zobristSideKey;
 
 void initZobristKeys();
 

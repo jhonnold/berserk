@@ -7,8 +7,18 @@
 #define getBit(bb, sq) (bb & (1ULL << (sq)))
 #define popBit(bb, sq) (bb &= ~(1ULL << (sq)))
 #define popLsb(bb) (bb &= bb - 1)
-#define bits(bb) __builtin_popcountll(bb)
 #define lsb(bb) (__builtin_ctzll(bb))
+
+#ifndef POPCOUNT
+inline int bits(BitBoard bb) {
+  int c;
+  for (c = 0; bb; bb &= bb - 1)
+    c++;
+  return c;
+}
+#else
+#define bits(bb) (__builtin_popcountll(bb))
+#endif
 
 void printBB(BitBoard bb);
 
