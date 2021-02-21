@@ -16,6 +16,8 @@
 #define moveCastle(m) (((m)&0x800000) >> 23)
 #define moveSE(m) ((m)&0xfff)
 
+extern const BitBoard homeRanks[];
+extern const BitBoard thirdRanks[];
 extern const int pawnDirections[];
 extern const char* promotionChars;
 
