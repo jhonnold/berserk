@@ -11,7 +11,11 @@
 #include "util.h"
 
 #define NAME "Berserk"
-#define VERSION "1.2.1"
+#ifdef POPCOUNT
+#define VERSION "1.2.2+popcnt"
+#else
+#define VERSION "1.2.2"
+#endif
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
