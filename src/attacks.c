@@ -4,6 +4,7 @@
 
 #include "attacks.h"
 #include "bits.h"
+#include "movegen.h"
 #include "random.h"
 
 const BitBoard NOT_A_FILE = 18374403900871474942ULL;
@@ -33,6 +34,13 @@ BitBoard BISHOP_MASKS[64];
 
 uint64_t ROOK_MAGICS[64];
 uint64_t BISHOP_MAGICS[64];
+
+const BitBoard centerFour = 103481868288L;
+const BitBoard columnMasks[8] = {72340172838076673L,   144680345676153346L,  289360691352306692L,
+                                 578721382704613384L,  1157442765409226768L, 2314885530818453536L,
+                                 4629771061636907072L, -9187201950435737472L};
+
+BitBoard PAWN_SPANS[2][64];
 
 inline BitBoard shift(BitBoard bb, int dir) {
   return dir == -8    ? bb >> 8
@@ -128,9 +136,41 @@ void initPinnedMovement() {
   }
 }
 
+void initPawnSpans() {
+  // WHITE
+  for (int sq = 0; sq < 64; sq++) {
+    BitBoard span = 0;
+    for (int i = sq + pawnDirections[WHITE]; i >= 0; i += pawnDirections[WHITE]) {
+      setBit(span, i);
+    }
+
+    span |= PAWN_SPANS[WHITE][sq] = span | shift(span, 1) | shift(span, -1);
+  }
+
+  // BLACK
+  for (int sq = 0; sq < 64; sq++) {
+    BitBoard span = 0;
+    for (int i = sq + pawnDirections[BLACK]; i < 64; i += pawnDirections[BLACK]) {
+      setBit(span, i);
+    }
+
+    span |= PAWN_SPANS[BLACK][sq] = span | shift(span, 1) | shift(span, -1);
+  }
+}
+
 inline BitBoard getInBetween(int from, int to) { return BETWEEN_SQS[from][to]; }
 
 inline BitBoard getPinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
+
+inline BitBoard getPawnSpan(int sq, int side) { return PAWN_SPANS[side][sq]; }
+
+inline BitBoard getPawnSpans(BitBoard pawns, int side) {
+  BitBoard span = 0;
+  for (; pawns; popLsb(pawns))
+    span |= PAWN_SPANS[side][lsb(pawns)];
+
+  return span;
+}
 
 BitBoard getGeneratedPawnAttacks(int sq, int color) {
   BitBoard attacks = 0, board = 0;

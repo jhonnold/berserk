@@ -3,12 +3,18 @@
 
 #include "types.h"
 
+extern const BitBoard columnMasks[];
+extern const BitBoard centerFour;
+
 void initAttacks();
+void initPawnSpans();
 
 BitBoard shift(BitBoard bb, int dir);
 
 BitBoard getInBetween(int from, int to);
 BitBoard getPinnedMoves(int p, int k);
+BitBoard getPawnSpans(BitBoard pawns, int side);
+BitBoard getPawnSpan(int sq, int side);
 
 BitBoard getPawnAttacks(int sq, int color);
 BitBoard getKnightAttacks(int sq);
