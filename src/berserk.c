@@ -4,6 +4,7 @@
 #include <sys/time.h>
 
 #include "attacks.h"
+#include "bits.h"
 #include "board.h"
 #include "eval.h"
 #include "types.h"
@@ -13,6 +14,7 @@
 int main() {
   initPositionValues();
   initAttacks();
+  initPawnSpans();
   initZobristKeys();
 
   Board board[1];
