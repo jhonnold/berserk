@@ -7,10 +7,16 @@
 #include "movegen.h"
 #include "random.h"
 
+const BitBoard aFile = 0x0101010101010101;
 const BitBoard NOT_A_FILE = 18374403900871474942ULL;
 const BitBoard NOT_H_FILE = 9187201950435737471ULL;
 const BitBoard NOT_AB_FILE = 18229723555195321596ULL;
 const BitBoard NOT_GH_FILE = 4557430888798830399ULL;
+
+const BitBoard sides[] = {
+    0xFFFFFFFF00000000,
+    0x00000000FFFFFFFF,
+};
 
 const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 7, 7, 7, 7,
                                       5, 5, 5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 7,
@@ -170,6 +176,20 @@ inline BitBoard getPawnSpans(BitBoard pawns, int side) {
     span |= PAWN_SPANS[side][lsb(pawns)];
 
   return span;
+}
+
+inline BitBoard fill(BitBoard initial, int direction) {
+  if (direction == 8) {
+    initial |= (initial << 8);
+    initial |= (initial << 16);
+    return initial | (initial << 32);
+  } else if (direction == -8) {
+    initial |= (initial >> 8);
+    initial |= (initial >> 16);
+    return initial | (initial >> 32);
+  }
+
+  return initial;
 }
 
 BitBoard getGeneratedPawnAttacks(int sq, int color) {
