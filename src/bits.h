@@ -8,6 +8,7 @@
 #define popBit(bb, sq) (bb &= ~(1ULL << (sq)))
 #define popLsb(bb) (bb &= bb - 1)
 #define lsb(bb) (__builtin_ctzll(bb))
+#define msb(bb) (63 ^ __builtin_clzll(bb))
 
 #ifndef POPCOUNT
 inline int bits(BitBoard bb) {

@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+extern const BitBoard sides[];
+extern const BitBoard aFile;
 extern const BitBoard columnMasks[];
 extern const BitBoard centerFour;
 
@@ -10,6 +12,7 @@ void initAttacks();
 void initPawnSpans();
 
 BitBoard shift(BitBoard bb, int dir);
+BitBoard fill(BitBoard initial, int direction);
 
 BitBoard getInBetween(int from, int to);
 BitBoard getPinnedMoves(int p, int k);

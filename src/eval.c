@@ -10,11 +10,12 @@
 #define S(mg, eg) (makeScore((mg), (eg)))
 
 const int pawnValue = S(100, 150);
-const int knightValue = S(475, 400);
-const int bishopValue = S(500, 450);
+const int knightValue = S(475, 450);
+const int bishopValue = S(475, 475);
 const int rookValue = S(700, 775);
 const int queenValue = S(1600, 1450);
 const int kingValue = S(30000, 30000);
+const int bishopPair = S(50, 50);
 
 // clang-format off
 // values concepts are inspired by cpw
@@ -32,12 +33,23 @@ const int pawnPositionValues[] = {
 const int knightPositionValues[] = {
   S( -15, -15), S(  -5,  -5), S(  -5,  -5), S(  -5,  -5), S(  -5,  -5), S(  -5,  -5), S(  -5,  -5), S( -15, -15),
   S( -10, -10), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S( -10, -10),
-  S( -10, -10), S(   0,   0), S(  10,  10), S(  10,  10), S(  10,  10), S(  10,  10), S(   0,   0), S( -10, -10),
-  S( -10, -10), S(   0,   0), S(  10,  10), S(  20,  20), S(  20,  20), S(  10,  10), S(   0,   0), S( -10, -10),
+  S( -10, -10), S(   0,   0), S(  20,  10), S(  30,  10), S(  30,  10), S(  20,  10), S(   0,   0), S( -10, -10),
+  S( -10, -10), S(   0,   0), S(  15,  10), S(  30,  20), S(  30,  20), S(  15,  10), S(   0,   0), S( -10, -10),
   S( -10, -10), S(   0,   0), S(  10,  10), S(  20,  20), S(  20,  20), S(  10,  10), S(   0,   0), S( -10, -10),
   S( -10, -10), S(   0,   0), S(  10,  10), S(  10,  10), S(  10,  10), S(  10,  10), S(   0,   0), S( -10, -10),
   S( -10, -10), S(   0,   0), S(   0,   0), S(   5,   5), S(   5,   5), S(   0,   0), S(   0,   0), S( -10, -10),
   S( -25, -25), S( -15, -15), S(  -5,  -5), S(  -5,  -5), S(  -5,  -5), S(  -5,  -5), S( -15, -15), S( -25, -25)
+};
+
+const int knightPostValues[] = {
+  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
+  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
+  S(   0,   0), S(   0,   0), S(   3,   3), S(  10,   0), S(  10,  10), S(   3,   3), S(   0,   0), S(   0,   0),
+  S(   0,   0), S(   2,   2), S(   5,   5), S(  10,  10), S(  10,  10), S(   5,   5), S(   2,   2), S(   0,   0),
+  S(   0,   0), S(   2,   2), S(   5,   5), S(  10,  10), S(  10,  10), S(   5,   5), S(   2,   2), S(   0,   0),
+  S(   0,   0), S(   0,   0), S(   1,   1), S(   1,   1), S(   1,   1), S(   1,   1), S(   0,   0), S(   0,   0),
+  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
+  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0)
 };
 
 const int bishopPositionValues[] = {
@@ -53,7 +65,7 @@ const int bishopPositionValues[] = {
 
 const int rookPositionValues[] = {
   S(   0,   0), S(   5,   5), S(   5,   5), S(   5,   5), S(   5,   5), S(   5,   5), S(   5,   5), S(   0,   0),
-  S(   5,   5), S(  10,  10), S(  10,  10), S(  10,  10), S(  10,  10), S(  10,  10), S(  10,  10), S(   5,   5),
+  S(  15,  25), S(  20,  30), S(  20,  30), S(  20,  30), S(  20,  30), S(  20,  30), S(  20,  30), S(  15,  25),
   S(  -5,  -5), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(  -5,  -5),
   S(  -5,  -5), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(  -5,  -5),
   S(  -5,  -5), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(  -5,  -5),
@@ -68,9 +80,9 @@ const int queenPositionValues[] = {
   S(   0,   0), S(   0,   0), S(   0,   5), S(   0,  10), S(   0,  10), S(   0,   5), S(   0,   0), S(   0,   0),
   S(   0,   0), S(   0,   5), S(   0,  10), S(   0,  15), S(   0,  15), S(   0,  10), S(   0,   5), S(   0,   0),
   S(   0,   0), S(   0,   5), S(   0,  10), S(   0,  15), S(   0,  15), S(   0,  10), S(   0,   5), S(   0,   0),
-  S(   0,   0), S(   5,   5), S(   0,   5), S(   0,  10), S(   0,  10), S(   0,   5), S(   5,   5), S(   0,   0),
-  S(   0,  -5), S(   0,   0), S(   5,   5), S(  10,   5), S(  10,   5), S(   5,   5), S(   0,   0), S(   0,  -5),
-  S( -20,  -5), S( -10,  -5), S( -10,   0), S( -10,   0), S( -10,   0), S( -10,   0), S( -10,  -5), S( -10,  -5),
+  S(   0,   0), S(   0,   5), S(   0,   5), S(   0,  10), S(   0,  10), S(   0,   5), S(   0,   5), S(   0,   0),
+  S(   0,  -5), S(   0,   0), S(   0,   5), S(   0,   5), S(   0,   5), S(   5,   5), S(   0,   0), S(   0,  -5),
+  S( -10,  -5), S( -10,  -5), S( -10,   0), S( -10,   0), S( -10,   0), S( -10,   0), S( -10,  -5), S( -10,  -5),
 };
 
 const int kingPositionValues[] = {
@@ -80,8 +92,8 @@ const int kingPositionValues[] = {
   S( -10, -25), S(   0,   0), S( -20,  15), S( -40,  30), S( -40,  30), S( -20,  15), S(   0,   0), S( -10, -25),
   S(   0, -25), S(  10,   0), S( -10,  15), S( -30,  30), S( -30,  30), S( -10,  15), S(  10,   0), S(   0, -25),
   S(  10, -35), S(  20, -10), S(   0,   0), S( -20,  15), S( -20,  15), S(   0,   0), S(  20, -10), S(  10, -35),
-  S(  30, -50), S(  40, -25), S(  20, -10), S(   0,   0), S(   0,   0), S(  20, -10), S(  40, -25), S(  30, -50),
-  S(  40, -70), S(  50, -50), S(  30, -35), S(  10, -25), S(  10, -25), S(  30, -35), S(  50, -50), S(  40, -70),
+  S(  20, -50), S(  30, -25), S(  20, -10), S(   0,   0), S(   0,   0), S(  20, -10), S(  30, -25), S(  20, -50),
+  S(  30, -70), S(  40, -50), S(  20, -35), S(  10, -25), S(  10, -25), S(  20, -35), S(  40, -50), S(  30, -70),
 };
 
 const int materialValues[12] = {
@@ -118,34 +130,46 @@ const int queenMobilities[] = {
 const int MAX_PHASE = 24;
 const int phaseMultipliers[] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
 
+const int doubledPawnPenalty = S(10, 10);
+const int isolatedPawnPenalty = S(10, 10);
 const int weakPawnPenalty = S(10, 5);
 const int backwardsPawnPenalty = S(10, 2);
 const int passedPawn[2][8] = {
     {
         S(0, 0),
-        S(75, 100),
-        S(50, 75),
-        S(15, 30),
-        S(12, 24),
-        S(9, 18),
-        S(6, 12),
+        S(75, 150),
+        S(50, 100),
+        S(15, 75),
+        S(12, 60),
+        S(11, 45),
+        S(10, 45),
         S(0, 0),
     },
     // reverse of above
     {
         S(0, 0),
-        S(6, 12),
-        S(9, 18),
-        S(12, 24),
-        S(15, 30),
-        S(50, 75),
-        S(75, 100),
+        S(10, 45),
+        S(11, 45),
+        S(12, 60),
+        S(15, 75),
+        S(50, 100),
+        S(75, 150),
         S(0, 0),
     },
 };
 
+// pawn shield will act more as a scalar
+const int pawnShield = S(100, 0);
+
 const int kingAir = S(-20, 10);
 const int minorDefended = S(5, 2);
+const int knightOutpost = 5;
+const int knightOutpostGood = 10;
+const int openFile = 20;
+const int semiOpenFile = 10;
+const int trappedRook = S(75, 75);
+const int fischerBishopPenalty = S(150, 150);
+const int rookOppositeKing = S(10, 0);
 
 const int attackWeight[] = {0, 50, 75, 88, 94, 97, 99};
 
@@ -222,6 +246,12 @@ int Evaluate(Board* board) {
     }
   }
 
+  if (bits(board->pieces[BISHOP[board->side]]) > 1)
+    score += taper(bishopPair, phase);
+
+  if (bits(board->pieces[BISHOP[board->xside]]) > 1)
+    score -= taper(bishopPair, phase);
+
   BitBoard myPawns = board->pieces[PAWN[board->side]];
   BitBoard opponentPawns = board->pieces[PAWN[board->xside]];
   BitBoard allPawns = myPawns | opponentPawns;
@@ -290,6 +320,29 @@ int Evaluate(Board* board) {
     score -= taper(passedPawn[board->xside][rank], phase);
   }
 
+  for (BitBoard pawns = myPawns; pawns; popLsb(pawns)) {
+    int sq = lsb(pawns);
+    int col = sq & 7;
+
+    if (bits(columnMasks[col] & pawns) > 1)
+      score -= taper(doubledPawnPenalty, phase);
+
+    if (!((col > 0 ? columnMasks[col - 1] : 0) & myPawns) && !((col < 7 ? columnMasks[col + 1] : 0) & myPawns))
+      score -= taper(isolatedPawnPenalty, phase);
+  }
+
+  for (BitBoard pawns = opponentPawns; pawns; popLsb(pawns)) {
+    int sq = lsb(pawns);
+    int col = sq & 7;
+
+    if (bits(columnMasks[col] & pawns) > 1)
+      score += taper(doubledPawnPenalty, phase);
+
+    if (!((col > 0 ? columnMasks[col - 1] : 0) & opponentPawns) &&
+        !((col < 7 ? columnMasks[col + 1] : 0) & opponentPawns))
+      score += taper(isolatedPawnPenalty, phase);
+  }
+
   int kingSq = lsb(board->pieces[KING[board->side]]);
   int oppoKingSq = lsb(board->pieces[KING[board->xside]]);
   BitBoard myKingArea = getKingAttacks(kingSq);
@@ -315,6 +368,14 @@ int Evaluate(Board* board) {
       myAttackScore += 20 * bits(attacksNearKing);
     }
 
+    int postSq = board->side == WHITE ? sq : mirror[sq];
+    if (knightPostValues[postSq] && getPawnAttacks(sq, board->xside) & myPawns) {
+      score += taper(knightPostValues[postSq], phase);
+      if (!(fill(getPawnAttacks(sq, board->side), pawnDirections[board->side]) & opponentPawns)) {
+        score += knightOutpostGood;
+      }
+    }
+
     popLsb(myKnights);
   }
 
@@ -328,6 +389,14 @@ int Evaluate(Board* board) {
     if (attacksNearKing) {
       oppoTotalAttackers++;
       oppoAttackScore += 20 * bits(attacksNearKing);
+    }
+
+    int postSq = board->xside == WHITE ? sq : mirror[sq];
+    if (knightPostValues[postSq] && getPawnAttacks(sq, board->side) & opponentPawns) {
+      score -= taper(knightPostValues[postSq], phase);
+      if (!(fill(getPawnAttacks(sq, board->xside), pawnDirections[board->xside]) & myPawns)) {
+        score -= knightOutpostGood;
+      }
     }
 
     popLsb(oppoKnights);
@@ -351,6 +420,18 @@ int Evaluate(Board* board) {
       myAttackScore += 20 * bits(attacksNearKing);
     }
 
+    if (board->side == WHITE) {
+      if ((sq == 8 || sq == 1) && getBit(opponentPawns, 17) && getBit(opponentPawns, 10))
+        score -= taper(fischerBishopPenalty, phase);
+      else if ((sq == 15 || sq == 6) && getBit(opponentPawns, 13) && getBit(opponentPawns, 22))
+        score -= taper(fischerBishopPenalty, phase);
+    } else {
+      if ((sq == 57 || sq == 48) && getBit(opponentPawns, 41) && getBit(opponentPawns, 50))
+        score -= taper(fischerBishopPenalty, phase);
+      else if ((sq == 62 || sq == 55) && getBit(opponentPawns, 53) && getBit(opponentPawns, 46))
+        score -= taper(fischerBishopPenalty, phase);
+    }
+
     popLsb(myBishops);
   }
 
@@ -368,6 +449,18 @@ int Evaluate(Board* board) {
       oppoAttackScore += 20 * bits(attacksNearKing);
     }
 
+    if (board->xside == WHITE) {
+      if ((sq == 8 || sq == 1) && getBit(myPawns, 17) && getBit(myPawns, 10))
+        score += taper(fischerBishopPenalty, phase);
+      else if ((sq == 15 || sq == 6) && getBit(myPawns, 13) && getBit(myPawns, 22))
+        score += taper(fischerBishopPenalty, phase);
+    } else {
+      if ((sq == 57 || sq == 48) && getBit(myPawns, 41) && getBit(myPawns, 50))
+        score += taper(fischerBishopPenalty, phase);
+      else if ((sq == 62 || sq == 55) && getBit(myPawns, 53) && getBit(myPawns, 46))
+        score += taper(fischerBishopPenalty, phase);
+    }
+
     popLsb(opponentBishops);
   }
 
@@ -383,6 +476,7 @@ int Evaluate(Board* board) {
 
   while (myRooks) {
     int sq = lsb(myRooks);
+    int col = sq & 7;
 
     BitBoard mobilitySquares = getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[board->side]] ^
                                                       board->pieces[ROOK[board->side]]) &
@@ -397,11 +491,35 @@ int Evaluate(Board* board) {
       myAttackScore += 40 * bits(attacksNearKing);
     }
 
+    if (!(columnMasks[col] & allPawns)) {
+      score += openFile;
+      if (col == (oppoKingSq & 7))
+        score += taper(rookOppositeKing, phase);
+    } else if (!(columnMasks[col] & myPawns)) {
+      score += semiOpenFile;
+      if (col == (oppoKingSq & 7))
+        score += taper(rookOppositeKing, phase);
+    }
+
+    // for the love of god magic constants
+    if (board->side == WHITE) {
+      if ((sq == 56 || sq == 48 || sq == 57) && (kingSq == 57 || kingSq == 58))
+        score -= taper(trappedRook, phase);
+      else if ((sq == 63 || sq == 55 || sq == 62) && (kingSq == 61 || kingSq == 62))
+        score -= taper(trappedRook, phase);
+    } else {
+      if ((sq == 0 || sq == 8 || sq == 1) && (kingSq == 1 || kingSq == 2))
+        score -= taper(trappedRook, phase);
+      else if ((sq == 7 || sq == 15 || sq == 8) && (kingSq == 5 || kingSq == 6))
+        score -= taper(trappedRook, phase);
+    }
+
     popLsb(myRooks);
   }
 
   while (opponentRooks) {
     int sq = lsb(opponentRooks);
+    int col = sq & 7;
 
     BitBoard mobilitySquares = getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[board->xside]] ^
                                                       board->pieces[ROOK[board->xside]]) &
@@ -414,6 +532,29 @@ int Evaluate(Board* board) {
     if (attacksNearKing) {
       oppoTotalAttackers++;
       oppoAttackScore += 40 * bits(attacksNearKing);
+    }
+
+    if (!(columnMasks[col] & allPawns)) {
+      score -= openFile;
+      if (col == (kingSq & 7))
+        score -= taper(rookOppositeKing, phase);
+    } else if (!(columnMasks[col] & opponentPawns)) {
+      score -= semiOpenFile;
+      if (col == (kingSq & 7))
+        score -= taper(rookOppositeKing, phase);
+    }
+
+    // for the love of god magic constants
+    if (board->xside == WHITE) {
+      if ((sq == 56 || sq == 48 || sq == 57) && (oppoKingSq == 57 || oppoKingSq == 58))
+        score += taper(trappedRook, phase);
+      else if ((sq == 63 || sq == 55 || sq == 62) && (oppoKingSq == 61 || oppoKingSq == 62))
+        score += taper(trappedRook, phase);
+    } else {
+      if ((sq == 0 || sq == 8 || sq == 1) && (oppoKingSq == 1 || oppoKingSq == 2))
+        score += taper(trappedRook, phase);
+      else if ((sq == 7 || sq == 15 || sq == 8) && (oppoKingSq == 5 || oppoKingSq == 6))
+        score += taper(trappedRook, phase);
     }
 
     popLsb(opponentRooks);
@@ -460,18 +601,65 @@ int Evaluate(Board* board) {
   score += myAttackScore * attackWeight[myTotalAttackers] / 100;
   score -= oppoAttackScore * attackWeight[oppoTotalAttackers] / 100;
 
-  // air
-  BitBoard air = getBishopAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[BISHOP[board->xside]]) |
-                 getRookAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[ROOK[board->xside]]);
-  int airNo = bits(air) / 2;
+  int kingCol = kingSq & 7;
+  if (board->side == WHITE) {
+    for (int c = kingCol - 1; c <= kingCol + 1; c++) {
+      if (c < 0 || c > 7)
+        continue;
 
-  score += taper(kingAir, phase) * ((airNo - 1) * (airNo - 1) - 50) / 15;
+      BitBoard column = myPawns & columnMasks[c];
 
-  air = getBishopAttacks(oppoKingSq, board->occupancies[BOTH] ^ board->pieces[BISHOP[board->side]]) |
-        getRookAttacks(oppoKingSq, board->occupancies[BOTH] ^ board->pieces[ROOK[board->side]]);
-  airNo = bits(air) / 2;
+      if (column) {
+        int pawnRank = msb(column) / 8;
+        score += -taper(pawnShield, phase) * (36 - pawnRank * pawnRank) / 100;
+      } else {
+        score += -taper(pawnShield, phase) * 36 / 100;
+      }
+    }
+  } else {
+    for (int c = kingCol - 1; c <= kingCol + 1; c++) {
+      if (c < 0 || c > 7)
+        continue;
 
-  score -= taper(kingAir, phase) * ((airNo - 1) * (airNo - 1) - 50) / 15;
+      BitBoard column = myPawns & columnMasks[c];
+      if (column) {
+        int pawnRank = 7 - lsb(column) / 8;
+        score += taper(pawnShield, phase) * -(36 - pawnRank * pawnRank) / 100;
+      } else {
+        score += -taper(pawnShield, phase) * 36 / 100;
+      }
+    }
+  }
+
+  kingCol = oppoKingSq & 7;
+  if (board->xside == WHITE) {
+    for (int c = kingCol - 1; c <= kingCol + 1; c++) {
+      if (c < 0 || c > 7)
+        continue;
+
+      BitBoard column = opponentPawns & columnMasks[c];
+
+      if (column) {
+        int pawnRank = msb(column) / 8;
+        score -= -taper(pawnShield, phase) * (36 - pawnRank * pawnRank) / 100;
+      } else {
+        score -= -taper(pawnShield, phase) * 36 / 100;
+      }
+    }
+  } else {
+    for (int c = kingCol - 1; c <= kingCol + 1; c++) {
+      if (c < 0 || c > 7)
+        continue;
+
+      BitBoard column = opponentPawns & columnMasks[c];
+      if (column) {
+        int pawnRank = 7 - lsb(column) / 8;
+        score -= taper(pawnShield, phase) * -(36 - pawnRank * pawnRank) / 100;
+      } else {
+        score -= -taper(pawnShield, phase) * 36 / 100;
+      }
+    }
+  }
 
   return score;
 }
