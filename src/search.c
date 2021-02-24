@@ -84,7 +84,8 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     return alpha;
 
   // Check extension
-  if (inCheck(board))
+  int currInCheck = inCheck(board);
+  if (currInCheck)
     depth++;
 
   if (depth == 0)
@@ -115,7 +116,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   Move bestMove = 0;
 
   int staticEval = Evaluate(board);
-  if (!isPV && !inCheck(board)) {
+  if (!isPV && !currInCheck) {
     // Reverse Futility Pruning
     if (depth <= 6 && staticEval - FUTILITY_MARGINS[depth] >= beta && staticEval < MATE_BOUND)
       return staticEval;
@@ -169,7 +170,9 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     // Start LMR
     int doZws = (!isPV || numMoves > 1) ? 1 : 0;
 
-    if (depth >= 3 && numMoves > (!ply ? 3 : 1) && !moveCapture(move) && !movePromo(move)) {
+    int givesCheck = inCheck(board);
+    if (depth >= 3 && numMoves > (!ply ? 3 : 1) && !moveCapture(move) && !movePromo(move) && !givesCheck &&
+        !currInCheck) {
       // Senpai logic
       int R = numMoves <= 6 ? 1 : depth / 2;
       R = min(newDepth, R);
