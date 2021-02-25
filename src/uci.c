@@ -72,6 +72,8 @@ void parseGo(char* in, SearchParams* params, Board* board) {
       time -= 50;
       time += inc;
       params->endTime = params->startTime + time;
+    } else {
+      params->endTime = 0;
     }
 
     if (depth == -1)
@@ -129,6 +131,7 @@ void UCI(Board* board) {
 
   char in[2048];
   SearchParams searchParams[1];
+  searchParams->quit = 0;
 
   printf("id name " NAME " " VERSION "\n");
   printf("id author Jay Honnold\n");

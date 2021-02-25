@@ -21,6 +21,9 @@ extern int baseMaterialValues[12][64];
 
 void initPositionValues();
 
+int getPhase(Board* board);
+int taper(int score, int phase);
+
 int Evaluate(Board* board);
 int TraceEvaluate(Board* board);
 

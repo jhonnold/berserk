@@ -7,28 +7,33 @@
 #include "movegen.h"
 #include "random.h"
 
-const BitBoard aFile = 0x0101010101010101;
-const BitBoard NOT_A_FILE = 18374403900871474942ULL;
-const BitBoard NOT_H_FILE = 9187201950435737471ULL;
-const BitBoard NOT_AB_FILE = 18229723555195321596ULL;
-const BitBoard NOT_GH_FILE = 4557430888798830399ULL;
-
-const BitBoard sides[] = {
-    0xFFFFFFFF00000000,
-    0x00000000FFFFFFFF,
+// clang-format off
+const int BISHOP_RELEVANT_BITS[64] = {
+  6, 5, 5, 5, 5, 5, 5, 6, 
+  5, 5, 5, 5, 5, 5, 5, 5, 
+  5, 5, 7, 7, 7, 7, 5, 5, 
+  5, 5, 7, 9, 9, 7, 5, 5, 
+  5, 5, 7, 9, 9, 7, 5, 5, 
+  5, 5, 7, 7, 7, 7, 5, 5, 
+  5, 5, 5, 5, 5, 5, 5, 5, 
+  6, 5, 5, 5, 5, 5, 5, 6
 };
 
-const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 7, 7, 7, 7,
-                                      5, 5, 5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 9, 9, 7, 5, 5, 5, 5, 7, 7,
-                                      7, 7, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 5, 6};
-
-const int ROOK_RELEVANT_BITS[64] = {12, 11, 11, 11, 11, 11, 11, 12, 11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11, 11, 10, 10, 10, 10, 10, 10, 11,
-                                    11, 10, 10, 10, 10, 10, 10, 11, 12, 11, 11, 11, 11, 11, 11, 12};
+const int ROOK_RELEVANT_BITS[64] = {
+  12, 11, 11, 11, 11, 11, 11, 12, 
+  11, 10, 10, 10, 10, 10, 10, 11,
+  11, 10, 10, 10, 10, 10, 10, 11, 
+  11, 10, 10, 10, 10, 10, 10, 11,
+  11, 10, 10, 10, 10, 10, 10, 11, 
+  11, 10, 10, 10, 10, 10, 10, 11,
+  11, 10, 10, 10, 10, 10, 10, 11, 
+  12, 11, 11, 11, 11, 11, 11, 12
+};
+// clang-format on
 
 BitBoard BETWEEN_SQS[64][64];
 BitBoard PINNED_MOVES[64][64];
+BitBoard PAWN_SPANS[2][64];
 
 BitBoard PAWN_ATTACKS[2][64];
 BitBoard KNIGHT_ATTACKS[64];
@@ -40,27 +45,6 @@ BitBoard BISHOP_MASKS[64];
 
 uint64_t ROOK_MAGICS[64];
 uint64_t BISHOP_MAGICS[64];
-
-const BitBoard centerFour = 103481868288L;
-const BitBoard columnMasks[8] = {72340172838076673L,   144680345676153346L,  289360691352306692L,
-                                 578721382704613384L,  1157442765409226768L, 2314885530818453536L,
-                                 4629771061636907072L, -9187201950435737472L};
-
-BitBoard PAWN_SPANS[2][64];
-
-inline BitBoard shift(BitBoard bb, int dir) {
-  return dir == -8    ? bb >> 8
-         : dir == 8   ? bb << 8
-         : dir == -16 ? bb >> 16
-         : dir == 16  ? bb << 16
-         : dir == -1  ? (bb & NOT_A_FILE) >> 1
-         : dir == 1   ? (bb & NOT_H_FILE) << 1
-         : dir == -7  ? (bb & NOT_H_FILE) >> 7
-         : dir == 7   ? (bb & NOT_A_FILE) << 7
-         : dir == -9  ? (bb & NOT_A_FILE) >> 9
-         : dir == 9   ? (bb & NOT_H_FILE) << 9
-                      : 0;
-}
 
 void initBetween() {
   int i;
@@ -178,35 +162,21 @@ inline BitBoard getPawnSpans(BitBoard pawns, int side) {
   return span;
 }
 
-inline BitBoard fill(BitBoard initial, int direction) {
-  if (direction == 8) {
-    initial |= (initial << 8);
-    initial |= (initial << 16);
-    return initial | (initial << 32);
-  } else if (direction == -8) {
-    initial |= (initial >> 8);
-    initial |= (initial >> 16);
-    return initial | (initial >> 32);
-  }
-
-  return initial;
-}
-
 BitBoard getGeneratedPawnAttacks(int sq, int color) {
   BitBoard attacks = 0, board = 0;
 
   setBit(board, sq);
 
   if (color) {
-    if ((board << 7) & NOT_H_FILE)
+    if ((board << 7) & ~H_FILE)
       attacks |= (board << 7);
-    if ((board << 9) & NOT_A_FILE)
+    if ((board << 9) & ~A_FILE)
       attacks |= (board << 9);
 
   } else {
-    if ((board >> 7) & NOT_A_FILE)
+    if ((board >> 7) & ~A_FILE)
       attacks |= (board >> 7);
-    if ((board >> 9) & NOT_H_FILE)
+    if ((board >> 9) & ~H_FILE)
       attacks |= (board >> 9);
   }
 
@@ -225,22 +195,22 @@ BitBoard getGeneratedKnightAttacks(int sq) {
 
   setBit(board, sq);
 
-  if ((board >> 17) & NOT_H_FILE)
+  if ((board >> 17) & ~H_FILE)
     attacks |= (board >> 17);
-  if ((board >> 15) & NOT_A_FILE)
+  if ((board >> 15) & ~A_FILE)
     attacks |= (board >> 15);
-  if ((board >> 10) & NOT_GH_FILE)
+  if ((board >> 10) & ~(G_FILE | H_FILE))
     attacks |= (board >> 10);
-  if ((board >> 6) & NOT_AB_FILE)
+  if ((board >> 6) & ~(A_FILE | B_FILE))
     attacks |= (board >> 6);
 
-  if ((board << 17) & NOT_A_FILE)
+  if ((board << 17) & ~A_FILE)
     attacks |= (board << 17);
-  if ((board << 15) & NOT_H_FILE)
+  if ((board << 15) & ~H_FILE)
     attacks |= (board << 15);
-  if ((board << 10) & NOT_AB_FILE)
+  if ((board << 10) & ~(A_FILE | B_FILE))
     attacks |= (board << 10);
-  if ((board << 6) & NOT_GH_FILE)
+  if ((board << 6) & ~(G_FILE | H_FILE))
     attacks |= (board << 6);
 
   return attacks;
@@ -257,19 +227,19 @@ BitBoard getGeneratedKingAttacks(int sq) {
   setBit(board, sq);
 
   attacks |= (board >> 8);
-  if ((board >> 7) & NOT_A_FILE)
+  if ((board >> 7) & ~A_FILE)
     attacks |= (board >> 7);
-  if ((board >> 9) & NOT_H_FILE)
+  if ((board >> 9) & ~H_FILE)
     attacks |= (board >> 9);
-  if ((board >> 1) & NOT_H_FILE)
+  if ((board >> 1) & ~H_FILE)
     attacks |= (board >> 1);
 
   attacks |= (board << 8);
-  if ((board << 7) & NOT_H_FILE)
+  if ((board << 7) & ~H_FILE)
     attacks |= (board << 7);
-  if ((board << 9) & NOT_A_FILE)
+  if ((board << 9) & ~A_FILE)
     attacks |= (board << 9);
-  if ((board << 1) & NOT_A_FILE)
+  if ((board << 1) & ~A_FILE)
     attacks |= (board << 1);
 
   return attacks;
@@ -530,3 +500,18 @@ inline BitBoard getQueenAttacks(int sq, BitBoard occupancy) {
 }
 
 inline BitBoard getKingAttacks(int sq) { return KING_ATTACKS[sq]; }
+
+inline BitBoard attacksTo(Board* board, int sq) {
+  BitBoard attacks = (getPawnAttacks(sq, WHITE) & board->pieces[PAWN[BLACK]]) |
+                     (getPawnAttacks(sq, BLACK) & board->pieces[PAWN[WHITE]]) |
+                     (getKnightAttacks(sq) & (board->pieces[KNIGHT[WHITE]] | board->pieces[KNIGHT[BLACK]])) |
+                     (getKingAttacks(sq) & (board->pieces[KING[WHITE]] | board->pieces[KING[BLACK]]));
+
+  attacks |=
+      getBishopAttacks(sq, board->occupancies[2]) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+  attacks |= getRookAttacks(sq, board->occupancies[2]) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+                                                          board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+
+  return attacks;
+}

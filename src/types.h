@@ -5,9 +5,9 @@
 
 typedef uint64_t BitBoard;
 
-typedef int Move;
-
 typedef uint64_t TTValue;
+
+typedef int Move;
 
 typedef struct {
   Move moves[256];

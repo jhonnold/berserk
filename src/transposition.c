@@ -5,24 +5,11 @@
 #include "transposition.h"
 #include "types.h"
 
-#define POWER 20
-#define BUCKET_SIZE 2
-
-const int TT_EXACT = 2;
-const int TT_LOWER = 0;
-const int TT_UPPER = 1;
-
+const TTValue NO_ENTRY = 0ULL;
 TTValue transpositionEntries[(1 << POWER) * 2 * BUCKET_SIZE];
 
-inline int ttIdx(uint64_t hash) { return (int)((hash) >> (64 - POWER)) << 1; }
+inline void ttClear() { memset(transpositionEntries, NO_ENTRY, sizeof(transpositionEntries)); }
 
-inline TTValue createValue(int score, int flag, int depth, Move move) {
-  return ((TTValue)score << 32) | ((TTValue)flag << 30) | ((TTValue)depth << 24) | ((TTValue)move);
-}
-
-inline int ttFlag(TTValue value) { return (int)((value & 0xC0000000) >> 30); }
-inline Move ttMove(TTValue value) { return (Move)(value & 0xFFFFFF); }
-inline int ttDepth(TTValue value) { return (int)((value & 0x3F000000) >> 24); }
 inline int ttScore(TTValue value, int ply) {
   int score = (int)(value >> 32);
 
@@ -32,13 +19,11 @@ inline int ttScore(TTValue value, int ply) {
 inline TTValue ttProbe(uint64_t hash) {
   int idx = ttIdx(hash);
 
-  for (int i = idx; i < idx + BUCKET_SIZE * 2; i += 2) {
-    uint64_t ttHash = transpositionEntries[i];
-    if (ttHash == hash)
+  for (int i = idx; i < idx + BUCKET_SIZE * 2; i += 2)
+    if (transpositionEntries[i] == hash)
       return transpositionEntries[i + 1];
-  }
 
-  return 0;
+  return NO_ENTRY;
 }
 
 inline void ttPut(uint64_t hash, int depth, int score, int flag, Move move, int ply) {
@@ -74,7 +59,5 @@ inline void ttPut(uint64_t hash, int depth, int score, int flag, Move move, int 
     score -= ply;
 
   transpositionEntries[replacementIdx] = hash;
-  transpositionEntries[replacementIdx + 1] = createValue(score, flag, depth, move);
+  transpositionEntries[replacementIdx + 1] = ttEntry(score, flag, depth, move);
 }
-
-inline void ttClear() { memset(transpositionEntries, 0ULL, sizeof(transpositionEntries)); }

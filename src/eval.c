@@ -4,6 +4,7 @@
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
+#include "move.h"
 #include "movegen.h"
 #include "types.h"
 
@@ -18,7 +19,6 @@ const int kingValue = S(30000, 30000);
 const int bishopPair = S(50, 50);
 
 // clang-format off
-// values concepts are inspired by cpw
 const int pawnPositionValues[] = {
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
   S(   5,  40), S(   5,  40), S(  20,  40), S(  25,  35), S(  25,  35), S(  20,  40), S(   5,  40), S(   5,  40),
@@ -325,10 +325,10 @@ int Evaluate(Board* board) {
     int sq = lsb(pawns);
     int col = sq & 7;
 
-    if (bits(columnMasks[col] & pawns) > 1)
+    if (bits(COLUMN_MASKS[col] & pawns) > 1)
       score -= taper(doubledPawnPenalty, phase);
 
-    if (!((col > 0 ? columnMasks[col - 1] : 0) & myPawns) && !((col < 7 ? columnMasks[col + 1] : 0) & myPawns))
+    if (!((col > 0 ? COLUMN_MASKS[col - 1] : 0) & myPawns) && !((col < 7 ? COLUMN_MASKS[col + 1] : 0) & myPawns))
       score -= taper(isolatedPawnPenalty, phase);
   }
 
@@ -336,11 +336,11 @@ int Evaluate(Board* board) {
     int sq = lsb(pawns);
     int col = sq & 7;
 
-    if (bits(columnMasks[col] & pawns) > 1)
+    if (bits(COLUMN_MASKS[col] & pawns) > 1)
       score += taper(doubledPawnPenalty, phase);
 
-    if (!((col > 0 ? columnMasks[col - 1] : 0) & opponentPawns) &&
-        !((col < 7 ? columnMasks[col + 1] : 0) & opponentPawns))
+    if (!((col > 0 ? COLUMN_MASKS[col - 1] : 0) & opponentPawns) &&
+        !((col < 7 ? COLUMN_MASKS[col + 1] : 0) & opponentPawns))
       score += taper(isolatedPawnPenalty, phase);
   }
 
@@ -498,11 +498,11 @@ int Evaluate(Board* board) {
       score += rookOnSeventh;
     }
 
-    if (!(columnMasks[col] & allPawns)) {
+    if (!(COLUMN_MASKS[col] & allPawns)) {
       score += openFile;
       if (col == (oppoKingSq & 7))
         score += taper(rookOppositeKing, phase);
-    } else if (!(columnMasks[col] & myPawns)) {
+    } else if (!(COLUMN_MASKS[col] & myPawns)) {
       score += semiOpenFile;
       if (col == (oppoKingSq & 7))
         score += taper(rookOppositeKing, phase);
@@ -547,11 +547,11 @@ int Evaluate(Board* board) {
       score -= rookOnSeventh;
     }
 
-    if (!(columnMasks[col] & allPawns)) {
+    if (!(COLUMN_MASKS[col] & allPawns)) {
       score -= openFile;
       if (col == (kingSq & 7))
         score -= taper(rookOppositeKing, phase);
-    } else if (!(columnMasks[col] & opponentPawns)) {
+    } else if (!(COLUMN_MASKS[col] & opponentPawns)) {
       score -= semiOpenFile;
       if (col == (kingSq & 7))
         score -= taper(rookOppositeKing, phase);
@@ -620,7 +620,7 @@ int Evaluate(Board* board) {
       if (c < 0 || c > 7)
         continue;
 
-      BitBoard column = myPawns & columnMasks[c];
+      BitBoard column = myPawns & COLUMN_MASKS[c];
 
       if (column) {
         int pawnRank = msb(column) / 8;
@@ -634,7 +634,7 @@ int Evaluate(Board* board) {
       if (c < 0 || c > 7)
         continue;
 
-      BitBoard column = myPawns & columnMasks[c];
+      BitBoard column = myPawns & COLUMN_MASKS[c];
       if (column) {
         int pawnRank = 7 - lsb(column) / 8;
         score += taper(pawnShield, phase) * -(36 - pawnRank * pawnRank) / 100;
@@ -650,7 +650,7 @@ int Evaluate(Board* board) {
       if (c < 0 || c > 7)
         continue;
 
-      BitBoard column = opponentPawns & columnMasks[c];
+      BitBoard column = opponentPawns & COLUMN_MASKS[c];
 
       if (column) {
         int pawnRank = msb(column) / 8;
@@ -664,7 +664,7 @@ int Evaluate(Board* board) {
       if (c < 0 || c > 7)
         continue;
 
-      BitBoard column = opponentPawns & columnMasks[c];
+      BitBoard column = opponentPawns & COLUMN_MASKS[c];
       if (column) {
         int pawnRank = 7 - lsb(column) / 8;
         score -= taper(pawnShield, phase) * -(36 - pawnRank * pawnRank) / 100;
