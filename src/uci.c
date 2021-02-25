@@ -162,6 +162,10 @@ void UCI(Board* board) {
       printf("uciok\n");
     } else if (!strncmp(in, "eval", 4)) {
       printf("score cp %d\n", TraceEvaluate(board));
+    } else if (!strncmp(in, "moves", 5)) {
+      MoveList moveList[1];
+      generateMoves(moveList, board, 0);
+      printMoves(moveList);
     }
   }
 }
