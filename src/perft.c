@@ -3,6 +3,7 @@
 #include <sys/time.h>
 
 #include "board.h"
+#include "move.h"
 #include "movegen.h"
 #include "types.h"
 

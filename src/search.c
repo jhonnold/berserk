@@ -4,14 +4,13 @@
 
 #include "board.h"
 #include "eval.h"
+#include "move.h"
 #include "movegen.h"
 #include "search.h"
+#include "see.h"
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
-
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#define max(a, b) (((a) > (b)) ? (a) : (b))
 
 const int CHECKMATE = 32767;
 const int MATE_BOUND = 30000;
