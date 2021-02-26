@@ -18,7 +18,7 @@ const int KILLER1 = INT32_MAX - 2 * INT16_MAX;
 const int KILLER2 = INT32_MAX - 2 * INT16_MAX - 1;
 const int COUNTER = INT32_MAX - 2 * INT16_MAX - 10;
 
-const int mvvLva[12][12] = {{105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
+const int MVV_LVA[12][12] = {{105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
                             {105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
                             {104, 104, 204, 204, 304, 304, 404, 404, 504, 504, 604, 604},
                             {104, 104, 204, 204, 304, 304, 404, 404, 504, 504, 604, 604},
@@ -31,12 +31,11 @@ const int mvvLva[12][12] = {{105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 6
                             {100, 100, 200, 200, 300, 300, 400, 400, 500, 500, 600, 600},
                             {100, 100, 200, 200, 300, 300, 400, 400, 500, 500, 600, 600}};
 
-const int pawnDirections[] = {-8, 8};
-const BitBoard middleFour = 281474976645120UL;
-const BitBoard promotionRanks[] = {65280UL, 71776119061217280L};
-const BitBoard homeRanks[] = {71776119061217280L, 65280UL};
-const BitBoard thirdRanks[] = {280375465082880L, 16711680L};
-const BitBoard filled = -1ULL;
+const int PAWN_DIRECTIONS[] = {N, S};
+const BitBoard PROMOTION_RANKS[] = {RANK_7, RANK_2};
+const BitBoard HOME_RANKS[] = {RANK_2, RANK_7};
+const BitBoard THIRD_RANKS[] = {RANK_3, RANK_6};
+const BitBoard FILLED = -1ULL;
 
 inline void addKiller(Board* board, Move move, int ply) {
   if (board->killers[ply][0] == move)
@@ -49,18 +48,18 @@ inline void addCounter(Board* board, Move move, Move parent) { board->counters[m
 inline void addMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
 
 void generatePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibilities, Board* board) {
-  BitBoard promotingPawns = pawns & promotionRanks[board->side];
+  BitBoard promotingPawns = pawns & PROMOTION_RANKS[board->side];
 
   BitBoard quietPromoters =
-      shift(promotingPawns, pawnDirections[board->side]) & ~board->occupancies[BOTH] & possibilities;
-  BitBoard capturingPromotersE =
-      shift(promotingPawns, pawnDirections[board->side] - 1) & board->occupancies[board->xside] & possibilities;
+      shift(promotingPawns, PAWN_DIRECTIONS[board->side]) & ~board->occupancies[BOTH] & possibilities;
   BitBoard capturingPromotersW =
-      shift(promotingPawns, pawnDirections[board->side] + 1) & board->occupancies[board->xside] & possibilities;
+      shift(promotingPawns, PAWN_DIRECTIONS[board->side] + W) & board->occupancies[board->xside] & possibilities;
+  BitBoard capturingPromotersE =
+      shift(promotingPawns, PAWN_DIRECTIONS[board->side] + E) & board->occupancies[board->xside] & possibilities;
 
   while (quietPromoters) {
     int end = lsb(quietPromoters);
-    int start = end - pawnDirections[board->side];
+    int start = end - PAWN_DIRECTIONS[board->side];
 
     addMove(moveList, buildMove(start, end, PAWN[board->side], QUEEN[board->side], 0, 0, 0, 0));
     addMove(moveList, buildMove(start, end, PAWN[board->side], ROOK[board->side], 0, 0, 0, 0));
@@ -72,7 +71,7 @@ void generatePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibi
 
   while (capturingPromotersE) {
     int end = lsb(capturingPromotersE);
-    int start = end - (pawnDirections[board->side] - 1);
+    int start = end - (PAWN_DIRECTIONS[board->side] + E);
 
     addMove(moveList, buildMove(start, end, PAWN[board->side], QUEEN[board->side], 1, 0, 0, 0));
     addMove(moveList, buildMove(start, end, PAWN[board->side], ROOK[board->side], 1, 0, 0, 0));
@@ -84,7 +83,7 @@ void generatePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibi
 
   while (capturingPromotersW) {
     int end = lsb(capturingPromotersW);
-    int start = end - (pawnDirections[board->side] + 1);
+    int start = end - (PAWN_DIRECTIONS[board->side] + W);
 
     addMove(moveList, buildMove(start, end, PAWN[board->side], QUEEN[board->side], 1, 0, 0, 0));
     addMove(moveList, buildMove(start, end, PAWN[board->side], ROOK[board->side], 1, 0, 0, 0));
@@ -96,23 +95,23 @@ void generatePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibi
 }
 
 void generatePawnCaptures(MoveList* moveList, BitBoard pawns, BitBoard possibilities, Board* board) {
-  BitBoard nonPromotingPawns = pawns & ~promotionRanks[board->side];
-  BitBoard capturingE =
-      shift(nonPromotingPawns, pawnDirections[board->side] - 1) & board->occupancies[board->xside] & possibilities;
+  BitBoard nonPromotingPawns = pawns & ~PROMOTION_RANKS[board->side];
   BitBoard capturingW =
-      shift(nonPromotingPawns, pawnDirections[board->side] + 1) & board->occupancies[board->xside] & possibilities;
+      shift(nonPromotingPawns, PAWN_DIRECTIONS[board->side] + W) & board->occupancies[board->xside] & possibilities;
+  BitBoard capturingE =
+      shift(nonPromotingPawns, PAWN_DIRECTIONS[board->side] + E) & board->occupancies[board->xside] & possibilities;
 
   while (capturingE) {
     int end = lsb(capturingE);
 
-    addMove(moveList, buildMove(end - (pawnDirections[board->side] - 1), end, PAWN[board->side], 0, 1, 0, 0, 0));
+    addMove(moveList, buildMove(end - (PAWN_DIRECTIONS[board->side] + E), end, PAWN[board->side], 0, 1, 0, 0, 0));
 
     popLsb(capturingE);
   }
 
   while (capturingW) {
     int end = lsb(capturingW);
-    addMove(moveList, buildMove(end - (pawnDirections[board->side] + 1), end, PAWN[board->side], 0, 1, 0, 0, 0));
+    addMove(moveList, buildMove(end - (PAWN_DIRECTIONS[board->side] + W), end, PAWN[board->side], 0, 1, 0, 0, 0));
     popLsb(capturingW);
   }
 
@@ -128,24 +127,24 @@ void generatePawnCaptures(MoveList* moveList, BitBoard pawns, BitBoard possibili
 }
 
 void generatePawnQuiets(MoveList* moveList, BitBoard pawns, BitBoard possibilities, Board* board) {
-  BitBoard empty = ~board->occupancies[2];
-  BitBoard nonPromotingPawns = pawns & ~promotionRanks[board->side];
+  BitBoard empty = ~board->occupancies[BOTH];
+  BitBoard nonPromotingPawns = pawns & ~PROMOTION_RANKS[board->side];
 
-  BitBoard singlePush = shift(nonPromotingPawns, pawnDirections[board->side]) & empty;
-  BitBoard doublePush = shift(singlePush & thirdRanks[board->side], pawnDirections[board->side]) & empty;
+  BitBoard singlePush = shift(nonPromotingPawns, PAWN_DIRECTIONS[board->side]) & empty;
+  BitBoard doublePush = shift(singlePush & THIRD_RANKS[board->side], PAWN_DIRECTIONS[board->side]) & empty;
 
   singlePush &= possibilities;
   doublePush &= possibilities;
 
   while (singlePush) {
     int end = lsb(singlePush);
-    addMove(moveList, buildMove(end - pawnDirections[board->side], end, PAWN[board->side], 0, 0, 0, 0, 0));
+    addMove(moveList, buildMove(end - PAWN_DIRECTIONS[board->side], end, PAWN[board->side], 0, 0, 0, 0, 0));
     popLsb(singlePush);
   }
 
   while (doublePush) {
     int end = lsb(doublePush);
-    addMove(moveList, buildMove(end - pawnDirections[board->side] - pawnDirections[board->side], end, PAWN[board->side],
+    addMove(moveList, buildMove(end - PAWN_DIRECTIONS[board->side] - PAWN_DIRECTIONS[board->side], end, PAWN[board->side],
                                 0, 0, 1, 0, 0));
     popLsb(doublePush);
   }
@@ -240,7 +239,7 @@ void generateRookCaptures(MoveList* moveList, BitBoard rooks, BitBoard possibili
   while (rooks) {
     int start = lsb(rooks);
 
-    BitBoard attacks = getRookAttacks(start, board->occupancies[2]) & board->occupancies[board->xside] & possibilities;
+    BitBoard attacks = getRookAttacks(start, board->occupancies[BOTH]) & board->occupancies[board->xside] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
@@ -339,15 +338,15 @@ void generateKingCastles(MoveList* moveList, Board* board) {
     return;
 
   if (board->side == WHITE) {
-    if ((board->castling & 0x8) && !(board->occupancies[BOTH] & getInBetween(60, 63)))
-      addMove(moveList, buildMove(60, 62, KING[board->side], 0, 0, 0, 0, 1));
-    if ((board->castling & 0x4) && !(board->occupancies[BOTH] & getInBetween(60, 56)))
-      addMove(moveList, buildMove(60, 58, KING[board->side], 0, 0, 0, 0, 1));
+    if ((board->castling & 0x8) && !(board->occupancies[BOTH] & getInBetween(E1, H1)))
+      addMove(moveList, buildMove(E1, G1, KING[board->side], 0, 0, 0, 0, 1));
+    if ((board->castling & 0x4) && !(board->occupancies[BOTH] & getInBetween(E1, A1)))
+      addMove(moveList, buildMove(E1, C1, KING[board->side], 0, 0, 0, 0, 1));
   } else {
-    if ((board->castling & 0x2) && !(board->occupancies[BOTH] & getInBetween(4, 7)))
-      addMove(moveList, buildMove(4, 6, KING[board->side], 0, 0, 0, 0, 1));
-    if ((board->castling & 0x1) && !(board->occupancies[BOTH] & getInBetween(4, 0)))
-      addMove(moveList, buildMove(4, 2, KING[board->side], 0, 0, 0, 0, 1));
+    if ((board->castling & 0x2) && !(board->occupancies[BOTH] & getInBetween(E8, H8)))
+      addMove(moveList, buildMove(E8, G8, KING[board->side], 0, 0, 0, 0, 1));
+    if ((board->castling & 0x1) && !(board->occupancies[BOTH] & getInBetween(E8, A8)))
+      addMove(moveList, buildMove(E8, C8, KING[board->side], 0, 0, 0, 0, 1));
   }
 }
 
@@ -394,12 +393,12 @@ void generateQuiesceMoves(MoveList* moveList, Board* board) {
     generateKingCaptures(moveList, board);
   } else {
     BitBoard nonPinned = ~board->pinners;
-    generatePawnCaptures(moveList, board->pieces[PAWN[board->side]] & nonPinned, -1ULL, board);
-    generatePawnPromotions(moveList, board->pieces[PAWN[board->side]] & nonPinned, -1ULL, board);
-    generateKnightCaptures(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, -1ULL, board);
-    generateBishopCaptures(moveList, board->pieces[BISHOP[board->side]] & nonPinned, -1ULL, board);
-    generateRookCaptures(moveList, board->pieces[ROOK[board->side]] & nonPinned, -1ULL, board);
-    generateQueenCaptures(moveList, board->pieces[QUEEN[board->side]] & nonPinned, -1ULL, board);
+    generatePawnCaptures(moveList, board->pieces[PAWN[board->side]] & nonPinned, FILLED, board);
+    generatePawnPromotions(moveList, board->pieces[PAWN[board->side]] & nonPinned, FILLED, board);
+    generateKnightCaptures(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, FILLED, board);
+    generateBishopCaptures(moveList, board->pieces[BISHOP[board->side]] & nonPinned, FILLED, board);
+    generateRookCaptures(moveList, board->pieces[ROOK[board->side]] & nonPinned, FILLED, board);
+    generateQueenCaptures(moveList, board->pieces[QUEEN[board->side]] & nonPinned, FILLED, board);
     generateKingCaptures(moveList, board);
 
     // TODO: Clean this up?
@@ -447,7 +446,7 @@ void generateQuiesceMoves(MoveList* moveList, Board* board) {
     Move move = moveList->moves[i];
 
     if (movePromo(move)) {
-      moveList->scores[i] = scoreMG(materialValues[movePromo(move)]);
+      moveList->scores[i] = scoreMG(MATERIAL_VALUES[movePromo(move)]);
     } else {
       int mover = movePiece(move);
       int captured = capturedPiece(move, board);
@@ -456,7 +455,7 @@ void generateQuiesceMoves(MoveList* moveList, Board* board) {
       if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
         moveList->scores[i] = seeScore;
       } else {
-        moveList->scores[i] = mvvLva[movePiece(move)][capturedPiece(move, board)];
+        moveList->scores[i] = MVV_LVA[movePiece(move)][capturedPiece(move, board)];
       }
     }
   }
@@ -480,11 +479,11 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
     generateKingMoves(moveList, board);
   } else {
     BitBoard nonPinned = ~board->pinners;
-    generatePawnMoves(moveList, board->pieces[PAWN[board->side]] & nonPinned, -1ULL, board);
-    generateKnightMoves(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, -1ULL, board);
-    generateBishopMoves(moveList, board->pieces[BISHOP[board->side]] & nonPinned, -1ULL, board);
-    generateRookMoves(moveList, board->pieces[ROOK[board->side]] & nonPinned, -1ULL, board);
-    generateQueenMoves(moveList, board->pieces[QUEEN[board->side]] & nonPinned, -1ULL, board);
+    generatePawnMoves(moveList, board->pieces[PAWN[board->side]] & nonPinned, FILLED, board);
+    generateKnightMoves(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, FILLED, board);
+    generateBishopMoves(moveList, board->pieces[BISHOP[board->side]] & nonPinned, FILLED, board);
+    generateRookMoves(moveList, board->pieces[ROOK[board->side]] & nonPinned, FILLED, board);
+    generateQueenMoves(moveList, board->pieces[QUEEN[board->side]] & nonPinned, FILLED, board);
     generateKingMoves(moveList, board);
 
     // TODO: Clean this up?
@@ -543,10 +542,10 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
       if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
         moveList->scores[i] = BAD_CAPTURE + seeScore;
       } else {
-        moveList->scores[i] = GOOD_CAPTURE + mvvLva[movePiece(move)][capturedPiece(move, board)];
+        moveList->scores[i] = GOOD_CAPTURE + MVV_LVA[movePiece(move)][capturedPiece(move, board)];
       }
     } else if (movePromo(move) >= 8) {
-      moveList->scores[i] = GOOD_CAPTURE + scoreMG(queenValue);
+      moveList->scores[i] = GOOD_CAPTURE + scoreMG(QUEEN_VALUE);
     } else if (move == board->killers[ply][0]) {
       moveList->scores[i] = KILLER1;
     } else if (move == board->killers[ply][1]) {
@@ -588,8 +587,7 @@ void printMoves(MoveList* moveList) {
   for (int i = 0; i < moveList->count; i++) {
     bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
-    printf("%s%s%c %5d %c %d %d %d %d\n", idxToCord[moveStart(move)], idxToCord[moveEnd(move)],
-           movePromo(move) ? pieceChars[movePromo(move)] : ' ', moveList->scores[i], pieceChars[movePiece(move)],
+    printf("%s %5d %c %d %d %d %d\n", moveStr(move), moveList->scores[i], PIECE_TO_CHAR[movePiece(move)],
            moveCapture(move), moveDouble(move), moveEP(move), moveCastle(move));
   }
 }

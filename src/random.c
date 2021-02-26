@@ -1,6 +1,6 @@
 #include "random.h"
 
-uint32_t randomState = 234;
+uint32_t randomState = INITIAL_RANDOM_STATE;
 
 uint32_t randomInt() {
   uint32_t result = randomState;

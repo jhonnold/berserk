@@ -2,11 +2,11 @@
 #include <stdio.h>
 
 #include "bits.h"
+#include "board.h"
 #include "types.h"
 
-const BitBoard COLUMN_MASKS[8] = {A_FILE, B_FILE, C_FILE, D_FILE, E_FILE, F_FILE, G_FILE, H_FILE};
-// These are intentionally in reverse as 0 is a8
-const BitBoard RANK_MASKS[8] = {RANK_8, RANK_7, RANK_6, RANK_5, RANK_4, RANK_3, RANK_2, RANK_1};
+const BitBoard FILE_MASKS[8] = {A_FILE, B_FILE, C_FILE, D_FILE, E_FILE, F_FILE, G_FILE, H_FILE};
+const BitBoard RANK_MASKS[8] = {RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
 
 #ifndef POPCOUNT
 inline int bits(BitBoard bb) {
@@ -18,41 +18,42 @@ inline int bits(BitBoard bb) {
 #endif
 
 inline BitBoard shift(BitBoard bb, int dir) {
-  return dir == -8    ? bb >> 8
-         : dir == 8   ? bb << 8
-         : dir == -16 ? bb >> 16
-         : dir == 16  ? bb << 16
-         : dir == -1  ? (bb & ~A_FILE) >> 1
-         : dir == 1   ? (bb & ~H_FILE) << 1
-         : dir == -7  ? (bb & ~H_FILE) >> 7
-         : dir == 7   ? (bb & ~A_FILE) << 7
-         : dir == -9  ? (bb & ~A_FILE) >> 9
-         : dir == 9   ? (bb & ~H_FILE) << 9
+  return dir == N    ? bb >> 8
+         : dir == S   ? bb << 8
+         : dir == (N + N) ? bb >> 16
+         : dir == (S + S)  ? bb << 16
+         : dir == W  ? (bb & ~A_FILE) >> 1
+         : dir == E   ? (bb & ~H_FILE) << 1
+         : dir == NE  ? (bb & ~H_FILE) >> 7
+         : dir == SW   ? (bb & ~A_FILE) << 7
+         : dir == NW  ? (bb & ~A_FILE) >> 9
+         : dir == SE   ? (bb & ~H_FILE) << 9
                       : 0;
 }
 
 inline BitBoard fill(BitBoard initial, int direction) {
-  if (direction == 8) {
-    initial |= (initial << 8);
-    initial |= (initial << 16);
-    return initial | (initial << 32);
-  } else if (direction == -8) {
-    initial |= (initial >> 8);
-    initial |= (initial >> 16);
-    return initial | (initial >> 32);
+  switch (direction) {
+    case S:
+      initial |= (initial << 8);
+      initial |= (initial << 16);
+      return initial | (initial << 32);
+    case N:
+      initial |= (initial >> 8);
+      initial |= (initial >> 16);
+      return initial | (initial >> 32);
+    default:
+      return initial;
   }
-
-  return initial;
 }
 
 void printBB(BitBoard bitboard) {
   for (int i = 0; i < 64; i++) {
-    if ((i & 7) == 0)
-      printf(" %d ", 8 - (i >> 3));
+    if (file(i) == 0)
+      printf(" %d ", 8 - rank(i));
 
     printf(" %d", getBit(bitboard, i) ? 1 : 0);
 
-    if ((i & 7) == 7)
+    if (file(i) == 7)
       printf("\n");
   }
 

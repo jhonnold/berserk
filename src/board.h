@@ -3,6 +3,18 @@
 
 #include "types.h"
 
+#define file(sq) ((sq) & 7)
+#define rank(sq) ((sq) >> 3)
+
+extern const BitBoard EMPTY;
+
+extern const int PAWN[];
+extern const int KNIGHT[];
+extern const int BISHOP[];
+extern const int ROOK[];
+extern const int QUEEN[];
+extern const int KING[];
+
 extern const int casltingRights[];
 extern const int mirror[];
 

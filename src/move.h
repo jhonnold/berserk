@@ -3,10 +3,10 @@
 
 #include "types.h"
 
-extern const int charToPieceIdx[];
-extern const char* pieceChars;
-extern const char* promotionChars;
-extern const char* idxToCord[];
+extern const int CHAR_TO_PIECE[];
+extern const char* PIECE_TO_CHAR;
+extern const char* PROMOTION_TO_CHAR;
+extern const char* SQ_TO_COORD[];
 
 #define buildMove(start, end, piece, promo, cap, dub, ep, castle)                                                      \
   (start) | ((end) << 6) | ((piece) << 12) | ((promo) << 16) | ((cap) << 20) | ((dub) << 21) | ((ep) << 22) |          \

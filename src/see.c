@@ -9,7 +9,7 @@
 #include "util.h"
 
 inline int see(Board* board, Move move) {
-  BitBoard occupied = board->occupancies[2];
+  BitBoard occupied = board->occupancies[BOTH];
   int side = board->side;
 
   int gain[32];
@@ -21,22 +21,22 @@ inline int see(Board* board, Move move) {
   BitBoard attackers = attacksTo(board, end);
   int captured = capturedPiece(move, board);
   // We can run see against a non-capture
-  int attackedPieceVal = captured >= 0 ? scoreMG(materialValues[captured]) : 0;
+  int attackedPieceVal = captured >= 0 ? scoreMG(MATERIAL_VALUES[captured]) : 0;
 
   side ^= 1;
   gain[0] = attackedPieceVal;
 
   int piece = movePiece(move);
-  attackedPieceVal = scoreMG(materialValues[piece]);
+  attackedPieceVal = scoreMG(MATERIAL_VALUES[piece]);
   popBit(occupied, start);
 
   // If pawn/bishop/queen captures
-  if (piece == 0 || piece == 1 || piece == 4 || piece == 5 || piece == 8 || piece == 9)
+  if (piece == PAWN[WHITE] || piece == PAWN[BLACK] || piece == BISHOP[WHITE] || piece == BISHOP[BLACK] || piece == QUEEN[WHITE] || piece == QUEEN[BLACK])
     attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
   // If pawn/rook/queen captures (ep)
-  if (piece >= 6 && piece <= 9)
+  if (piece >= ROOK[WHITE] && piece <= QUEEN[BLACK])
     attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                   board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
@@ -44,27 +44,27 @@ inline int see(Board* board, Move move) {
   attackers &= occupied;
 
   while (attackers) {
-    for (piece = side; piece <= KING[side]; piece += 2)
+    for (piece = PAWN[side]; piece <= KING[side]; piece += 2)
       if ((attackee = board->pieces[piece] & attackers))
         break;
 
-    if (piece >= 12)
+    if (piece > KING[BLACK])
       break;
 
     occupied ^= (attackee & -attackee);
 
     // If pawn/bishop/queen captures
-    if (piece == 0 || piece == 1 || piece == 4 || piece == 5 || piece == 8 || piece == 9)
+    if (piece == PAWN[WHITE] || piece == PAWN[BLACK] || piece == BISHOP[WHITE] || piece == BISHOP[BLACK] || piece == QUEEN[WHITE] || piece == QUEEN[BLACK])
       attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                       board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
     // If pawn/rook/queen captures (ep)
-    if (piece >= 6 && piece <= 9)
+    if (piece >= ROOK[WHITE] && piece <= QUEEN[BLACK])
       attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
     gain[captureCount] = -gain[captureCount - 1] + attackedPieceVal;
-    attackedPieceVal = scoreMG(materialValues[piece]);
+    attackedPieceVal = scoreMG(MATERIAL_VALUES[piece]);
     if (gain[captureCount++] - attackedPieceVal > 0)
       break;
 

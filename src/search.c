@@ -16,6 +16,9 @@ const int CHECKMATE = 32767;
 const int MATE_BOUND = 30000;
 
 const int FUTILITY_MARGINS[] = {0, 90, 180, 280, 380, 490, 600};
+const int SEE_PRUNE_CAPTURE_CUTOFF = -80;
+const int SEE_PRUNE_CUTOFF = -25;
+const int DELTA_CUTOFF = 200;
 
 void Search(Board* board, SearchParams* params, SearchData* data) {
   data->nodes = 0;
@@ -155,7 +158,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       int lmrDepth = numMoves <= 6 ? newDepth - 1 : newDepth - depth / 2;
       lmrDepth = max(0, lmrDepth);
 
-      int seeCutoff = moveCapture(move) ? (-80 * depth) : (-25 * lmrDepth * lmrDepth);
+      int seeCutoff = moveCapture(move) ? (SEE_PRUNE_CAPTURE_CUTOFF * depth) : (SEE_PRUNE_CUTOFF * lmrDepth * lmrDepth);
 
       // SEE pruning
       if (see(board, move) < seeCutoff)
@@ -276,7 +279,7 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
       continue;
 
     int captured = capturedPiece(move, board);
-    if (eval + 200 + scoreMG(materialValues[captured]) < alpha)
+    if (eval + DELTA_CUTOFF + scoreMG(MATERIAL_VALUES[captured]) < alpha)
       continue;
 
     makeMove(move, board);

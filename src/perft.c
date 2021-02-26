@@ -47,7 +47,7 @@ void PerftTest(int depth, Board* board) {
     int64_t nodes = perft(depth - 1, board);
     undoMove(m, board);
 
-    printf("%s%s: %" PRId64 "\n", idxToCord[moveStart(m)], idxToCord[moveEnd(m)], nodes);
+    printf("%s: %" PRId64 "\n", moveStr(m), nodes);
     total += nodes;
   }
 
