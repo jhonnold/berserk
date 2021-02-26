@@ -7,8 +7,12 @@ extern const int casltingRights[];
 extern const int mirror[];
 
 void clear(Board* board);
+uint64_t zobrist(Board* board);
 void parseFen(char* fen, Board* board);
 void printBoard(Board* board);
+
+void setSpecialPieces(Board* board);
+void setOccupancies(Board* board);
 
 int inCheck(Board* board);
 int isSquareAttacked(int sq, int attacker, BitBoard occupancy, Board* board);

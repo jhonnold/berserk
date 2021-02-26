@@ -52,44 +52,6 @@ void clear(Board* board) {
   board->moveNo = 0;
 }
 
-inline void setOccupancies(Board* board) {
-  memset(board->occupancies, EMPTY, sizeof(board->occupancies));
-
-  for (int i = 0; i < 12; i++)
-    board->occupancies[i & 1] |= board->pieces[i];
-  board->occupancies[BOTH] = board->occupancies[WHITE] | board->occupancies[BLACK];
-}
-
-inline void setSpecialPieces(Board* board) {
-  int kingSq = lsb(board->pieces[KING[board->side]]);
-
-  board->pinners = EMPTY;
-  board->checkers = (getKnightAttacks(kingSq) & board->pieces[KNIGHT[board->xside]]) |
-                    (getPawnAttacks(kingSq, board->side) & board->pieces[PAWN[board->xside]]);
-
-  for (int kingColor = WHITE; kingColor <= BLACK; kingColor++) {
-    int enemyColor = 1 - kingColor;
-    kingSq = lsb(board->pieces[KING[kingColor]]);
-
-    BitBoard enemyPiece =
-        ((board->pieces[BISHOP[enemyColor]] | board->pieces[QUEEN[enemyColor]]) & getBishopAttacks(kingSq, 0)) |
-        ((board->pieces[ROOK[enemyColor]] | board->pieces[QUEEN[enemyColor]]) & getRookAttacks(kingSq, 0));
-
-    while (enemyPiece) {
-      int sq = lsb(enemyPiece);
-
-      BitBoard blockers = getInBetween(kingSq, sq) & board->occupancies[BOTH];
-
-      if (!blockers)
-        board->checkers |= (enemyPiece & -enemyPiece);
-      else if (bits(blockers) == 1)
-        board->pinners |= (blockers & board->occupancies[kingColor]);
-
-      popLsb(enemyPiece);
-    }
-  }
-}
-
 uint64_t zobrist(Board* board) {
   uint64_t hash = 0;
 
@@ -217,6 +179,44 @@ inline int capturedPiece(Move move, Board* board) {
       return i;
 
   return -1;
+}
+
+inline void setOccupancies(Board* board) {
+  memset(board->occupancies, EMPTY, sizeof(board->occupancies));
+
+  for (int i = 0; i < 12; i++)
+    board->occupancies[i & 1] |= board->pieces[i];
+  board->occupancies[BOTH] = board->occupancies[WHITE] | board->occupancies[BLACK];
+}
+
+inline void setSpecialPieces(Board* board) {
+  int kingSq = lsb(board->pieces[KING[board->side]]);
+
+  board->pinners = EMPTY;
+  board->checkers = (getKnightAttacks(kingSq) & board->pieces[KNIGHT[board->xside]]) |
+                    (getPawnAttacks(kingSq, board->side) & board->pieces[PAWN[board->xside]]);
+
+  for (int kingColor = WHITE; kingColor <= BLACK; kingColor++) {
+    int enemyColor = 1 - kingColor;
+    kingSq = lsb(board->pieces[KING[kingColor]]);
+
+    BitBoard enemyPiece =
+        ((board->pieces[BISHOP[enemyColor]] | board->pieces[QUEEN[enemyColor]]) & getBishopAttacks(kingSq, 0)) |
+        ((board->pieces[ROOK[enemyColor]] | board->pieces[QUEEN[enemyColor]]) & getRookAttacks(kingSq, 0));
+
+    while (enemyPiece) {
+      int sq = lsb(enemyPiece);
+
+      BitBoard blockers = getInBetween(kingSq, sq) & board->occupancies[BOTH];
+
+      if (!blockers)
+        board->checkers |= (enemyPiece & -enemyPiece);
+      else if (bits(blockers) == 1)
+        board->pinners |= (blockers & board->occupancies[kingColor]);
+
+      popLsb(enemyPiece);
+    }
+  }
 }
 
 void makeMove(Move move, Board* board) {
