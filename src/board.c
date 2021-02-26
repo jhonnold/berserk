@@ -37,6 +37,12 @@ const int mirror[] = {
 void clear(Board* board) {
   memset(board->pieces, EMPTY, sizeof(board->pieces));
   memset(board->occupancies, EMPTY, sizeof(board->occupancies));
+  memset(board->gameMoves, EMPTY, sizeof(board->gameMoves));
+  memset(board->zobristHistory, EMPTY, sizeof(board->zobristHistory));
+  memset(board->castlingHistory, EMPTY, sizeof(board->castlingHistory));
+  memset(board->captureHistory, EMPTY, sizeof(board->captureHistory));
+  memset(board->killers, EMPTY, sizeof(board->killers));
+  memset(board->counters, EMPTY, sizeof(board->counters));
 
   board->side = WHITE;
   board->xside = BLACK;

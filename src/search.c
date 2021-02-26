@@ -17,8 +17,7 @@ const int MATE_BOUND = 30000;
 
 const int FUTILITY_MARGINS[] = {0, 90, 180, 280, 380, 490, 600};
 
-void Search(Board* board, SearchParams* params) {
-  SearchData data[1];
+void Search(Board* board, SearchParams* params, SearchData* data) {
   data->nodes = 0;
   data->seldepth = 1;
 
