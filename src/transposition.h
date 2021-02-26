@@ -8,7 +8,7 @@
 enum { TT_LOWER, TT_UPPER, TT_EXACT };
 
 extern const TTValue NO_ENTRY;
-extern TTValue transpositionEntries[];
+extern TTValue TRANSPOSITION_ENTRIES[];
 
 #define POWER 20
 #define BUCKET_SIZE 2

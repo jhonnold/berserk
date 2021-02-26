@@ -3,10 +3,9 @@
 
 #include "types.h"
 
-extern const BitBoard homeRanks[];
-extern const BitBoard thirdRanks[];
-extern const int pawnDirections[];
-extern const char* promotionChars;
+extern const BitBoard HOME_RANKS[];
+extern const BitBoard THIRD_RANKS[];
+extern const int PAWN_DIRECTIONS[];
 
 void addMove(MoveList* moveList, Move move);
 void generateMoves(MoveList* moveList, Board* board, int ply);

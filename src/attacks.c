@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "attacks.h"
+#include "board.h"
 #include "bits.h"
 #include "movegen.h"
 #include "random.h"
@@ -50,29 +51,29 @@ void initBetween() {
   int i;
   for (int f = 0; f < 64; f++) {
     for (int t = f + 1; t < 64; t++) {
-      if ((f >> 3) == (t >> 3)) {
-        i = t - 1;
+      if (rank(f) == rank(t)) {
+        i = t + W;
         while (i > f) {
           BETWEEN_SQS[f][t] |= (1ULL << i);
-          i--;
+          i += W;
         }
-      } else if ((f & 7) == (t & 7)) {
-        i = t - 8;
+      } else if (file(f) == file(t)) {
+        i = t + N;
         while (i > f) {
           BETWEEN_SQS[f][t] |= (1ULL << i);
-          i -= 8;
+          i += N;
         }
-      } else if ((t - f) % 9 == 0 && ((t & 7) > (f & 7))) {
-        i = t - 9;
+      } else if ((t - f) % 9 == 0 && (file(t) > file(f))) {
+        i = t + NW;
         while (i > f) {
           BETWEEN_SQS[f][t] |= (1ULL << i);
-          i -= 9;
+          i += NW;
         }
-      } else if ((t - f) % 7 == 0 && ((t & 7) < (f & 7))) {
-        i = t - 7;
+      } else if ((t - f) % 7 == 0 && (file(t) < file(f))) {
+        i = t + NE;
         while (i > f) {
           BETWEEN_SQS[f][t] |= (1ULL << i);
-          i -= 7;
+          i += NE;
         }
       }
     }
@@ -84,7 +85,7 @@ void initBetween() {
 }
 
 void initPinnedMovement() {
-  int dirs[] = {-1, -7, -8, -9, 1, 7, 8, 9};
+  int dirs[] = {W, NE, N, NW, E, SW, S, SE};
 
   for (int pSq = 0; pSq < 64; pSq++) {
     for (int kSq = 0; kSq < 64; kSq++) {
@@ -94,12 +95,12 @@ void initPinnedMovement() {
           break;
 
         for (int xray = kSq + dirs[i]; xray >= 0 && xray < 64; xray += dirs[i]) {
-          if (dirs[i] == 1 || dirs[i] == 9 || dirs[i] == -7)
-            if ((xray & 7) == 0)
+          if (dirs[i] == E || dirs[i] == SE || dirs[i] == NE)
+            if (file(xray) == 0)
               break;
 
-          if (dirs[i] == -1 || dirs[i] == -9 || dirs[i] == 7)
-            if ((xray & 7) == 7)
+          if (dirs[i] == W || dirs[i] == NW || dirs[i] == SW)
+            if (file(xray) == 7)
               break;
 
           if (xray == pSq) {
@@ -113,12 +114,12 @@ void initPinnedMovement() {
         for (int xray = kSq + dir; xray >= 0 && xray < 64; xray += dir) {
           PINNED_MOVES[pSq][kSq] |= (1ULL << xray);
 
-          if (dir == 1 || dir == 9 || dir == -7)
-            if ((xray & 7) == 7)
+          if (dir == E || dir == SE || dir == NE)
+            if (file(xray) == 7)
               break;
 
-          if (dir == -1 || dir == -9 || dir == 7)
-            if ((xray & 7) == 0)
+          if (dir == W || dir == SW || dir == NW)
+            if (file(xray) == 0)
               break;
         }
       }
@@ -130,21 +131,21 @@ void initPawnSpans() {
   // WHITE
   for (int sq = 0; sq < 64; sq++) {
     BitBoard span = 0;
-    for (int i = sq + pawnDirections[WHITE]; i >= 0; i += pawnDirections[WHITE]) {
+    for (int i = sq + PAWN_DIRECTIONS[WHITE]; i >= 0; i += PAWN_DIRECTIONS[WHITE]) {
       setBit(span, i);
     }
 
-    span |= PAWN_SPANS[WHITE][sq] = span | shift(span, 1) | shift(span, -1);
+    span |= PAWN_SPANS[WHITE][sq] = span | shift(span, E) | shift(span, W);
   }
 
   // BLACK
   for (int sq = 0; sq < 64; sq++) {
     BitBoard span = 0;
-    for (int i = sq + pawnDirections[BLACK]; i < 64; i += pawnDirections[BLACK]) {
+    for (int i = sq + PAWN_DIRECTIONS[BLACK]; i < 64; i += PAWN_DIRECTIONS[BLACK]) {
       setBit(span, i);
     }
 
-    span |= PAWN_SPANS[BLACK][sq] = span | shift(span, 1) | shift(span, -1);
+    span |= PAWN_SPANS[BLACK][sq] = span | shift(span, E) | shift(span, W);
   }
 }
 
@@ -167,17 +168,12 @@ BitBoard getGeneratedPawnAttacks(int sq, int color) {
 
   setBit(board, sq);
 
-  if (color) {
-    if ((board << 7) & ~H_FILE)
-      attacks |= (board << 7);
-    if ((board << 9) & ~A_FILE)
-      attacks |= (board << 9);
-
+  if (color == WHITE) {
+    attacks |= shift(board, NW);
+    attacks |= shift(board, NE);
   } else {
-    if ((board >> 7) & ~A_FILE)
-      attacks |= (board >> 7);
-    if ((board >> 9) & ~H_FILE)
-      attacks |= (board >> 9);
+    attacks |= shift(board, SE);
+    attacks |= shift(board, SW);
   }
 
   return attacks;
@@ -185,8 +181,8 @@ BitBoard getGeneratedPawnAttacks(int sq, int color) {
 
 void initPawnAttacks() {
   for (int i = 0; i < 64; i++) {
-    PAWN_ATTACKS[0][i] = getGeneratedPawnAttacks(i, 0);
-    PAWN_ATTACKS[1][i] = getGeneratedPawnAttacks(i, 1);
+    PAWN_ATTACKS[WHITE][i] = getGeneratedPawnAttacks(i, WHITE);
+    PAWN_ATTACKS[BLACK][i] = getGeneratedPawnAttacks(i, BLACK);
   }
 }
 
@@ -226,21 +222,14 @@ BitBoard getGeneratedKingAttacks(int sq) {
 
   setBit(board, sq);
 
-  attacks |= (board >> 8);
-  if ((board >> 7) & ~A_FILE)
-    attacks |= (board >> 7);
-  if ((board >> 9) & ~H_FILE)
-    attacks |= (board >> 9);
-  if ((board >> 1) & ~H_FILE)
-    attacks |= (board >> 1);
-
-  attacks |= (board << 8);
-  if ((board << 7) & ~H_FILE)
-    attacks |= (board << 7);
-  if ((board << 9) & ~A_FILE)
-    attacks |= (board << 9);
-  if ((board << 1) & ~A_FILE)
-    attacks |= (board << 1);
+  attacks |= shift(board, N);
+  attacks |= shift(board, NE);
+  attacks |= shift(board, E);
+  attacks |= shift(board, SE);
+  attacks |= shift(board, S);
+  attacks |= shift(board, SW);
+  attacks |= shift(board, W);
+  attacks |= shift(board, NW);
 
   return attacks;
 }
@@ -253,8 +242,8 @@ void initKingAttacks() {
 BitBoard getBishopMask(int sq) {
   BitBoard attacks = 0;
 
-  int sr = sq >> 3;
-  int sf = sq & 7;
+  int sr = rank(sq);
+  int sf = file(sq);
 
   for (int r = sr + 1, f = sf + 1; r <= 6 && f <= 6; r++, f++)
     attacks |= (1ULL << (r * 8 + f));
@@ -277,8 +266,8 @@ void initBishopMasks() {
 BitBoard getBishopAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
-  int sr = sq >> 3;
-  int sf = sq & 7;
+  int sr = rank(sq);
+  int sf = file(sq);
 
   for (int r = sr + 1, f = sf + 1; r <= 7 && f <= 7; r++, f++) {
     attacks |= (1ULL << (r * 8 + f));
@@ -310,8 +299,8 @@ BitBoard getBishopAttacksOTF(int sq, BitBoard blockers) {
 BitBoard getRookMask(int sq) {
   BitBoard attacks = 0;
 
-  int sr = sq >> 3;
-  int sf = sq & 7;
+  int sr = rank(sq);
+  int sf = file(sq);
 
   for (int r = sr + 1; r <= 6; r++)
     attacks |= (1ULL << (r * 8 + sf));
@@ -333,8 +322,8 @@ void initRookMasks() {
 BitBoard getRookAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
-  int sr = sq >> 3;
-  int sf = sq & 7;
+  int sr = rank(sq);
+  int sf = file(sq);
 
   for (int r = sr + 1; r <= 7; r++) {
     attacks |= (1ULL << (r * 8 + sf));
@@ -508,9 +497,9 @@ inline BitBoard attacksTo(Board* board, int sq) {
                      (getKingAttacks(sq) & (board->pieces[KING[WHITE]] | board->pieces[KING[BLACK]]));
 
   attacks |=
-      getBishopAttacks(sq, board->occupancies[2]) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+      getBishopAttacks(sq, board->occupancies[BOTH]) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                      board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
-  attacks |= getRookAttacks(sq, board->occupancies[2]) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+  attacks |= getRookAttacks(sq, board->occupancies[BOTH]) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                           board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
   return attacks;
