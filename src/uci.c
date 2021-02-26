@@ -82,7 +82,8 @@ void parseGo(char* in, SearchParams* params, Board* board) {
     printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
            params->timeset);
 
-    Search(board, params);
+    SearchData data[1];
+    Search(board, params, data);
   }
 }
 
