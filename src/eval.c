@@ -11,7 +11,7 @@
 #define S(mg, eg) (makeScore((mg), (eg)))
 
 const int PAWN_VALUE = S(100, 150);
-const int KNIGHT_VALUE = S(475, 450);
+const int KNIGHT_VALUE = S(475, 475);
 const int BISHOP_VALUE = S(475, 475);
 const int ROOK_VALUE = S(700, 775);
 const int QUEEN_VALUE = S(1600, 1450);
