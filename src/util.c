@@ -2,40 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef WIN32
-#include <windows.h>
-#else
-#include <string.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <unistd.h>
-#endif
-
 #include "types.h"
 
-long getTimeMs() {
 #ifdef WIN32
-  return GetTickCount();
-#else
-  struct timeval time;
-  gettimeofday(&time, NULL);
-
-  return time.tv_sec * 1000 + time.tv_usec / 1000;
-#endif
-}
+#include <windows.h>
+long getTimeMs() { return GetTickCount(); }
 
 int inputWaiting() {
-#ifndef WIN32
-  fd_set readfds;
-  struct timeval tv;
-  FD_ZERO(&readfds);
-  FD_SET(fileno(stdin), &readfds);
-  tv.tv_sec = 0;
-  tv.tv_usec = 0;
-  select(16, &readfds, 0, 0, &tv);
-
-  return (FD_ISSET(fileno(stdin), &readfds));
-#else
   static int init = 0, pipe;
   static HANDLE inh;
   DWORD dw;
@@ -57,14 +30,70 @@ int inputWaiting() {
     GetNumberOfConsoleInputEvents(inh, &dw);
     return dw <= 1 ? 0 : dw;
   }
-#endif
 }
+#else
+#include <errno.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+sigset_t mask, omask;
+
+long getTimeMs() {
+  struct timeval time;
+  gettimeofday(&time, NULL);
+
+  return time.tv_sec * 1000 + time.tv_usec / 1000;
+}
+
+void sigterm(int signo) { (void)signo; }
+
+void initSignalHandlers() {
+  struct sigaction s;
+  s.sa_handler = sigterm;
+
+  sigemptyset(&s.sa_mask);
+  s.sa_flags = 0;
+  sigaction(SIGTERM, &s, NULL);
+
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGTERM);
+  sigprocmask(SIG_BLOCK, &mask, &omask);
+}
+
+int inputWaiting(SearchParams* params) {
+  fd_set readfds;
+
+  struct timespec tv;
+  tv.tv_sec = 0;
+  tv.tv_nsec = 0;
+
+  FD_ZERO(&readfds);
+  FD_SET(fileno(stdin), &readfds);
+
+  int res = pselect(16, &readfds, 0, 0, &tv, &omask);
+  if (res < 0 && errno == EINTR) {
+    params->stopped = 1;
+    params->quit = 1;
+
+    return 0;
+  }
+
+  return FD_ISSET(fileno(stdin), &readfds);
+}
+#endif
 
 void readInput(SearchParams* params) {
   int bytes = 0;
   char in[256], *endc;
 
+#ifndef WIN32
+  if (inputWaiting(params)) {
+#else
   if (inputWaiting()) {
+#endif
     do {
       bytes = read(fileno(stdin), in, 256);
     } while (bytes < 0);
