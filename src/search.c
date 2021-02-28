@@ -15,7 +15,7 @@
 const int CHECKMATE = 32767;
 const int MATE_BOUND = 30000;
 
-const int FUTILITY_MARGINS[] = {0, 90, 180, 280, 380, 490, 600};
+const int FUTILITY_MARGIN = 80;
 const int SEE_PRUNE_CAPTURE_CUTOFF = -80;
 const int SEE_PRUNE_CUTOFF = -25;
 const int DELTA_CUTOFF = 200;
@@ -119,7 +119,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   int staticEval = Evaluate(board);
   if (!isPV && !currInCheck) {
     // Reverse Futility Pruning
-    if (depth <= 6 && staticEval - FUTILITY_MARGINS[depth] >= beta && staticEval < MATE_BOUND)
+    if (depth <= 6 && staticEval - (FUTILITY_MARGIN * depth) >= beta && staticEval < MATE_BOUND)
       return staticEval;
 
     // Null move pruning
