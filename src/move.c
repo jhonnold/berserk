@@ -5,7 +5,7 @@
 #include "types.h"
 
 const int CHAR_TO_PIECE[] = {['P'] = 0, ['N'] = 2, ['B'] = 4, ['R'] = 6, ['Q'] = 8, ['K'] = 10,
-                              ['p'] = 1, ['n'] = 3, ['b'] = 5, ['r'] = 7, ['q'] = 9, ['k'] = 11};
+                             ['p'] = 1, ['n'] = 3, ['b'] = 5, ['r'] = 7, ['q'] = 9, ['k'] = 11};
 const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
 const char* PROMOTION_TO_CHAR = "ppnnbbrrqqkk";
 const char* SQ_TO_COORD[] = {
@@ -42,7 +42,8 @@ char* moveStr(Move move) {
   static char buffer[6];
 
   if (movePromo(move)) {
-    sprintf(buffer, "%s%s%c", SQ_TO_COORD[moveStart(move)], SQ_TO_COORD[moveEnd(move)], PROMOTION_TO_CHAR[movePromo(move)]);
+    sprintf(buffer, "%s%s%c", SQ_TO_COORD[moveStart(move)], SQ_TO_COORD[moveEnd(move)],
+            PROMOTION_TO_CHAR[movePromo(move)]);
   } else {
     sprintf(buffer, "%s%s", SQ_TO_COORD[moveStart(move)], SQ_TO_COORD[moveEnd(move)]);
   }

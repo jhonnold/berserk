@@ -31,7 +31,8 @@ inline int see(Board* board, Move move) {
   popBit(occupied, start);
 
   // If pawn/bishop/queen captures
-  if (piece == PAWN[WHITE] || piece == PAWN[BLACK] || piece == BISHOP[WHITE] || piece == BISHOP[BLACK] || piece == QUEEN[WHITE] || piece == QUEEN[BLACK])
+  if (piece == PAWN[WHITE] || piece == PAWN[BLACK] || piece == BISHOP[WHITE] || piece == BISHOP[BLACK] ||
+      piece == QUEEN[WHITE] || piece == QUEEN[BLACK])
     attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
@@ -54,7 +55,8 @@ inline int see(Board* board, Move move) {
     occupied ^= (attackee & -attackee);
 
     // If pawn/bishop/queen captures
-    if (piece == PAWN[WHITE] || piece == PAWN[BLACK] || piece == BISHOP[WHITE] || piece == BISHOP[BLACK] || piece == QUEEN[WHITE] || piece == QUEEN[BLACK])
+    if (piece == PAWN[WHITE] || piece == PAWN[BLACK] || piece == BISHOP[WHITE] || piece == BISHOP[BLACK] ||
+        piece == QUEEN[WHITE] || piece == QUEEN[BLACK])
       attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                       board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 

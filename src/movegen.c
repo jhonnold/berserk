@@ -19,17 +19,17 @@ const int KILLER2 = INT32_MAX - 2 * INT16_MAX - 1;
 const int COUNTER = INT32_MAX - 2 * INT16_MAX - 10;
 
 const int MVV_LVA[12][12] = {{105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
-                            {105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
-                            {104, 104, 204, 204, 304, 304, 404, 404, 504, 504, 604, 604},
-                            {104, 104, 204, 204, 304, 304, 404, 404, 504, 504, 604, 604},
-                            {103, 103, 203, 203, 303, 303, 403, 403, 503, 503, 603, 603},
-                            {103, 103, 203, 203, 303, 303, 403, 403, 503, 503, 603, 603},
-                            {102, 102, 202, 202, 302, 302, 402, 402, 502, 502, 602, 602},
-                            {102, 102, 202, 202, 302, 302, 402, 402, 502, 502, 602, 602},
-                            {101, 101, 201, 201, 301, 301, 401, 401, 501, 501, 601, 601},
-                            {101, 101, 201, 201, 301, 301, 401, 401, 501, 501, 601, 601},
-                            {100, 100, 200, 200, 300, 300, 400, 400, 500, 500, 600, 600},
-                            {100, 100, 200, 200, 300, 300, 400, 400, 500, 500, 600, 600}};
+                             {105, 105, 205, 205, 305, 305, 405, 405, 505, 505, 605, 605},
+                             {104, 104, 204, 204, 304, 304, 404, 404, 504, 504, 604, 604},
+                             {104, 104, 204, 204, 304, 304, 404, 404, 504, 504, 604, 604},
+                             {103, 103, 203, 203, 303, 303, 403, 403, 503, 503, 603, 603},
+                             {103, 103, 203, 203, 303, 303, 403, 403, 503, 503, 603, 603},
+                             {102, 102, 202, 202, 302, 302, 402, 402, 502, 502, 602, 602},
+                             {102, 102, 202, 202, 302, 302, 402, 402, 502, 502, 602, 602},
+                             {101, 101, 201, 201, 301, 301, 401, 401, 501, 501, 601, 601},
+                             {101, 101, 201, 201, 301, 301, 401, 401, 501, 501, 601, 601},
+                             {100, 100, 200, 200, 300, 300, 400, 400, 500, 500, 600, 600},
+                             {100, 100, 200, 200, 300, 300, 400, 400, 500, 500, 600, 600}};
 
 const int PAWN_DIRECTIONS[] = {N, S};
 const BitBoard PROMOTION_RANKS[] = {RANK_7, RANK_2};
@@ -144,8 +144,8 @@ void generatePawnQuiets(MoveList* moveList, BitBoard pawns, BitBoard possibiliti
 
   while (doublePush) {
     int end = lsb(doublePush);
-    addMove(moveList, buildMove(end - PAWN_DIRECTIONS[board->side] - PAWN_DIRECTIONS[board->side], end, PAWN[board->side],
-                                0, 0, 1, 0, 0));
+    addMove(moveList, buildMove(end - PAWN_DIRECTIONS[board->side] - PAWN_DIRECTIONS[board->side], end,
+                                PAWN[board->side], 0, 0, 1, 0, 0));
     popLsb(doublePush);
   }
 }
@@ -239,7 +239,8 @@ void generateRookCaptures(MoveList* moveList, BitBoard rooks, BitBoard possibili
   while (rooks) {
     int start = lsb(rooks);
 
-    BitBoard attacks = getRookAttacks(start, board->occupancies[BOTH]) & board->occupancies[board->xside] & possibilities;
+    BitBoard attacks =
+        getRookAttacks(start, board->occupancies[BOTH]) & board->occupancies[board->xside] & possibilities;
     while (attacks) {
       int end = lsb(attacks);
 
