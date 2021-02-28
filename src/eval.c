@@ -134,8 +134,29 @@ const int PHASE_MULTIPLIERS[] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
 
 const int DOUBLED_PAWN = S(-10, -10);
 const int ISOLATED_PAWN = S(-10, -10);
-const int WEAK_PAWN = S(-10, -5);
-const int BACKWARDS_PAWN = S(-10, -2);
+const int BACKWARDS_PAWN = S(-20, -7);
+const int DEFENDED_PAWN = S(10, 10);
+const int CONNECTED_PAWN[2][8] = {{
+                                      S(0, 0),
+                                      S(30, 30),
+                                      S(20, 5),
+                                      S(10, 2),
+                                      S(5, 0),
+                                      S(3, 0),
+                                      S(2, 0),
+                                      S(0, 0),
+                                  },
+                                  {
+                                      S(0, 0),
+                                      S(2, 0),
+                                      S(3, 0),
+                                      S(5, 0),
+                                      S(10, 2),
+                                      S(20, 5),
+                                      S(30, 30),
+                                      S(0, 0),
+                                  }};
+
 const int PASSED_PAWN[2][8] = {
     {
         S(0, 0),
@@ -227,6 +248,48 @@ int EvaluateSide(Board* board, int side) {
   if (bits(board->pieces[BISHOP[side]]) > 1)
     score += taper(BISHOP_PAIR, phase);
 
+  for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
+    BitBoard sqBitboard = pawns & -pawns;
+    int sq = lsb(pawns);
+
+    int file = file(sq);
+    int rank = rank(sq);
+
+    BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
+    BitBoard doubled = board->pieces[PAWN[side]] & shift(sqBitboard, PAWN_DIRECTIONS[xside]);
+    BitBoard neighbors = board->pieces[PAWN[side]] & ADJACENT_FILE_MASKS[file];
+    BitBoard connected = neighbors & RANK_MASKS[rank];
+    BitBoard defenders = board->pieces[PAWN[side]] & getPawnAttacks(sq, xside);
+    // BitBoard levers = board->pieces[PAWN[xside]] & getPawnAttacks(sq, side);
+    BitBoard forwardLever = board->pieces[PAWN[xside]] & getPawnAttacks(sq + PAWN_DIRECTIONS[side], side);
+
+    int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][sq + PAWN_DIRECTIONS[side]]) && forwardLever;
+    int passed =
+        !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
+
+    if (doubled)
+      score += taper(DOUBLED_PAWN, phase);
+
+    if (!neighbors)
+      score += taper(ISOLATED_PAWN, phase);
+
+    if (backwards)
+      score += taper(BACKWARDS_PAWN, phase);
+
+    if (passed)
+      score += taper(PASSED_PAWN[side][rank], phase);
+
+    if (defenders | connected) {
+      int s = 2;
+      if (connected)
+        s++;
+      if (opposed)
+        s--;
+
+      score += taper(CONNECTED_PAWN[side][rank], phase) * s + taper(DEFENDED_PAWN, phase) * bits(defenders);
+    }
+  }
+
   // PAWNS
   BitBoard myPawns = board->pieces[PAWN[side]];
   BitBoard opponentPawns = board->pieces[PAWN[xside]];
@@ -243,38 +306,6 @@ int EvaluateSide(Board* board, int side) {
   BitBoard myBlockedAndHomePawns =
       (shift(board->occupancies[BOTH], PAWN_DIRECTIONS[xside]) | HOME_RANKS[side] | THIRD_RANKS[side]) &
       board->pieces[PAWN[side]];
-
-  BitBoard weakPawns = myPawns & ~myPawnAttacks;
-  weakPawns &= ~shift(myPawnAttacks & ~allPawns, PAWN_DIRECTIONS[xside]);
-
-  BitBoard singleStep = shift(myPawns, PAWN_DIRECTIONS[side]) & ~allPawns;
-  BitBoard doubleStep = shift(singleStep & THIRD_RANKS[side], PAWN_DIRECTIONS[side]) & ~allPawns;
-
-  weakPawns &= ~(shift(singleStep, PAWN_DIRECTIONS[side] + E) | shift(singleStep, PAWN_DIRECTIONS[side] + W) |
-                 shift(doubleStep, PAWN_DIRECTIONS[side] + E) | shift(doubleStep, PAWN_DIRECTIONS[side] + W));
-  score += taper(WEAK_PAWN, phase) * bits(weakPawns);
-
-  BitBoard backwards = shift(weakPawns, PAWN_DIRECTIONS[side]) & ~allPawns & oppoPawnAttacks;
-  score += taper(BACKWARDS_PAWN, phase) * bits(backwards);
-
-  BitBoard passers = myPawns & ~getPawnSpans(opponentPawns, xside);
-  for (; passers; popLsb(passers)) {
-    int sq = lsb(passers);
-    int r = rank(sq);
-
-    score += taper(PASSED_PAWN[side][r], phase);
-  }
-
-  for (BitBoard pawns = myPawns; pawns; popLsb(pawns)) {
-    int sq = lsb(pawns);
-    int f = file(sq);
-
-    if (bits(FILE_MASKS[f] & pawns) > 1)
-      score += taper(DOUBLED_PAWN, phase);
-
-    if (!((f > 0 ? FILE_MASKS[f - 1] : 0) & myPawns) && !((f < 7 ? FILE_MASKS[f + 1] : 0) & myPawns))
-      score += taper(ISOLATED_PAWN, phase);
-  }
 
   int kingSq = lsb(board->pieces[KING[side]]);
   int oppoKingSq = lsb(board->pieces[KING[xside]]);
