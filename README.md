@@ -12,25 +12,33 @@ Utilizes bitboards for piece representation and magic bitboards for move generat
 
 ### Search
 
-Standard search meeting the **obligatory** Alpha-Beta enhancements found [here](https://www.chessprogramming.org/Search). Simple move ordering is also implemented, Transposition table move first, followed by captures ([MVV-LVA](https://www.chessprogramming.org/MVV-LVA)), then all others.
-
 - [Negamax](https://www.chessprogramming.org/Negamax) and [Quiescence](https://www.chessprogramming.org/Quiescence_Search)
+- [PVS](https://www.chessprogramming.org/Principal_Variation_Search)
 - [Transposition Table](https://www.chessprogramming.org/Transposition_Table)
 - [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening)
 - [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
+- [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+- [Delta Pruning](https://www.chessprogramming.org/Delta_Pruning)
+- [Reverse Futility Pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
+- [LMR](https://www.chessprogramming.org/Late_Move_Reductions)
 - [MVV-LVA](https://www.chessprogramming.org/MVV-LVA)
+- [SEE](https://www.chessprogramming.org/Static_Exchange_Evaluation)
+- [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
+- [Countermove Heuristic](https://www.chessprogramming.org/Countermove_Heuristic)
 
 ### Evaluation
 
-Evaluation is tapered from the start to the end of the game using the example on CPW. No advanced logic has been implemented outside of Material + PSQT.
+Evaluation is tapered from the start to the end of the game using the example on CPW.
 
 - [Tapered](https://www.chessprogramming.org/Tapered_Eval)
 - [Material](https://www.chessprogramming.org/Material)
 - [Piece Square Tables](https://www.chessprogramming.org/Piece-Square_Tables)
+- [Mobility](https://www.chessprogramming.org/Mobility)
+- [King Safety](https://www.chessprogramming.org/King_Safety)
 
 ## Building
 
-At this time Berserk only supports gcc on Windows and Linux. (MacOS coming soon...)
+At this time Berserk only supports gcc
 
 ```bash
 $ git clone https://github.com/jhonnold/berserk
