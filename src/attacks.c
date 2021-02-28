@@ -3,10 +3,11 @@
 #include <string.h>
 
 #include "attacks.h"
-#include "board.h"
 #include "bits.h"
+#include "board.h"
 #include "movegen.h"
 #include "random.h"
+
 
 // clang-format off
 const int BISHOP_RELEVANT_BITS[64] = {
@@ -498,9 +499,9 @@ inline BitBoard attacksTo(Board* board, int sq) {
 
   attacks |=
       getBishopAttacks(sq, board->occupancies[BOTH]) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
-                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+                                                        board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
   attacks |= getRookAttacks(sq, board->occupancies[BOTH]) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
-                                                          board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
+                                                             board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
   return attacks;
 }

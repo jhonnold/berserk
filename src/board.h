@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-#define file(sq) ((sq) & 7)
+#define file(sq) ((sq)&7)
 #define rank(sq) ((sq) >> 3)
 
 extern const BitBoard EMPTY;

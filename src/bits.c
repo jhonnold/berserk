@@ -18,31 +18,31 @@ inline int bits(BitBoard bb) {
 #endif
 
 inline BitBoard shift(BitBoard bb, int dir) {
-  return dir == N    ? bb >> 8
-         : dir == S   ? bb << 8
+  return dir == N         ? bb >> 8
+         : dir == S       ? bb << 8
          : dir == (N + N) ? bb >> 16
-         : dir == (S + S)  ? bb << 16
-         : dir == W  ? (bb & ~A_FILE) >> 1
-         : dir == E   ? (bb & ~H_FILE) << 1
-         : dir == NE  ? (bb & ~H_FILE) >> 7
-         : dir == SW   ? (bb & ~A_FILE) << 7
-         : dir == NW  ? (bb & ~A_FILE) >> 9
-         : dir == SE   ? (bb & ~H_FILE) << 9
-                      : 0;
+         : dir == (S + S) ? bb << 16
+         : dir == W       ? (bb & ~A_FILE) >> 1
+         : dir == E       ? (bb & ~H_FILE) << 1
+         : dir == NE      ? (bb & ~H_FILE) >> 7
+         : dir == SW      ? (bb & ~A_FILE) << 7
+         : dir == NW      ? (bb & ~A_FILE) >> 9
+         : dir == SE      ? (bb & ~H_FILE) << 9
+                          : 0;
 }
 
 inline BitBoard fill(BitBoard initial, int direction) {
   switch (direction) {
-    case S:
-      initial |= (initial << 8);
-      initial |= (initial << 16);
-      return initial | (initial << 32);
-    case N:
-      initial |= (initial >> 8);
-      initial |= (initial >> 16);
-      return initial | (initial >> 32);
-    default:
-      return initial;
+  case S:
+    initial |= (initial << 8);
+    initial |= (initial << 16);
+    return initial | (initial << 32);
+  case N:
+    initial |= (initial >> 8);
+    initial |= (initial >> 16);
+    return initial | (initial >> 32);
+  default:
+    return initial;
   }
 }
 
