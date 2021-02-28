@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 #ifndef WIN32
   initSignalHandlers();
 #endif
-  initPositionValues();
+  initPSQT();
   initAttacks();
   initPawnSpans();
   initZobristKeys();

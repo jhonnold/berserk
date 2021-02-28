@@ -19,12 +19,12 @@ extern const int MATERIAL_VALUES[];
 
 extern int MATERIAL_AND_PSQT_VALUES[12][64];
 
-void initPositionValues();
+void initPSQT();
 
 int getPhase(Board* board);
 int taper(int score, int phase);
 
+int EvaluateSide(Board* board, int side);
 int Evaluate(Board* board);
-int TraceEvaluate(Board* board);
 
 #endif
