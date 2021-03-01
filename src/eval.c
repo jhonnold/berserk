@@ -132,7 +132,7 @@ const int QUEEN_MOBILITIES[] = {
 const int MAX_PHASE = 24;
 const int PHASE_MULTIPLIERS[] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
 
-const int DOUBLED_PAWN = S(-10, -10);
+const int DOUBLED_PAWN = S(-5, -20);
 const int ISOLATED_PAWN = S(-10, -10);
 const int BACKWARDS_PAWN = S(-20, -7);
 const int WEAK_PAWN = S(-10, -5);
