@@ -5,6 +5,8 @@
 
 extern const BitBoard FILE_MASKS[8];
 extern const BitBoard RANK_MASKS[8];
+extern const BitBoard ADJACENT_FILE_MASKS[8];
+extern const BitBoard FORWARD_RANK_MASKS[2][8];
 
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL

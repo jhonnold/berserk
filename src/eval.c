@@ -22,14 +22,14 @@ const int BISHOP_PAIR = S(50, 50);
 
 // clang-format off
 const int PAWN_PSQT[] = {
-  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
-  S(   5,  40), S(   5,  40), S(  20,  40), S(  25,  35), S(  25,  35), S(  20,  40), S(   5,  40), S(   5,  40),
-  S(   0,  20), S(   0,  20), S(  10,  20), S(  15,  20), S(  15,  20), S(  10,  20), S(   0,  20), S(   0,  20),
-  S(  -5,  10), S(  -5,  10), S(   7,  10), S(  10,  10), S(  10,  10), S(   7,  10), S(  -5,  10), S(  -5,  10),
-  S(  -5,   0), S(  -5,   0), S(   5,   0), S(   5,   0), S(   5,   0), S(   5,   0), S(  -5,   0), S(  -5,   0),
-  S(  -4,  -5), S(  -5,  -5), S(   0,  -5), S(   1,  -5), S(   1,  -5), S(   0,  -5), S(  -5,  -5), S(  -4,  -5),
-  S( -10, -10), S(  -5, -10), S(   0, -10), S(  -1, -10), S(  -1, -10), S(   0, -10), S(  -5, -10), S( -10, -10),
-  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0)
+  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
+  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
+  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
+  S( -15,   0), S(  -5,   0), S(   0,   0), S(  15,   0), S(  15,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
+  S( -15,   0), S(  -5,   0), S(   0,   0), S(  25,   0), S(  25,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
+  S( -15,   0), S(  -5,   0), S(   0,   0), S(  15,   0), S(  15,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
+  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
+  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
 };
 
 const int KNIGHT_PSQT[] = {
@@ -133,28 +133,50 @@ const int MAX_PHASE = 24;
 const int PHASE_MULTIPLIERS[] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
 
 const int DOUBLED_PAWN = S(-10, -10);
-const int ISOLATED_PAWN = S(-10, -10);
-const int WEAK_PAWN = S(-10, -5);
-const int BACKWARDS_PAWN = S(-10, -2);
+const int OPPOSED_ISOLATED_PAWN = S(-2, -5);
+const int OPEN_ISOLATED_PAWN = S(-6, -16);
+const int BACKWARDS_PAWN = S(-20, -7);
+const int DEFENDED_PAWN = S(8, 2);
+const int CONNECTED_PAWN[2][8] = {{
+                                      S(0, 0),
+                                      S(75, 100),
+                                      S(40, 40),
+                                      S(20, 15),
+                                      S(10, 5),
+                                      S(6, 1),
+                                      S(4, 0),
+                                      S(0, 0),
+                                  },
+                                  {
+                                      S(0, 0),
+                                      S(4, 0),
+                                      S(6, 1),
+                                      S(10, 5),
+                                      S(20, 15),
+                                      S(40, 40),
+                                      S(75, 100),
+                                      S(0, 0),
+                                  }};
+
 const int PASSED_PAWN[2][8] = {
     {
         S(0, 0),
-        S(75, 150),
-        S(50, 100),
-        S(15, 75),
-        S(12, 60),
-        S(11, 45),
-        S(10, 45),
+        S(223, 210),
+        S(138, 143),
+        S(52, 56),
+        S(14, 32),
+        S(12, 25),
+        S(7, 23),
         S(0, 0),
     },
     {
         S(0, 0),
-        S(10, 45),
-        S(11, 45),
-        S(12, 60),
-        S(15, 75),
-        S(50, 100),
-        S(75, 150),
+        S(7, 23),
+        S(12, 25),
+        S(14, 32),
+        S(52, 56),
+        S(138, 143),
+        S(223, 210),
         S(0, 0),
     },
 };
@@ -227,6 +249,48 @@ int EvaluateSide(Board* board, int side) {
   if (bits(board->pieces[BISHOP[side]]) > 1)
     score += taper(BISHOP_PAIR, phase);
 
+  for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
+    BitBoard sqBitboard = pawns & -pawns;
+    int sq = lsb(pawns);
+
+    int file = file(sq);
+    int rank = rank(sq);
+
+    BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
+    BitBoard doubled = board->pieces[PAWN[side]] & shift(sqBitboard, PAWN_DIRECTIONS[xside]);
+    BitBoard neighbors = board->pieces[PAWN[side]] & ADJACENT_FILE_MASKS[file];
+    BitBoard connected = neighbors & RANK_MASKS[rank];
+    BitBoard defenders = board->pieces[PAWN[side]] & getPawnAttacks(sq, xside);
+    // BitBoard levers = board->pieces[PAWN[xside]] & getPawnAttacks(sq, side);
+    BitBoard forwardLever = board->pieces[PAWN[xside]] & getPawnAttacks(sq + PAWN_DIRECTIONS[side], side);
+
+    int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][rank(sq + PAWN_DIRECTIONS[side])]) && forwardLever;
+    int passed =
+        !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
+
+    if (doubled)
+      score += taper(DOUBLED_PAWN, phase);
+
+    if (!neighbors)
+      score += taper(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN, phase);
+
+    if (backwards)
+      score += taper(BACKWARDS_PAWN, phase);
+
+    if (passed)
+      score += taper(PASSED_PAWN[side][rank], phase);
+
+    if (defenders | connected) {
+      int s = 2;
+      if (connected)
+        s++;
+      if (opposed)
+        s--;
+
+      score += taper(CONNECTED_PAWN[side][rank], phase) * s + taper(DEFENDED_PAWN, phase) * bits(defenders);
+    }
+  }
+
   // PAWNS
   BitBoard myPawns = board->pieces[PAWN[side]];
   BitBoard opponentPawns = board->pieces[PAWN[xside]];
@@ -243,38 +307,6 @@ int EvaluateSide(Board* board, int side) {
   BitBoard myBlockedAndHomePawns =
       (shift(board->occupancies[BOTH], PAWN_DIRECTIONS[xside]) | HOME_RANKS[side] | THIRD_RANKS[side]) &
       board->pieces[PAWN[side]];
-
-  BitBoard weakPawns = myPawns & ~myPawnAttacks;
-  weakPawns &= ~shift(myPawnAttacks & ~allPawns, PAWN_DIRECTIONS[xside]);
-
-  BitBoard singleStep = shift(myPawns, PAWN_DIRECTIONS[side]) & ~allPawns;
-  BitBoard doubleStep = shift(singleStep & THIRD_RANKS[side], PAWN_DIRECTIONS[side]) & ~allPawns;
-
-  weakPawns &= ~(shift(singleStep, PAWN_DIRECTIONS[side] + E) | shift(singleStep, PAWN_DIRECTIONS[side] + W) |
-                 shift(doubleStep, PAWN_DIRECTIONS[side] + E) | shift(doubleStep, PAWN_DIRECTIONS[side] + W));
-  score += taper(WEAK_PAWN, phase) * bits(weakPawns);
-
-  BitBoard backwards = shift(weakPawns, PAWN_DIRECTIONS[side]) & ~allPawns & oppoPawnAttacks;
-  score += taper(BACKWARDS_PAWN, phase) * bits(backwards);
-
-  BitBoard passers = myPawns & ~getPawnSpans(opponentPawns, xside);
-  for (; passers; popLsb(passers)) {
-    int sq = lsb(passers);
-    int r = rank(sq);
-
-    score += taper(PASSED_PAWN[side][r], phase);
-  }
-
-  for (BitBoard pawns = myPawns; pawns; popLsb(pawns)) {
-    int sq = lsb(pawns);
-    int f = file(sq);
-
-    if (bits(FILE_MASKS[f] & pawns) > 1)
-      score += taper(DOUBLED_PAWN, phase);
-
-    if (!((f > 0 ? FILE_MASKS[f - 1] : 0) & myPawns) && !((f < 7 ? FILE_MASKS[f + 1] : 0) & myPawns))
-      score += taper(ISOLATED_PAWN, phase);
-  }
 
   int kingSq = lsb(board->pieces[KING[side]]);
   int oppoKingSq = lsb(board->pieces[KING[xside]]);
