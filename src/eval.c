@@ -265,7 +265,7 @@ int EvaluateSide(Board* board, int side) {
     // BitBoard levers = board->pieces[PAWN[xside]] & getPawnAttacks(sq, side);
     BitBoard forwardLever = board->pieces[PAWN[xside]] & getPawnAttacks(sq + PAWN_DIRECTIONS[side], side);
 
-    int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][sq + PAWN_DIRECTIONS[side]]) && forwardLever;
+    int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][rank(sq + PAWN_DIRECTIONS[side])]) && forwardLever;
     int passed =
         !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
 
@@ -281,15 +281,15 @@ int EvaluateSide(Board* board, int side) {
     if (passed)
       score += taper(PASSED_PAWN[side][rank], phase);
 
-    // if (defenders | connected) {
-    //   int s = 2;
-    //   if (connected)
-    //     s++;
-    //   if (opposed)
-    //     s--;
+    if (defenders | connected) {
+      int s = 2;
+      if (connected)
+        s++;
+      if (opposed)
+        s--;
 
-    //   score += taper(CONNECTED_PAWN[side][rank], phase) * s + taper(DEFENDED_PAWN, phase) * bits(defenders);
-    // }
+      score += taper(CONNECTED_PAWN[side][rank], phase) * s + taper(DEFENDED_PAWN, phase) * bits(defenders);
+    }
   }
 
   // PAWNS
