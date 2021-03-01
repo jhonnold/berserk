@@ -181,8 +181,8 @@ const int PASSED_PAWN[2][8] = {
     },
 };
 
-// pawn shield will act more as a scalar
-const int PAWN_SHIELD = S(100, 0);
+const int PAWN_SHELTER = 36;
+const int PAWN_STORM[8] = {0, 0, 0, -10, -30, -60, 0, 0};
 
 const int DEFENDED_MINOR = S(5, 2);
 const int KNIGHT_OUTPOST = 5;
@@ -440,19 +440,32 @@ int EvaluateSide(Board* board, int side) {
     popLsb(myQueens);
   }
 
-  // KING
-  score += attackScore * ATTACK_WEIGHTS[attackers] / 100;
-  int kingFile = file(kingSq);
-  for (int c = kingFile - 1; c <= kingFile + 1; c++) {
-    if (c < 0 || c > 7)
-      continue;
+  // KING SAFETY
+  if (board->pieces[QUEEN[xside]] &&
+      (board->pieces[KNIGHT[xside]] | board->pieces[BISHOP[xside]] | board->pieces[ROOK[xside]])) {
+    score += attackScore * ATTACK_WEIGHTS[attackers] / 100;
+    int kingFile = file(kingSq);
 
-    BitBoard file = myPawns & FILE_MASKS[c];
-    if (file) {
-      int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
-      score += -taper(PAWN_SHIELD, phase) * (36 - pawnRank * pawnRank) / 100;
-    } else {
-      score += -taper(PAWN_SHIELD, phase) * 36 / 100;
+    // shelter and storm
+    for (int c = kingFile - 1; c <= kingFile + 1; c++) {
+      if (c < 0 || c > 7)
+        continue;
+
+      BitBoard file = myPawns & FILE_MASKS[c];
+      if (file) {
+        int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
+        score += PAWN_SHELTER + pawnRank * pawnRank;
+      } else {
+        score += PAWN_SHELTER;
+      }
+
+      file = opponentPawns & FILE_MASKS[c];
+      if (file) {
+        int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
+        score += PAWN_STORM[pawnRank];
+      } else {
+        score += PAWN_STORM[6];
+      }
     }
   }
 
