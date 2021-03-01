@@ -132,9 +132,10 @@ const int QUEEN_MOBILITIES[] = {
 const int MAX_PHASE = 24;
 const int PHASE_MULTIPLIERS[] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
 
-const int DOUBLED_PAWN = S(-10, -20);
-const int ISOLATED_PAWN = S(-2, -10);
-const int BACKWARDS_PAWN = S(-4, -10);
+const int DOUBLED_PAWN = S(-10, -10);
+const int ISOLATED_PAWN = S(-10, -10);
+const int BACKWARDS_PAWN = S(-20, -7);
+const int WEAK_PAWN = S(-10, -5);
 const int DEFENDED_PAWN = S(10, 10);
 const int CONNECTED_PAWN[2][8] = {{
                                       S(0, 0),
@@ -279,15 +280,15 @@ int EvaluateSide(Board* board, int side) {
     if (passed)
       score += taper(PASSED_PAWN[side][rank], phase);
 
-    if (defenders | connected) {
-      int s = 2;
-      if (connected)
-        s++;
-      if (opposed)
-        s--;
+    // if (defenders | connected) {
+    //   int s = 2;
+    //   if (connected)
+    //     s++;
+    //   if (opposed)
+    //     s--;
 
-      score += taper(CONNECTED_PAWN[side][rank], phase) * s + taper(DEFENDED_PAWN, phase) * bits(defenders);
-    }
+    //   score += taper(CONNECTED_PAWN[side][rank], phase) * s + taper(DEFENDED_PAWN, phase) * bits(defenders);
+    // }
   }
 
   // PAWNS
