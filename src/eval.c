@@ -46,10 +46,10 @@ const int KNIGHT_PSQT[] = {
 const int KNIGHT_POST_PSQT[] = {
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
-  S(   0,   0), S(   0,   0), S(   3,   3), S(  10,   0), S(  10,  10), S(   3,   3), S(   0,   0), S(   0,   0),
-  S(   0,   0), S(   2,   2), S(   5,   5), S(  10,  10), S(  10,  10), S(   5,   5), S(   2,   2), S(   0,   0),
-  S(   0,   0), S(   2,   2), S(   5,   5), S(  10,  10), S(  10,  10), S(   5,   5), S(   2,   2), S(   0,   0),
-  S(   0,   0), S(   0,   0), S(   1,   1), S(   1,   1), S(   1,   1), S(   1,   1), S(   0,   0), S(   0,   0),
+  S(   0,   0), S(   0,   0), S(  24,  16), S(  48,  32), S(  48,  32), S(  24,  16), S(   0,   0), S(   0,   0),
+  S(   0,   0), S(  15,  10), S(  30,  20), S(  48,  32), S(  48,  32), S(  30,  20), S(  15,  10), S(   0,   0),
+  S(   0,   0), S(  15,  10), S(  30,  20), S(  36,  24), S(  36,  24), S(  30,  20), S(  15,  10), S(   0,   0),
+  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0)
 };
@@ -185,8 +185,6 @@ const int PAWN_SHELTER = 36;
 const int PAWN_STORM[8] = {0, 0, 0, -10, -30, -60, 0, 0};
 
 const int DEFENDED_MINOR = S(5, 2);
-const int KNIGHT_OUTPOST = 5;
-const int GOOD_KNIGHT_OUTPOST = 10;
 const int ROOK_OPEN_FILE = 20;
 const int ROOK_SEMI_OPEN_FILE = 10;
 const int ROOK_SEVENTH_RANK = 20;
@@ -348,11 +346,9 @@ int EvaluateSide(Board* board, int side) {
       attackScore += 20 * bits(attacksNearKing);
     }
 
-    if (KNIGHT_POST_PSQT[rel(sq, side)] && (getPawnAttacks(sq, side) & myPawns)) {
+    if (KNIGHT_POST_PSQT[rel(sq, side)] && (getPawnAttacks(sq, xside) & myPawns) &&
+        !(fill(getPawnAttacks(sq, side), PAWN_DIRECTIONS[side]) & board->pieces[PAWN[xside]]))
       score += taper(KNIGHT_POST_PSQT[rel(sq, side)], phase);
-      if (!(fill(getPawnAttacks(sq, side), PAWN_DIRECTIONS[side]) & opponentPawns))
-        score += GOOD_KNIGHT_OUTPOST;
-    }
 
     popLsb(myKnights);
   }
