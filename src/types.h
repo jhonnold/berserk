@@ -21,6 +21,7 @@ typedef struct {
   BitBoard occupancies[3];
   BitBoard checkers;
   BitBoard pinners;
+  uint64_t piecesCounts;
 
   // Game state
   int side;

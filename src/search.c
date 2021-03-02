@@ -95,6 +95,9 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   if ((data->nodes & 2047) == 0)
     communicate(params);
 
+  if (ply && isMaterialDraw(board))
+    return 0;
+
   TTValue ttValue = ttProbe(board->zobrist);
   if (ttValue) {
     if (ttDepth(ttValue) >= depth) {
@@ -240,8 +243,15 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 }
 
 int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, SearchData* data) {
+  data->nodes++;
+  if (ply > data->seldepth)
+    data->seldepth = ply;
+
   if ((data->nodes & 2047) == 0)
     communicate(params);
+
+  if (isMaterialDraw(board))
+    return 0;
 
   TTValue ttValue = ttProbe(board->zobrist);
   if (ttValue) {
@@ -255,10 +265,6 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
     if (flag == TT_UPPER && score <= alpha)
       return score;
   }
-
-  data->nodes++;
-  if (ply > data->seldepth)
-    data->seldepth = ply;
 
   int eval = Evaluate(board);
 

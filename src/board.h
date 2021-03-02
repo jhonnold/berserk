@@ -16,7 +16,9 @@ extern const int QUEEN[];
 extern const int KING[];
 
 extern const int casltingRights[];
-extern const int mirror[];
+extern const int MIRROR[];
+
+extern const uint64_t PIECE_COUNT_IDX[];
 
 void clear(Board* board);
 uint64_t zobrist(Board* board);
