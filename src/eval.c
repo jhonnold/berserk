@@ -9,7 +9,7 @@
 #include "types.h"
 
 #define S(mg, eg) (makeScore((mg), (eg)))
-#define rel(sq, side) ((side) ? mirror[(sq)] : (sq))
+#define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
 
 const int PAWN_VALUE = S(100, 150);
 const int KNIGHT_VALUE = S(475, 475);
@@ -202,17 +202,17 @@ int PSQT[12][64];
 void initPSQT() {
   for (int sq = 0; sq < 64; sq++) {
     PSQT[PAWN[WHITE]][sq] = PAWN_PSQT[sq];
-    PSQT[PAWN[BLACK]][mirror[sq]] = PAWN_PSQT[sq];
+    PSQT[PAWN[BLACK]][MIRROR[sq]] = PAWN_PSQT[sq];
     PSQT[KNIGHT[WHITE]][sq] = KNIGHT_PSQT[sq];
-    PSQT[KNIGHT[BLACK]][mirror[sq]] = KNIGHT_PSQT[sq];
+    PSQT[KNIGHT[BLACK]][MIRROR[sq]] = KNIGHT_PSQT[sq];
     PSQT[BISHOP[WHITE]][sq] = BISHOP_PSQT[sq];
-    PSQT[BISHOP[BLACK]][mirror[sq]] = BISHOP_PSQT[sq];
+    PSQT[BISHOP[BLACK]][MIRROR[sq]] = BISHOP_PSQT[sq];
     PSQT[ROOK[WHITE]][sq] = ROOK_PSQT[sq];
-    PSQT[ROOK[BLACK]][mirror[sq]] = ROOK_PSQT[sq];
+    PSQT[ROOK[BLACK]][MIRROR[sq]] = ROOK_PSQT[sq];
     PSQT[QUEEN[WHITE]][sq] = QUEEN_PSQT[sq];
-    PSQT[QUEEN[BLACK]][mirror[sq]] = QUEEN_PSQT[sq];
+    PSQT[QUEEN[BLACK]][MIRROR[sq]] = QUEEN_PSQT[sq];
     PSQT[KING[WHITE]][sq] = KING_PSQT[sq];
-    PSQT[KING[BLACK]][mirror[sq]] = KING_PSQT[sq];
+    PSQT[KING[BLACK]][MIRROR[sq]] = KING_PSQT[sq];
   }
 }
 // clang-format on
@@ -227,6 +227,25 @@ inline int getPhase(Board* board) {
 }
 
 inline int taper(int score, int phase) { return (scoreMG(score) * (256 - phase) + (scoreEG(score) * phase)) / 256; }
+
+inline int isMaterialDraw(Board* board) {
+  switch (board->piecesCounts) {
+  case 0x0:      // Kk
+  case 0x100:    // KNk
+  case 0x200:    // KNNk
+  case 0x1000:   // Kkn
+  case 0x2000:   // Kknn
+  case 0x1100:   // KNkn
+  case 0x10000:  // KBk
+  case 0x100000: // Kkb
+  case 0x11000:  // KBkn
+  case 0x100100: // KNkb
+  case 0x110000: // KBkb
+    return 1;
+  default:
+    return 0;
+  }
+}
 
 int EvaluateSide(Board* board, int side) {
   int score = 0;

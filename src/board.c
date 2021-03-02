@@ -20,7 +20,7 @@ const int QUEEN[] = {8, 9};
 const int KING[] = {10, 11};
 
 // clang-format off
-const int castlingRights[] = {
+const int CASTLING_RIGHTS[] = {
   14, 15, 15, 15, 12, 15, 15, 13, 
   15, 15, 15, 15, 15, 15, 15, 15, 
   15, 15, 15, 15, 15, 15, 15, 15, 
@@ -31,7 +31,7 @@ const int castlingRights[] = {
   11, 15, 15, 15, 3,  15, 15,  7
 };
 
-const int mirror[] = {
+const int MIRROR[] = {
   56, 57, 58, 59, 60, 61, 62, 63, 
   48, 49, 50, 51, 52, 53, 54, 55, 
   40, 41, 42, 43, 44, 45, 46, 47, 
@@ -43,6 +43,12 @@ const int mirror[] = {
 };
 // clang-format on
 
+const uint64_t PIECE_COUNT_IDX[10] = {
+    // P           p            N           n           B
+    1ULL << 0, 1ULL << 4, 1ULL << 8, 1ULL << 12, 1ULL << 16,
+    // b           R            r           Q           q
+    1ULL << 20, 1ULL << 24, 1ULL << 28, 1ULL << 32, 1ULL << 36};
+
 void clear(Board* board) {
   memset(board->pieces, EMPTY, sizeof(board->pieces));
   memset(board->occupancies, EMPTY, sizeof(board->occupancies));
@@ -52,6 +58,8 @@ void clear(Board* board) {
   memset(board->captureHistory, EMPTY, sizeof(board->captureHistory));
   memset(board->killers, EMPTY, sizeof(board->killers));
   memset(board->counters, EMPTY, sizeof(board->counters));
+
+  board->piecesCounts = 0ULL;
 
   board->side = WHITE;
   board->xside = BLACK;
@@ -92,6 +100,9 @@ void parseFen(char* fen, Board* board) {
     if ((*fen >= 'a' && *fen <= 'z') || (*fen >= 'A' && *fen <= 'Z')) {
       int piece = CHAR_TO_PIECE[(int)*fen];
       setBit(board->pieces[piece], i);
+
+      if (*fen != 'K' && *fen != 'k')
+        board->piecesCounts += PIECE_COUNT_IDX[piece];
     } else if (*fen >= '0' && *fen <= '9') {
       int offset = *fen - '1';
       i += offset;
@@ -160,7 +171,11 @@ void printBoard(Board* board) {
       printf("\n");
   }
 
-  printf("\n    a b c d e f g h\n\n");
+  printf("\n    a b c d e f g h\n Pieces: ");
+  for (int i = PAWN[WHITE]; i <= QUEEN[BLACK]; i++) {
+    printf("%d%c, ", (int)(board->piecesCounts >> (i * 4)) & 0xF, PIECE_TO_CHAR[i]);
+  }
+  printf("\n\n");
 }
 
 inline int isSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* board) {
@@ -253,6 +268,7 @@ void makeMove(Move move, Board* board) {
     board->captureHistory[board->moveNo] = captured;
     popBit(board->pieces[captured], end);
     board->zobrist ^= ZOBRIST_PIECES[captured][end];
+    board->piecesCounts -= PIECE_COUNT_IDX[captured];
   }
 
   if (promoted) {
@@ -261,11 +277,15 @@ void makeMove(Move move, Board* board) {
 
     board->zobrist ^= ZOBRIST_PIECES[piece][end];
     board->zobrist ^= ZOBRIST_PIECES[promoted][end];
+
+    board->piecesCounts -= PIECE_COUNT_IDX[piece];
+    board->piecesCounts += PIECE_COUNT_IDX[promoted];
   }
 
   if (ep) {
     popBit(board->pieces[PAWN[board->xside]], end - PAWN_DIRECTIONS[board->side]);
     board->zobrist ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
+    board->piecesCounts -= PIECE_COUNT_IDX[PAWN[board->xside]];
   }
 
   if (board->epSquare) {
@@ -307,8 +327,8 @@ void makeMove(Move move, Board* board) {
   }
 
   board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
-  board->castling &= castlingRights[start];
-  board->castling &= castlingRights[end];
+  board->castling &= CASTLING_RIGHTS[start];
+  board->castling &= CASTLING_RIGHTS[end];
   board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
 
   setOccupancies(board);
@@ -341,14 +361,22 @@ void undoMove(Move move, Board* board) {
   popBit(board->pieces[piece], end);
   setBit(board->pieces[piece], start);
 
-  if (capture)
+  if (capture) {
     setBit(board->pieces[board->captureHistory[board->moveNo]], end);
+    if (!ep)
+      board->piecesCounts += PIECE_COUNT_IDX[board->captureHistory[board->moveNo]];
+  }
 
-  if (promoted)
+  if (promoted) {
     popBit(board->pieces[promoted], end);
+    board->piecesCounts -= PIECE_COUNT_IDX[promoted];
+    board->piecesCounts += PIECE_COUNT_IDX[piece];
+  }
 
-  if (ep)
+  if (ep) {
     setBit(board->pieces[PAWN[board->xside]], end - PAWN_DIRECTIONS[board->side]);
+    board->piecesCounts += PIECE_COUNT_IDX[PAWN[board->xside]];
+  }
 
   if (castle) {
     if (end == G1) {
