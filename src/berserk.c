@@ -7,6 +7,7 @@
 #include "board.h"
 #include "eval.h"
 #include "search.h"
+#include "transposition.h"
 #include "types.h"
 #include "uci.h"
 #include "util.h"
@@ -28,6 +29,8 @@ int main(int argc, char** argv) {
   initAttacks();
   initPawnSpans();
   initZobristKeys();
+
+  ttInit(32);
 
   Board board[1];
   memset(board, 0, sizeof(Board));
@@ -61,5 +64,6 @@ int main(int argc, char** argv) {
     UCI(board);
   }
 
+  ttFree();
   return 0;
 }

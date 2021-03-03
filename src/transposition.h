@@ -8,9 +8,9 @@
 enum { TT_LOWER, TT_UPPER, TT_EXACT };
 
 extern const TTValue NO_ENTRY;
-extern TTValue TRANSPOSITION_ENTRIES[];
+extern TTValue* TRANSPOSITION_ENTRIES;
+extern int POWER;
 
-#define POWER 20
 #define BUCKET_SIZE 2
 
 #define ttIdx(hash) ((int)((hash) >> (64 - POWER)) << 1)
@@ -20,6 +20,8 @@ extern TTValue TRANSPOSITION_ENTRIES[];
 #define ttMove(value) ((Move)((value)&0xFFFFFF))
 #define ttDepth(value) ((int)((value)&0x3F000000) >> 24)
 
+void ttInit(int mb);
+void ttFree();
 void ttClear();
 TTValue ttProbe(uint64_t hash);
 int ttScore(TTValue value, int ply);
