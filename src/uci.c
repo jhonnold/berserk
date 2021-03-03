@@ -7,6 +7,7 @@
 #include "movegen.h"
 #include "perft.h"
 #include "search.h"
+#include "transposition.h"
 #include "uci.h"
 #include "util.h"
 
@@ -136,6 +137,7 @@ void UCI(Board* board) {
 
   printf("id name " NAME " " VERSION "\n");
   printf("id author Jay Honnold\n");
+  printf("option name Hash type spin default 32 min 4 max 4096\n");
   printf("uciok\n");
 
   while (!searchParams->quit) {
@@ -170,6 +172,14 @@ void UCI(Board* board) {
       MoveList moveList[1];
       generateMoves(moveList, board, 0);
       printMoves(moveList);
+    } else if (!strncmp(in, "setoption name Hash value ", 26)) {
+      int mb;
+      sscanf(in, "%*s %*s %*s %*s %d", &mb);
+      if (mb < 4)
+        mb = 4;
+      if (mb > 4096)
+        mb = 4096;
+      ttInit(mb);
     }
   }
 }

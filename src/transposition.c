@@ -1,4 +1,6 @@
 #include <inttypes.h>
+#include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "search.h"
@@ -6,9 +8,25 @@
 #include "types.h"
 
 const TTValue NO_ENTRY = 0ULL;
-TTValue TRANSPOSITION_ENTRIES[(1 << POWER) * 2 * BUCKET_SIZE];
+TTValue* TRANSPOSITION_ENTRIES = NULL;
+size_t SIZE = 0;
+int POWER = 0;
 
-inline void ttClear() { memset(TRANSPOSITION_ENTRIES, NO_ENTRY, sizeof(TRANSPOSITION_ENTRIES)); }
+void ttInit(int mb) {
+  POWER = (int)log2(0x100000 / sizeof(TTValue)) + (int)log2(mb) - (int)log2(BUCKET_SIZE);
+
+  if (TRANSPOSITION_ENTRIES != NULL)
+    free(TRANSPOSITION_ENTRIES);
+
+  SIZE = (1 << POWER) * sizeof(TTValue) * BUCKET_SIZE;
+  TRANSPOSITION_ENTRIES = malloc(SIZE);
+
+  ttClear();
+}
+
+void ttFree() { free(TRANSPOSITION_ENTRIES); }
+
+inline void ttClear() { memset(TRANSPOSITION_ENTRIES, NO_ENTRY, SIZE); }
 
 inline int ttScore(TTValue value, int ply) {
   int score = (int)(value >> 32);
