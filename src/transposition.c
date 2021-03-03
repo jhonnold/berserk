@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,13 +14,15 @@ size_t SIZE = 0;
 int POWER = 0;
 
 void ttInit(int mb) {
-  POWER = (int)log2(0x100000 / sizeof(TTValue)) + (int)log2(mb) - (int)log2(BUCKET_SIZE);
+  POWER = (int)log2(0x100000 / sizeof(TTValue)) + (int)log2(mb) - (int)log2(BUCKET_SIZE) - 1;
 
   if (TRANSPOSITION_ENTRIES != NULL)
     free(TRANSPOSITION_ENTRIES);
 
-  SIZE = (1 << POWER) * sizeof(TTValue) * BUCKET_SIZE;
+  SIZE = (1 << POWER) * sizeof(TTValue) * BUCKET_SIZE * 2;
   TRANSPOSITION_ENTRIES = malloc(SIZE);
+
+  printf("%d power, %d entries\n", POWER, (1 << POWER) * BUCKET_SIZE);
 
   ttClear();
 }
