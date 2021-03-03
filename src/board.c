@@ -58,6 +58,8 @@ void clear(Board* board) {
   memset(board->captureHistory, EMPTY, sizeof(board->captureHistory));
   memset(board->killers, EMPTY, sizeof(board->killers));
   memset(board->counters, EMPTY, sizeof(board->counters));
+  memset(board->historyHeuristic, EMPTY, sizeof(board->historyHeuristic));
+  memset(board->bfHeuristic, EMPTY, sizeof(board->bfHeuristic));
 
   board->piecesCounts = 0ULL;
 

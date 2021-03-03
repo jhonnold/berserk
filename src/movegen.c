@@ -10,6 +10,7 @@
 #include "see.h"
 #include "transposition.h"
 #include "types.h"
+#include "util.h"
 
 const int HASH = INT32_MAX;
 const int GOOD_CAPTURE = INT32_MAX - INT16_MAX;
@@ -44,6 +45,14 @@ inline void addKiller(Board* board, Move move, int ply) {
 }
 
 inline void addCounter(Board* board, Move move, Move parent) { board->counters[moveSE(parent)] = move; }
+
+inline void addHistoryHeuristic(Board* board, Move move, int depth) {
+  board->historyHeuristic[board->side][moveSE(move)] += depth * depth;
+}
+
+inline void addBFHeuristic(Board* board, Move move, int depth) {
+  board->bfHeuristic[board->side][moveSE(move)] += depth * depth;
+}
 
 inline void addMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
 
@@ -554,7 +563,8 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
     } else if (board->moveNo && move == board->counters[moveSE(board->gameMoves[board->moveNo - 1])]) {
       moveList->scores[i] = COUNTER;
     } else {
-      moveList->scores[i] = 0;
+      moveList->scores[i] = 100 * board->historyHeuristic[board->side][moveSE(move)] /
+                            max(1, board->bfHeuristic[board->side][moveSE(move)]);
     }
   }
 }

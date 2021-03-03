@@ -16,5 +16,7 @@ char* moveStr(Move move);
 void bubbleTopMove(MoveList* moveList, int from);
 void addKiller(Board* board, Move move, int ply);
 void addCounter(Board* board, Move move, Move parent);
+void addHistoryHeuristic(Board* board, Move move, int depth);
+void addBFHeuristic(Board* board, Move move, int depth);
 
 #endif

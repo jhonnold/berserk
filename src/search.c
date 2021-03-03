@@ -75,7 +75,7 @@ void printPv(Move move, Board* board) {
 int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, SearchParams* params,
             SearchData* data) {
   // Repetition detection
-  if (ply && isRepetition(board))
+  if (ply && (isRepetition(board) || isMaterialDraw(board)))
     return 0;
 
   // Mate distance pruning
@@ -94,9 +94,6 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
   if ((data->nodes & 2047) == 0)
     communicate(params);
-
-  if (ply && isMaterialDraw(board))
-    return 0;
 
   TTValue ttValue = ttProbe(board->zobrist);
   if (ttValue) {
@@ -207,6 +204,14 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
         if (!moveCapture(move) && !movePromo(move)) {
           addKiller(board, move, ply);
           addCounter(board, move, board->gameMoves[board->moveNo - 1]);
+          addHistoryHeuristic(board, move, depth);
+        }
+
+        for (int j = 0; j < i; j++) {
+          if (moveCapture(moveList->moves[j]) || movePromo(moveList->moves[j]))
+            continue;
+
+          addBFHeuristic(board, moveList->moves[j], depth);
         }
 
         break;
