@@ -13,9 +13,9 @@
 
 #define NAME "Berserk"
 #ifdef POPCOUNT
-#define VERSION "2.0.0-alpha.rc3+popcnt"
+#define VERSION "2.0.0+popcnt"
 #else
-#define VERSION "2.0.0-alpha.rc3"
+#define VERSION "2.0.0"
 #endif
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

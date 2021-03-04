@@ -2,6 +2,12 @@
 
 A UCI chess engine written in C.
 
+## ELO History
+
+| **Version** | **ELO** | **TC** |
+|---|---|---|
+| 1.2.2 | 2160 | 2'+1" |
+
 ## Features
 
 ### Board Representation
@@ -28,13 +34,23 @@ Utilizes bitboards for piece representation and magic bitboards for move generat
 
 ### Evaluation
 
-Evaluation is tapered from the start to the end of the game using the example on CPW.
+Evaluation is tapered.
 
 - [Tapered](https://www.chessprogramming.org/Tapered_Eval)
 - [Material](https://www.chessprogramming.org/Material)
 - [Piece Square Tables](https://www.chessprogramming.org/Piece-Square_Tables)
 - [Mobility](https://www.chessprogramming.org/Mobility)
+- [Pawn Structure](https://www.chessprogramming.org/Pawn_Structure)
 - [King Safety](https://www.chessprogramming.org/King_Safety)
+
+### Future Improvements
+
+- Phased move generated
+- Candidate passed pawns
+- More positional analysis
+- Singularity extension
+- Texel tuning
+- Other things...
 
 ## Building
 
@@ -51,11 +67,23 @@ $ ./berserk
 
 This engine could not be written without some influence and they are...
 
+### Engine Influences
+
 - [chess22k](https://github.com/sandermvdb/chess22k)
 - [bbc](https://github.com/maksimKorzh/chess_programming)
   - [youtube](https://www.youtube.com/channel/UCB9-prLkPwgvlKKqDgXhsMQ)
 - [Vice](https://github.com/bluefeversoft/Vice_Chess_Engine)
 - [Stockfish](https://github.com/official-stockfish/Stockfish)
 - [Ethereal](https://github.com/AndyGrant/Ethereal)
+  - This has been especially helpful as it introduced me to [OpenBench](https://github.com/AndyGrant/OpenBench)
 - [CPW](https://www.chessprogramming.org/Main_Page)
+
+
+### Additional Resources
+
+- [Open Bench](https://github.com/AndyGrant/OpenBench)
 - [TalkChess Forum](http://talkchess.com/forum3/viewforum.php?f=7)
+- [CCRL](https://kirill-kryukov.com/chess/discussion-board/viewforum.php?f=7)
+- [JCER](https://chessengines.blogspot.com/p/rating-jcer.html)
+- [Cute Chess](https://cutechess.com/)
+- [Arena](http://www.playwitharena.de/)
