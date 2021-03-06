@@ -2,9 +2,9 @@
 
 A UCI chess engine written in C.
 
-## ELO History
+## Elo History
 
-| **Version** | **ELO** | **TC** |
+| **Version** | **Elo** | **TC** |
 |---|---|---|
 | 1.2.2 | 2160 | 2'+1" |
 
