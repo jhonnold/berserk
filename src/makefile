@@ -3,7 +3,7 @@ SRC = *.c
 EXE = berserk
 
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
-CFLAGS = -O3 $(WFLAGS) -flto -march=native
+CFLAGS = -O3 $(WFLAGS) -flto -march=native -lm
 
 all:
 	$(CC) $(CFLAGS) $(SRC) -o $(EXE)
