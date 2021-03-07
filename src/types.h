@@ -61,6 +61,21 @@ typedef struct {
   int quit;
 } SearchParams;
 
+typedef struct {
+  int material;
+  int pawns;
+  int knights;
+  int bishops;
+  int rooks;
+  int queens;
+  int kings;
+
+  int mobility;
+
+  int attacking;
+  int kingSafety;
+} EvalData;
+
 enum { WHITE, BLACK, BOTH };
 
 // clang-format off

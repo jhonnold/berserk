@@ -24,8 +24,10 @@ void initPSQT();
 int getPhase(Board* board);
 int taper(int score, int phase);
 
+int toScore(EvalData* data);
 int isMaterialDraw(Board* board);
-int EvaluateSide(Board* board, int side);
+void EvaluateSide(Board* board, int side, EvalData* data);
 int Evaluate(Board* board);
+void PrintEvaluation(Board* board);
 
 #endif
