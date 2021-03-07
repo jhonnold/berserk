@@ -181,7 +181,7 @@ const int PASSED_PAWN[2][8] = {
     },
 };
 
-const int PAWN_SHELTER = 36;
+const int PAWN_SHELTER = -36;
 const int PAWN_STORM[8] = {0, 0, 0, -10, -30, -60, 0, 0};
 
 const int DEFENDED_MINOR = S(5, 2);
