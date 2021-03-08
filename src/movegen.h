@@ -7,6 +7,13 @@ extern const BitBoard HOME_RANKS[];
 extern const BitBoard THIRD_RANKS[];
 extern const int PAWN_DIRECTIONS[];
 
+extern const int HASH;
+extern const int GOOD_CAPTURE;
+extern const int BAD_CAPTURE;
+extern const int KILLER1;
+extern const int KILLER2;
+extern const int COUNTER;
+
 void addMove(MoveList* moveList, Move move);
 void generateMoves(MoveList* moveList, Board* board, int ply);
 void generateQuiesceMoves(MoveList* moveList, Board* board);
