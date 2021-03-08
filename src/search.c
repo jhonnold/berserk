@@ -184,8 +184,6 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     if (depth >= 3 && numMoves > 1 && !moveCapture(move) && !movePromo(move) && !givesCheck && !currInCheck) {
       int R = LMR[min(depth, 63)][min(numMoves, 63)];
 
-      if (!isPV)
-        R++;
       if (moveList->scores[i] >= COUNTER)
         R--;
 
