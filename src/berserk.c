@@ -29,6 +29,7 @@ int main(int argc, char** argv) {
   initAttacks();
   initPawnSpans();
   initZobristKeys();
+  initLMR();
 
   ttInit(32);
 

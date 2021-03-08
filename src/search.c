@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,6 +20,14 @@ const int FUTILITY_MARGIN = 80;
 const int SEE_PRUNE_CAPTURE_CUTOFF = -80;
 const int SEE_PRUNE_CUTOFF = -25;
 const int DELTA_CUTOFF = 200;
+
+int LMR[64][64];
+
+void initLMR() {
+  for (int depth = 0; depth < 64; depth++)
+    for (int moves = 0; moves < 64; moves++)
+      LMR[depth][moves] = (int)(0.6f + log(depth) * log(1.2f * moves) / 2.5f);
+}
 
 void Search(Board* board, SearchParams* params, SearchData* data) {
   data->nodes = 0;
@@ -155,7 +164,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
         (board->pieces[KNIGHT[board->side]] | board->pieces[BISHOP[board->side]] | board->pieces[ROOK[board->side]] |
          board->pieces[QUEEN[board->side]])) {
 
-      int lmrDepth = numMoves <= 6 ? newDepth - 1 : newDepth - depth / 2;
+      int lmrDepth = newDepth - LMR[depth][numMoves];
       lmrDepth = max(0, lmrDepth);
 
       int seeCutoff = moveCapture(move) ? (SEE_PRUNE_CAPTURE_CUTOFF * depth) : (SEE_PRUNE_CUTOFF * lmrDepth * lmrDepth);
@@ -169,17 +178,13 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     makeMove(move, board);
 
     // Start LMR
-    int doZws = (!isPV || numMoves > 1) ? 1 : 0;
+    int doZws = (!isPV || numMoves > 1);
 
     int givesCheck = inCheck(board);
-    if (depth >= 3 && numMoves > (!ply ? 3 : 1) && !moveCapture(move) && !movePromo(move) && !givesCheck &&
-        !currInCheck) {
-      // Senpai logic
-      int R = numMoves <= 6 ? 1 : depth / 2;
-      R = min(newDepth, R);
-
+    if (depth >= 3 && numMoves > 1 && !moveCapture(move) && !movePromo(move) && !givesCheck && !currInCheck) {
+      int R = LMR[min(depth, 63)][min(numMoves, 63)];
       score = -negamax(-alpha - 1, -alpha, newDepth - R, ply + 1, 1, board, params, data);
-      doZws = (score > alpha) ? 1 : 0;
+      doZws = (score > alpha);
     }
 
     if (doZws)
