@@ -186,6 +186,8 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
       if (moveList->scores[i] >= COUNTER)
         R--;
+      if (!isPV && moveList->scores[i] < 50)
+        R++;
 
       score = -negamax(-alpha - 1, -alpha, newDepth - R, ply + 1, 1, board, params, data);
       doZws = (score > alpha);
