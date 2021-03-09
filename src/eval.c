@@ -6,6 +6,7 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
+#include "string.h"
 #include "types.h"
 
 #define S(mg, eg) (makeScore((mg), (eg)))
@@ -192,6 +193,11 @@ const int ROOK_OPPOSITE_KING = S(10, 0);
 const int ROOK_TRAPPED = S(-75, -75);
 const int BISHOP_TRAPPED = S(-150, -150);
 
+const int KNIGHT_THREATS[] = {S(0, 0), S(5, 30), S(30, 30), S(45, 45), S(60, 60), S(50, 50)};
+const int BISHOP_THREATS[] = {S(0, 0), S(5, 30), S(30, 30), S(45, 45), S(60, 60), S(50, 50)};
+const int ROOK_THREATS[] = {S(0, 0), S(0, 30), S(30, 30), S(45, 45), S(20, 30), S(50, 50)};
+const int KING_THREATS[] = {S(0, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60)};
+
 const int ATTACK_WEIGHTS[] = {0, 50, 75, 88, 94, 97, 99};
 
 // clang-format off
@@ -256,6 +262,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   data->mobility = 0;
   data->attacking = 0;
   data->kingSafety = 0;
+  memset(data->attacks, 0, sizeof(data->attacks));
 
   int xside = 1 - side;
   int phase = getPhase(board);
@@ -265,9 +272,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   BitBoard opponentPawns = board->pieces[PAWN[xside]];
   BitBoard allPawns = myPawns | opponentPawns;
 
-  BitBoard opponentPawnAttacksE = shift(opponentPawns, PAWN_DIRECTIONS[xside] + E);
-  BitBoard opponentPawnAttacksW = shift(opponentPawns, PAWN_DIRECTIONS[xside] + W);
-  BitBoard oppoPawnAttacks = opponentPawnAttacksE | opponentPawnAttacksW;
+  BitBoard pawnAttacks = shift(myPawns, PAWN_DIRECTIONS[side] + E) | shift(myPawns, PAWN_DIRECTIONS[side] + W);
+  BitBoard oppoPawnAttacks =
+      shift(opponentPawns, PAWN_DIRECTIONS[xside] + E) | shift(opponentPawns, PAWN_DIRECTIONS[xside] + W);
 
   BitBoard myBlockedAndHomePawns =
       (shift(board->occupancies[BOTH], PAWN_DIRECTIONS[xside]) | HOME_RANKS[side] | THIRD_RANKS[side]) &
@@ -280,6 +287,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   int attackers = 0;
 
   // PAWNS
+  data->attacks[PAWN[side] >> 1] = pawnAttacks;
   for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
     BitBoard sqBitboard = pawns & -pawns;
     int sq = lsb(pawns);
@@ -331,7 +339,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->material += taper(MATERIAL_VALUES[KNIGHT[side]], phase);
     data->knights += taper(PSQT[KNIGHT[side]][sq], phase);
 
-    BitBoard mobilitySquares = getKnightAttacks(sq) & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
+    BitBoard movement = getKnightAttacks(sq);
+    data->attacks[KNIGHT[side] >> 1] |= movement;
+
+    BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(KNIGHT_MOBILITIES[bits(mobilitySquares)], phase);
 
     BitBoard attacksNearKing = getKnightAttacks(sq) & oppoKingArea;
@@ -358,8 +369,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->material += taper(MATERIAL_VALUES[BISHOP[side]], phase);
     data->bishops += taper(PSQT[BISHOP[side]][sq], phase);
 
-    BitBoard mobilitySquares = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) &
-                               ~oppoPawnAttacks & ~myBlockedAndHomePawns;
+    BitBoard movement = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
+    data->attacks[BISHOP[side] >> 1] |= movement;
+
+    BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(BISHOP_MOBILITIES[bits(mobilitySquares)], phase);
 
     BitBoard attacksNearKing =
@@ -393,9 +406,11 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->material += taper(MATERIAL_VALUES[ROOK[side]], phase);
     data->rooks += taper(PSQT[ROOK[side]][sq], phase);
 
-    BitBoard mobilitySquares =
-        getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]) &
-        ~oppoPawnAttacks & ~myBlockedAndHomePawns;
+    BitBoard movement =
+        getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]);
+    data->attacks[ROOK[side] >> 1] |= movement;
+
+    BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(ROOK_MOBILITIES[bits(mobilitySquares)], phase);
 
     BitBoard attacksNearKing =
@@ -439,8 +454,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->material += taper(MATERIAL_VALUES[QUEEN[side]], phase);
     data->queens += taper(PSQT[QUEEN[side]][sq], phase);
 
-    BitBoard mobilitySquares =
-        getQueenAttacks(sq, board->occupancies[BOTH]) & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
+    BitBoard movement = getQueenAttacks(sq, board->occupancies[BOTH]);
+    data->attacks[QUEEN[side] >> 1] |= movement;
+
+    BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(QUEEN_MOBILITIES[bits(mobilitySquares)], phase);
 
     BitBoard attacksNearKing = getQueenAttacks(sq, board->occupancies[BOTH]) & oppoKingArea;
@@ -456,6 +473,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     data->material += taper(MATERIAL_VALUES[KING[side]], phase);
     data->kings += taper(PSQT[KING[side]][sq], phase);
+
+    BitBoard movement = getKingAttacks(sq);
+    data->attacks[KING[side] >> 1] |= movement;
   }
 
   // KING SAFETY AND ATTACKING
@@ -488,6 +508,40 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   }
 }
 
+void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData) {
+  data->threats = 0;
+
+  int xside = 1 - side;
+  int phase = getPhase(board);
+
+  BitBoard* myAttacks = data->attacks;
+  BitBoard* enemyAttacks = enemyData->attacks;
+
+  BitBoard allMyAttacks = myAttacks[0] | myAttacks[1] | myAttacks[2] | myAttacks[3] | myAttacks[4] | myAttacks[5];
+
+  BitBoard weak = board->occupancies[xside] & ~enemyAttacks[0] & allMyAttacks;
+
+  for (BitBoard knightThreats = weak & myAttacks[1]; knightThreats; popLsb(knightThreats)) {
+    int piece = pieceAt(lsb(knightThreats), xside, board);
+    data->threats += taper(KNIGHT_THREATS[piece >> 1], phase);
+  }
+
+  for (BitBoard bishopThreats = weak & myAttacks[2]; bishopThreats; popLsb(bishopThreats)) {
+    int piece = pieceAt(lsb(bishopThreats), xside, board);
+    data->threats += taper(BISHOP_THREATS[piece >> 1], phase);
+  }
+
+  for (BitBoard rookThreats = weak & myAttacks[3]; rookThreats; popLsb(rookThreats)) {
+    int piece = pieceAt(lsb(rookThreats), xside, board);
+    data->threats += taper(ROOK_THREATS[piece >> 1], phase);
+  }
+
+  for (BitBoard kingThreats = weak & myAttacks[5]; kingThreats; popLsb(kingThreats)) {
+    int piece = pieceAt(lsb(kingThreats), xside, board);
+    data->threats += taper(KING_THREATS[piece >> 1], phase);
+  }
+}
+
 int Evaluate(Board* board) {
   EvalData sideData[1];
   EvalData xsideData[1];
@@ -495,12 +549,15 @@ int Evaluate(Board* board) {
   EvaluateSide(board, board->side, sideData);
   EvaluateSide(board, board->xside, xsideData);
 
+  EvaluateThreats(board, board->side, sideData, xsideData);
+  EvaluateThreats(board, board->xside, xsideData, sideData);
+
   return toScore(sideData) - toScore(xsideData);
 }
 
 inline int toScore(EvalData* data) {
   return data->pawns + data->knights + data->bishops + data->rooks + data->queens + data->kings + data->kingSafety +
-         data->attacking + data->material + data->mobility;
+         data->attacking + data->material + data->mobility + data->threats;
 }
 
 void PrintEvaluation(Board* board) {
@@ -509,6 +566,9 @@ void PrintEvaluation(Board* board) {
 
   EvaluateSide(board, WHITE, whiteEval);
   EvaluateSide(board, BLACK, blackEval);
+
+  EvaluateThreats(board, WHITE, whiteEval, blackEval);
+  EvaluateThreats(board, BLACK, blackEval, whiteEval);
 
   printf("|            | WHITE | BLACK | DIFF  |\n");
   printf("|------------|-------|-------|-------|\n");
@@ -525,6 +585,8 @@ void PrintEvaluation(Board* board) {
   printf("| kings      | %5d | %5d | %5d |\n", whiteEval->kings, blackEval->kings, whiteEval->kings - blackEval->kings);
   printf("| mobility   | %5d | %5d | %5d |\n", whiteEval->mobility, blackEval->mobility,
          whiteEval->mobility - blackEval->mobility);
+  printf("| threats    | %5d | %5d | %5d |\n", whiteEval->threats, blackEval->threats,
+         whiteEval->threats - blackEval->threats);
   printf("| attacking  | %5d | %5d | %5d |\n", whiteEval->attacking, blackEval->attacking,
          whiteEval->attacking - blackEval->attacking);
   printf("| kingSafety | %5d | %5d | %5d |\n", whiteEval->kingSafety, blackEval->kingSafety,

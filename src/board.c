@@ -197,9 +197,11 @@ inline int isSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* 
 
 inline int inCheck(Board* board) { return board->checkers ? 1 : 0; }
 
-inline int capturedPiece(Move move, Board* board) {
-  for (int i = PAWN[board->xside]; i <= KING[board->xside]; i += 2)
-    if (getBit(board->pieces[i], moveEnd(move)))
+inline int capturedPiece(Move move, Board* board) { return pieceAt(moveEnd(move), board->xside, board); }
+
+inline int pieceAt(int sq, int side, Board* board) {
+  for (int i = PAWN[side]; i <= KING[side]; i += 2)
+    if (getBit(board->pieces[i], sq))
       return i;
 
   return -1;
