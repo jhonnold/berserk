@@ -197,6 +197,7 @@ const int KNIGHT_THREATS[] = {S(0, 0), S(5, 30), S(30, 30), S(45, 45), S(60, 60)
 const int BISHOP_THREATS[] = {S(0, 0), S(5, 30), S(30, 30), S(45, 45), S(60, 60), S(50, 50)};
 const int ROOK_THREATS[] = {S(0, 0), S(0, 30), S(30, 30), S(45, 45), S(20, 30), S(50, 50)};
 const int KING_THREATS[] = {S(0, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60)};
+const int HANGING_THREAT = S(45, 22);
 
 const int ATTACK_WEIGHTS[] = {0, 50, 75, 88, 94, 97, 99};
 
@@ -518,6 +519,8 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
   BitBoard* enemyAttacks = enemyData->attacks;
 
   BitBoard allMyAttacks = myAttacks[0] | myAttacks[1] | myAttacks[2] | myAttacks[3] | myAttacks[4] | myAttacks[5];
+  BitBoard allEnemyAttacks =
+      enemyAttacks[0] | enemyAttacks[1] | enemyAttacks[2] | enemyAttacks[3] | enemyAttacks[4] | enemyAttacks[5];
 
   BitBoard weak = board->occupancies[xside] & ~enemyAttacks[0] & allMyAttacks;
 
@@ -540,6 +543,9 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
     int piece = pieceAt(lsb(kingThreats), xside, board);
     data->threats += taper(KING_THREATS[piece >> 1], phase);
   }
+
+  BitBoard hanging = allMyAttacks & ~allEnemyAttacks & board->occupancies[xside];
+  data->threats += taper(HANGING_THREAT, phase) * bits(hanging);
 }
 
 int Evaluate(Board* board) {
