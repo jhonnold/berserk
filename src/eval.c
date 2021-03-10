@@ -218,9 +218,8 @@ const int KS_ATTACK_PATTERN[] = {
     //   P     P     P     P     P     P     P     P     P     P     P     P     P     P     P     P
     4, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2, 2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
 
-const int KING_SAFETY_SCORES[] = {S(0, 0),   S(0, 0),   S(0, 0),   S(60, 0),  S(90, 0),   S(105, 0),  S(120, 0),
-                                  S(135, 0), S(150, 0), S(180, 0), S(225, 0), S(300, 0),  S(390, 0),  S(450, 0),
-                                  S(585, 0), S(675, 0), S(780, 0), S(960, 0), S(1110, 0), S(1240, 0), S(1890, 0)};
+const int KING_SAFETY_SCORES[] = {0,   0,   0,   40,  60,  70,  80,  90,  100, 120, 150,
+                                  200, 260, 300, 390, 450, 520, 640, 740, 760, 1260};
 
 // clang-format off
 int PSQT[12][64];
@@ -623,7 +622,7 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   if (attackersFlag)
     ksCounter += KS_ATTACK_PATTERN[attackersFlag];
 
-  data->kingSafety -= taper(KING_SAFETY_SCORES[min(ksCounter, 20)], getPhase(board));
+  data->kingSafety -= KING_SAFETY_SCORES[min(ksCounter, 20)];
 }
 
 int Evaluate(Board* board) {
