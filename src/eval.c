@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "attacks.h"
 #include "bits.h"
@@ -12,6 +13,7 @@
 
 #define S(mg, eg) (makeScore((mg), (eg)))
 #define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
+#define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
 
 const int PAWN_VALUE = S(100, 150);
 const int KNIGHT_VALUE = S(475, 475);
@@ -205,16 +207,20 @@ const int ATTACK_WEIGHTS[] = {0, 50, 75, 88, 94, 97, 99};
 const int KING_SAFETY_ALLIES[] = {2, 2, 1, 1, 0, 0, 0, 0, 3};
 const int KING_SAFETY_ATTACKS[] = {0, 2, 2, 2, 2, 2, 3, 4, 4};
 const int KING_SAFETY_WEAK_SQS[] = {0, 1, 2, 2, 2, 2, 2, 1, -5};
+const int KING_SAFETY_QUEEN_CHECK[] = {0, 0, 0, 0, 2, 3, 4, 4, 4, 4, 3, 3, 3, 2, 0, 0, 0};
+const int KING_SAFETY_QUEEN_TROPISM[] = {0, 0, 2, 2, 2, 2, 1, 1};
+const int KING_SAFETY_DOUBLE_ATTACKS[] = {0, 1, 1, 3, 3, 9, 9, 9, 9};
 const int KS_ATTACK_PATTERN[] = {
-    //                                                 Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q
-    // 	                    R  R  R  R  R  R  R  R                          R  R  R  R  R  R  R  R
-    //             B  B  B  B              B  B  B  B              B  B  B  B              B  B  B  B
-    //       N  N        N  N        N  N        N  N        N  N        N  N        N  N        N  N
-    //    P     P     P     P     P     P     P     P     P     P     P     P     P     P     P     P
+    //                                                Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q
+    //                     R  R  R  R  R  R  R  R                          R  R  R  R  R  R  R  R
+    //            B  B  B  B              B  B  B  B              B  B  B  B              B  B  B  B
+    //      N  N        N  N        N  N        N  N        N  N        N  N        N  N        N  N
+    //   P     P     P     P     P     P     P     P     P     P     P     P     P     P     P     P
     4, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2, 2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
 
-const int KING_SAFETY_SCORES[] = {0,   0,   0,   40,  60,  70,  80,  90,  100, 120, 150,
-                                  200, 260, 300, 390, 450, 520, 640, 740, 760, 1260};
+const int KING_SAFETY_SCORES[] = {S(0, 0),   S(0, 0),   S(0, 0),   S(60, 0),  S(90, 0),   S(105, 0),  S(120, 0),
+                                  S(135, 0), S(150, 0), S(180, 0), S(225, 0), S(300, 0),  S(390, 0),  S(450, 0),
+                                  S(585, 0), S(675, 0), S(780, 0), S(960, 0), S(1110, 0), S(1240, 0), S(1890, 0)};
 
 // clang-format off
 int PSQT[12][64];
@@ -306,6 +312,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   // PAWNS
   data->attacks[PAWN[side] >> 1] = pawnAttacks;
   data->allAttacks = pawnAttacks;
+  data->attacks2 = shift(myPawns, PAWN_DIRECTIONS[xside] + E) & shift(myPawns, PAWN_DIRECTIONS[xside] + W);
 
   for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
     BitBoard sqBitboard = pawns & -pawns;
@@ -550,39 +557,56 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   if (!(board->pieces[ROOK[xside]] | board->pieces[QUEEN[xside]]))
     return;
 
-  int ksCounter = 0;
+  int ksCounter = 1 - (board->side ^ xside);
   int kingSq = lsb(board->pieces[KING[side]]);
   BitBoard kingArea = board->pieces[KING[side]] | getKingAttacks(kingSq);
   ksCounter += KING_SAFETY_ALLIES[bits(kingArea & board->occupancies[side])];
   ksCounter += KING_SAFETY_ATTACKS[bits(kingArea & enemyData->allAttacks)];
+  ksCounter += KING_SAFETY_DOUBLE_ATTACKS[bits(kingArea & enemyData->attacks2 & ~data->attacks[0])];
+  if (!(kingArea & data->attacks[1]))
+    ksCounter++;
   ksCounter += KING_SAFETY_WEAK_SQS[bits(kingArea & enemyData->allAttacks & ~data->attacks2 &
                                          ~(data->attacks[0] | data->attacks[1] | data->attacks[2] | data->attacks[3]))];
 
-  BitBoard unsafeKnightChecks = getKnightAttacks(kingSq) & data->allAttacks & ~board->occupancies[xside];
-  BitBoard safeKnightChecks = getKnightAttacks(kingSq) & ~data->allAttacks & ~board->occupancies[xside];
-  ksCounter += 3 * bits(safeKnightChecks & enemyData->attacks[1]);
-  ksCounter += bits(unsafeKnightChecks & enemyData->attacks[1]);
+  BitBoard valid = ~board->occupancies[xside] & (~getKingAttacks(kingSq) | (enemyData->attacks2 & ~data->attacks2));
 
-  BitBoard unsafeBishopChecks =
-      getBishopAttacks(kingSq, board->occupancies[BOTH]) & data->allAttacks & ~board->occupancies[xside];
-  BitBoard safeBishopChecks =
-      getBishopAttacks(kingSq, board->occupancies[BOTH]) & ~data->allAttacks & ~board->occupancies[xside];
-  ksCounter += 3 * bits(safeBishopChecks & enemyData->attacks[2]);
-  ksCounter += bits(unsafeBishopChecks & enemyData->attacks[2]);
+  BitBoard possibleKnightChecks = getKnightAttacks(kingSq) & valid & enemyData->attacks[1];
+  if (possibleKnightChecks) {
+    if (possibleKnightChecks & ~data->allAttacks)
+      ksCounter += 3;
+    else
+      ksCounter++;
+  }
 
-  BitBoard unsafeRookChecks =
-      getRookAttacks(kingSq, board->occupancies[BOTH]) & data->allAttacks & ~board->occupancies[xside];
-  BitBoard safeRookChecks =
-      getRookAttacks(kingSq, board->occupancies[BOTH]) & ~data->allAttacks & ~board->occupancies[xside];
-  ksCounter += 3 * bits(safeRookChecks & enemyData->attacks[3]);
-  ksCounter += bits(unsafeRookChecks & enemyData->attacks[3]);
+  BitBoard possibleBishopChecks =
+      getBishopAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[2];
+  if (possibleBishopChecks) {
+    if (possibleBishopChecks & ~data->allAttacks)
+      ksCounter += 3;
+    else
+      ksCounter++;
+  }
 
-  BitBoard unsafeQueenChecks =
-      getQueenAttacks(kingSq, board->occupancies[BOTH]) & data->allAttacks & ~board->occupancies[xside];
-  BitBoard safeQueenChecks =
-      getQueenAttacks(kingSq, board->occupancies[BOTH]) & ~data->allAttacks & ~board->occupancies[xside];
-  ksCounter += 3 * bits(safeQueenChecks & enemyData->attacks[4]);
-  ksCounter += bits(unsafeQueenChecks & enemyData->attacks[4]);
+  BitBoard possibleRookChecks =
+      getRookAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[3];
+  if (possibleRookChecks) {
+    if (possibleRookChecks & ~data->allAttacks)
+      ksCounter += 3;
+    else
+      ksCounter++;
+  }
+
+  BitBoard possibleQueenChecks =
+      getQueenAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[4];
+  if (possibleQueenChecks) {
+    if (possibleQueenChecks & ~data->allAttacks)
+      ksCounter += KING_SAFETY_QUEEN_CHECK[bits(board->occupancies[side])];
+    if (possibleQueenChecks & getKingAttacks(kingSq))
+      ksCounter += 2;
+  }
+
+  if (!(data->allAttacks & board->pieces[QUEEN[xside]]))
+    ksCounter += KING_SAFETY_QUEEN_TROPISM[distance(kingSq, lsb(board->pieces[QUEEN[xside]]))];
 
   int attackersFlag = 0;
   if (enemyData->attacks[0] & kingArea)
@@ -599,7 +623,7 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   if (attackersFlag)
     ksCounter += KS_ATTACK_PATTERN[attackersFlag];
 
-  data->kingSafety -= KING_SAFETY_SCORES[min(ksCounter, 20)];
+  data->kingSafety -= taper(KING_SAFETY_SCORES[min(ksCounter, 20)], getPhase(board));
 }
 
 int Evaluate(Board* board) {
