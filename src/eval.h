@@ -28,6 +28,7 @@ int toScore(EvalData* data);
 int isMaterialDraw(Board* board);
 void EvaluateSide(Board* board, int side, EvalData* data);
 void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData);
+void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData);
 int Evaluate(Board* board);
 void PrintEvaluation(Board* board);
 

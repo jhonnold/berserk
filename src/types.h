@@ -72,11 +72,15 @@ typedef struct {
 
   int mobility;
 
-  int attacking;
   int kingSafety;
 
   int threats;
+
+  int attackers;
+  int attackScore;
   BitBoard attacks[6];
+  BitBoard allAttacks;
+  BitBoard attacks2;
 } EvalData;
 
 enum { WHITE, BLACK, BOTH };

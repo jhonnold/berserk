@@ -200,6 +200,7 @@ const int KING_THREATS[] = {S(0, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60)
 const int HANGING_THREAT = S(45, 22);
 
 const int ATTACK_WEIGHTS[] = {0, 50, 75, 88, 94, 97, 99};
+const int WEAK_SQ_KING_AREA = -160;
 
 // clang-format off
 int PSQT[12][64];
@@ -261,9 +262,12 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   data->queens = 0;
   data->kings = 0;
   data->mobility = 0;
-  data->attacking = 0;
   data->kingSafety = 0;
   memset(data->attacks, 0, sizeof(data->attacks));
+  data->attacks2 = 0;
+  data->allAttacks = 0;
+  data->attackers = 0;
+  data->attackScore = 0;
 
   int xside = 1 - side;
   int phase = getPhase(board);
@@ -284,11 +288,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   int kingSq = lsb(board->pieces[KING[side]]);
   int oppoKingSq = lsb(board->pieces[KING[xside]]);
   BitBoard oppoKingArea = getKingAttacks(oppoKingSq);
-  int attackScore = 0;
-  int attackers = 0;
 
   // PAWNS
   data->attacks[PAWN[side] >> 1] = pawnAttacks;
+  data->allAttacks = pawnAttacks;
   for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
     BitBoard sqBitboard = pawns & -pawns;
     int sq = lsb(pawns);
@@ -342,14 +345,16 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard movement = getKnightAttacks(sq);
     data->attacks[KNIGHT[side] >> 1] |= movement;
+    data->allAttacks |= movement;
+    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(KNIGHT_MOBILITIES[bits(mobilitySquares)], phase);
 
     BitBoard attacksNearKing = getKnightAttacks(sq) & oppoKingArea;
     if (attacksNearKing) {
-      attackers++;
-      attackScore += 20 * bits(attacksNearKing);
+      data->attackers++;
+      data->attackScore += 20 * bits(attacksNearKing);
     }
 
     if (KNIGHT_POST_PSQT[rel(sq, side)] && (getPawnAttacks(sq, xside) & myPawns) &&
@@ -372,6 +377,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard movement = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
     data->attacks[BISHOP[side] >> 1] |= movement;
+    data->allAttacks |= movement;
+    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(BISHOP_MOBILITIES[bits(mobilitySquares)], phase);
@@ -379,8 +386,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard attacksNearKing =
         getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & oppoKingArea;
     if (attacksNearKing) {
-      attackers++;
-      attackScore += 20 * bits(attacksNearKing);
+      data->attackers++;
+      data->attackScore += 20 * bits(attacksNearKing);
     }
 
     if (side == WHITE) {
@@ -410,6 +417,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard movement =
         getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]);
     data->attacks[ROOK[side] >> 1] |= movement;
+    data->allAttacks |= movement;
+    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(ROOK_MOBILITIES[bits(mobilitySquares)], phase);
@@ -418,8 +427,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
         getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]) &
         oppoKingArea;
     if (attacksNearKing) {
-      attackers++;
-      attackScore += 40 * bits(attacksNearKing);
+      data->attackers++;
+      data->attackScore += 40 * bits(attacksNearKing);
     }
 
     if (rank(rel(sq, side)) == 1)
@@ -457,14 +466,16 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard movement = getQueenAttacks(sq, board->occupancies[BOTH]);
     data->attacks[QUEEN[side] >> 1] |= movement;
+    data->allAttacks |= movement;
+    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(QUEEN_MOBILITIES[bits(mobilitySquares)], phase);
 
     BitBoard attacksNearKing = getQueenAttacks(sq, board->occupancies[BOTH]) & oppoKingArea;
     if (attacksNearKing) {
-      attackers++;
-      attackScore += 80 * bits(attacksNearKing);
+      data->attackers++;
+      data->attackScore += 80 * bits(attacksNearKing);
     }
   }
 
@@ -477,35 +488,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard movement = getKingAttacks(sq);
     data->attacks[KING[side] >> 1] |= movement;
-  }
-
-  // KING SAFETY AND ATTACKING
-  if (board->pieces[QUEEN[xside]] &&
-      (board->pieces[KNIGHT[xside]] | board->pieces[BISHOP[xside]] | board->pieces[ROOK[xside]])) {
-    data->attacking += attackScore * ATTACK_WEIGHTS[attackers] / 100;
-    int kingFile = file(kingSq);
-
-    // shelter and storm
-    for (int c = kingFile - 1; c <= kingFile + 1; c++) {
-      if (c < 0 || c > 7)
-        continue;
-
-      BitBoard file = myPawns & FILE_MASKS[c];
-      if (file) {
-        int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
-        data->kingSafety += PAWN_SHELTER + pawnRank * pawnRank;
-      } else {
-        data->kingSafety += PAWN_SHELTER;
-      }
-
-      file = opponentPawns & FILE_MASKS[c];
-      if (file) {
-        int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
-        data->kingSafety += PAWN_STORM[pawnRank];
-      } else {
-        data->kingSafety += PAWN_STORM[6];
-      }
-    }
+    data->allAttacks |= movement;
+    data->attacks2 |= (movement & data->allAttacks);
   }
 }
 
@@ -518,11 +502,7 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
   BitBoard* myAttacks = data->attacks;
   BitBoard* enemyAttacks = enemyData->attacks;
 
-  BitBoard allMyAttacks = myAttacks[0] | myAttacks[1] | myAttacks[2] | myAttacks[3] | myAttacks[4] | myAttacks[5];
-  BitBoard allEnemyAttacks =
-      enemyAttacks[0] | enemyAttacks[1] | enemyAttacks[2] | enemyAttacks[3] | enemyAttacks[4] | enemyAttacks[5];
-
-  BitBoard weak = board->occupancies[xside] & ~enemyAttacks[0] & allMyAttacks;
+  BitBoard weak = board->occupancies[xside] & ~enemyAttacks[0] & data->allAttacks;
 
   for (BitBoard knightThreats = weak & myAttacks[1]; knightThreats; popLsb(knightThreats)) {
     int piece = pieceAt(lsb(knightThreats), xside, board);
@@ -544,8 +524,43 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
     data->threats += taper(KING_THREATS[piece >> 1], phase);
   }
 
-  BitBoard hanging = allMyAttacks & ~allEnemyAttacks & board->occupancies[xside];
+  BitBoard hanging = data->allAttacks & ~enemyData->allAttacks & board->occupancies[xside];
   data->threats += taper(HANGING_THREAT, phase) * bits(hanging);
+}
+
+void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
+  int xside = 1 - side;
+
+  data->kingSafety = 0;
+
+  // KING SAFETY AND ATTACKING
+  if (board->pieces[QUEEN[xside]] &&
+      (board->pieces[KNIGHT[xside]] | board->pieces[BISHOP[xside]] | board->pieces[ROOK[xside]])) {
+    data->kingSafety -= enemyData->attackScore * ATTACK_WEIGHTS[enemyData->attackers] / 100;
+    int kingFile = file(lsb(board->pieces[KING[side]]));
+
+    // shelter and storm
+    for (int c = kingFile - 1; c <= kingFile + 1; c++) {
+      if (c < 0 || c > 7)
+        continue;
+
+      BitBoard file = board->pieces[PAWN[side]] & FILE_MASKS[c];
+      if (file) {
+        int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
+        data->kingSafety += PAWN_SHELTER + pawnRank * pawnRank;
+      } else {
+        data->kingSafety += PAWN_SHELTER;
+      }
+
+      file = board->pieces[PAWN[xside]] & FILE_MASKS[c];
+      if (file) {
+        int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
+        data->kingSafety += PAWN_STORM[pawnRank];
+      } else {
+        data->kingSafety += PAWN_STORM[6];
+      }
+    }
+  }
 }
 
 int Evaluate(Board* board) {
@@ -558,12 +573,15 @@ int Evaluate(Board* board) {
   EvaluateThreats(board, board->side, sideData, xsideData);
   EvaluateThreats(board, board->xside, xsideData, sideData);
 
+  EvaluateKingSafety(board, board->side, sideData, xsideData);
+  EvaluateKingSafety(board, board->xside, xsideData, sideData);
+
   return toScore(sideData) - toScore(xsideData);
 }
 
 inline int toScore(EvalData* data) {
   return data->pawns + data->knights + data->bishops + data->rooks + data->queens + data->kings + data->kingSafety +
-         data->attacking + data->material + data->mobility + data->threats;
+         data->material + data->mobility + data->threats;
 }
 
 void PrintEvaluation(Board* board) {
@@ -575,6 +593,9 @@ void PrintEvaluation(Board* board) {
 
   EvaluateThreats(board, WHITE, whiteEval, blackEval);
   EvaluateThreats(board, BLACK, blackEval, whiteEval);
+
+  EvaluateKingSafety(board, WHITE, whiteEval, blackEval);
+  EvaluateKingSafety(board, BLACK, blackEval, whiteEval);
 
   printf("|            | WHITE | BLACK | DIFF  |\n");
   printf("|------------|-------|-------|-------|\n");
@@ -593,8 +614,6 @@ void PrintEvaluation(Board* board) {
          whiteEval->mobility - blackEval->mobility);
   printf("| threats    | %5d | %5d | %5d |\n", whiteEval->threats, blackEval->threats,
          whiteEval->threats - blackEval->threats);
-  printf("| attacking  | %5d | %5d | %5d |\n", whiteEval->attacking, blackEval->attacking,
-         whiteEval->attacking - blackEval->attacking);
   printf("| kingSafety | %5d | %5d | %5d |\n", whiteEval->kingSafety, blackEval->kingSafety,
          whiteEval->kingSafety - blackEval->kingSafety);
   printf("|------------|-------|-------|-------|\n");
