@@ -553,7 +553,7 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   data->kingSafety = 0;
   int xside = 1 - side;
 
-  if (!(board->pieces[ROOK[xside]] | board->pieces[QUEEN[xside]]))
+  if (!board->pieces[QUEEN[xside]])
     return;
 
   int ksCounter = 1 - (board->side ^ xside);
@@ -563,15 +563,15 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   int allies = bits(kingArea & board->occupancies[side]);
   int enemyAttacks = bits(kingArea & enemyData->allAttacks);
   int enemyDoubleAttacks = bits(kingArea & enemyData->attacks2 & ~data->attacks[0]);
-  int weakSqs = bits(kingArea & enemyData->allAttacks & ~data->attacks2 &
-                     (~data->allAttacks | data->attacks[4] | data->attacks[5]));
+  int weakSqs = bits(kingArea & enemyData->allAttacks &
+                     ~(data->attacks[0] | data->attacks[1] | data->attacks[2] | data->attacks[3]));
 
   ksCounter += KING_SAFETY_ALLIES[allies];
   ksCounter += KING_SAFETY_ATTACKS[enemyAttacks];
   ksCounter += KING_SAFETY_DOUBLE_ATTACKS[enemyDoubleAttacks];
+  ksCounter += KING_SAFETY_WEAK_SQS[weakSqs];
   if (!(kingArea & data->attacks[1]))
     ksCounter++;
-  ksCounter += KING_SAFETY_WEAK_SQS[weakSqs];
 
   BitBoard valid = ~board->occupancies[xside] & (~getKingAttacks(kingSq) | (enemyData->attacks2 & ~data->attacks2));
 
