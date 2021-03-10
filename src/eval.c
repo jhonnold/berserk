@@ -311,7 +311,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   // PAWNS
   data->attacks[PAWN[side] >> 1] = pawnAttacks;
   data->allAttacks = pawnAttacks;
-  data->attacks2 = shift(myPawns, PAWN_DIRECTIONS[xside] + E) & shift(myPawns, PAWN_DIRECTIONS[xside] + W);
+  data->attacks2 = shift(myPawns, PAWN_DIRECTIONS[side] + E) & shift(myPawns, PAWN_DIRECTIONS[side] + W);
 
   for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
     BitBoard sqBitboard = pawns & -pawns;
@@ -365,9 +365,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->knights += taper(PSQT[KNIGHT[side]][sq], phase);
 
     BitBoard movement = getKnightAttacks(sq);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[KNIGHT[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(KNIGHT_MOBILITIES[bits(mobilitySquares)], phase);
@@ -397,9 +397,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->bishops += taper(PSQT[BISHOP[side]][sq], phase);
 
     BitBoard movement = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[BISHOP[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(BISHOP_MOBILITIES[bits(mobilitySquares)], phase);
@@ -437,9 +437,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard movement =
         getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[ROOK[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(ROOK_MOBILITIES[bits(mobilitySquares)], phase);
@@ -486,9 +486,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->queens += taper(PSQT[QUEEN[side]][sq], phase);
 
     BitBoard movement = getQueenAttacks(sq, board->occupancies[BOTH]);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[QUEEN[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(QUEEN_MOBILITIES[bits(mobilitySquares)], phase);
@@ -508,9 +508,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->kings += taper(PSQT[KING[side]][sq], phase);
 
     BitBoard movement = getKingAttacks(sq);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[KING[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
   }
 }
 
@@ -559,13 +559,19 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   int ksCounter = 1 - (board->side ^ xside);
   int kingSq = lsb(board->pieces[KING[side]]);
   BitBoard kingArea = board->pieces[KING[side]] | getKingAttacks(kingSq);
-  ksCounter += KING_SAFETY_ALLIES[bits(kingArea & board->occupancies[side])];
-  ksCounter += KING_SAFETY_ATTACKS[bits(kingArea & enemyData->allAttacks)];
-  ksCounter += KING_SAFETY_DOUBLE_ATTACKS[bits(kingArea & enemyData->attacks2 & ~data->attacks[0])];
+
+  int allies = bits(kingArea & board->occupancies[side]);
+  int enemyAttacks = bits(kingArea & enemyData->allAttacks);
+  int enemyDoubleAttacks = bits(kingArea & enemyData->attacks2 & ~data->attacks[0]);
+  int weakSqs = bits(kingArea & enemyData->allAttacks & ~data->attacks2 &
+                     (~data->allAttacks | data->attacks[4] | data->attacks[5]));
+
+  ksCounter += KING_SAFETY_ALLIES[allies];
+  ksCounter += KING_SAFETY_ATTACKS[enemyAttacks];
+  ksCounter += KING_SAFETY_DOUBLE_ATTACKS[enemyDoubleAttacks];
   if (!(kingArea & data->attacks[1]))
     ksCounter++;
-  ksCounter += KING_SAFETY_WEAK_SQS[bits(kingArea & enemyData->allAttacks & ~data->attacks2 &
-                                         ~(data->attacks[0] | data->attacks[1] | data->attacks[2] | data->attacks[3]))];
+  ksCounter += KING_SAFETY_WEAK_SQS[weakSqs];
 
   BitBoard valid = ~board->occupancies[xside] & (~getKingAttacks(kingSq) | (enemyData->attacks2 & ~data->attacks2));
 
