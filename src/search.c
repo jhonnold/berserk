@@ -43,7 +43,7 @@ void Search(Board* board, SearchParams* params, SearchData* data) {
   int score = negamax(alpha, beta, 1, 0, 1, board, params, data);
 
   for (int depth = 2; depth <= params->depth && !params->stopped; depth++) {
-    int delta = depth >= 5 && abs(score) < 1500 ? 50 : CHECKMATE;
+    int delta = depth >= 5 ? 25 : CHECKMATE;
     alpha = max(score - delta, -CHECKMATE);
     beta = min(score + delta, CHECKMATE);
 

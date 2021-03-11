@@ -70,7 +70,7 @@ void parseGo(char* in, SearchParams* params, Board* board) {
     if (time != -1) {
       params->timeset = 1;
       time /= movesToGo;
-      time -= 50;
+      time -= 15;
       time += inc;
       params->endTime = params->startTime + time;
     } else {
