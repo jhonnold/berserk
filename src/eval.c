@@ -185,9 +185,6 @@ const int PASSED_PAWN[2][8] = {
     },
 };
 
-const int PAWN_SHELTER = -36;
-const int PAWN_STORM[8] = {0, 0, 0, -10, -30, -60, 0, 0};
-
 const int DEFENDED_MINOR = S(5, 2);
 const int ROOK_OPEN_FILE = 20;
 const int ROOK_SEMI_OPEN_FILE = 10;
@@ -202,22 +199,15 @@ const int ROOK_THREATS[] = {S(0, 0), S(0, 30), S(30, 30), S(45, 45), S(20, 30), 
 const int KING_THREATS[] = {S(0, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60)};
 const int HANGING_THREAT = S(45, 22);
 
-const int ATTACK_WEIGHTS[] = {0, 50, 75, 88, 94, 97, 99};
-
+// These values are *currently* borrowed from chess22k
 const int KING_SAFETY_ALLIES[] = {2, 2, 1, 1, 0, 0, 0, 0, 3};
 const int KING_SAFETY_ATTACKS[] = {0, 2, 2, 2, 2, 2, 3, 4, 4};
 const int KING_SAFETY_WEAK_SQS[] = {0, 1, 2, 2, 2, 2, 2, 1, -5};
 const int KING_SAFETY_QUEEN_CHECK[] = {0, 0, 0, 0, 2, 3, 4, 4, 4, 4, 3, 3, 3, 2, 0, 0, 0};
 const int KING_SAFETY_QUEEN_TROPISM[] = {0, 0, 2, 2, 2, 2, 1, 1};
 const int KING_SAFETY_DOUBLE_ATTACKS[] = {0, 1, 1, 3, 3, 9, 9, 9, 9};
-const int KS_ATTACK_PATTERN[] = {
-    //                                                Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q  Q
-    //                     R  R  R  R  R  R  R  R                          R  R  R  R  R  R  R  R
-    //            B  B  B  B              B  B  B  B              B  B  B  B              B  B  B  B
-    //      N  N        N  N        N  N        N  N        N  N        N  N        N  N        N  N
-    //   P     P     P     P     P     P     P     P     P     P     P     P     P     P     P     P
-    4, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2, 2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
-
+const int KS_ATTACK_PATTERN[] = {0, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2,
+                                 2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
 const int KING_SAFETY_SCORES[] = {0,   0,   0,   40,  60,  70,  80,  90,  100, 120, 150,
                                   200, 260, 300, 390, 450, 520, 640, 740, 760, 1260};
 
@@ -282,11 +272,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   data->kings = 0;
   data->mobility = 0;
   data->kingSafety = 0;
-  memset(data->attacks, 0, sizeof(data->attacks));
   data->attacks2 = 0;
   data->allAttacks = 0;
-  data->attackers = 0;
-  data->attackScore = 0;
+  memset(data->attacks, 0, sizeof(data->attacks));
 
   int xside = 1 - side;
   int phase = getPhase(board);
@@ -306,7 +294,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
   int kingSq = lsb(board->pieces[KING[side]]);
   int oppoKingSq = lsb(board->pieces[KING[xside]]);
-  BitBoard oppoKingArea = getKingAttacks(oppoKingSq);
 
   // PAWNS
   data->attacks[PAWN[side] >> 1] = pawnAttacks;
@@ -372,12 +359,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(KNIGHT_MOBILITIES[bits(mobilitySquares)], phase);
 
-    BitBoard attacksNearKing = getKnightAttacks(sq) & oppoKingArea;
-    if (attacksNearKing) {
-      data->attackers++;
-      data->attackScore += 20 * bits(attacksNearKing);
-    }
-
     if (KNIGHT_POST_PSQT[rel(sq, side)] && (getPawnAttacks(sq, xside) & myPawns) &&
         !(fill(getPawnAttacks(sq, side), PAWN_DIRECTIONS[side]) & board->pieces[PAWN[xside]]))
       data->knights += taper(KNIGHT_POST_PSQT[rel(sq, side)], phase);
@@ -403,13 +384,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(BISHOP_MOBILITIES[bits(mobilitySquares)], phase);
-
-    BitBoard attacksNearKing =
-        getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & oppoKingArea;
-    if (attacksNearKing) {
-      data->attackers++;
-      data->attackScore += 20 * bits(attacksNearKing);
-    }
 
     if (side == WHITE) {
       if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7))
@@ -443,14 +417,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(ROOK_MOBILITIES[bits(mobilitySquares)], phase);
-
-    BitBoard attacksNearKing =
-        getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]) &
-        oppoKingArea;
-    if (attacksNearKing) {
-      data->attackers++;
-      data->attackScore += 40 * bits(attacksNearKing);
-    }
 
     if (rank(rel(sq, side)) == 1)
       data->rooks += ROOK_SEVENTH_RANK;
@@ -492,12 +458,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(QUEEN_MOBILITIES[bits(mobilitySquares)], phase);
-
-    BitBoard attacksNearKing = getQueenAttacks(sq, board->occupancies[BOTH]) & oppoKingArea;
-    if (attacksNearKing) {
-      data->attackers++;
-      data->attackScore += 80 * bits(attacksNearKing);
-    }
   }
 
   // KINGS
@@ -604,12 +564,16 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   BitBoard possibleQueenChecks =
       getQueenAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[4];
   if (possibleQueenChecks) {
+    // dont care for unsafe queen checks
     if (possibleQueenChecks & ~data->allAttacks)
       ksCounter += KING_SAFETY_QUEEN_CHECK[bits(board->occupancies[side])];
+
+    // safe queen check on KING RING is additionally bad
     if (possibleQueenChecks & getKingAttacks(kingSq))
       ksCounter += 2;
   }
 
+  // danger for close queen
   if (!(data->allAttacks & board->pieces[QUEEN[xside]]))
     ksCounter += KING_SAFETY_QUEEN_TROPISM[distance(kingSq, lsb(board->pieces[QUEEN[xside]]))];
 
@@ -625,8 +589,7 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   if (enemyData->attacks[4] & kingArea)
     attackersFlag += 16;
 
-  if (attackersFlag)
-    ksCounter += KS_ATTACK_PATTERN[attackersFlag];
+  ksCounter += KS_ATTACK_PATTERN[attackersFlag];
 
   data->kingSafety -= KING_SAFETY_SCORES[min(ksCounter, 20)];
 }
