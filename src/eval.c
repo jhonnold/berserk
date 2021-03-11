@@ -520,6 +520,11 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   int kingSq = lsb(board->pieces[KING[side]]);
   BitBoard kingArea = board->pieces[KING[side]] | getKingAttacks(kingSq);
 
+  if (kingSq >= A1)
+    kingArea |= shift(kingArea, N);
+  else if (kingSq <= H8)
+    kingArea |= shift(kingArea, S);
+
   int allies = bits(kingArea & board->occupancies[side]);
   int enemyAttacks = bits(kingArea & enemyData->allAttacks);
   int enemyDoubleAttacks = bits(kingArea & enemyData->attacks2 & ~data->attacks[0]);
