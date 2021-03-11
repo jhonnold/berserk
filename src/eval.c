@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "attacks.h"
 #include "bits.h"
@@ -8,9 +9,11 @@
 #include "movegen.h"
 #include "string.h"
 #include "types.h"
+#include "util.h"
 
 #define S(mg, eg) (makeScore((mg), (eg)))
 #define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
+#define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
 
 const int PAWN_VALUE = S(100, 150);
 const int KNIGHT_VALUE = S(475, 475);
@@ -182,9 +185,6 @@ const int PASSED_PAWN[2][8] = {
     },
 };
 
-const int PAWN_SHELTER = -36;
-const int PAWN_STORM[8] = {0, 0, 0, -10, -30, -60, 0, 0};
-
 const int DEFENDED_MINOR = S(5, 2);
 const int ROOK_OPEN_FILE = 20;
 const int ROOK_SEMI_OPEN_FILE = 10;
@@ -199,8 +199,17 @@ const int ROOK_THREATS[] = {S(0, 0), S(0, 30), S(30, 30), S(45, 45), S(20, 30), 
 const int KING_THREATS[] = {S(0, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60)};
 const int HANGING_THREAT = S(45, 22);
 
-const int ATTACK_WEIGHTS[] = {0, 50, 75, 88, 94, 97, 99};
-const int WEAK_SQ_KING_AREA = -160;
+// These values are *currently* borrowed from chess22k
+const int KING_SAFETY_ALLIES[] = {2, 2, 1, 1, 0, 0, 0, 0, 3};
+const int KING_SAFETY_ATTACKS[] = {0, 2, 2, 2, 2, 2, 3, 4, 4};
+const int KING_SAFETY_WEAK_SQS[] = {0, 1, 2, 2, 2, 2, 2, 1, -5};
+const int KING_SAFETY_QUEEN_CHECK[] = {0, 0, 0, 0, 2, 3, 4, 4, 4, 4, 3, 3, 3, 2, 0, 0, 0};
+const int KING_SAFETY_QUEEN_TROPISM[] = {0, 0, 2, 2, 2, 2, 1, 1};
+const int KING_SAFETY_DOUBLE_ATTACKS[] = {0, 1, 1, 3, 3, 9, 9, 9, 9};
+const int KS_ATTACK_PATTERN[] = {0, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2,
+                                 2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
+const int KING_SAFETY_SCORES[] = {0,   0,   0,   40,  60,  70,  80,  90,  100, 120, 150,
+                                  200, 260, 300, 390, 450, 520, 640, 740, 760, 1260};
 
 // clang-format off
 int PSQT[12][64];
@@ -263,11 +272,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   data->kings = 0;
   data->mobility = 0;
   data->kingSafety = 0;
-  memset(data->attacks, 0, sizeof(data->attacks));
   data->attacks2 = 0;
   data->allAttacks = 0;
-  data->attackers = 0;
-  data->attackScore = 0;
+  memset(data->attacks, 0, sizeof(data->attacks));
 
   int xside = 1 - side;
   int phase = getPhase(board);
@@ -287,11 +294,12 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
   int kingSq = lsb(board->pieces[KING[side]]);
   int oppoKingSq = lsb(board->pieces[KING[xside]]);
-  BitBoard oppoKingArea = getKingAttacks(oppoKingSq);
 
   // PAWNS
   data->attacks[PAWN[side] >> 1] = pawnAttacks;
   data->allAttacks = pawnAttacks;
+  data->attacks2 = shift(myPawns, PAWN_DIRECTIONS[side] + E) & shift(myPawns, PAWN_DIRECTIONS[side] + W);
+
   for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
     BitBoard sqBitboard = pawns & -pawns;
     int sq = lsb(pawns);
@@ -344,18 +352,12 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->knights += taper(PSQT[KNIGHT[side]][sq], phase);
 
     BitBoard movement = getKnightAttacks(sq);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[KNIGHT[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(KNIGHT_MOBILITIES[bits(mobilitySquares)], phase);
-
-    BitBoard attacksNearKing = getKnightAttacks(sq) & oppoKingArea;
-    if (attacksNearKing) {
-      data->attackers++;
-      data->attackScore += 20 * bits(attacksNearKing);
-    }
 
     if (KNIGHT_POST_PSQT[rel(sq, side)] && (getPawnAttacks(sq, xside) & myPawns) &&
         !(fill(getPawnAttacks(sq, side), PAWN_DIRECTIONS[side]) & board->pieces[PAWN[xside]]))
@@ -376,19 +378,12 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->bishops += taper(PSQT[BISHOP[side]][sq], phase);
 
     BitBoard movement = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[BISHOP[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(BISHOP_MOBILITIES[bits(mobilitySquares)], phase);
-
-    BitBoard attacksNearKing =
-        getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & oppoKingArea;
-    if (attacksNearKing) {
-      data->attackers++;
-      data->attackScore += 20 * bits(attacksNearKing);
-    }
 
     if (side == WHITE) {
       if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7))
@@ -416,20 +411,12 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     BitBoard movement =
         getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[ROOK[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(ROOK_MOBILITIES[bits(mobilitySquares)], phase);
-
-    BitBoard attacksNearKing =
-        getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]) &
-        oppoKingArea;
-    if (attacksNearKing) {
-      data->attackers++;
-      data->attackScore += 40 * bits(attacksNearKing);
-    }
 
     if (rank(rel(sq, side)) == 1)
       data->rooks += ROOK_SEVENTH_RANK;
@@ -465,18 +452,12 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->queens += taper(PSQT[QUEEN[side]][sq], phase);
 
     BitBoard movement = getQueenAttacks(sq, board->occupancies[BOTH]);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[QUEEN[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(QUEEN_MOBILITIES[bits(mobilitySquares)], phase);
-
-    BitBoard attacksNearKing = getQueenAttacks(sq, board->occupancies[BOTH]) & oppoKingArea;
-    if (attacksNearKing) {
-      data->attackers++;
-      data->attackScore += 80 * bits(attacksNearKing);
-    }
   }
 
   // KINGS
@@ -487,9 +468,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->kings += taper(PSQT[KING[side]][sq], phase);
 
     BitBoard movement = getKingAttacks(sq);
+    data->attacks2 |= (movement & data->allAttacks);
     data->attacks[KING[side] >> 1] |= movement;
     data->allAttacks |= movement;
-    data->attacks2 |= (movement & data->allAttacks);
   }
 }
 
@@ -529,38 +510,88 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
 }
 
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
+  data->kingSafety = 0;
   int xside = 1 - side;
 
-  data->kingSafety = 0;
+  if (!board->pieces[QUEEN[xside]])
+    return;
 
-  // KING SAFETY AND ATTACKING
-  if (board->pieces[QUEEN[xside]] &&
-      (board->pieces[KNIGHT[xside]] | board->pieces[BISHOP[xside]] | board->pieces[ROOK[xside]])) {
-    data->kingSafety -= enemyData->attackScore * ATTACK_WEIGHTS[enemyData->attackers] / 100;
-    int kingFile = file(lsb(board->pieces[KING[side]]));
+  int ksCounter = 1 - (board->side ^ xside);
+  int kingSq = lsb(board->pieces[KING[side]]);
+  BitBoard kingArea = board->pieces[KING[side]] | getKingAttacks(kingSq);
 
-    // shelter and storm
-    for (int c = kingFile - 1; c <= kingFile + 1; c++) {
-      if (c < 0 || c > 7)
-        continue;
+  int allies = bits(kingArea & board->occupancies[side]);
+  int enemyAttacks = bits(kingArea & enemyData->allAttacks);
+  int enemyDoubleAttacks = bits(kingArea & enemyData->attacks2 & ~data->attacks[0]);
+  int weakSqs = bits(kingArea & enemyData->allAttacks &
+                     ~(data->attacks[0] | data->attacks[1] | data->attacks[2] | data->attacks[3]));
 
-      BitBoard file = board->pieces[PAWN[side]] & FILE_MASKS[c];
-      if (file) {
-        int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
-        data->kingSafety += PAWN_SHELTER + pawnRank * pawnRank;
-      } else {
-        data->kingSafety += PAWN_SHELTER;
-      }
+  ksCounter += KING_SAFETY_ALLIES[allies];
+  ksCounter += KING_SAFETY_ATTACKS[enemyAttacks];
+  ksCounter += KING_SAFETY_DOUBLE_ATTACKS[enemyDoubleAttacks];
+  ksCounter += KING_SAFETY_WEAK_SQS[weakSqs];
+  if (!(kingArea & data->attacks[1]))
+    ksCounter++;
 
-      file = board->pieces[PAWN[xside]] & FILE_MASKS[c];
-      if (file) {
-        int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
-        data->kingSafety += PAWN_STORM[pawnRank];
-      } else {
-        data->kingSafety += PAWN_STORM[6];
-      }
-    }
+  BitBoard valid = ~board->occupancies[xside] & (~getKingAttacks(kingSq) | (enemyData->attacks2 & ~data->attacks2));
+
+  BitBoard possibleKnightChecks = getKnightAttacks(kingSq) & valid & enemyData->attacks[1];
+  if (possibleKnightChecks) {
+    if (possibleKnightChecks & ~data->allAttacks)
+      ksCounter += 3;
+    else
+      ksCounter++;
   }
+
+  BitBoard possibleBishopChecks =
+      getBishopAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[2];
+  if (possibleBishopChecks) {
+    if (possibleBishopChecks & ~data->allAttacks)
+      ksCounter += 3;
+    else
+      ksCounter++;
+  }
+
+  BitBoard possibleRookChecks =
+      getRookAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[3];
+  if (possibleRookChecks) {
+    if (possibleRookChecks & ~data->allAttacks)
+      ksCounter += 3;
+    else
+      ksCounter++;
+  }
+
+  BitBoard possibleQueenChecks =
+      getQueenAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[4];
+  if (possibleQueenChecks) {
+    // dont care for unsafe queen checks
+    if (possibleQueenChecks & ~data->allAttacks)
+      ksCounter += KING_SAFETY_QUEEN_CHECK[bits(board->occupancies[side])];
+
+    // safe queen check on KING RING is additionally bad
+    if (possibleQueenChecks & getKingAttacks(kingSq))
+      ksCounter += 2;
+  }
+
+  // danger for close queen
+  if (!(data->allAttacks & board->pieces[QUEEN[xside]]))
+    ksCounter += KING_SAFETY_QUEEN_TROPISM[distance(kingSq, lsb(board->pieces[QUEEN[xside]]))];
+
+  int attackersFlag = 0;
+  if (enemyData->attacks[0] & kingArea)
+    attackersFlag += 1;
+  if (enemyData->attacks[1] & kingArea)
+    attackersFlag += 2;
+  if (enemyData->attacks[2] & kingArea)
+    attackersFlag += 4;
+  if (enemyData->attacks[3] & kingArea)
+    attackersFlag += 8;
+  if (enemyData->attacks[4] & kingArea)
+    attackersFlag += 16;
+
+  ksCounter += KS_ATTACK_PATTERN[attackersFlag];
+
+  data->kingSafety -= KING_SAFETY_SCORES[min(ksCounter, 20)];
 }
 
 int Evaluate(Board* board) {

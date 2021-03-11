@@ -71,13 +71,9 @@ typedef struct {
   int kings;
 
   int mobility;
-
   int kingSafety;
-
   int threats;
 
-  int attackers;
-  int attackScore;
   BitBoard attacks[6];
   BitBoard allAttacks;
   BitBoard attacks2;
