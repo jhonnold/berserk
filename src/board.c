@@ -43,11 +43,13 @@ const int MIRROR[] = {
 };
 // clang-format on
 
-const uint64_t PIECE_COUNT_IDX[10] = {
+const uint64_t PIECE_COUNT_IDX[] = {
     // P           p            N           n           B
     1ULL << 0, 1ULL << 4, 1ULL << 8, 1ULL << 12, 1ULL << 16,
     // b           R            r           Q           q
     1ULL << 20, 1ULL << 24, 1ULL << 28, 1ULL << 32, 1ULL << 36};
+
+const uint64_t MAJOR_PIECE_COUNT_MASK[] = {0x0F0F0F0F00, 0xF0F0F0F000};
 
 void clear(Board* board) {
   memset(board->pieces, EMPTY, sizeof(board->pieces));
@@ -207,9 +209,7 @@ inline int pieceAt(int sq, int side, Board* board) {
   return -1;
 }
 
-inline int hasNonPawn(Board* board) {
-  return board->occupancies[board->side] & ~(board->pieces[PAWN[board->side]] | board->pieces[KING[board->side]]);
-}
+inline int hasNonPawn(Board* board) { return (board->piecesCounts & MAJOR_PIECE_COUNT_MASK[board->side]) != 0; }
 
 inline void setOccupancies(Board* board) {
   memset(board->occupancies, EMPTY, sizeof(board->occupancies));
