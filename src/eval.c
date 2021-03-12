@@ -199,6 +199,9 @@ const int ROOK_THREATS[] = {S(0, 0), S(0, 30), S(30, 30), S(45, 45), S(20, 30), 
 const int KING_THREATS[] = {S(0, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60)};
 const int HANGING_THREAT = S(45, 22);
 
+const int PAWN_SHELTER = -36;
+const int PAWN_STORM[8] = {0, 0, 0, -10, -30, -60, 0, 0};
+
 // These values are *currently* borrowed from chess22k
 const int KING_SAFETY_ALLIES[] = {2, 2, 1, 1, 0, 0, 0, 0, 3};
 const int KING_SAFETY_ATTACKS[] = {0, 2, 2, 2, 2, 2, 3, 4, 4};
@@ -206,8 +209,8 @@ const int KING_SAFETY_WEAK_SQS[] = {0, 1, 2, 2, 2, 2, 2, 1, -5};
 const int KING_SAFETY_QUEEN_CHECK[] = {0, 0, 0, 0, 2, 3, 4, 4, 4, 4, 3, 3, 3, 2, 0, 0, 0};
 const int KING_SAFETY_QUEEN_TROPISM[] = {0, 0, 2, 2, 2, 2, 1, 1};
 const int KING_SAFETY_DOUBLE_ATTACKS[] = {0, 1, 1, 3, 3, 9, 9, 9, 9};
-const int KS_ATTACK_PATTERN[] = {0, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2,
-                                 2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
+const int KING_SAFETY_ATTACK_PATTERN[] = {0, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2,
+                                          2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
 const int KING_SAFETY_SCORES[] = {0,   0,   0,   40,  60,  70,  80,  90,  100, 120, 150,
                                   200, 260, 300, 390, 450, 520, 640, 740, 760, 1260};
 
@@ -602,9 +605,40 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   if (enemyData->attacks[4] & kingArea)
     attackersFlag += 16;
 
-  ksCounter += KS_ATTACK_PATTERN[attackersFlag];
+  ksCounter += KING_SAFETY_ATTACK_PATTERN[attackersFlag];
 
   data->kingSafety -= KING_SAFETY_SCORES[min(ksCounter, 20)];
+
+  // PAWN STORM / SHIELD
+  int kingFile = file(kingSq);
+
+  // shelter and storm
+  for (int c = kingFile - 1; c <= kingFile + 1; c++) {
+    if (c < 0 || c > 7)
+      continue;
+
+    BitBoard file = board->pieces[PAWN[side]] & FILE_MASKS[c];
+
+    int s = PAWN_SHELTER;
+
+    if (file) {
+      int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
+      s += pawnRank * pawnRank;
+    }
+
+    if (c == kingFile)
+      s *= 2;
+
+    data->kingSafety += s;
+
+    file = board->pieces[PAWN[xside]] & FILE_MASKS[c];
+    if (file) {
+      int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
+      data->kingSafety += PAWN_STORM[pawnRank];
+    } else {
+      data->kingSafety += PAWN_STORM[6];
+    }
+  }
 }
 
 int Evaluate(Board* board) {
