@@ -138,10 +138,11 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       return staticEval;
 
     // Null move pruning
-    if (depth > 3 && canNull) {
-      int R = 3;
-      if (depth >= 6)
-        R++;
+    if (depth >= 3 && canNull && staticEval >= beta) {
+      int R = 3 + depth / 6 + min((staticEval - beta) / 200, 3);
+
+      if (R > depth)
+        R = depth;
 
       nullMove(board);
       int score = -negamax(-beta, -beta + 1, depth - R, ply + 1, 0, board, params, data);
