@@ -467,7 +467,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->material += taper(MATERIAL_VALUES[KING[side]], phase);
     data->kings += taper(PSQT[KING[side]][sq], phase);
 
-    BitBoard movement = getKingAttacks(sq);
+    BitBoard movement = getKingAttacks(sq) & ~getKingAttacks(lsb(board->pieces[KING[xside]]));
     data->attacks2 |= (movement & data->allAttacks);
     data->attacks[KING[side] >> 1] |= movement;
     data->allAttacks |= movement;
@@ -517,6 +517,7 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
     return;
 
   int ksCounter = 1 - (board->side ^ xside);
+
   int kingSq = lsb(board->pieces[KING[side]]);
   BitBoard kingArea = board->pieces[KING[side]] | getKingAttacks(kingSq);
 
@@ -524,6 +525,13 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
     kingArea |= shift(kingArea, N);
   else if (kingSq <= H8)
     kingArea |= shift(kingArea, S);
+
+  if (file(kingSq) == 0)
+    kingArea |= shift(kingArea, E);
+  else if (file(kingSq) == 7)
+    kingArea |= shift(kingArea, W);
+
+  kingArea &= ~board->pieces[KING[side]];
 
   int allies = bits(kingArea & board->occupancies[side]);
   int enemyAttacks = bits(kingArea & enemyData->allAttacks);
@@ -538,9 +546,9 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   if (!(kingArea & data->attacks[1]))
     ksCounter++;
 
-  BitBoard valid = ~board->occupancies[xside] & (~getKingAttacks(kingSq) | (enemyData->attacks2 & ~data->attacks2));
+  BitBoard unsafeKing = getKingAttacks(kingSq) & enemyData->attacks2 & ~data->attacks2;
 
-  BitBoard possibleKnightChecks = getKnightAttacks(kingSq) & valid & enemyData->attacks[1];
+  BitBoard possibleKnightChecks = getKnightAttacks(kingSq) & enemyData->attacks[1] & ~board->occupancies[xside];
   if (possibleKnightChecks) {
     if (possibleKnightChecks & ~data->allAttacks)
       ksCounter += 3;
@@ -548,8 +556,8 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
       ksCounter++;
   }
 
-  BitBoard possibleBishopChecks =
-      getBishopAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[2];
+  BitBoard possibleBishopChecks = getBishopAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) &
+                                  enemyData->attacks[2] & ~board->occupancies[xside];
   if (possibleBishopChecks) {
     if (possibleBishopChecks & ~data->allAttacks)
       ksCounter += 3;
@@ -557,24 +565,24 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
       ksCounter++;
   }
 
-  BitBoard possibleRookChecks =
-      getRookAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[3];
+  BitBoard possibleRookChecks = getRookAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) &
+                                enemyData->attacks[3] & ~board->occupancies[xside];
   if (possibleRookChecks) {
-    if (possibleRookChecks & ~data->allAttacks)
+    if (possibleRookChecks & (~data->allAttacks | unsafeKing))
       ksCounter += 3;
     else
       ksCounter++;
   }
 
-  BitBoard possibleQueenChecks =
-      getQueenAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) & valid & enemyData->attacks[4];
+  BitBoard possibleQueenChecks = getQueenAttacks(kingSq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]) &
+                                 enemyData->attacks[4] & ~board->occupancies[xside];
   if (possibleQueenChecks) {
     // dont care for unsafe queen checks
     if (possibleQueenChecks & ~data->allAttacks)
       ksCounter += KING_SAFETY_QUEEN_CHECK[bits(board->occupancies[side])];
 
     // safe queen check on KING RING is additionally bad
-    if (possibleQueenChecks & getKingAttacks(kingSq))
+    if (possibleQueenChecks & unsafeKing)
       ksCounter += 2;
   }
 
