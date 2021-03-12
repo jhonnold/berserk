@@ -35,6 +35,7 @@ int isRepetition(Board* board);
 
 int capturedPiece(Move move, Board* board);
 int pieceAt(int sq, int side, Board* board);
+int hasNonPawn(Board* board);
 
 void nullMove(Board* board);
 void undoNullMove(Board* board);

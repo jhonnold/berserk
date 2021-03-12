@@ -207,6 +207,10 @@ inline int pieceAt(int sq, int side, Board* board) {
   return -1;
 }
 
+inline int hasNonPawn(Board* board) {
+  return board->occupancies[board->side] & ~(board->pieces[PAWN[board->side]] | board->pieces[KING[board->side]]);
+}
+
 inline void setOccupancies(Board* board) {
   memset(board->occupancies, EMPTY, sizeof(board->occupancies));
 
