@@ -127,6 +127,12 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
   int staticEval = Evaluate(board);
   if (!isPV && !currInCheck) {
+    if (ttValue && ttDepth(ttValue) >= depth) {
+      int ttEval = ttScore(ttValue, ply);
+      if (ttFlag(ttValue) == (ttEval > staticEval ? TT_LOWER : TT_UPPER))
+        staticEval = ttEval;
+    }
+
     // Reverse Futility Pruning
     if (depth <= 6 && staticEval - (FUTILITY_MARGIN * depth) >= beta && staticEval < MATE_BOUND)
       return staticEval;
@@ -283,6 +289,11 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
   }
 
   int eval = Evaluate(board);
+  if (ttValue) {
+    int ttEval = ttScore(ttValue, ply);
+    if (ttFlag(ttValue) == (ttEval > eval ? TT_LOWER : TT_UPPER))
+      eval = ttEval;
+  }
 
   if (eval >= beta)
     return beta;
