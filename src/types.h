@@ -13,6 +13,7 @@ typedef struct {
   Move moves[256];
   int scores[256];
   int count;
+  int bestHistory;
 } MoveList;
 
 typedef struct {
