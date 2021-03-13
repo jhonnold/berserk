@@ -156,6 +156,8 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     }
   }
 
+  data->evals[ply] = staticEval;
+
   MoveList moveList[1];
   generateMoves(moveList, board, ply);
 
@@ -189,6 +191,9 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
         R--;
 
       if (!isPV)
+        R++;
+
+      if (ply >= 2 && staticEval <= data->evals[ply - 2])
         R++;
 
       R -= max(-2, min(2, (moveList->scores[i] - 150) / 50));

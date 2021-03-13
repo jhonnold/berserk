@@ -49,6 +49,8 @@ typedef struct {
 typedef struct {
   int nodes;
   int seldepth;
+
+  int evals[64];
 } SearchData;
 
 typedef struct {
