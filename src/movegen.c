@@ -563,9 +563,8 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
     } else if (board->moveNo && move == board->counters[moveSE(board->gameMoves[board->moveNo - 1])]) {
       moveList->scores[i] = COUNTER;
     } else {
-      int hist = 100 * board->historyHeuristic[board->side][moveSE(move)] /
-                 max(1, board->bfHeuristic[board->side][moveSE(move)]);
-      moveList->scores[i] = hist;
+      moveList->scores[i] = 100 * board->historyHeuristic[board->side][moveSE(move)] /
+                            max(1, board->bfHeuristic[board->side][moveSE(move)]);
     }
   }
 }
