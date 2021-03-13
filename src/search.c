@@ -16,22 +16,36 @@
 const int CHECKMATE = 32767;
 const int MATE_BOUND = 30000;
 
-const int FUTILITY_MARGIN = 80;
-const int SEE_PRUNE_CAPTURE_CUTOFF = -80;
-const int SEE_PRUNE_CUTOFF = -25;
+const int FUTILITY_MARGIN = 85;
+const int SEE_PRUNE_CAPTURE_CUTOFF = -70;
+const int SEE_PRUNE_CUTOFF = -20;
 const int DELTA_CUTOFF = 200;
 
 int LMR[64][64];
+int LMP[2][64];
+int SEE[2][64];
+int FUTILITY[64];
 
 void initLMR() {
   for (int depth = 0; depth < 64; depth++)
     for (int moves = 0; moves < 64; moves++)
       LMR[depth][moves] = (int)(0.6f + log(depth) * log(1.2f * moves) / 2.5f);
+
+  for (int depth = 0; depth < 64; depth++) {
+    LMP[0][depth] = 3 + depth * depth;
+    LMP[1][depth] = 3 + depth * depth / 2;
+
+    SEE[0][depth] = SEE_PRUNE_CUTOFF * depth * depth;
+    SEE[1][depth] = SEE_PRUNE_CAPTURE_CUTOFF * depth;
+
+    FUTILITY[depth] = FUTILITY_MARGIN * depth;
+  }
 }
 
 void Search(Board* board, SearchParams* params, SearchData* data) {
   data->nodes = 0;
   data->seldepth = 1;
+  memset(data->evals, 0, sizeof(data->evals));
 
   ttClear();
   memset(board->killers, 0, sizeof(board->killers));
@@ -65,7 +79,7 @@ void Search(Board* board, SearchParams* params, SearchData* data) {
   printf("bestmove %s\n", moveStr(ttMove(ttProbe(board->zobrist))));
 }
 
-void printPv(Move move, Board* board) {
+void printPv(Move move, Board* board, int maxDepth) {
   int depth = 0;
   Board temp[1];
   memcpy(temp, board, sizeof(Board));
@@ -76,7 +90,7 @@ void printPv(Move move, Board* board) {
     makeMove(move, temp);
     TTValue ttValue = ttProbe(temp->zobrist);
     move = ttMove(ttValue);
-  } while (++depth < 64 && move);
+  } while (++depth < maxDepth && move);
 
   printf("\n");
 }
@@ -134,7 +148,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     }
 
     // Reverse Futility Pruning
-    if (depth <= 6 && staticEval - (FUTILITY_MARGIN * depth) >= beta && staticEval < MATE_BOUND)
+    if (depth <= 6 && staticEval - FUTILITY[depth] >= beta && staticEval < MATE_BOUND)
       return staticEval;
 
     // Null move pruning
@@ -156,6 +170,9 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     }
   }
 
+  data->evals[ply] = staticEval;
+  int improving = ply >= 2 && staticEval <= data->evals[ply - 2];
+
   MoveList moveList[1];
   generateMoves(moveList, board, ply);
 
@@ -164,34 +181,26 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
+    int tactical = movePromo(move) || moveCapture(move);
+
     int score = alpha + 1;
 
-    if (!isPV && bestScore > -MATE_BOUND && hasNonPawn(board)) {
-      int lmrDepth = depth - LMR[depth][numMoves];
-      lmrDepth = max(0, lmrDepth);
+    if (!isPV && bestScore > -MATE_BOUND) {
+      if (depth <= 8 && !tactical && numMoves >= LMP[improving][depth])
+        continue;
 
-      int seeCutoff = moveCapture(move) ? (SEE_PRUNE_CAPTURE_CUTOFF * depth) : (SEE_PRUNE_CUTOFF * lmrDepth * lmrDepth);
-
-      // SEE pruning
-      if (see(board, move) < seeCutoff)
+      if (see(board, move) < SEE[tactical][depth])
         continue;
     }
 
     numMoves++;
     makeMove(move, board);
 
-    // Start LMR
     int R = 1;
-    if (depth >= 2 && numMoves > 1 && !moveCapture(move) && !movePromo(move)) {
+    if (depth >= 2 && numMoves > 1 && !tactical) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
-      if (moveList->scores[i] >= COUNTER)
-        R--;
-
-      if (!isPV)
-        R++;
-
-      R -= max(-2, min(2, (moveList->scores[i] - 150) / 50));
+      R += !isPV + !improving - !!(moveList->scores[i] >= COUNTER);
 
       R = min(depth - 1, max(R, 1));
     }
@@ -218,7 +227,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
         alpha = score;
 
       if (alpha >= beta) {
-        if (!moveCapture(move) && !movePromo(move)) {
+        if (!tactical) {
           addKiller(board, move, ply);
           addCounter(board, move, board->gameMoves[board->moveNo - 1]);
           addHistoryHeuristic(board, move, depth);
@@ -255,7 +264,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       printf("info depth %d seldepth %d nodes %d time %ld score cp %d pv ", depth, data->seldepth, data->nodes,
              getTimeMs() - params->startTime, bestScore);
     }
-    printPv(bestMove, board);
+    printPv(bestMove, board, depth);
   }
 
   int ttFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
