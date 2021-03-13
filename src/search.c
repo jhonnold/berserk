@@ -165,13 +165,9 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     Move move = moveList->moves[i];
 
     int score = alpha + 1;
-    int newDepth = depth - 1;
 
-    if (!isPV && bestScore > -MATE_BOUND &&
-        (board->pieces[KNIGHT[board->side]] | board->pieces[BISHOP[board->side]] | board->pieces[ROOK[board->side]] |
-         board->pieces[QUEEN[board->side]])) {
-
-      int lmrDepth = newDepth - LMR[depth][numMoves];
+    if (!isPV && bestScore > -MATE_BOUND && hasNonPawn(board)) {
+      int lmrDepth = depth - LMR[depth][numMoves];
       lmrDepth = max(0, lmrDepth);
 
       int seeCutoff = moveCapture(move) ? (SEE_PRUNE_CAPTURE_CUTOFF * depth) : (SEE_PRUNE_CUTOFF * lmrDepth * lmrDepth);
@@ -185,26 +181,29 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     makeMove(move, board);
 
     // Start LMR
-    int doZws = (!isPV || numMoves > 1);
-
-    int givesCheck = inCheck(board);
-    if (depth >= 3 && numMoves > 1 && !moveCapture(move) && !movePromo(move) && !givesCheck && !currInCheck) {
-      int R = LMR[min(depth, 63)][min(numMoves, 63)];
+    int R = 1;
+    if (depth >= 2 && numMoves > 1 && !moveCapture(move) && !movePromo(move)) {
+      R = LMR[min(depth, 63)][min(numMoves, 63)];
 
       if (moveList->scores[i] >= COUNTER)
         R--;
-      if (!isPV && moveList->scores[i] < 50)
+
+      if (!isPV)
         R++;
 
-      score = -negamax(-alpha - 1, -alpha, newDepth - R, ply + 1, 1, board, params, data);
-      doZws = (score > alpha);
+      R -= max(-2, min(2, (moveList->scores[i] - 150) / 50));
+
+      R = min(depth - 1, max(R, 1));
     }
 
-    if (doZws)
-      score = -negamax(-alpha - 1, -alpha, newDepth, ply + 1, 1, board, params, data);
+    if (R != 1)
+      score = -negamax(-alpha - 1, -alpha, depth - R, ply + 1, 1, board, params, data);
+
+    if ((R != 1 && score > alpha) || (R == 1 && (!isPV || numMoves > 1)))
+      score = -negamax(-alpha - 1, -alpha, depth - 1, ply + 1, 1, board, params, data);
 
     if (isPV && (numMoves == 1 || (score > alpha && (!ply || score < beta))))
-      score = -negamax(-beta, -alpha, newDepth, ply + 1, 1, board, params, data);
+      score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params, data);
 
     undoMove(move, board);
 
