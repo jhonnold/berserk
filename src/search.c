@@ -22,11 +22,17 @@ const int SEE_PRUNE_CUTOFF = -20;
 const int DELTA_CUTOFF = 200;
 
 int LMR[64][64];
+int LMP[2][64];
 
 void initLMR() {
   for (int depth = 0; depth < 64; depth++)
     for (int moves = 0; moves < 64; moves++)
       LMR[depth][moves] = (int)(0.6f + log(depth) * log(1.2f * moves) / 2.5f);
+
+  for (int depth = 0; depth < 64; depth++) {
+    LMP[0][depth] = 3 + depth * depth;
+    LMP[1][depth] = 3 + depth * depth / 2;
+  }
 }
 
 void Search(Board* board, SearchParams* params, SearchData* data) {
@@ -176,9 +182,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
         if (see(board, move) < SEE_PRUNE_CAPTURE_CUTOFF * depth)
           continue;
       } else {
-        int moveCutoff = improving ? 3 + depth * depth : 3 + depth * depth / 2;
-
-        if (depth <= 6 && numMoves >= moveCutoff)
+        if (depth <= 8 && numMoves >= LMP[improving][depth])
           continue;
 
         if (see(board, move) < SEE_PRUNE_CUTOFF * depth * depth)
@@ -200,7 +204,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       if (!isPV)
         R++;
 
-      if (improving)
+      if (!improving)
         R++;
 
       R = min(depth - 1, max(R, 1));
