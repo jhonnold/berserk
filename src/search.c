@@ -196,8 +196,8 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       if (ply >= 2 && staticEval <= data->evals[ply - 2])
         R++;
 
-      if (moveList->scores[i] * 2 < moveList->bestHistory)
-        R++;
+      if (moveList->bestHistory)
+        R -= (4 * moveList->scores[i] / moveList->bestHistory) - 2;
 
       R = min(depth - 1, max(R, 1));
     }
