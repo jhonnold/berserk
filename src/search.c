@@ -138,7 +138,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       return staticEval;
 
     // Null move pruning
-    if (depth >= 3 && canNull && staticEval >= beta) {
+    if (depth >= 3 && canNull && staticEval >= beta && hasNonPawn(board)) {
       int R = 3 + depth / 6 + min((staticEval - beta) / 200, 3);
 
       if (R > depth)
