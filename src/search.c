@@ -16,9 +16,9 @@
 const int CHECKMATE = 32767;
 const int MATE_BOUND = 30000;
 
-const int FUTILITY_MARGIN = 80;
-const int SEE_PRUNE_CAPTURE_CUTOFF = -80;
-const int SEE_PRUNE_CUTOFF = -25;
+const int FUTILITY_MARGIN = 85;
+const int SEE_PRUNE_CAPTURE_CUTOFF = -70;
+const int SEE_PRUNE_CUTOFF = -20;
 const int DELTA_CUTOFF = 200;
 
 int LMR[64][64];
@@ -157,6 +157,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   }
 
   data->evals[ply] = staticEval;
+  int improving = ply >= 2 && staticEval <= data->evals[ply - 2];
 
   MoveList moveList[1];
   generateMoves(moveList, board, ply);
@@ -166,17 +167,23 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
+    int tactical = movePromo(move) || moveCapture(move);
+
     int score = alpha + 1;
 
-    if (!isPV && bestScore > -MATE_BOUND && hasNonPawn(board)) {
-      int lmrDepth = depth - LMR[depth][numMoves];
-      lmrDepth = max(0, lmrDepth);
+    if (!isPV && bestScore > -MATE_BOUND) {
+      if (tactical) {
+        if (see(board, move) < SEE_PRUNE_CAPTURE_CUTOFF * depth)
+          continue;
+      } else {
+        int moveCutoff = improving ? 3 + depth * depth : 3 + depth * depth / 2;
 
-      int seeCutoff = moveCapture(move) ? (SEE_PRUNE_CAPTURE_CUTOFF * depth) : (SEE_PRUNE_CUTOFF * lmrDepth * lmrDepth);
+        if (depth <= 6 && numMoves >= moveCutoff)
+          continue;
 
-      // SEE pruning
-      if (see(board, move) < seeCutoff)
-        continue;
+        if (see(board, move) < SEE_PRUNE_CUTOFF * depth * depth)
+          continue;
+      }
     }
 
     numMoves++;
@@ -184,7 +191,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
     // Start LMR
     int R = 1;
-    if (depth >= 2 && numMoves > 1 && !moveCapture(move) && !movePromo(move)) {
+    if (depth >= 2 && numMoves > 1 && !tactical) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
       if (moveList->scores[i] >= COUNTER)
@@ -193,10 +200,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       if (!isPV)
         R++;
 
-      if (ply >= 2 && staticEval <= data->evals[ply - 2])
-        R++;
-
-      if (!moveList->scores[i] || moveList->scores[i] * 2 <= moveList->bestHistory)
+      if (improving)
         R++;
 
       R = min(depth - 1, max(R, 1));
