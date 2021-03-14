@@ -456,6 +456,7 @@ void nullMove(Board* board) {
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->captureHistory[board->moveNo] = -1;
+  board->gameMoves[board->moveNo] = NULL_MOVE;
 
   if (board->epSquare)
     board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];

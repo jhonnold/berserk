@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+#define NULL_MOVE 0
+
 extern const int CHAR_TO_PIECE[];
 extern const char* PIECE_TO_CHAR;
 extern const char* PROMOTION_TO_CHAR;
