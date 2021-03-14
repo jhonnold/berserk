@@ -171,7 +171,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   }
 
   data->evals[ply] = staticEval;
-  int improving = ply >= 2 && staticEval <= data->evals[ply - 2];
+  int improving = ply >= 2 && staticEval > data->evals[ply - 2];
 
   MoveList moveList[1];
   generateMoves(moveList, board, ply);
