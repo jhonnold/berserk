@@ -324,13 +324,10 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
     if (eval + DELTA_CUTOFF + scoreMG(MATERIAL_VALUES[captured]) < alpha)
       continue;
 
+    if (moveList->scores[i] < 0)
+      break;
+
     makeMove(move, board);
-
-    if (moveList->scores[i] <= 0 && !inCheck(board)) {
-      undoMove(move, board);
-      continue;
-    }
-
     int score = -quiesce(-beta, -alpha, ply + 1, board, params, data);
     undoMove(move, board);
 
