@@ -326,7 +326,7 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
 
     makeMove(move, board);
 
-    if (moveList->scores[i] <= 0 && !inCheck(board)) {
+    if (moveList->scores[i] < 0) {
       undoMove(move, board);
       continue;
     }
