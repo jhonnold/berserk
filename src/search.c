@@ -32,11 +32,11 @@ void initLMR() {
       LMR[depth][moves] = (int)(0.6f + log(depth) * log(1.2f * moves) / 2.5f);
 
   for (int depth = 0; depth < 64; depth++) {
-    LMP[0][depth] = 3 + depth * depth;
-    LMP[1][depth] = 3 + depth * depth / 2;
+    LMP[0][depth] = (3 + depth * depth) / 2; // not improving
+    LMP[1][depth] = 3 + depth * depth;
 
-    SEE[0][depth] = SEE_PRUNE_CUTOFF * depth * depth;
-    SEE[1][depth] = SEE_PRUNE_CAPTURE_CUTOFF * depth;
+    SEE[0][depth] = SEE_PRUNE_CUTOFF * depth * depth; // quiet
+    SEE[1][depth] = SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture
 
     FUTILITY[depth] = FUTILITY_MARGIN * depth;
   }
