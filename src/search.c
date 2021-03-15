@@ -305,10 +305,12 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
   }
 
   if (eval >= beta)
-    return beta;
+    return eval;
 
   if (eval > alpha)
     alpha = eval;
+
+  int bestScore = eval;
 
   MoveList moveList[1];
   generateQuiesceMoves(moveList, board);
@@ -334,11 +336,14 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
     if (params->stopped)
       return 0;
 
-    if (score >= beta)
-      return beta;
-    if (score > alpha)
-      alpha = score;
+    if (score > bestScore) {
+      bestScore = score;
+      alpha = max(alpha, score);
+
+      if (alpha >= beta)
+        break;
+    }
   }
 
-  return alpha;
+  return bestScore;
 }
