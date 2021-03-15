@@ -57,22 +57,23 @@ void Search(Board* board, SearchParams* params, SearchData* data) {
   int score = negamax(alpha, beta, 1, 0, 1, board, params, data);
 
   for (int depth = 2; depth <= params->depth && !params->stopped; depth++) {
-    int delta = depth >= 5 ? 25 : CHECKMATE;
+    int delta = depth >= 5 ? 10 : CHECKMATE;
     alpha = max(score - delta, -CHECKMATE);
     beta = min(score + delta, CHECKMATE);
 
     while (!params->stopped) {
       score = negamax(alpha, beta, depth, 0, 1, board, params, data);
 
-      if (score <= alpha && score > -MATE_BOUND) {
+      if (score <= alpha) {
+        beta = (alpha + beta) / 2;
         alpha = max(alpha - delta, -CHECKMATE);
-        delta *= 2;
-      } else if (score >= beta && score < MATE_BOUND) {
+      } else if (score >= beta) {
         beta = min(beta + delta, CHECKMATE);
-        delta *= 2;
       } else {
         break;
       }
+
+      delta += delta / 2;
     }
   }
 
