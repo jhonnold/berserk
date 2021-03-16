@@ -21,17 +21,17 @@ const int SEE_PRUNE_CAPTURE_CUTOFF = -70;
 const int SEE_PRUNE_CUTOFF = -20;
 const int DELTA_CUTOFF = 200;
 
-int LMR[64][64];
-int LMP[2][64];
-int SEE[2][64];
-int FUTILITY[64];
+int LMR[MAX_DEPTH][64];
+int LMP[2][MAX_DEPTH];
+int SEE[2][MAX_DEPTH];
+int FUTILITY[MAX_DEPTH];
 
 void initLMR() {
-  for (int depth = 0; depth < 64; depth++)
+  for (int depth = 0; depth < MAX_DEPTH; depth++)
     for (int moves = 0; moves < 64; moves++)
       LMR[depth][moves] = (int)(0.6f + log(depth) * log(1.2f * moves) / 2.5f);
 
-  for (int depth = 0; depth < 64; depth++) {
+  for (int depth = 0; depth < MAX_DEPTH; depth++) {
     LMP[0][depth] = (3 + depth * depth) / 2; // not improving
     LMP[1][depth] = 3 + depth * depth;
 
@@ -101,6 +101,9 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   // Repetition detection
   if (ply && (isRepetition(board) || isMaterialDraw(board)))
     return 0;
+
+  if (ply > MAX_DEPTH - 1)
+    return Evaluate(board);
 
   // Mate distance pruning
   alpha = max(alpha, -CHECKMATE + ply);
@@ -278,6 +281,9 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
   data->nodes++;
   if (ply > data->seldepth)
     data->seldepth = ply;
+
+  if (ply > MAX_DEPTH - 1)
+    return Evaluate(board);
 
   if ((data->nodes & 2047) == 0)
     communicate(params);

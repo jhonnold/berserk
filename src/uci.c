@@ -24,7 +24,7 @@
 void parseGo(char* in, SearchParams* params, Board* board) {
   in += 3;
 
-  params->depth = 64;
+  params->depth = MAX_DEPTH;
   params->timeset = 0;
   params->stopped = 0;
   params->quit = 0;
@@ -54,7 +54,8 @@ void parseGo(char* in, SearchParams* params, Board* board) {
     moveTime = atoi(ptrChar + 9);
 
   if ((ptrChar = strstr(in, "depth")))
-    depth = atoi(ptrChar + 6);
+    // clamp
+    depth = min(MAX_DEPTH - 1, atoi(ptrChar + 6));
 
   if (moveTime != -1) {
     time = moveTime;
@@ -77,8 +78,8 @@ void parseGo(char* in, SearchParams* params, Board* board) {
       params->endTime = 0;
     }
 
-    if (depth == -1)
-      params->depth = 64;
+    if (depth <= 0)
+      params->depth = MAX_DEPTH - 1;
 
     printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
            params->timeset);
@@ -138,6 +139,7 @@ void UCI(Board* board) {
   printf("id name " NAME " " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 4096\n");
+  printf("option name Threads type spin default 1 min 1 max 1\n"); // This is not used!
   printf("uciok\n");
 
   while (!searchParams->quit) {
