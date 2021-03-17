@@ -66,17 +66,17 @@ typedef struct {
 } SearchParams;
 
 typedef struct {
-  int material;
-  int pawns;
-  int knights;
-  int bishops;
-  int rooks;
-  int queens;
-  int kings;
+  int material[2];
+  int pawns[2];
+  int knights[2];
+  int bishops[2];
+  int rooks[2];
+  int queens[2];
+  int kings[2];
 
-  int mobility;
-  int kingSafety;
-  int threats;
+  int mobility[2];
+  int kingSafety[2];
+  int threats[2];
 
   BitBoard attacks[6];
   BitBoard allAttacks;
