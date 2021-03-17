@@ -3,6 +3,7 @@
 
 #include "types.h"
 
+extern const BitBoard PROMOTION_RANKS[];
 extern const BitBoard HOME_RANKS[];
 extern const BitBoard THIRD_RANKS[];
 extern const int PAWN_DIRECTIONS[];

@@ -186,10 +186,13 @@ const int PASSED_PAWN[2][8] = {
 };
 
 const int DEFENDED_MINOR = S(5, 2);
-const int ROOK_OPEN_FILE = 20;
-const int ROOK_SEMI_OPEN_FILE = 10;
-const int ROOK_SEVENTH_RANK = 20;
-const int ROOK_OPPOSITE_KING = S(10, 0);
+
+const int ROOK_OPEN_FILE = S(20, 20);
+const int ROOK_SEMI_OPEN = S(10, 10);
+const int ROOK_SEVENTH_RANK = S(20, 40);
+const int ROOK_OPPOSITE_KING = S(20, 0);
+const int ROOK_ADJACENT_KING = S(10, 0);
+
 const int ROOK_TRAPPED = S(-75, -75);
 const int BISHOP_TRAPPED = S(-150, -150);
 
@@ -285,7 +288,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   // Random utility stuff
   BitBoard myPawns = board->pieces[PAWN[side]];
   BitBoard opponentPawns = board->pieces[PAWN[xside]];
-  BitBoard allPawns = myPawns | opponentPawns;
 
   BitBoard pawnAttacks = shift(myPawns, PAWN_DIRECTIONS[side] + E) | shift(myPawns, PAWN_DIRECTIONS[side] + W);
   BitBoard oppoPawnAttacks =
@@ -296,7 +298,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
       board->pieces[PAWN[side]];
 
   int kingSq = lsb(board->pieces[KING[side]]);
-  int oppoKingSq = lsb(board->pieces[KING[xside]]);
 
   // PAWNS
   data->attacks[PAWN[side] >> 1] = pawnAttacks;
@@ -409,6 +410,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   // ROOKS
   for (BitBoard rooks = board->pieces[ROOK[side]]; rooks; popLsb(rooks)) {
     int sq = lsb(rooks);
+    BitBoard sqBb = rooks & -rooks;
     int file = file(sq);
 
     data->material += taper(MATERIAL_VALUES[ROOK[side]], phase);
@@ -423,17 +425,19 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(ROOK_MOBILITIES[bits(mobilitySquares)], phase);
 
-    if (rank(rel(sq, side)) == 1)
-      data->rooks += ROOK_SEVENTH_RANK;
+    if (sqBb & PROMOTION_RANKS[side])
+      data->rooks += taper(ROOK_SEVENTH_RANK, phase);
 
-    if (!(FILE_MASKS[file] & allPawns)) {
-      data->rooks += ROOK_OPEN_FILE;
-      if (file == file(oppoKingSq))
+    if (!(FILE_MASKS[file] & myPawns)) {
+      if (!(FILE_MASKS[file] & opponentPawns))
+        data->rooks += taper(ROOK_OPEN_FILE, phase);
+      else
+        data->rooks += taper(ROOK_SEMI_OPEN, phase);
+
+      if (FILE_MASKS[file] & board->pieces[KING[xside]])
         data->rooks += taper(ROOK_OPPOSITE_KING, phase);
-    } else if (!(FILE_MASKS[file] & myPawns)) {
-      data->rooks += ROOK_SEMI_OPEN_FILE;
-      if (file == file(oppoKingSq))
-        data->rooks += taper(ROOK_OPPOSITE_KING, phase);
+      else if (ADJACENT_FILE_MASKS[file] & board->pieces[KING[xside]])
+        data->rooks += taper(ROOK_ADJACENT_KING, phase);
     }
 
     if (side == WHITE) {
