@@ -166,7 +166,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       int score = -negamax(-beta, -beta + 1, depth - R, ply + 1, 0, board, params, data);
       undoNullMove(board);
 
-      if (ply && params->stopped)
+      if (params->stopped)
         return 0;
 
       if (score >= beta)
@@ -220,7 +220,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
     undoMove(move, board);
 
-    if (ply && params->stopped)
+    if (params->stopped)
       return 0;
 
     if (score > bestScore) {
