@@ -50,9 +50,9 @@ const int KNIGHT_PSQT[] = {
 const int KNIGHT_POST_PSQT[] = {
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
-  S(   0,   0), S(   0,   0), S(  24,  16), S(  48,  32), S(  48,  32), S(  24,  16), S(   0,   0), S(   0,   0),
-  S(   0,   0), S(  15,  10), S(  30,  20), S(  48,  32), S(  48,  32), S(  30,  20), S(  15,  10), S(   0,   0),
-  S(   0,   0), S(  15,  10), S(  30,  20), S(  36,  24), S(  36,  24), S(  30,  20), S(  15,  10), S(   0,   0),
+  S(   0,   0), S(  30,  20), S(  40,  28), S(  48,  32), S(  48,  32), S(  40,  28), S(  30,  20), S(   0,   0),
+  S(   0,   0), S(  30,  20), S(  40,  28), S(  48,  32), S(  48,  32), S(  40,  28), S(  30,  20), S(   0,   0),
+  S(   0,   0), S(  30,  20), S(  36,  24), S(  40,  28), S(  40,  28), S(  36,  24), S(  30,  20), S(   0,   0),
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
   S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0)
@@ -347,9 +347,12 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     }
   }
 
+  BitBoard outposts = ~fill(oppoPawnAttacks, PAWN_DIRECTIONS[xside]) &
+                      (pawnAttacks | shift(myPawns | opponentPawns, PAWN_DIRECTIONS[xside]));
   // KNIGHTS
   for (BitBoard knights = board->pieces[KNIGHT[side]]; knights; popLsb(knights)) {
     int sq = lsb(knights);
+    BitBoard sqBb = knights & -knights;
 
     data->material += taper(MATERIAL_VALUES[KNIGHT[side]], phase);
     data->knights += taper(PSQT[KNIGHT[side]][sq], phase);
@@ -362,8 +365,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
     data->mobility += taper(KNIGHT_MOBILITIES[bits(mobilitySquares)], phase);
 
-    if (KNIGHT_POST_PSQT[rel(sq, side)] && (getPawnAttacks(sq, xside) & myPawns) &&
-        !(fill(getPawnAttacks(sq, side), PAWN_DIRECTIONS[side]) & board->pieces[PAWN[xside]]))
+    if (KNIGHT_POST_PSQT[rel(sq, side)] && (outposts & sqBb))
       data->knights += taper(KNIGHT_POST_PSQT[rel(sq, side)], phase);
 
     if (getPawnAttacks(sq, xside) & myPawns)
