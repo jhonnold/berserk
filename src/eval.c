@@ -247,7 +247,7 @@ inline int getPhase(Board* board) {
   return ((currentPhase << 8) + (MAX_PHASE / 2)) / MAX_PHASE;
 }
 
-inline int taper(int score, int phase) { return (scoreMG(score) * (256 - phase) + (scoreEG(score) * phase)) / 256; }
+inline int taper(int mg, int eg, int phase) { return (mg * (256 - phase) + (eg * phase)) / 256; }
 
 inline int isMaterialDraw(Board* board) {
   switch (board->piecesCounts) {
@@ -269,21 +269,28 @@ inline int isMaterialDraw(Board* board) {
 }
 
 void EvaluateSide(Board* board, int side, EvalData* data) {
-  data->material = 0;
-  data->pawns = 0;
-  data->knights = 0;
-  data->bishops = 0;
-  data->rooks = 0;
-  data->queens = 0;
-  data->kings = 0;
-  data->mobility = 0;
-  data->kingSafety = 0;
+  data->material[0] = 0;
+  data->material[1] = 0;
+  data->pawns[0] = 0;
+  data->pawns[1] = 0;
+  data->knights[0] = 0;
+  data->knights[1] = 0;
+  data->bishops[0] = 0;
+  data->bishops[1] = 0;
+  data->rooks[0] = 0;
+  data->rooks[1] = 0;
+  data->queens[0] = 0;
+  data->queens[1] = 0;
+  data->kings[0] = 0;
+  data->kings[1] = 0;
+  data->mobility[0] = 0;
+  data->mobility[1] = 0;
+
   data->attacks2 = 0;
   data->allAttacks = 0;
   memset(data->attacks, 0, sizeof(data->attacks));
 
   int xside = 1 - side;
-  int phase = getPhase(board);
 
   // Random utility stuff
   BitBoard myPawns = board->pieces[PAWN[side]];
@@ -308,8 +315,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard sqBitboard = pawns & -pawns;
     int sq = lsb(pawns);
 
-    data->material += taper(MATERIAL_VALUES[PAWN[side]], phase);
-    data->pawns += taper(PSQT[PAWN[side]][sq], phase);
+    data->material[0] += scoreMG(MATERIAL_VALUES[PAWN[side]]);
+    data->material[1] += scoreEG(MATERIAL_VALUES[PAWN[side]]);
+    data->pawns[0] += scoreMG(PSQT[PAWN[side]][sq]);
+    data->pawns[1] += scoreEG(PSQT[PAWN[side]][sq]);
 
     int file = file(sq);
     int rank = rank(sq);
@@ -325,17 +334,25 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     int passed =
         !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
 
-    if (doubled)
-      data->pawns += taper(DOUBLED_PAWN, phase);
+    if (doubled) {
+      data->pawns[0] += scoreMG(DOUBLED_PAWN);
+      data->pawns[1] += scoreEG(DOUBLED_PAWN);
+    }
 
-    if (!neighbors)
-      data->pawns += taper(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN, phase);
+    if (!neighbors) {
+      data->pawns[0] += scoreMG(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN);
+      data->pawns[1] += scoreEG(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN);
+    }
 
-    if (backwards)
-      data->pawns += taper(BACKWARDS_PAWN, phase);
+    if (backwards) {
+      data->pawns[0] += scoreMG(BACKWARDS_PAWN);
+      data->pawns[1] += scoreEG(BACKWARDS_PAWN);
+    }
 
-    if (passed)
-      data->pawns += taper(PASSED_PAWN[side][rank], phase);
+    if (passed) {
+      data->pawns[0] += scoreMG(PASSED_PAWN[side][rank]);
+      data->pawns[1] += scoreEG(PASSED_PAWN[side][rank]);
+    }
 
     if (defenders | connected) {
       int s = 2;
@@ -344,7 +361,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
       if (opposed)
         s--;
 
-      data->pawns += taper(CONNECTED_PAWN[side][rank], phase) * s + taper(DEFENDED_PAWN, phase) * bits(defenders);
+      data->pawns[0] += scoreMG(CONNECTED_PAWN[side][rank]) * s + scoreMG(DEFENDED_PAWN) * bits(defenders);
+      data->pawns[1] += scoreEG(CONNECTED_PAWN[side][rank]) * s + scoreEG(DEFENDED_PAWN) * bits(defenders);
     }
   }
 
@@ -355,8 +373,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     int sq = lsb(knights);
     BitBoard sqBb = knights & -knights;
 
-    data->material += taper(MATERIAL_VALUES[KNIGHT[side]], phase);
-    data->knights += taper(PSQT[KNIGHT[side]][sq], phase);
+    data->material[0] += scoreMG(MATERIAL_VALUES[KNIGHT[side]]);
+    data->material[1] += scoreEG(MATERIAL_VALUES[KNIGHT[side]]);
+    data->knights[0] += scoreMG(PSQT[KNIGHT[side]][sq]);
+    data->knights[1] += scoreEG(PSQT[KNIGHT[side]][sq]);
 
     BitBoard movement = getKnightAttacks(sq);
     data->attacks2 |= (movement & data->allAttacks);
@@ -364,24 +384,31 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->allAttacks |= movement;
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility += taper(KNIGHT_MOBILITIES[bits(mobilitySquares)], phase);
+    data->mobility[0] += scoreMG(KNIGHT_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[1] += scoreEG(KNIGHT_MOBILITIES[bits(mobilitySquares)]);
 
-    if (KNIGHT_POST_PSQT[rel(sq, side)] && (outposts & sqBb))
-      data->knights += taper(KNIGHT_POST_PSQT[rel(sq, side)], phase);
-
-    if (getPawnAttacks(sq, xside) & myPawns)
-      data->knights += taper(DEFENDED_MINOR, phase);
+    if (KNIGHT_POST_PSQT[rel(sq, side)] && (outposts & sqBb)) {
+      data->knights[0] += scoreMG(KNIGHT_POST_PSQT[rel(sq, side)]);
+      data->knights[1] += scoreEG(KNIGHT_POST_PSQT[rel(sq, side)]);
+    }
   }
 
+  data->knights[0] += scoreMG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
+  data->knights[1] += scoreEG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
+
   // BISHOPS
-  if (bits(board->pieces[BISHOP[side]]) > 1)
-    data->bishops += taper(BISHOP_PAIR, phase);
+  if (bits(board->pieces[BISHOP[side]]) > 1) {
+    data->bishops[0] += scoreMG(BISHOP_PAIR);
+    data->bishops[1] += scoreEG(BISHOP_PAIR);
+  }
 
   for (BitBoard bishops = board->pieces[BISHOP[side]]; bishops; popLsb(bishops)) {
     int sq = lsb(bishops);
 
-    data->material += taper(MATERIAL_VALUES[BISHOP[side]], phase);
-    data->bishops += taper(PSQT[BISHOP[side]][sq], phase);
+    data->material[0] += scoreMG(MATERIAL_VALUES[BISHOP[side]]);
+    data->material[1] += scoreEG(MATERIAL_VALUES[BISHOP[side]]);
+    data->bishops[0] += scoreMG(PSQT[BISHOP[side]][sq]);
+    data->bishops[1] += scoreEG(PSQT[BISHOP[side]][sq]);
 
     BitBoard movement = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
     data->attacks2 |= (movement & data->allAttacks);
@@ -389,23 +416,30 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->allAttacks |= movement;
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility += taper(BISHOP_MOBILITIES[bits(mobilitySquares)], phase);
+    data->mobility[0] += scoreMG(BISHOP_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[1] += scoreEG(BISHOP_MOBILITIES[bits(mobilitySquares)]);
 
     if (side == WHITE) {
-      if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7))
-        data->bishops += taper(BISHOP_TRAPPED, phase);
-      else if ((sq == H7 || sq == G8) && getBit(opponentPawns, F7) && getBit(opponentPawns, G6))
-        data->bishops += taper(BISHOP_TRAPPED, phase);
+      if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7)) {
+        data->bishops[0] += scoreMG(BISHOP_TRAPPED);
+        data->bishops[1] += scoreEG(BISHOP_TRAPPED);
+      } else if ((sq == H7 || sq == G8) && getBit(opponentPawns, F7) && getBit(opponentPawns, G6)) {
+        data->bishops[0] += scoreMG(BISHOP_TRAPPED);
+        data->bishops[1] += scoreEG(BISHOP_TRAPPED);
+      }
     } else {
-      if ((sq == A2 || sq == B1) && getBit(opponentPawns, B3) && getBit(opponentPawns, C2))
-        data->bishops += taper(BISHOP_TRAPPED, phase);
-      else if ((sq == H2 || sq == G1) && getBit(opponentPawns, G3) && getBit(opponentPawns, F2))
-        data->bishops += taper(BISHOP_TRAPPED, phase);
+      if ((sq == A2 || sq == B1) && getBit(opponentPawns, B3) && getBit(opponentPawns, C2)) {
+        data->bishops[0] += scoreMG(BISHOP_TRAPPED);
+        data->bishops[1] += scoreEG(BISHOP_TRAPPED);
+      } else if ((sq == H2 || sq == G1) && getBit(opponentPawns, G3) && getBit(opponentPawns, F2)) {
+        data->bishops[0] += scoreMG(BISHOP_TRAPPED);
+        data->bishops[1] += scoreEG(BISHOP_TRAPPED);
+      }
     }
-
-    if (getPawnAttacks(sq, xside) & myPawns)
-      data->bishops += taper(DEFENDED_MINOR, phase);
   }
+
+  data->bishops[0] += scoreMG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[BISHOP[side]]);
+  data->bishops[1] += scoreEG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[BISHOP[side]]);
 
   // ROOKS
   for (BitBoard rooks = board->pieces[ROOK[side]]; rooks; popLsb(rooks)) {
@@ -413,8 +447,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard sqBb = rooks & -rooks;
     int file = file(sq);
 
-    data->material += taper(MATERIAL_VALUES[ROOK[side]], phase);
-    data->rooks += taper(PSQT[ROOK[side]][sq], phase);
+    data->material[0] += scoreMG(MATERIAL_VALUES[ROOK[side]]);
+    data->material[1] += scoreEG(MATERIAL_VALUES[ROOK[side]]);
+    data->rooks[0] += scoreMG(PSQT[ROOK[side]][sq]);
+    data->rooks[1] += scoreEG(PSQT[ROOK[side]][sq]);
 
     BitBoard movement =
         getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]);
@@ -423,33 +459,48 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->allAttacks |= movement;
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility += taper(ROOK_MOBILITIES[bits(mobilitySquares)], phase);
+    data->mobility[0] += scoreMG(ROOK_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[1] += scoreEG(ROOK_MOBILITIES[bits(mobilitySquares)]);
 
-    if (sqBb & PROMOTION_RANKS[side])
-      data->rooks += taper(ROOK_SEVENTH_RANK, phase);
+    if (sqBb & PROMOTION_RANKS[side]) {
+      data->rooks[0] += scoreMG(ROOK_SEVENTH_RANK);
+      data->rooks[1] += scoreEG(ROOK_SEVENTH_RANK);
+    }
 
     if (!(FILE_MASKS[file] & myPawns)) {
-      if (!(FILE_MASKS[file] & opponentPawns))
-        data->rooks += taper(ROOK_OPEN_FILE, phase);
-      else
-        data->rooks += taper(ROOK_SEMI_OPEN, phase);
+      if (!(FILE_MASKS[file] & opponentPawns)) {
+        data->rooks[0] += scoreMG(ROOK_OPEN_FILE);
+        data->rooks[1] += scoreEG(ROOK_OPEN_FILE);
+      } else {
+        data->rooks[0] += scoreMG(ROOK_SEMI_OPEN);
+        data->rooks[1] += scoreEG(ROOK_SEMI_OPEN);
+      }
 
-      if (FILE_MASKS[file] & board->pieces[KING[xside]])
-        data->rooks += taper(ROOK_OPPOSITE_KING, phase);
-      else if (ADJACENT_FILE_MASKS[file] & board->pieces[KING[xside]])
-        data->rooks += taper(ROOK_ADJACENT_KING, phase);
+      if (FILE_MASKS[file] & board->pieces[KING[xside]]) {
+        data->rooks[0] += scoreMG(ROOK_OPPOSITE_KING);
+        data->rooks[1] += scoreEG(ROOK_OPPOSITE_KING);
+      } else if (ADJACENT_FILE_MASKS[file] & board->pieces[KING[xside]]) {
+        data->rooks[0] += scoreMG(ROOK_ADJACENT_KING);
+        data->rooks[1] += scoreEG(ROOK_ADJACENT_KING);
+      }
     }
 
     if (side == WHITE) {
-      if ((sq == A1 || sq == A2 || sq == B1) && (kingSq == C1 || kingSq == B1))
-        data->rooks += taper(ROOK_TRAPPED, phase);
-      else if ((sq == H1 || sq == H2 || sq == G1) && (kingSq == F1 || kingSq == G1))
-        data->rooks += taper(ROOK_TRAPPED, phase);
+      if ((sq == A1 || sq == A2 || sq == B1) && (kingSq == C1 || kingSq == B1)) {
+        data->rooks[0] += scoreMG(ROOK_TRAPPED);
+        data->rooks[1] += scoreEG(ROOK_TRAPPED);
+      } else if ((sq == H1 || sq == H2 || sq == G1) && (kingSq == F1 || kingSq == G1)) {
+        data->rooks[0] += scoreMG(ROOK_TRAPPED);
+        data->rooks[1] += scoreEG(ROOK_TRAPPED);
+      }
     } else {
-      if ((sq == A8 || sq == A7 || sq == B8) && (kingSq == B8 || kingSq == C8))
-        data->rooks += taper(ROOK_TRAPPED, phase);
-      else if ((sq == H8 || sq == H7 || sq == G8) && (kingSq == F8 || kingSq == G8))
-        data->rooks += taper(ROOK_TRAPPED, phase);
+      if ((sq == A8 || sq == A7 || sq == B8) && (kingSq == B8 || kingSq == C8)) {
+        data->rooks[0] += scoreMG(ROOK_TRAPPED);
+        data->rooks[1] += scoreEG(ROOK_TRAPPED);
+      } else if ((sq == H8 || sq == H7 || sq == G8) && (kingSq == F8 || kingSq == G8)) {
+        data->rooks[0] += scoreMG(ROOK_TRAPPED);
+        data->rooks[1] += scoreEG(ROOK_TRAPPED);
+      }
     }
   }
 
@@ -457,8 +508,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   for (BitBoard queens = board->pieces[QUEEN[side]]; queens; popLsb(queens)) {
     int sq = lsb(queens);
 
-    data->material += taper(MATERIAL_VALUES[QUEEN[side]], phase);
-    data->queens += taper(PSQT[QUEEN[side]][sq], phase);
+    data->material[0] += scoreMG(MATERIAL_VALUES[QUEEN[side]]);
+    data->material[1] += scoreEG(MATERIAL_VALUES[QUEEN[side]]);
+    data->queens[0] += scoreMG(PSQT[QUEEN[side]][sq]);
+    data->queens[1] += scoreEG(PSQT[QUEEN[side]][sq]);
 
     BitBoard movement = getQueenAttacks(sq, board->occupancies[BOTH]);
     data->attacks2 |= (movement & data->allAttacks);
@@ -466,15 +519,18 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->allAttacks |= movement;
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility += taper(QUEEN_MOBILITIES[bits(mobilitySquares)], phase);
+    data->mobility[0] += scoreMG(QUEEN_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[1] += scoreEG(QUEEN_MOBILITIES[bits(mobilitySquares)]);
   }
 
   // KINGS
   for (BitBoard kings = board->pieces[KING[side]]; kings; popLsb(kings)) {
     int sq = lsb(kings);
 
-    data->material += taper(MATERIAL_VALUES[KING[side]], phase);
-    data->kings += taper(PSQT[KING[side]][sq], phase);
+    data->material[0] += scoreMG(MATERIAL_VALUES[KING[side]]);
+    data->material[1] += scoreEG(MATERIAL_VALUES[KING[side]]);
+    data->kings[0] += scoreMG(PSQT[KING[side]][sq]);
+    data->kings[1] += scoreEG(PSQT[KING[side]][sq]);
 
     BitBoard movement = getKingAttacks(sq) & ~getKingAttacks(lsb(board->pieces[KING[xside]]));
     data->attacks2 |= (movement & data->allAttacks);
@@ -484,10 +540,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 }
 
 void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData) {
-  data->threats = 0;
+  data->threats[0] = 0;
+  data->threats[1] = 0;
 
   int xside = 1 - side;
-  int phase = getPhase(board);
 
   BitBoard* myAttacks = data->attacks;
   BitBoard* enemyAttacks = enemyData->attacks;
@@ -496,30 +552,37 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
 
   for (BitBoard knightThreats = weak & myAttacks[1]; knightThreats; popLsb(knightThreats)) {
     int piece = pieceAt(lsb(knightThreats), xside, board);
-    data->threats += taper(KNIGHT_THREATS[piece >> 1], phase);
+    data->threats[0] += scoreMG(KNIGHT_THREATS[piece >> 1]);
+    data->threats[1] += scoreEG(KNIGHT_THREATS[piece >> 1]);
   }
 
   for (BitBoard bishopThreats = weak & myAttacks[2]; bishopThreats; popLsb(bishopThreats)) {
     int piece = pieceAt(lsb(bishopThreats), xside, board);
-    data->threats += taper(BISHOP_THREATS[piece >> 1], phase);
+    data->threats[0] += scoreMG(BISHOP_THREATS[piece >> 1]);
+    data->threats[1] += scoreEG(BISHOP_THREATS[piece >> 1]);
   }
 
   for (BitBoard rookThreats = weak & myAttacks[3]; rookThreats; popLsb(rookThreats)) {
     int piece = pieceAt(lsb(rookThreats), xside, board);
-    data->threats += taper(ROOK_THREATS[piece >> 1], phase);
+    data->threats[0] += scoreMG(ROOK_THREATS[piece >> 1]);
+    data->threats[1] += scoreEG(ROOK_THREATS[piece >> 1]);
   }
 
   for (BitBoard kingThreats = weak & myAttacks[5]; kingThreats; popLsb(kingThreats)) {
     int piece = pieceAt(lsb(kingThreats), xside, board);
-    data->threats += taper(KING_THREATS[piece >> 1], phase);
+    data->threats[0] += scoreMG(KING_THREATS[piece >> 1]);
+    data->threats[1] += scoreEG(KING_THREATS[piece >> 1]);
   }
 
   BitBoard hanging = data->allAttacks & ~enemyData->allAttacks & board->occupancies[xside];
-  data->threats += taper(HANGING_THREAT, phase) * bits(hanging);
+  data->threats[0] += scoreMG(HANGING_THREAT) * bits(hanging);
+  data->threats[1] += scoreEG(HANGING_THREAT) * bits(hanging);
 }
 
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
-  data->kingSafety = 0;
+  data->kingSafety[0] = 0;
+  data->kingSafety[1] = 0;
+
   int xside = 1 - side;
 
   if (!board->pieces[QUEEN[xside]])
@@ -613,7 +676,8 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
 
   ksCounter += KING_SAFETY_ATTACK_PATTERN[attackersFlag];
 
-  data->kingSafety -= KING_SAFETY_SCORES[min(ksCounter, 20)];
+  data->kingSafety[0] -= KING_SAFETY_SCORES[min(ksCounter, 20)];
+  data->kingSafety[1] -= KING_SAFETY_SCORES[min(ksCounter, 20)];
 
   // PAWN STORM / SHIELD
   int kingFile = file(kingSq);
@@ -635,14 +699,17 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
     if (c == kingFile)
       s *= 2;
 
-    data->kingSafety += s;
+    data->kingSafety[0] += s;
+    data->kingSafety[1] += s;
 
     file = board->pieces[PAWN[xside]] & FILE_MASKS[c];
     if (file) {
       int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
-      data->kingSafety += PAWN_STORM[pawnRank];
+      data->kingSafety[0] += PAWN_STORM[pawnRank];
+      data->kingSafety[1] += PAWN_STORM[pawnRank];
     } else {
-      data->kingSafety += PAWN_STORM[6];
+      data->kingSafety[0] += PAWN_STORM[6];
+      data->kingSafety[1] += PAWN_STORM[6];
     }
   }
 }
@@ -660,12 +727,16 @@ int Evaluate(Board* board) {
   EvaluateKingSafety(board, board->side, sideData, xsideData);
   EvaluateKingSafety(board, board->xside, xsideData, sideData);
 
-  return toScore(sideData) - toScore(xsideData);
+  return toScore(sideData, board) - toScore(xsideData, board);
 }
 
-inline int toScore(EvalData* data) {
-  return data->pawns + data->knights + data->bishops + data->rooks + data->queens + data->kings + data->kingSafety +
-         data->material + data->mobility + data->threats;
+inline int toScore(EvalData* data, Board* board) {
+  int mg = data->pawns[0] + data->knights[0] + data->bishops[0] + data->rooks[0] + data->queens[0] + data->kings[0] +
+           data->kingSafety[0] + data->material[0] + data->mobility[0] + data->threats[0];
+  int eg = data->pawns[1] + data->knights[1] + data->bishops[1] + data->rooks[1] + data->queens[1] + data->kings[1] +
+           data->kingSafety[1] + data->material[1] + data->mobility[1] + data->threats[1];
+
+  return taper(mg, eg, getPhase(board));
 }
 
 void PrintEvaluation(Board* board) {
@@ -681,25 +752,64 @@ void PrintEvaluation(Board* board) {
   EvaluateKingSafety(board, WHITE, whiteEval, blackEval);
   EvaluateKingSafety(board, BLACK, blackEval, whiteEval);
 
-  printf("|            | WHITE | BLACK | DIFF  |\n");
-  printf("|------------|-------|-------|-------|\n");
-  printf("| material   | %5d | %5d | %5d |\n", whiteEval->material, blackEval->material,
-         whiteEval->material - blackEval->material);
-  printf("| pawns      | %5d | %5d | %5d |\n", whiteEval->pawns, blackEval->pawns, whiteEval->pawns - blackEval->pawns);
-  printf("| knights    | %5d | %5d | %5d |\n", whiteEval->knights, blackEval->knights,
-         whiteEval->knights - blackEval->knights);
-  printf("| bishops    | %5d | %5d | %5d |\n", whiteEval->bishops, blackEval->bishops,
-         whiteEval->bishops - blackEval->bishops);
-  printf("| rooks      | %5d | %5d | %5d |\n", whiteEval->rooks, blackEval->rooks, whiteEval->rooks - blackEval->rooks);
-  printf("| queens     | %5d | %5d | %5d |\n", whiteEval->queens, blackEval->queens,
-         whiteEval->queens - blackEval->queens);
-  printf("| kings      | %5d | %5d | %5d |\n", whiteEval->kings, blackEval->kings, whiteEval->kings - blackEval->kings);
-  printf("| mobility   | %5d | %5d | %5d |\n", whiteEval->mobility, blackEval->mobility,
-         whiteEval->mobility - blackEval->mobility);
-  printf("| threats    | %5d | %5d | %5d |\n", whiteEval->threats, blackEval->threats,
-         whiteEval->threats - blackEval->threats);
-  printf("| kingSafety | %5d | %5d | %5d |\n", whiteEval->kingSafety, blackEval->kingSafety,
-         whiteEval->kingSafety - blackEval->kingSafety);
-  printf("|------------|-------|-------|-------|\n");
-  printf("\nResult (white): %5d\n\n", toScore(whiteEval) - toScore(blackEval));
+  int phase = getPhase(board);
+
+  printf("|            | WHITE mg,eg,taper | BLACK mg,eg,taper | DIFF  mg,eg,taper |\n");
+  printf("|------------|-------------------|-------------------|-------------------|\n");
+  printf(
+      "| material   | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->material[0], whiteEval->material[1],
+      taper(whiteEval->material[0], whiteEval->material[1], phase), blackEval->material[0], blackEval->material[1],
+      taper(blackEval->material[0], blackEval->material[1], phase), whiteEval->material[0] - blackEval->material[0],
+      whiteEval->material[1] - blackEval->material[1],
+      taper(whiteEval->material[0] - blackEval->material[0], whiteEval->material[1] - blackEval->material[1], phase));
+  printf("| pawns      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->pawns[0], whiteEval->pawns[1],
+         taper(whiteEval->pawns[0], whiteEval->pawns[1], phase), blackEval->pawns[0], blackEval->pawns[1],
+         taper(blackEval->pawns[0], blackEval->pawns[1], phase), whiteEval->pawns[0] - blackEval->pawns[0],
+         whiteEval->pawns[1] - blackEval->pawns[1],
+         taper(whiteEval->pawns[0] - blackEval->pawns[0], whiteEval->pawns[1] - blackEval->pawns[1], phase));
+  printf("| knights    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->knights[0], whiteEval->knights[1],
+         taper(whiteEval->knights[0], whiteEval->knights[1], phase), blackEval->knights[0], blackEval->knights[1],
+         taper(blackEval->knights[0], blackEval->knights[1], phase), whiteEval->knights[0] - blackEval->knights[0],
+         whiteEval->knights[1] - blackEval->knights[1],
+         taper(whiteEval->knights[0] - blackEval->knights[0], whiteEval->knights[1] - blackEval->knights[1], phase));
+  printf("| bishops    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->bishops[0], whiteEval->bishops[1],
+         taper(whiteEval->bishops[0], whiteEval->bishops[1], phase), blackEval->bishops[0], blackEval->bishops[1],
+         taper(blackEval->bishops[0], blackEval->bishops[1], phase), whiteEval->bishops[0] - blackEval->bishops[0],
+         whiteEval->bishops[1] - blackEval->bishops[1],
+         taper(whiteEval->bishops[0] - blackEval->bishops[0], whiteEval->bishops[1] - blackEval->bishops[1], phase));
+  printf("| rooks      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->rooks[0], whiteEval->rooks[1],
+         taper(whiteEval->rooks[0], whiteEval->rooks[1], phase), blackEval->rooks[0], blackEval->rooks[1],
+         taper(blackEval->rooks[0], blackEval->rooks[1], phase), whiteEval->rooks[0] - blackEval->rooks[0],
+         whiteEval->rooks[1] - blackEval->rooks[1],
+         taper(whiteEval->rooks[0] - blackEval->rooks[0], whiteEval->rooks[1] - blackEval->rooks[1], phase));
+  printf("| queens     | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->queens[0], whiteEval->queens[1],
+         taper(whiteEval->queens[0], whiteEval->queens[1], phase), blackEval->queens[0], blackEval->queens[1],
+         taper(blackEval->queens[0], blackEval->queens[1], phase), whiteEval->queens[0] - blackEval->queens[0],
+         whiteEval->queens[1] - blackEval->queens[1],
+         taper(whiteEval->queens[0] - blackEval->queens[0], whiteEval->queens[1] - blackEval->queens[1], phase));
+  printf("| kings      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->kings[0], whiteEval->kings[1],
+         taper(whiteEval->kings[0], whiteEval->kings[1], phase), blackEval->kings[0], blackEval->kings[1],
+         taper(blackEval->kings[0], blackEval->kings[1], phase), whiteEval->kings[0] - blackEval->kings[0],
+         whiteEval->kings[1] - blackEval->kings[1],
+         taper(whiteEval->kings[0] - blackEval->kings[0], whiteEval->kings[1] - blackEval->kings[1], phase));
+  printf(
+      "| mobility   | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->mobility[0], whiteEval->mobility[1],
+      taper(whiteEval->mobility[0], whiteEval->mobility[1], phase), blackEval->mobility[0], blackEval->mobility[1],
+      taper(blackEval->mobility[0], blackEval->mobility[1], phase), whiteEval->mobility[0] - blackEval->mobility[0],
+      whiteEval->mobility[1] - blackEval->mobility[1],
+      taper(whiteEval->mobility[0] - blackEval->mobility[0], whiteEval->mobility[1] - blackEval->mobility[1], phase));
+  printf("| threats    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->threats[0], whiteEval->threats[1],
+         taper(whiteEval->threats[0], whiteEval->threats[1], phase), blackEval->threats[0], blackEval->threats[1],
+         taper(blackEval->threats[0], blackEval->threats[1], phase), whiteEval->threats[0] - blackEval->threats[0],
+         whiteEval->threats[1] - blackEval->threats[1],
+         taper(whiteEval->threats[0] - blackEval->threats[0], whiteEval->threats[1] - blackEval->threats[1], phase));
+  printf("| kingSafety | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->kingSafety[0],
+         whiteEval->kingSafety[1], taper(whiteEval->kingSafety[0], whiteEval->kingSafety[1], phase),
+         blackEval->kingSafety[0], blackEval->kingSafety[1],
+         taper(blackEval->kingSafety[0], blackEval->kingSafety[1], phase),
+         whiteEval->kingSafety[0] - blackEval->kingSafety[0], whiteEval->kingSafety[1] - blackEval->kingSafety[1],
+         taper(whiteEval->kingSafety[0] - blackEval->kingSafety[0], whiteEval->kingSafety[1] - blackEval->kingSafety[1],
+               phase));
+  printf("|------------|-------------------|-------------------|-------------------|\n");
+  printf("\nResult (white): %5d\n\n", toScore(whiteEval, board) - toScore(blackEval, board));
 }

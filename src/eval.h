@@ -22,9 +22,9 @@ extern int MATERIAL_AND_PSQT_VALUES[12][64];
 void initPSQT();
 
 int getPhase(Board* board);
-int taper(int score, int phase);
+int taper(int mg, int eg, int phase);
 
-int toScore(EvalData* data);
+int toScore(EvalData* data, Board* board);
 int isMaterialDraw(Board* board);
 void EvaluateSide(Board* board, int side, EvalData* data);
 void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData);
