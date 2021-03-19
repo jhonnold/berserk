@@ -202,20 +202,11 @@ const int ROOK_THREATS[] = {S(0, 0), S(0, 30), S(30, 30), S(45, 45), S(20, 30), 
 const int KING_THREATS[] = {S(0, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60)};
 const int HANGING_THREAT = S(45, 22);
 
-const int PAWN_SHELTER = -36;
-const int PAWN_STORM[8] = {0, 0, 0, -10, -30, -60, 0, 0};
-
-// These values are *currently* borrowed from chess22k
-const int KING_SAFETY_ALLIES[] = {2, 2, 1, 1, 0, 0, 0, 0, 3};
-const int KING_SAFETY_ATTACKS[] = {0, 2, 2, 2, 2, 2, 3, 4, 4};
-const int KING_SAFETY_WEAK_SQS[] = {0, 1, 2, 2, 2, 2, 2, 1, -5};
-const int KING_SAFETY_QUEEN_CHECK[] = {0, 0, 0, 0, 2, 3, 4, 4, 4, 4, 3, 3, 3, 2, 0, 0, 0};
-const int KING_SAFETY_QUEEN_TROPISM[] = {0, 0, 2, 2, 2, 2, 1, 1};
-const int KING_SAFETY_DOUBLE_ATTACKS[] = {0, 1, 1, 3, 3, 9, 9, 9, 9};
-const int KING_SAFETY_ATTACK_PATTERN[] = {0, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2,
-                                          2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
-const int KING_SAFETY_SCORES[] = {0,   0,   0,   40,  60,  70,  80,  90,  100, 120, 150,
-                                  200, 260, 300, 390, 450, 520, 640, 740, 760, 1260};
+const int PAWN_SHELTER[2][8] = {
+    {S(-36, -36), S(-35, -35), S(-32, -32), S(-27, -27), S(-20, -20), S(-11, -11), 0, 0},
+    {S(-72, -72), S(-70, -70), S(-64, -64), S(-54, -54), S(-40, -40), S(-22, -22), 0, 0},
+};
+const int PAWN_STORM[8] = {0, 0, 0, S(-10, -10), S(-30, -30), S(-60, -60), 0, 0};
 
 const int KS_ATTACKER_WEIGHTS[] = {0, 60, 30, 40, 35}; // Inspired by ethereal's values
 const int KS_ATTACK = 47;
@@ -656,39 +647,24 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
     }
   }
 
-  if (!board->pieces[QUEEN[xside]])
+  if (!board->pieces[QUEEN[xside]] ||
+      !(board->pieces[ROOK[xside]] | board->pieces[BISHOP[xside]] | board->pieces[KNIGHT[xside]]))
     return;
+
   // PAWN STORM / SHIELD
-  int kingFile = file(kingSq);
+  for (int c = max(0, file(kingSq) - 1); c <= min(7, file(kingSq) + 1); c++) {
+    BitBoard pawnFile = board->pieces[PAWN[side]] & FILE_MASKS[c];
+    int pawnRank = pawnFile ? (side ? 7 - rank(lsb(pawnFile)) : rank(msb(pawnFile))) : 0;
 
-  // shelter and storm
-  for (int c = kingFile - 1; c <= kingFile + 1; c++) {
-    if (c < 0 || c > 7)
-      continue;
+    data->kingSafety[0] += scoreMG(PAWN_SHELTER[c == file(kingSq)][pawnRank]);
+    data->kingSafety[1] += scoreEG(PAWN_SHELTER[c == file(kingSq)][pawnRank]);
 
-    BitBoard file = board->pieces[PAWN[side]] & FILE_MASKS[c];
+    BitBoard enemyFile = board->pieces[PAWN[xside]] & FILE_MASKS[c];
+    if (enemyFile) {
+      int pushRank = (side ? 7 - rank(lsb(enemyFile)) : rank(msb(enemyFile)));
 
-    int s = PAWN_SHELTER;
-
-    if (file) {
-      int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
-      s += pawnRank * pawnRank;
-    }
-
-    if (c == kingFile)
-      s *= 2;
-
-    data->kingSafety[0] += s;
-    data->kingSafety[1] += s;
-
-    file = board->pieces[PAWN[xside]] & FILE_MASKS[c];
-    if (file) {
-      int pawnRank = side == WHITE ? rank(msb(file)) : 7 - rank(lsb(file));
-      data->kingSafety[0] += PAWN_STORM[pawnRank];
-      data->kingSafety[1] += PAWN_STORM[pawnRank];
-    } else {
-      data->kingSafety[0] += PAWN_STORM[6];
-      data->kingSafety[1] += PAWN_STORM[6];
+      data->kingSafety[0] += scoreMG(PAWN_STORM[pushRank]);
+      data->kingSafety[1] += scoreEG(PAWN_STORM[pushRank]);
     }
   }
 }
