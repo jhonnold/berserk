@@ -5,8 +5,9 @@ A UCI chess engine written in C.
 ## Elo History
 
 | **Version** | **Elo** | **TC** |
-|---|---|---|
-| 1.2.2 | 2160 | 2'+1" |
+| ----------- | ------- | ------ |
+| 1.2.2       | 2160    | 2'+1"  |
+| 2.0.0       | 2546    | 2'+1"  |
 
 ## Features
 
@@ -77,7 +78,6 @@ This engine could not be written without some influence and they are...
 - [Ethereal](https://github.com/AndyGrant/Ethereal)
   - This has been especially helpful as it introduced me to [OpenBench](https://github.com/AndyGrant/OpenBench)
 - [CPW](https://www.chessprogramming.org/Main_Page)
-
 
 ### Additional Resources
 

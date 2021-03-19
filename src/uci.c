@@ -12,11 +12,7 @@
 #include "util.h"
 
 #define NAME "Berserk"
-#ifdef POPCOUNT
-#define VERSION "2.0.0+popcnt"
-#else
-#define VERSION "2.0.0"
-#endif
+#define VERSION "3.0.0"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -139,7 +135,7 @@ void UCI(Board* board) {
   printf("id name " NAME " " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 4096\n");
-  printf("option name Threads type spin default 1 min 1 max 1\n"); // This is not used!
+  printf("option name Threads type spin default 1 min 1 max 1\n"); // This is not actually used!
   printf("uciok\n");
 
   while (!searchParams->quit) {
