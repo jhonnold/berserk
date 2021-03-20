@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 
 #include "attacks.h"
@@ -344,7 +345,7 @@ void generateKingCaptures(MoveList* moveList, Board* board) {
 }
 
 void generateKingCastles(MoveList* moveList, Board* board) {
-  if (inCheck(board))
+  if (board->checkers)
     return;
 
   if (board->side == WHITE) {
@@ -457,9 +458,14 @@ void generateQuiesceMoves(MoveList* moveList, Board* board) {
 
     if (movePromo(move)) {
       moveList->scores[i] = scoreMG(MATERIAL_VALUES[movePromo(move)]);
+    } else if (moveEP(move)) {
+      moveList->scores[i] = MVV_LVA[PAWN[board->side]][PAWN[board->xside]];
     } else {
       int mover = movePiece(move);
       int captured = board->squares[moveEnd(move)];
+
+      assert(captured != NO_PIECE);
+      assert(mover != NO_PIECE);
 
       int seeScore = 0;
       if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
@@ -544,6 +550,8 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
 
     if (move == hashMove) {
       moveList->scores[i] = HASH;
+    } else if (moveEP(move)) {
+      moveList->scores[i] = GOOD_CAPTURE + MVV_LVA[PAWN[board->side]][PAWN[board->xside]];
     } else if (moveCapture(move)) {
       int mover = movePiece(move);
       int captured = board->squares[moveEnd(move)];

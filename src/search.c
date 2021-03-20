@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -112,8 +113,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     return alpha;
 
   // Check extension
-  int currInCheck = inCheck(board);
-  if (currInCheck)
+  if (board->checkers)
     depth++;
 
   if (depth == 0)
@@ -144,7 +144,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   Move bestMove = 0;
 
   int staticEval = Evaluate(board);
-  if (!isPV && !currInCheck) {
+  if (!isPV && !board->checkers) {
     if (ttValue && ttDepth(ttValue) >= depth) {
       int ttEval = ttScore(ttValue, ply);
       if (ttFlag(ttValue) == (ttEval > staticEval ? TT_LOWER : TT_UPPER))
@@ -251,7 +251,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
   // Checkmate detection
   if (!moveList->count)
-    return inCheck(board) ? -CHECKMATE + ply : 0;
+    return board->checkers ? -CHECKMATE + ply : 0;
 
   if (!ply && !params->stopped) {
     if (bestScore > MATE_BOUND) {
@@ -326,12 +326,17 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
     bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
-    if (movePromo(move) && movePromo(move) < QUEEN[WHITE])
-      continue;
+    if (movePromo(move)) {
+      if (movePromo(move) < QUEEN[WHITE])
+        continue;
+    } else {
+      int captured = moveEP(move) ? PAWN[board->xside] : board->squares[moveEnd(move)];
 
-    int captured = board->squares[moveEnd(move)];
-    if (eval + DELTA_CUTOFF + scoreMG(MATERIAL_VALUES[captured]) < alpha)
-      continue;
+      assert(captured != NO_PIECE);
+
+      if (eval + DELTA_CUTOFF + scoreMG(MATERIAL_VALUES[captured]) < alpha)
+        continue;
+    }
 
     if (moveList->scores[i] < 0)
       break;

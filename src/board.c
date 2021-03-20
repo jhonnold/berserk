@@ -195,8 +195,6 @@ inline int isSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* 
   return 0;
 }
 
-inline int inCheck(Board* board) { return board->checkers ? 1 : 0; }
-
 inline int hasNonPawn(Board* board) { return (board->piecesCounts & MAJOR_PIECE_COUNT_MASK[board->side]) != 0; }
 
 inline void setOccupancies(Board* board) {

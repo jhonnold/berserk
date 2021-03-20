@@ -20,8 +20,7 @@ inline int see(Board* board, Move move) {
 
   BitBoard attackers = attacksTo(board, end);
   // We can run see against a non-capture
-  int attackedPieceVal =
-      board->squares[moveEnd(move)] != NO_PIECE ? scoreMG(MATERIAL_VALUES[board->squares[moveEnd(move)]]) : 0;
+  int attackedPieceVal = scoreMG(MATERIAL_VALUES[board->squares[moveEnd(move)]]);
 
   side ^= 1;
   gain[0] = attackedPieceVal;

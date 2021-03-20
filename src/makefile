@@ -4,9 +4,9 @@ EXE = berserk
 VERSION = 3.0.0
 
 LIBS = -lm
-WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow -DNDEBUG
-CFLAGS = -O3 $(WFLAGS) -flto -march=native
-RFLAGS = -O3 $(WFLAGS) -flto -static
+WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow 
+CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG
+RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG
 DFLAGS = -O0 $(WFLAGS) -g
 
 POPCOUNT = -DPOPCOUNT -msse3 -mpopcnt
