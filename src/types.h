@@ -32,6 +32,7 @@ typedef struct {
   int epSquare;
   int castling;
   int moveNo;
+  int halfMove;
 
   uint64_t zobrist;
   uint64_t zobristHistory[512];
@@ -40,6 +41,7 @@ typedef struct {
   int castlingHistory[512];
   int epSquareHistory[512];
   int captureHistory[512];
+  int halfMoveHistory[512];
 
   // movegen
   Move gameMoves[512];
@@ -52,6 +54,9 @@ typedef struct {
 typedef struct {
   int nodes;
   int seldepth;
+
+  Move bestMove;
+  int score;
 
   int evals[MAX_DEPTH];
 } SearchData;

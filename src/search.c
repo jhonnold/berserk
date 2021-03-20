@@ -78,7 +78,7 @@ void Search(Board* board, SearchParams* params, SearchData* data) {
     }
   }
 
-  printf("bestmove %s\n", moveStr(ttMove(ttProbe(board->zobrist))));
+  printf("bestmove %s\n", moveStr(data->bestMove));
 }
 
 void printPv(Move move, Board* board, int maxDepth) {
@@ -99,25 +99,30 @@ void printPv(Move move, Board* board, int maxDepth) {
 
 int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, SearchParams* params,
             SearchData* data) {
-  // Repetition detection
-  if (ply && (isRepetition(board) || isMaterialDraw(board)))
-    return 0;
-
-  if (ply > MAX_DEPTH - 1)
-    return Evaluate(board);
-
-  // Mate distance pruning
-  alpha = max(alpha, -CHECKMATE + ply);
-  beta = min(beta, CHECKMATE - ply - 1);
-  if (alpha >= beta)
-    return alpha;
-
-  // Check extension
+  // check extension
   if (board->checkers)
     depth++;
 
   if (depth == 0)
     return quiesce(alpha, beta, ply, board, params, data);
+
+  data->nodes++;
+  data->seldepth = max(ply, data->seldepth);
+
+  if (ply) {
+    // draw
+    if (isRepetition(board) || isMaterialDraw(board) || (board->halfMove > 99))
+      return 0;
+
+    if (ply > MAX_DEPTH - 1)
+      return Evaluate(board);
+
+    // Mate distance pruning
+    alpha = max(alpha, -CHECKMATE + ply);
+    beta = min(beta, CHECKMATE - ply - 1);
+    if (alpha >= beta)
+      return alpha;
+  }
 
   if ((data->nodes & 2047) == 0)
     communicate(params);
@@ -137,9 +142,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     }
   }
 
-  data->nodes++;
-
-  int isPV = beta - alpha != 1 ? 1 : 0;
+  int isPV = beta - alpha != 1;
   int bestScore = -CHECKMATE, a0 = alpha;
   Move bestMove = 0;
 
@@ -227,6 +230,11 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       bestScore = score;
       bestMove = move;
 
+      if (!ply) {
+        data->bestMove = move;
+        data->score = score;
+      }
+
       if (score > alpha)
         alpha = score;
 
@@ -279,17 +287,16 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
 
 int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, SearchData* data) {
   data->nodes++;
-  if (ply > data->seldepth)
-    data->seldepth = ply;
+  data->seldepth = max(ply, data->seldepth);
+
+  if (isMaterialDraw(board) || isRepetition(board) || (board->halfMove > 99))
+    return 0;
 
   if (ply > MAX_DEPTH - 1)
     return Evaluate(board);
 
   if ((data->nodes & 2047) == 0)
     communicate(params);
-
-  if (isMaterialDraw(board))
-    return 0;
 
   TTValue ttValue = ttProbe(board->zobrist);
   if (ttValue) {

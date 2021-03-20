@@ -62,6 +62,7 @@ void clear(Board* board) {
   memset(board->counters, EMPTY, sizeof(board->counters));
   memset(board->historyHeuristic, EMPTY, sizeof(board->historyHeuristic));
   memset(board->bfHeuristic, EMPTY, sizeof(board->bfHeuristic));
+  memset(board->halfMoveHistory, 0, sizeof(board->halfMoveHistory));
 
   for (int i = 0; i < 64; i++)
     board->squares[i] = NO_PIECE;
@@ -74,6 +75,7 @@ void clear(Board* board) {
   board->epSquare = 0;
   board->castling = 0;
   board->moveNo = 0;
+  board->halfMove = 0;
 }
 
 uint64_t zobrist(Board* board) {
@@ -152,6 +154,12 @@ void parseFen(char* fen, Board* board) {
   } else {
     board->epSquare = 0;
   }
+
+  while (*fen != ' ')
+    fen++;
+  fen++;
+
+  sscanf(fen, "%d", &board->halfMove);
 
   setOccupancies(board);
   setSpecialPieces(board);
@@ -251,6 +259,7 @@ void makeMove(Move move, Board* board) {
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->gameMoves[board->moveNo] = move;
   board->captureHistory[board->moveNo] = NO_PIECE;
+  board->halfMoveHistory[board->moveNo] = board->halfMove;
 
   popBit(board->pieces[piece], start);
   setBit(board->pieces[piece], end);
@@ -261,11 +270,17 @@ void makeMove(Move move, Board* board) {
   board->zobrist ^= ZOBRIST_PIECES[piece][start];
   board->zobrist ^= ZOBRIST_PIECES[piece][end];
 
+  if (piece == PAWN[board->side])
+    board->halfMove = 0;
+  else
+    board->halfMove++;
+
   if (capture && !ep) {
     board->captureHistory[board->moveNo] = captured;
     popBit(board->pieces[captured], end);
     board->zobrist ^= ZOBRIST_PIECES[captured][end];
     board->piecesCounts -= PIECE_COUNT_IDX[captured];
+    board->halfMove = 0;
   }
 
   if (promoted) {
@@ -286,6 +301,7 @@ void makeMove(Move move, Board* board) {
     board->squares[end - PAWN_DIRECTIONS[board->side]] = NO_PIECE;
     board->zobrist ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
     board->piecesCounts -= PIECE_COUNT_IDX[PAWN[board->xside]];
+    board->halfMove = 0;
   }
 
   if (board->epSquare) {
@@ -369,6 +385,7 @@ void undoMove(Move move, Board* board) {
   board->epSquare = board->epSquareHistory[board->moveNo];
   board->castling = board->castlingHistory[board->moveNo];
   board->zobrist = board->zobristHistory[board->moveNo];
+  board->halfMove = board->halfMoveHistory[board->moveNo];
 
   popBit(board->pieces[piece], end);
   setBit(board->pieces[piece], start);
@@ -466,7 +483,7 @@ int isLegal(Move move, Board* board) {
 }
 
 inline int isRepetition(Board* board) {
-  for (int i = 0; i < board->moveNo; i++) {
+  for (int i = board->moveNo - 2; i >= 0 && i >= board->moveNo - board->halfMove; i -= 2) {
     if (board->zobristHistory[i] == board->zobrist)
       return 1;
   }
@@ -480,6 +497,9 @@ void nullMove(Board* board) {
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->captureHistory[board->moveNo] = NO_PIECE;
   board->gameMoves[board->moveNo] = NULL_MOVE;
+  board->halfMoveHistory[board->moveNo] = board->halfMove;
+
+  board->halfMove++;
 
   if (board->epSquare)
     board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];
@@ -500,4 +520,5 @@ void undoNullMove(Board* board) {
   board->zobrist = board->zobristHistory[board->moveNo];
   board->castling = board->castlingHistory[board->moveNo];
   board->epSquare = board->epSquareHistory[board->moveNo];
+  board->halfMove = board->halfMoveHistory[board->moveNo];
 }
