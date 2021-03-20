@@ -64,7 +64,7 @@ void clear(Board* board) {
   memset(board->bfHeuristic, EMPTY, sizeof(board->bfHeuristic));
 
   for (int i = 0; i < 64; i++)
-    board->squares[i] = -1;
+    board->squares[i] = NO_PIECE;
 
   board->piecesCounts = 0ULL;
 
@@ -164,16 +164,10 @@ void printBoard(Board* board) {
     if (file(i) == 0)
       printf(" %d ", 8 - rank(i));
 
-    if (getBit(board->occupancies[BOTH], i)) {
-      for (int p = 0; p < 12; p++) {
-        if (getBit(board->pieces[p], i)) {
-          printf(" %c", PIECE_TO_CHAR[p]);
-          break;
-        }
-      }
-    } else {
+    if (board->squares[i] == NO_PIECE)
       printf(" .");
-    }
+    else
+      printf(" %c", PIECE_TO_CHAR[board->squares[i]]);
 
     if ((i & 7) == 7)
       printf("\n");
@@ -202,16 +196,6 @@ inline int isSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* 
 }
 
 inline int inCheck(Board* board) { return board->checkers ? 1 : 0; }
-
-inline int capturedPiece(Move move, Board* board) { return pieceAt(moveEnd(move), board->xside, board); }
-
-inline int pieceAt(int sq, int side, Board* board) {
-  for (int i = PAWN[side]; i <= KING[side]; i += 2)
-    if (getBit(board->pieces[i], sq))
-      return i;
-
-  return -1;
-}
 
 inline int hasNonPawn(Board* board) { return (board->piecesCounts & MAJOR_PIECE_COUNT_MASK[board->side]) != 0; }
 
@@ -262,18 +246,18 @@ void makeMove(Move move, Board* board) {
   int dub = moveDouble(move);
   int ep = moveEP(move);
   int castle = moveCastle(move);
-  int captured = board->pieces[end];
+  int captured = board->squares[end];
 
   board->zobristHistory[board->moveNo] = board->zobrist;
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->gameMoves[board->moveNo] = move;
-  board->captureHistory[board->moveNo] = -1;
+  board->captureHistory[board->moveNo] = NO_PIECE;
 
   popBit(board->pieces[piece], start);
   setBit(board->pieces[piece], end);
 
-  board->squares[start] = -1;
+  board->squares[start] = NO_PIECE;
   board->squares[end] = piece;
 
   board->zobrist ^= ZOBRIST_PIECES[piece][start];
@@ -301,7 +285,7 @@ void makeMove(Move move, Board* board) {
 
   if (ep) {
     popBit(board->pieces[PAWN[board->xside]], end - PAWN_DIRECTIONS[board->side]);
-    board->squares[end - PAWN_DIRECTIONS[board->side]] = -1;
+    board->squares[end - PAWN_DIRECTIONS[board->side]] = NO_PIECE;
     board->zobrist ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
     board->piecesCounts -= PIECE_COUNT_IDX[PAWN[board->xside]];
   }
@@ -321,7 +305,7 @@ void makeMove(Move move, Board* board) {
       popBit(board->pieces[ROOK[WHITE]], H1);
       setBit(board->pieces[ROOK[WHITE]], F1);
 
-      board->squares[H1] = -1;
+      board->squares[H1] = NO_PIECE;
       board->squares[F1] = ROOK[WHITE];
 
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][H1];
@@ -330,7 +314,7 @@ void makeMove(Move move, Board* board) {
       popBit(board->pieces[ROOK[WHITE]], A1);
       setBit(board->pieces[ROOK[WHITE]], D1);
 
-      board->squares[A1] = -1;
+      board->squares[A1] = NO_PIECE;
       board->squares[D1] = ROOK[WHITE];
 
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][A1];
@@ -339,7 +323,7 @@ void makeMove(Move move, Board* board) {
       popBit(board->pieces[ROOK[BLACK]], H8);
       setBit(board->pieces[ROOK[BLACK]], F8);
 
-      board->squares[H8] = -1;
+      board->squares[H8] = NO_PIECE;
       board->squares[F8] = ROOK[BLACK];
 
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][H8];
@@ -348,7 +332,7 @@ void makeMove(Move move, Board* board) {
       popBit(board->pieces[ROOK[BLACK]], A8);
       setBit(board->pieces[ROOK[BLACK]], D8);
 
-      board->squares[A8] = -1;
+      board->squares[A8] = NO_PIECE;
       board->squares[D8] = ROOK[BLACK];
 
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][A8];
@@ -391,15 +375,16 @@ void undoMove(Move move, Board* board) {
   popBit(board->pieces[piece], end);
   setBit(board->pieces[piece], start);
 
-  board->squares[end] = -1;
+  board->squares[end] = NO_PIECE;
   board->squares[start] = piece;
 
   if (capture) {
     setBit(board->pieces[board->captureHistory[board->moveNo]], end);
-    board->squares[end] = board->captureHistory[board->moveNo];
 
-    if (!ep)
+    if (!ep) {
+      board->squares[end] = board->captureHistory[board->moveNo];
       board->piecesCounts += PIECE_COUNT_IDX[board->captureHistory[board->moveNo]];
+    }
   }
 
   if (promoted) {
@@ -419,25 +404,25 @@ void undoMove(Move move, Board* board) {
       popBit(board->pieces[ROOK[WHITE]], F1);
       setBit(board->pieces[ROOK[WHITE]], H1);
 
-      board->squares[F1] = -1;
+      board->squares[F1] = NO_PIECE;
       board->squares[H1] = ROOK[WHITE];
     } else if (end == C1) {
       popBit(board->pieces[ROOK[WHITE]], D1);
       setBit(board->pieces[ROOK[WHITE]], A1);
 
-      board->squares[D1] = -1;
+      board->squares[D1] = NO_PIECE;
       board->squares[A1] = ROOK[WHITE];
     } else if (end == G8) {
       popBit(board->pieces[ROOK[BLACK]], F8);
       setBit(board->pieces[ROOK[BLACK]], H8);
 
-      board->squares[F8] = -1;
+      board->squares[F8] = NO_PIECE;
       board->squares[H8] = ROOK[BLACK];
     } else if (end == C8) {
       popBit(board->pieces[ROOK[BLACK]], D8);
       setBit(board->pieces[ROOK[BLACK]], A8);
 
-      board->squares[D8] = -1;
+      board->squares[D8] = NO_PIECE;
       board->squares[A8] = ROOK[BLACK];
     }
   }
@@ -495,7 +480,7 @@ void nullMove(Board* board) {
   board->zobristHistory[board->moveNo] = board->zobrist;
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
-  board->captureHistory[board->moveNo] = -1;
+  board->captureHistory[board->moveNo] = NO_PIECE;
   board->gameMoves[board->moveNo] = NULL_MOVE;
 
   if (board->epSquare)

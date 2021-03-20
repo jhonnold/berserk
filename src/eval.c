@@ -575,25 +575,25 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
   BitBoard weak = board->occupancies[xside] & ~enemyAttacks[0] & data->allAttacks;
 
   for (BitBoard knightThreats = weak & myAttacks[1]; knightThreats; popLsb(knightThreats)) {
-    int piece = pieceAt(lsb(knightThreats), xside, board);
+    int piece = board->squares[lsb(knightThreats)];
     data->threats[0] += scoreMG(KNIGHT_THREATS[piece >> 1]);
     data->threats[1] += scoreEG(KNIGHT_THREATS[piece >> 1]);
   }
 
   for (BitBoard bishopThreats = weak & myAttacks[2]; bishopThreats; popLsb(bishopThreats)) {
-    int piece = pieceAt(lsb(bishopThreats), xside, board);
+    int piece = board->squares[lsb(bishopThreats)];
     data->threats[0] += scoreMG(BISHOP_THREATS[piece >> 1]);
     data->threats[1] += scoreEG(BISHOP_THREATS[piece >> 1]);
   }
 
   for (BitBoard rookThreats = weak & myAttacks[3]; rookThreats; popLsb(rookThreats)) {
-    int piece = pieceAt(lsb(rookThreats), xside, board);
+    int piece = board->squares[lsb(rookThreats)];
     data->threats[0] += scoreMG(ROOK_THREATS[piece >> 1]);
     data->threats[1] += scoreEG(ROOK_THREATS[piece >> 1]);
   }
 
   for (BitBoard kingThreats = weak & myAttacks[5]; kingThreats; popLsb(kingThreats)) {
-    int piece = pieceAt(lsb(kingThreats), xside, board);
+    int piece = board->squares[lsb(kingThreats)];
     data->threats[0] += scoreMG(KING_THREATS[piece >> 1]);
     data->threats[1] += scoreEG(KING_THREATS[piece >> 1]);
   }

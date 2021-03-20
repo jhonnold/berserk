@@ -178,6 +178,8 @@ void UCI(Board* board) {
       if (mb > 4096)
         mb = 4096;
       ttInit(mb);
+    } else if (!strncmp(in, "board", 5)) {
+      printBoard(board);
     }
   }
 }

@@ -459,13 +459,13 @@ void generateQuiesceMoves(MoveList* moveList, Board* board) {
       moveList->scores[i] = scoreMG(MATERIAL_VALUES[movePromo(move)]);
     } else {
       int mover = movePiece(move);
-      int captured = capturedPiece(move, board);
+      int captured = board->squares[moveEnd(move)];
 
       int seeScore = 0;
       if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
         moveList->scores[i] = seeScore;
       } else {
-        moveList->scores[i] = MVV_LVA[movePiece(move)][capturedPiece(move, board)];
+        moveList->scores[i] = MVV_LVA[mover][captured];
       }
     }
   }
@@ -546,13 +546,13 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
       moveList->scores[i] = HASH;
     } else if (moveCapture(move)) {
       int mover = movePiece(move);
-      int captured = capturedPiece(move, board);
+      int captured = board->squares[moveEnd(move)];
 
       int seeScore = 0;
       if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
         moveList->scores[i] = BAD_CAPTURE + seeScore;
       } else {
-        moveList->scores[i] = GOOD_CAPTURE + MVV_LVA[movePiece(move)][capturedPiece(move, board)];
+        moveList->scores[i] = GOOD_CAPTURE + MVV_LVA[mover][captured];
       }
     } else if (movePromo(move) >= 8) {
       moveList->scores[i] = GOOD_CAPTURE + scoreMG(QUEEN_VALUE);

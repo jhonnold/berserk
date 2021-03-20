@@ -19,9 +19,9 @@ typedef struct {
 
 typedef struct {
   // pieces
-  int squares[64];
   BitBoard pieces[12];
   BitBoard occupancies[3];
+  int squares[64];
   BitBoard checkers;
   BitBoard pinners;
   uint64_t piecesCounts;

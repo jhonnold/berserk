@@ -329,7 +329,7 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
     if (movePromo(move) && movePromo(move) < QUEEN[WHITE])
       continue;
 
-    int captured = capturedPiece(move, board);
+    int captured = board->squares[moveEnd(move)];
     if (eval + DELTA_CUTOFF + scoreMG(MATERIAL_VALUES[captured]) < alpha)
       continue;
 
