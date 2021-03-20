@@ -4,9 +4,10 @@ EXE = berserk
 VERSION = 3.0.0
 
 LIBS = -lm
-WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
-CFLAGS = -O3 $(WFLAGS) -flto -march=native
-RFLAGS = -O3 $(WFLAGS) -flto -static
+WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow 
+CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG
+RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG
+DFLAGS = -O0 $(WFLAGS) -g
 
 POPCOUNT = -DPOPCOUNT -msse3 -mpopcnt
 
@@ -25,6 +26,9 @@ release:
 	mkdir ../dist
 	$(CC) $(RFLAGS) $(LIBS) $(SRC) -o ../dist/$(EXE)-$(VERSION)-x64
 	$(CC) $(RFLAGS) $(LIBS) $(POPCOUNT) $(SRC) -o ../dist/$(EXE)-$(VERSION)-x64-popcnt
+
+debug:
+	$(CC) $(DFLAGS) $(LIBS) $(POPCOUNT) $(SRC) -o $(EXE)
 
 clean:
 	rm -rf $(EXE)

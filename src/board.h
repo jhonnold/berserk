@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+#define NO_PIECE 12
+
 #define file(sq) ((sq)&7)
 #define rank(sq) ((sq) >> 3)
 
@@ -28,13 +30,10 @@ void printBoard(Board* board);
 void setSpecialPieces(Board* board);
 void setOccupancies(Board* board);
 
-int inCheck(Board* board);
 int isSquareAttacked(int sq, int attacker, BitBoard occupancy, Board* board);
 int isLegal(Move move, Board* board);
 int isRepetition(Board* board);
 
-int capturedPiece(Move move, Board* board);
-int pieceAt(int sq, int side, Board* board);
 int hasNonPawn(Board* board);
 
 void nullMove(Board* board);

@@ -40,17 +40,30 @@ inline int bits(BitBoard bb) {
 #endif
 
 inline BitBoard shift(BitBoard bb, int dir) {
-  return dir == N         ? bb >> 8
-         : dir == S       ? bb << 8
-         : dir == (N + N) ? bb >> 16
-         : dir == (S + S) ? bb << 16
-         : dir == W       ? (bb & ~A_FILE) >> 1
-         : dir == E       ? (bb & ~H_FILE) << 1
-         : dir == NE      ? (bb & ~H_FILE) >> 7
-         : dir == SW      ? (bb & ~A_FILE) << 7
-         : dir == NW      ? (bb & ~A_FILE) >> 9
-         : dir == SE      ? (bb & ~H_FILE) << 9
-                          : 0;
+  switch (dir) {
+  case N:
+    return bb >> 8;
+  case S:
+    return bb << 8;
+  case (N + N):
+    return bb >> 16;
+  case (S + S):
+    return bb << 16;
+  case W:
+    return (bb & ~A_FILE) >> 1;
+  case E:
+    return (bb & ~H_FILE) << 1;
+  case NE:
+    return (bb & ~H_FILE) >> 7;
+  case SW:
+    return (bb & ~A_FILE) << 7;
+  case NW:
+    return (bb & ~A_FILE) >> 9;
+  case SE:
+    return (bb & ~H_FILE) << 9;
+  default:
+    return 0;
+  }
 }
 
 inline BitBoard fill(BitBoard initial, int direction) {

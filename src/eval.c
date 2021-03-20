@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -102,13 +103,14 @@ const int KING_PSQT[] = {
   S(  30, -70), S(  40, -50), S(  20, -35), S(  10, -25), S(  10, -25), S(  20, -35), S(  40, -50), S(  30, -70),
 };
 
-const int MATERIAL_VALUES[12] = {
+const int MATERIAL_VALUES[13] = {
   PAWN_VALUE, PAWN_VALUE, 
   KNIGHT_VALUE, KNIGHT_VALUE, 
   BISHOP_VALUE, BISHOP_VALUE,
   ROOK_VALUE, ROOK_VALUE, 
   QUEEN_VALUE,  QUEEN_VALUE, 
-  KING_VALUE,   KING_VALUE
+  KING_VALUE,   KING_VALUE,
+  S(0, 0) // NO_PIECE
 };
 
 // clang-format on
@@ -237,6 +239,7 @@ void initPSQT() {
 }
 // clang-format on
 
+// TODO: Convert this to use board->pieceCounts?
 inline int getPhase(Board* board) {
   int currentPhase = 0;
   for (int i = 2; i < 10; i++)
@@ -575,25 +578,37 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
   BitBoard weak = board->occupancies[xside] & ~enemyAttacks[0] & data->allAttacks;
 
   for (BitBoard knightThreats = weak & myAttacks[1]; knightThreats; popLsb(knightThreats)) {
-    int piece = pieceAt(lsb(knightThreats), xside, board);
+    int piece = board->squares[lsb(knightThreats)];
+
+    assert(piece != NO_PIECE);
+
     data->threats[0] += scoreMG(KNIGHT_THREATS[piece >> 1]);
     data->threats[1] += scoreEG(KNIGHT_THREATS[piece >> 1]);
   }
 
   for (BitBoard bishopThreats = weak & myAttacks[2]; bishopThreats; popLsb(bishopThreats)) {
-    int piece = pieceAt(lsb(bishopThreats), xside, board);
+    int piece = board->squares[lsb(bishopThreats)];
+
+    assert(piece != NO_PIECE);
+
     data->threats[0] += scoreMG(BISHOP_THREATS[piece >> 1]);
     data->threats[1] += scoreEG(BISHOP_THREATS[piece >> 1]);
   }
 
   for (BitBoard rookThreats = weak & myAttacks[3]; rookThreats; popLsb(rookThreats)) {
-    int piece = pieceAt(lsb(rookThreats), xside, board);
+    int piece = board->squares[lsb(rookThreats)];
+
+    assert(piece != NO_PIECE);
+
     data->threats[0] += scoreMG(ROOK_THREATS[piece >> 1]);
     data->threats[1] += scoreEG(ROOK_THREATS[piece >> 1]);
   }
 
   for (BitBoard kingThreats = weak & myAttacks[5]; kingThreats; popLsb(kingThreats)) {
-    int piece = pieceAt(lsb(kingThreats), xside, board);
+    int piece = board->squares[lsb(kingThreats)];
+
+    assert(piece != NO_PIECE);
+
     data->threats[0] += scoreMG(KING_THREATS[piece >> 1]);
     data->threats[1] += scoreEG(KING_THREATS[piece >> 1]);
   }
