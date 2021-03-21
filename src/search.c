@@ -145,8 +145,8 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   int eval = data->evals[ply] = (ttValue ? ttEval(ttValue) : Evaluate(board));
   int improving = ply >= 2 && (data->evals[ply] > data->evals[ply - 2]);
 
-  board->killers[ply][0] = NULL_MOVE;
-  board->killers[ply][1] = NULL_MOVE;
+  board->killers[ply + 1][0] = NULL_MOVE;
+  board->killers[ply + 1][1] = NULL_MOVE;
 
   if (!isPV && !board->checkers) {
     if (ttValue && ttDepth(ttValue) >= depth) {
