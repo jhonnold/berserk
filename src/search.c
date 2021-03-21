@@ -142,21 +142,26 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   int bestScore = -CHECKMATE, a0 = alpha;
   Move bestMove = 0;
 
-  int staticEval = Evaluate(board);
+  int eval = data->evals[ply] = (ttValue ? ttEval(ttValue) : Evaluate(board));
+  int improving = ply >= 2 && (data->evals[ply] > data->evals[ply - 2]);
+
+  board->killers[ply][0] = NULL_MOVE;
+  board->killers[ply][1] = NULL_MOVE;
+
   if (!isPV && !board->checkers) {
     if (ttValue && ttDepth(ttValue) >= depth) {
-      int ttEval = ttScore(ttValue, ply);
-      if (ttFlag(ttValue) == (ttEval > staticEval ? TT_LOWER : TT_UPPER))
-        staticEval = ttEval;
+      int ttEvalFromScore = ttScore(ttValue, ply);
+      if (ttFlag(ttValue) == (ttEvalFromScore > eval ? TT_LOWER : TT_UPPER))
+        eval = ttEvalFromScore;
     }
 
     // Reverse Futility Pruning
-    if (depth <= 6 && staticEval - FUTILITY[depth] >= beta && staticEval < MATE_BOUND)
-      return staticEval;
+    if (depth <= 6 && eval - FUTILITY[depth] >= beta && eval < MATE_BOUND)
+      return eval;
 
     // Null move pruning
-    if (depth >= 3 && canNull && staticEval >= beta && hasNonPawn(board)) {
-      int R = 3 + depth / 6 + min((staticEval - beta) / 200, 3);
+    if (depth >= 3 && canNull && eval >= beta && hasNonPawn(board)) {
+      int R = 3 + depth / 6 + min((eval - beta) / 200, 3);
 
       if (R > depth)
         R = depth;
@@ -172,9 +177,6 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
         return beta;
     }
   }
-
-  data->evals[ply] = staticEval;
-  int improving = ply >= 2 && staticEval > data->evals[ply - 2];
 
   MoveList moveList[1];
   generateMoves(moveList, board, ply);
@@ -280,7 +282,10 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   }
 
   int ttFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
-  ttPut(board->zobrist, depth, bestScore, ttFlag, bestMove, ply);
+  ttPut(board->zobrist, depth, bestScore, ttFlag, bestMove, ply, data->evals[ply]);
+
+  assert(bestScore >= -CHECKMATE);
+  assert(bestScore <= CHECKMATE);
 
   return bestScore;
 }
@@ -311,7 +316,7 @@ int quiesce(int alpha, int beta, int ply, Board* board, SearchParams* params, Se
       return score;
   }
 
-  int eval = Evaluate(board);
+  int eval = data->evals[ply] = (ttValue ? ttEval(ttValue) : Evaluate(board));
   if (ttValue) {
     int ttEval = ttScore(ttValue, ply);
     if (ttFlag(ttValue) == (ttEval > eval ? TT_LOWER : TT_UPPER))
