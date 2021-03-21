@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -244,6 +245,8 @@ inline void setSpecialPieces(Board* board) {
 }
 
 void makeMove(Move move, Board* board) {
+  assert(move != NULL_MOVE);
+
   int start = moveStart(move);
   int end = moveEnd(move);
   int piece = movePiece(move);

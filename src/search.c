@@ -52,10 +52,12 @@ void Search(Board* board, SearchParams* params, SearchData* data) {
   memset(board->killers, 0, sizeof(board->killers));
   memset(board->counters, 0, sizeof(board->counters));
 
+  PV pv[1];
+
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
 
-  int score = negamax(alpha, beta, 1, 0, 1, board, params, data);
+  int score = negamax(alpha, beta, 1, 0, 1, board, params, data, pv);
 
   for (int depth = 2; depth <= params->depth && !params->stopped; depth++) {
     int delta = depth >= 5 ? 10 : CHECKMATE;
@@ -63,7 +65,7 @@ void Search(Board* board, SearchParams* params, SearchData* data) {
     beta = min(score + delta, CHECKMATE);
 
     while (!params->stopped) {
-      score = negamax(alpha, beta, depth, 0, 1, board, params, data);
+      score = negamax(alpha, beta, depth, 0, 1, board, params, data, pv);
 
       if (score <= alpha) {
         beta = (alpha + beta) / 2;
@@ -97,13 +99,16 @@ void printPv(Move move, Board* board, int maxDepth) {
   printf("\n");
 }
 
-int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, SearchParams* params,
-            SearchData* data) {
+int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, SearchParams* params, SearchData* data,
+            PV* pv) {
   if (depth == 0)
     return quiesce(alpha, beta, ply, board, params, data);
 
   data->nodes++;
   data->seldepth = max(ply, data->seldepth);
+
+  PV childPv[1];
+  pv->count = 0;
 
   if (ply) {
     // draw
@@ -145,6 +150,8 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
   int eval = data->evals[ply] = (ttValue ? ttEval(ttValue) : Evaluate(board));
   int improving = ply >= 2 && (data->evals[ply] > data->evals[ply - 2]);
 
+  assert(eval == Evaluate(board));
+
   board->killers[ply + 1][0] = NULL_MOVE;
   board->killers[ply + 1][1] = NULL_MOVE;
 
@@ -167,7 +174,7 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
         R = depth;
 
       nullMove(board);
-      int score = -negamax(-beta, -beta + 1, depth - R, ply + 1, 0, board, params, data);
+      int score = -negamax(-beta, -beta + 1, depth - R, ply + 1, 0, board, params, data, childPv);
       undoNullMove(board);
 
       if (params->stopped)
@@ -215,13 +222,13 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     }
 
     if (R != 1)
-      score = -negamax(-alpha - 1, -alpha, newDepth - R, ply + 1, 1, board, params, data);
+      score = -negamax(-alpha - 1, -alpha, newDepth - R, ply + 1, 1, board, params, data, childPv);
 
     if ((R != 1 && score > alpha) || (R == 1 && (!isPV || numMoves > 1)))
-      score = -negamax(-alpha - 1, -alpha, newDepth - 1, ply + 1, 1, board, params, data);
+      score = -negamax(-alpha - 1, -alpha, newDepth - 1, ply + 1, 1, board, params, data, childPv);
 
     if (isPV && (numMoves == 1 || (score > alpha && (!ply || score < beta))))
-      score = -negamax(-beta, -alpha, newDepth - 1, ply + 1, 1, board, params, data);
+      score = -negamax(-beta, -alpha, newDepth - 1, ply + 1, 1, board, params, data, childPv);
 
     undoMove(move, board);
 
@@ -232,13 +239,18 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
       bestScore = score;
       bestMove = move;
 
-      if (!ply) {
-        data->bestMove = move;
-        data->score = score;
-      }
-
-      if (score > alpha)
+      if (score > alpha) {
         alpha = score;
+
+        pv->count = childPv->count + 1;
+        pv->moves[0] = move;
+        memcpy(pv->moves + 1, childPv->moves, childPv->count * sizeof(Move));
+
+        if (!ply) {
+          data->bestMove = move;
+          data->score = score;
+        }
+      }
 
       if (alpha >= beta) {
         if (!tactical) {

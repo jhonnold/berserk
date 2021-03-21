@@ -52,6 +52,11 @@ typedef struct {
 } Board;
 
 typedef struct {
+  int count;
+  Move moves[MAX_DEPTH];
+} PV;
+
+typedef struct {
   int nodes;
   int seldepth;
 
