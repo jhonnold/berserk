@@ -99,10 +99,6 @@ void printPv(Move move, Board* board, int maxDepth) {
 
 int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, SearchParams* params,
             SearchData* data) {
-  // check extension
-  if (board->checkers)
-    depth++;
-
   if (depth == 0)
     return quiesce(alpha, beta, ply, board, params, data);
 
@@ -203,6 +199,10 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     numMoves++;
     makeMove(move, board);
 
+    int newDepth = depth;
+    if (board->checkers)
+      newDepth++; // check extension
+
     int R = 1;
     if (depth >= 2 && numMoves > 1 && !tactical) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
@@ -213,13 +213,13 @@ int negamax(int alpha, int beta, int depth, int ply, int canNull, Board* board, 
     }
 
     if (R != 1)
-      score = -negamax(-alpha - 1, -alpha, depth - R, ply + 1, 1, board, params, data);
+      score = -negamax(-alpha - 1, -alpha, newDepth - R, ply + 1, 1, board, params, data);
 
     if ((R != 1 && score > alpha) || (R == 1 && (!isPV || numMoves > 1)))
-      score = -negamax(-alpha - 1, -alpha, depth - 1, ply + 1, 1, board, params, data);
+      score = -negamax(-alpha - 1, -alpha, newDepth - 1, ply + 1, 1, board, params, data);
 
     if (isPV && (numMoves == 1 || (score > alpha && (!ply || score < beta))))
-      score = -negamax(-beta, -alpha, depth - 1, ply + 1, 1, board, params, data);
+      score = -negamax(-beta, -alpha, newDepth - 1, ply + 1, 1, board, params, data);
 
     undoMove(move, board);
 
