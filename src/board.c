@@ -55,14 +55,9 @@ const uint64_t MAJOR_PIECE_COUNT_MASK[] = {0x0F0F0F0F00, 0xF0F0F0F000};
 void clear(Board* board) {
   memset(board->pieces, EMPTY, sizeof(board->pieces));
   memset(board->occupancies, EMPTY, sizeof(board->occupancies));
-  memset(board->gameMoves, EMPTY, sizeof(board->gameMoves));
   memset(board->zobristHistory, EMPTY, sizeof(board->zobristHistory));
   memset(board->castlingHistory, EMPTY, sizeof(board->castlingHistory));
   memset(board->captureHistory, EMPTY, sizeof(board->captureHistory));
-  memset(board->killers, EMPTY, sizeof(board->killers));
-  memset(board->counters, EMPTY, sizeof(board->counters));
-  memset(board->historyHeuristic, EMPTY, sizeof(board->historyHeuristic));
-  memset(board->bfHeuristic, EMPTY, sizeof(board->bfHeuristic));
   memset(board->halfMoveHistory, 0, sizeof(board->halfMoveHistory));
 
   for (int i = 0; i < 64; i++)
@@ -260,7 +255,6 @@ void makeMove(Move move, Board* board) {
   board->zobristHistory[board->moveNo] = board->zobrist;
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
-  board->gameMoves[board->moveNo] = move;
   board->captureHistory[board->moveNo] = NO_PIECE;
   board->halfMoveHistory[board->moveNo] = board->halfMove;
 
@@ -499,7 +493,6 @@ void nullMove(Board* board) {
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->captureHistory[board->moveNo] = NO_PIECE;
-  board->gameMoves[board->moveNo] = NULL_MOVE;
   board->halfMoveHistory[board->moveNo] = board->halfMove;
 
   board->halfMove++;

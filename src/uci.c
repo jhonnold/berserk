@@ -81,7 +81,9 @@ void parseGo(char* in, SearchParams* params, Board* board) {
            params->timeset);
 
     SearchData data[1];
-    Search(board, params, data);
+    data->board = board;
+
+    Search(params, data);
   }
 }
 
@@ -168,7 +170,12 @@ void UCI(Board* board) {
       PrintEvaluation(board);
     } else if (!strncmp(in, "moves", 5)) {
       MoveList moveList[1];
-      generateMoves(moveList, board, 0);
+
+      SearchData data[1];
+      data->board = board;
+      data->ply = 0;
+
+      generateMoves(moveList, data);
       printMoves(moveList);
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb;

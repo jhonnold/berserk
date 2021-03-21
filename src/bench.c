@@ -83,7 +83,9 @@ void Bench() {
     parseFen(benchmarks[i], board);
 
     SearchData data[1];
-    Search(board, params, data);
+    data->board = board;
+
+    Search(params, data);
 
     times[i] = getTimeMs() - testStart;
     bestMoves[i] = data->bestMove;

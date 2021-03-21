@@ -39,20 +39,20 @@ const BitBoard HOME_RANKS[] = {RANK_2, RANK_7};
 const BitBoard THIRD_RANKS[] = {RANK_3, RANK_6};
 const BitBoard FILLED = -1ULL;
 
-inline void addKiller(Board* board, Move move, int ply) {
-  if (board->killers[ply][0] == move)
-    board->killers[ply][1] = board->killers[ply][0];
-  board->killers[ply][0] = move;
+inline void addKiller(SearchData* data, Move move) {
+  if (data->killers[data->ply][0] == move)
+    data->killers[data->ply][1] = data->killers[data->ply][0];
+  data->killers[data->ply][0] = move;
 }
 
-inline void addCounter(Board* board, Move move, Move parent) { board->counters[moveSE(parent)] = move; }
+inline void addCounter(SearchData* data, Move move, Move parent) { data->counters[moveSE(parent)] = move; }
 
-inline void addHistoryHeuristic(Board* board, Move move, int depth) {
-  board->historyHeuristic[board->side][moveSE(move)] += depth * depth;
+inline void addHistoryHeuristic(SearchData* data, Move move, int depth) {
+  data->hh[data->board->side][moveSE(move)] += depth * depth;
 }
 
-inline void addBFHeuristic(Board* board, Move move, int depth) {
-  board->bfHeuristic[board->side][moveSE(move)] += depth * depth;
+inline void addBFHeuristic(SearchData* data, Move move, int depth) {
+  data->bf[data->board->side][moveSE(move)] += depth * depth;
 }
 
 inline void addMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
@@ -387,8 +387,10 @@ void generateKingMoves(MoveList* moveList, Board* board) {
 }
 
 // captures and promotions
-void generateQuiesceMoves(MoveList* moveList, Board* board) {
+void generateQuiesceMoves(MoveList* moveList, SearchData* data) {
   moveList->count = 0;
+
+  Board* board = data->board;
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
   if (bits(board->checkers) > 1) {
@@ -477,8 +479,10 @@ void generateQuiesceMoves(MoveList* moveList, Board* board) {
   }
 }
 
-void generateMoves(MoveList* moveList, Board* board, int ply) {
+void generateMoves(MoveList* moveList, SearchData* data) {
   moveList->count = 0;
+
+  Board* board = data->board;
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
   if (bits(board->checkers) > 1) { // double check
@@ -564,15 +568,14 @@ void generateMoves(MoveList* moveList, Board* board, int ply) {
       }
     } else if (movePromo(move) >= 8) {
       moveList->scores[i] = GOOD_CAPTURE + scoreMG(QUEEN_VALUE);
-    } else if (move == board->killers[ply][0]) {
+    } else if (move == data->killers[data->ply][0]) {
       moveList->scores[i] = KILLER1;
-    } else if (move == board->killers[ply][1]) {
+    } else if (move == data->killers[data->ply][1]) {
       moveList->scores[i] = KILLER2;
-    } else if (board->moveNo && move == board->counters[moveSE(board->gameMoves[board->moveNo - 1])]) {
+    } else if (board->moveNo && move == data->counters[moveSE(data->moves[data->ply - 1])]) {
       moveList->scores[i] = COUNTER;
     } else {
-      moveList->scores[i] = 100 * board->historyHeuristic[board->side][moveSE(move)] /
-                            max(1, board->bfHeuristic[board->side][moveSE(move)]);
+      moveList->scores[i] = 100 * data->hh[board->side][moveSE(move)] / max(1, data->bf[board->side][moveSE(move)]);
     }
   }
 }
