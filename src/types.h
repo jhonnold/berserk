@@ -42,23 +42,29 @@ typedef struct {
   int epSquareHistory[512];
   int captureHistory[512];
   int halfMoveHistory[512];
-
-  // movegen
-  Move gameMoves[512];
-  Move killers[MAX_DEPTH][2];
-  Move counters[64 * 64];
-  int historyHeuristic[2][64 * 64];
-  int bfHeuristic[2][64 * 64];
 } Board;
 
 typedef struct {
+  int count;
+  Move moves[MAX_DEPTH];
+} PV;
+
+typedef struct {
+  int score;
+  Move bestMove;
+
+  Board* board;
+  int ply;
+
   int nodes;
   int seldepth;
 
-  Move bestMove;
-  int score;
-
   int evals[MAX_DEPTH];
+  Move moves[MAX_DEPTH];
+  Move killers[MAX_DEPTH][2];
+  Move counters[64 * 64];
+  int hh[2][64 * 64];
+  int bf[2][64 * 64];
 } SearchData;
 
 typedef struct {

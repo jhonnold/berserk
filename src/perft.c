@@ -7,12 +7,12 @@
 #include "movegen.h"
 #include "types.h"
 
-int64_t perft(int depth, Board* board) {
+int64_t perft(int depth, SearchData* data) {
   if (depth == 0)
     return 1;
 
   MoveList moveList[1];
-  generateMoves(moveList, board, 0);
+  generateMoves(moveList, data);
 
   if (depth == 1)
     return moveList->count;
@@ -22,9 +22,9 @@ int64_t perft(int depth, Board* board) {
   for (int i = 0; i < moveList->count; i++) {
     Move m = moveList->moves[i];
 
-    makeMove(m, board);
-    nodes += perft(depth - 1, board);
-    undoMove(m, board);
+    makeMove(m, data->board);
+    nodes += perft(depth - 1, data);
+    undoMove(m, data->board);
   }
 
   return nodes;
@@ -38,13 +38,17 @@ void PerftTest(int depth, Board* board) {
   gettimeofday(&start, NULL);
 
   MoveList moveList[1];
-  generateMoves(moveList, board, 0);
+  SearchData data[1];
+  data->board = board;
+  data->ply = 0;
+
+  generateMoves(moveList, data);
 
   for (int i = 0; i < moveList->count; i++) {
     Move m = moveList->moves[i];
 
     makeMove(m, board);
-    int64_t nodes = perft(depth - 1, board);
+    int64_t nodes = perft(depth - 1, data);
     undoMove(m, board);
 
     printf("%s: %" PRId64 "\n", moveStr(m), nodes);

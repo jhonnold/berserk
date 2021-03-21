@@ -17,7 +17,9 @@ const char* SQ_TO_COORD[] = {
 
 Move parseMove(char* moveStr, Board* board) {
   MoveList moveList[1];
-  generateMoves(moveList, board, 0);
+  SearchData data[1];
+  data->board = board;
+  generateMoves(moveList, data);
 
   int start = (moveStr[0] - 'a') + (8 - (moveStr[1] - '0')) * 8;
   int end = (moveStr[2] - 'a') + (8 - (moveStr[3] - '0')) * 8;

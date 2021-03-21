@@ -16,15 +16,15 @@ extern const int KILLER2;
 extern const int COUNTER;
 
 void addMove(MoveList* moveList, Move move);
-void generateMoves(MoveList* moveList, Board* board, int ply);
-void generateQuiesceMoves(MoveList* moveList, Board* board);
+void generateMoves(MoveList* moveList, SearchData* data);
+void generateQuiesceMoves(MoveList* moveList, SearchData* data);
 void printMoves(MoveList* moveList);
 Move parseMove(char* moveStr, Board* board);
 char* moveStr(Move move);
 void bubbleTopMove(MoveList* moveList, int from);
-void addKiller(Board* board, Move move, int ply);
-void addCounter(Board* board, Move move, Move parent);
-void addHistoryHeuristic(Board* board, Move move, int depth);
-void addBFHeuristic(Board* board, Move move, int depth);
+void addKiller(SearchData* data, Move move);
+void addCounter(SearchData* data, Move move, Move parent);
+void addHistoryHeuristic(SearchData* data, Move move, int depth);
+void addBFHeuristic(SearchData* data, Move move, int depth);
 
 #endif

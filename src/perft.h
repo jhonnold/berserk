@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-int64_t perft(int depth, Board* board);
+int64_t perft(int depth, SearchData* data);
 void PerftTest(int depth, Board* board);
 
 #endif

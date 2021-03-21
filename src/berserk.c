@@ -6,6 +6,7 @@
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
+#include "random.h"
 #include "search.h"
 #include "transposition.h"
 #include "types.h"
@@ -14,6 +15,8 @@
 #include "zobrist.h"
 
 int main(int argc, char** argv) {
+  seedRandom(0);
+
 #ifndef WIN32
   initSignalHandlers();
 #endif

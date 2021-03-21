@@ -1,8 +1,11 @@
+#include <assert.h>
 #include <inttypes.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "bits.h"
 #include "search.h"
 #include "transposition.h"
 #include "types.h"
@@ -29,7 +32,7 @@ void ttFree() { free(TRANSPOSITION_ENTRIES); }
 inline void ttClear() { memset(TRANSPOSITION_ENTRIES, NO_ENTRY, SIZE); }
 
 inline int ttScore(TTValue value, int ply) {
-  int score = (int)(value >> 32);
+  int score = (int)((int16_t)((value & 0x0000FFFF00000000) >> 32));
 
   return score > MATE_BOUND ? score - ply : score < -MATE_BOUND ? score + ply : score;
 }
@@ -44,7 +47,7 @@ inline TTValue ttProbe(uint64_t hash) {
   return NO_ENTRY;
 }
 
-inline void ttPut(uint64_t hash, int depth, int score, int flag, Move move, int ply) {
+inline TTValue ttPut(uint64_t hash, int depth, int score, int flag, Move move, int ply, int eval) {
   int idx = ttIdx(hash);
   int replacementDepth = INT32_MAX;
   int replacementIdx = idx;
@@ -59,7 +62,7 @@ inline void ttPut(uint64_t hash, int depth, int score, int flag, Move move, int 
     int currDepth = ttDepth(TRANSPOSITION_ENTRIES[i + 1]);
     if (TRANSPOSITION_ENTRIES[i] == hash) {
       if (currDepth > depth && flag != TT_EXACT)
-        return;
+        return TRANSPOSITION_ENTRIES[i + 1];
 
       replacementIdx = i;
       break;
@@ -71,11 +74,25 @@ inline void ttPut(uint64_t hash, int depth, int score, int flag, Move move, int 
     }
   }
 
+  int adjustedScore = score;
   if (score > MATE_BOUND)
-    score += ply;
+    adjustedScore += ply;
   else if (score < -MATE_BOUND)
-    score -= ply;
+    adjustedScore -= ply;
+
+  assert(adjustedScore <= INT16_MAX);
+  assert(adjustedScore >= INT16_MIN);
+  assert(eval <= INT16_MAX);
+  assert(eval >= INT16_MIN);
 
   TRANSPOSITION_ENTRIES[replacementIdx] = hash;
-  TRANSPOSITION_ENTRIES[replacementIdx + 1] = ttEntry(score, flag, depth, move);
+  TTValue tt = TRANSPOSITION_ENTRIES[replacementIdx + 1] = ttEntry(adjustedScore, flag, depth, move, eval);
+
+  assert(depth == ttDepth(tt));
+  assert(score == ttScore(tt, ply));
+  assert(flag == ttFlag(tt));
+  assert(move == ttMove(tt));
+  assert(eval == ttEval(tt));
+
+  return tt;
 }

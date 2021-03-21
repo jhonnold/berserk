@@ -3,10 +3,9 @@
 
 #include <stdint.h>
 
-#define INITIAL_RANDOM_STATE 234
-
-uint32_t randomInt();
+uint64_t rotate(uint64_t v, uint8_t s);
 uint64_t randomLong();
+void seedRandom(uint64_t seed);
 uint64_t randomMagic();
 
 #endif
