@@ -19,6 +19,7 @@ Move parseMove(char* moveStr, Board* board) {
   MoveList moveList[1];
   SearchData data[1];
   data->board = board;
+  data->ply = 0;
   generateMoves(moveList, data);
 
   int start = (moveStr[0] - 'a') + (8 - (moveStr[1] - '0')) * 8;
