@@ -30,13 +30,12 @@ inline int see(Board* board, Move move) {
   popBit(occupied, start);
 
   // If pawn/bishop/queen captures
-  if (piece == PAWN[WHITE] || piece == PAWN[BLACK] || piece == BISHOP[WHITE] || piece == BISHOP[BLACK] ||
-      piece == QUEEN[WHITE] || piece == QUEEN[BLACK])
+  if (PIECE_TYPE[piece] == PAWN_TYPE || PIECE_TYPE[piece] == BISHOP_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)
     attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
   // If pawn/rook/queen captures (ep)
-  if (piece >= ROOK[WHITE] && piece <= QUEEN[BLACK])
+  if (PIECE_TYPE[piece] == ROOK_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)
     attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                   board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
@@ -54,13 +53,12 @@ inline int see(Board* board, Move move) {
     occupied ^= (attackee & -attackee);
 
     // If pawn/bishop/queen captures
-    if (piece == PAWN[WHITE] || piece == PAWN[BLACK] || piece == BISHOP[WHITE] || piece == BISHOP[BLACK] ||
-        piece == QUEEN[WHITE] || piece == QUEEN[BLACK])
+    if (PIECE_TYPE[piece] == PAWN_TYPE || PIECE_TYPE[piece] == BISHOP_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)
       attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                       board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
     // If pawn/rook/queen captures (ep)
-    if (piece >= ROOK[WHITE] && piece <= QUEEN[BLACK])
+    if (PIECE_TYPE[piece] == ROOK_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)
       attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 

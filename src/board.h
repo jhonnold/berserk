@@ -16,6 +16,7 @@ extern const int BISHOP[];
 extern const int ROOK[];
 extern const int QUEEN[];
 extern const int KING[];
+extern const int PIECE_TYPE[];
 
 extern const int casltingRights[];
 extern const int MIRROR[];

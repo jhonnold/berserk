@@ -470,7 +470,7 @@ void generateQuiesceMoves(MoveList* moveList, SearchData* data) {
       assert(mover != NO_PIECE);
 
       int seeScore = 0;
-      if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
+      if ((PIECE_TYPE[captured] <= PIECE_TYPE[mover]) && (seeScore = see(board, move)) < 0) {
         moveList->scores[i] = seeScore;
       } else {
         moveList->scores[i] = MVV_LVA[mover][captured];
@@ -560,8 +560,11 @@ void generateMoves(MoveList* moveList, SearchData* data) {
       int mover = movePiece(move);
       int captured = board->squares[moveEnd(move)];
 
+      assert(captured != NO_PIECE);
+      assert(mover != NO_PIECE);
+
       int seeScore = 0;
-      if (((captured >> 1) <= (mover >> 1)) && (seeScore = see(board, move)) < 0) {
+      if ((PIECE_TYPE[captured] <= PIECE_TYPE[mover]) && (seeScore = see(board, move)) < 0) {
         moveList->scores[i] = BAD_CAPTURE + seeScore;
       } else {
         moveList->scores[i] = GOOD_CAPTURE + MVV_LVA[mover][captured];
@@ -572,7 +575,7 @@ void generateMoves(MoveList* moveList, SearchData* data) {
       moveList->scores[i] = KILLER1;
     } else if (move == data->killers[data->ply][1]) {
       moveList->scores[i] = KILLER2;
-    } else if (board->moveNo && move == data->counters[moveSE(data->moves[data->ply - 1])]) {
+    } else if (data->ply && move == data->counters[moveSE(data->moves[data->ply - 1])]) {
       moveList->scores[i] = COUNTER;
     } else {
       moveList->scores[i] = 100 * data->hh[board->side][moveSE(move)] / max(1, data->bf[board->side][moveSE(move)]);

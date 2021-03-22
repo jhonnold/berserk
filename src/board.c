@@ -13,12 +13,18 @@
 
 const BitBoard EMPTY = 0ULL;
 
-const int PAWN[] = {0, 1};
-const int KNIGHT[] = {2, 3};
-const int BISHOP[] = {4, 5};
-const int ROOK[] = {6, 7};
-const int QUEEN[] = {8, 9};
-const int KING[] = {10, 11};
+const int PAWN[] = {PAWN_WHITE, PAWN_BLACK};
+const int KNIGHT[] = {KNIGHT_WHITE, KNIGHT_BLACK};
+const int BISHOP[] = {BISHOP_WHITE, BISHOP_BLACK};
+const int ROOK[] = {ROOK_WHITE, ROOK_BLACK};
+const int QUEEN[] = {QUEEN_WHITE, QUEEN_BLACK};
+const int KING[] = {KING_WHITE, KING_BLACK};
+
+// way to identify if PAWN[WHITE] == PAWN[BLACK]
+const int PIECE_TYPE[12] = {
+    PAWN_TYPE, PAWN_TYPE, KNIGHT_TYPE, KNIGHT_TYPE, BISHOP_TYPE, BISHOP_TYPE,
+    ROOK_TYPE, ROOK_TYPE, QUEEN_TYPE,  QUEEN_TYPE,  KING_TYPE,   KING_TYPE,
+};
 
 // clang-format off
 const int CASTLING_RIGHTS[] = {
@@ -178,7 +184,7 @@ void printBoard(Board* board) {
   }
 
   printf("\n    a b c d e f g h\n Pieces: ");
-  for (int i = PAWN[WHITE]; i <= QUEEN[BLACK]; i++) {
+  for (int i = PAWN_WHITE; i <= QUEEN_BLACK; i++) {
     printf("%d%c, ", (int)(board->piecesCounts >> (i * 4)) & 0xF, PIECE_TO_CHAR[i]);
   }
   printf("\n\n");
@@ -204,7 +210,7 @@ inline int hasNonPawn(Board* board) { return (board->piecesCounts & MAJOR_PIECE_
 inline void setOccupancies(Board* board) {
   memset(board->occupancies, EMPTY, sizeof(board->occupancies));
 
-  for (int i = PAWN[WHITE]; i <= KING[BLACK]; i++)
+  for (int i = PAWN_WHITE; i <= KING_BLACK; i++)
     board->occupancies[i & 1] |= board->pieces[i];
   board->occupancies[BOTH] = board->occupancies[WHITE] | board->occupancies[BLACK];
 }

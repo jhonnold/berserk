@@ -111,17 +111,27 @@ enum {
   A2, B2, C2, D2, E2, F2, G2, H2,
   A1, B1, C1, D1, E1, F1, G1, H1,
 };
+// clang-format on
+
+enum { N = -8, E = 1, S = 8, W = -1, NE = -7, SE = 9, SW = 7, NW = -9 };
 
 enum {
-  N = -8,
-  E = 1,
-  S = 8,
-  W = -1,
-  NE = -7,
-  SE = 9,
-  SW = 7,
-  NW = -9
+  PAWN_WHITE,
+  PAWN_BLACK,
+  KNIGHT_WHITE,
+  KNIGHT_BLACK,
+  BISHOP_WHITE,
+  BISHOP_BLACK,
+  ROOK_WHITE,
+  ROOK_BLACK,
+  QUEEN_WHITE,
+  QUEEN_BLACK,
+  KING_WHITE,
+  KING_BLACK
 };
-// clang-format on
+
+enum { PAWN_TYPE, KNIGHT_TYPE, BISHOP_TYPE, ROOK_TYPE, QUEEN_TYPE, KING_TYPE };
+
+enum { MG, EG };
 
 #endif

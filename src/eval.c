@@ -271,22 +271,22 @@ inline int isMaterialDraw(Board* board) {
 }
 
 void EvaluateSide(Board* board, int side, EvalData* data) {
-  data->material[0] = 0;
-  data->material[1] = 0;
-  data->pawns[0] = 0;
-  data->pawns[1] = 0;
-  data->knights[0] = 0;
-  data->knights[1] = 0;
-  data->bishops[0] = 0;
-  data->bishops[1] = 0;
-  data->rooks[0] = 0;
-  data->rooks[1] = 0;
-  data->queens[0] = 0;
-  data->queens[1] = 0;
-  data->kings[0] = 0;
-  data->kings[1] = 0;
-  data->mobility[0] = 0;
-  data->mobility[1] = 0;
+  data->material[MG] = 0;
+  data->material[EG] = 0;
+  data->pawns[MG] = 0;
+  data->pawns[EG] = 0;
+  data->knights[MG] = 0;
+  data->knights[EG] = 0;
+  data->bishops[MG] = 0;
+  data->bishops[EG] = 0;
+  data->rooks[MG] = 0;
+  data->rooks[EG] = 0;
+  data->queens[MG] = 0;
+  data->queens[EG] = 0;
+  data->kings[MG] = 0;
+  data->kings[EG] = 0;
+  data->mobility[MG] = 0;
+  data->mobility[EG] = 0;
 
   data->attacks2 = 0;
   data->allAttacks = 0;
@@ -314,7 +314,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   BitBoard enemyKingArea = getKingAttacks(enemyKingSq);
 
   // PAWNS
-  data->attacks[PAWN[side] >> 1] = pawnAttacks;
+  data->attacks[PAWN_TYPE] = pawnAttacks;
   data->allAttacks = pawnAttacks;
   data->attacks2 = shift(myPawns, PAWN_DIRECTIONS[side] + E) & shift(myPawns, PAWN_DIRECTIONS[side] + W);
 
@@ -322,10 +322,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard sqBitboard = pawns & -pawns;
     int sq = lsb(pawns);
 
-    data->material[0] += scoreMG(MATERIAL_VALUES[PAWN[side]]);
-    data->material[1] += scoreEG(MATERIAL_VALUES[PAWN[side]]);
-    data->pawns[0] += scoreMG(PSQT[PAWN[side]][sq]);
-    data->pawns[1] += scoreEG(PSQT[PAWN[side]][sq]);
+    data->material[MG] += scoreMG(MATERIAL_VALUES[PAWN[side]]);
+    data->material[EG] += scoreEG(MATERIAL_VALUES[PAWN[side]]);
+    data->pawns[MG] += scoreMG(PSQT[PAWN[side]][sq]);
+    data->pawns[EG] += scoreEG(PSQT[PAWN[side]][sq]);
 
     int file = file(sq);
     int rank = rank(sq);
@@ -342,23 +342,23 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
         !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
 
     if (doubled) {
-      data->pawns[0] += scoreMG(DOUBLED_PAWN);
-      data->pawns[1] += scoreEG(DOUBLED_PAWN);
+      data->pawns[MG] += scoreMG(DOUBLED_PAWN);
+      data->pawns[EG] += scoreEG(DOUBLED_PAWN);
     }
 
     if (!neighbors) {
-      data->pawns[0] += scoreMG(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN);
-      data->pawns[1] += scoreEG(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN);
+      data->pawns[MG] += scoreMG(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN);
+      data->pawns[EG] += scoreEG(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN);
     }
 
     if (backwards) {
-      data->pawns[0] += scoreMG(BACKWARDS_PAWN);
-      data->pawns[1] += scoreEG(BACKWARDS_PAWN);
+      data->pawns[MG] += scoreMG(BACKWARDS_PAWN);
+      data->pawns[EG] += scoreEG(BACKWARDS_PAWN);
     }
 
     if (passed) {
-      data->pawns[0] += scoreMG(PASSED_PAWN[side][rank]);
-      data->pawns[1] += scoreEG(PASSED_PAWN[side][rank]);
+      data->pawns[MG] += scoreMG(PASSED_PAWN[side][rank]);
+      data->pawns[EG] += scoreEG(PASSED_PAWN[side][rank]);
     }
 
     if (defenders | connected) {
@@ -368,8 +368,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
       if (opposed)
         s--;
 
-      data->pawns[0] += scoreMG(CONNECTED_PAWN[side][rank]) * s + scoreMG(DEFENDED_PAWN) * bits(defenders);
-      data->pawns[1] += scoreEG(CONNECTED_PAWN[side][rank]) * s + scoreEG(DEFENDED_PAWN) * bits(defenders);
+      data->pawns[MG] += scoreMG(CONNECTED_PAWN[side][rank]) * s + scoreMG(DEFENDED_PAWN) * bits(defenders);
+      data->pawns[EG] += scoreEG(CONNECTED_PAWN[side][rank]) * s + scoreEG(DEFENDED_PAWN) * bits(defenders);
     }
   }
 
@@ -380,83 +380,83 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     int sq = lsb(knights);
     BitBoard sqBb = knights & -knights;
 
-    data->material[0] += scoreMG(MATERIAL_VALUES[KNIGHT[side]]);
-    data->material[1] += scoreEG(MATERIAL_VALUES[KNIGHT[side]]);
-    data->knights[0] += scoreMG(PSQT[KNIGHT[side]][sq]);
-    data->knights[1] += scoreEG(PSQT[KNIGHT[side]][sq]);
+    data->material[MG] += scoreMG(MATERIAL_VALUES[KNIGHT[side]]);
+    data->material[EG] += scoreEG(MATERIAL_VALUES[KNIGHT[side]]);
+    data->knights[MG] += scoreMG(PSQT[KNIGHT[side]][sq]);
+    data->knights[EG] += scoreEG(PSQT[KNIGHT[side]][sq]);
 
     BitBoard movement = getKnightAttacks(sq);
     data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[KNIGHT[side] >> 1] |= movement;
+    data->attacks[KNIGHT_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[1];
+      data->attackWeight += KS_ATTACKER_WEIGHTS[KNIGHT_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[0] += scoreMG(KNIGHT_MOBILITIES[bits(mobilitySquares)]);
-    data->mobility[1] += scoreEG(KNIGHT_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[MG] += scoreMG(KNIGHT_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[EG] += scoreEG(KNIGHT_MOBILITIES[bits(mobilitySquares)]);
 
     if (KNIGHT_POST_PSQT[rel(sq, side)] && (outposts & sqBb)) {
-      data->knights[0] += scoreMG(KNIGHT_POST_PSQT[rel(sq, side)]);
-      data->knights[1] += scoreEG(KNIGHT_POST_PSQT[rel(sq, side)]);
+      data->knights[MG] += scoreMG(KNIGHT_POST_PSQT[rel(sq, side)]);
+      data->knights[EG] += scoreEG(KNIGHT_POST_PSQT[rel(sq, side)]);
     }
   }
 
-  data->knights[0] += scoreMG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
-  data->knights[1] += scoreEG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
+  data->knights[MG] += scoreMG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
+  data->knights[EG] += scoreEG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
 
   // BISHOPS
   if (bits(board->pieces[BISHOP[side]]) > 1) {
-    data->bishops[0] += scoreMG(BISHOP_PAIR);
-    data->bishops[1] += scoreEG(BISHOP_PAIR);
+    data->bishops[MG] += scoreMG(BISHOP_PAIR);
+    data->bishops[EG] += scoreEG(BISHOP_PAIR);
   }
 
   for (BitBoard bishops = board->pieces[BISHOP[side]]; bishops; popLsb(bishops)) {
     int sq = lsb(bishops);
 
-    data->material[0] += scoreMG(MATERIAL_VALUES[BISHOP[side]]);
-    data->material[1] += scoreEG(MATERIAL_VALUES[BISHOP[side]]);
-    data->bishops[0] += scoreMG(PSQT[BISHOP[side]][sq]);
-    data->bishops[1] += scoreEG(PSQT[BISHOP[side]][sq]);
+    data->material[MG] += scoreMG(MATERIAL_VALUES[BISHOP[side]]);
+    data->material[EG] += scoreEG(MATERIAL_VALUES[BISHOP[side]]);
+    data->bishops[MG] += scoreMG(PSQT[BISHOP[side]][sq]);
+    data->bishops[EG] += scoreEG(PSQT[BISHOP[side]][sq]);
 
     BitBoard movement = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
     data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[BISHOP[side] >> 1] |= movement;
+    data->attacks[BISHOP_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[2];
+      data->attackWeight += KS_ATTACKER_WEIGHTS[BISHOP_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[0] += scoreMG(BISHOP_MOBILITIES[bits(mobilitySquares)]);
-    data->mobility[1] += scoreEG(BISHOP_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[MG] += scoreMG(BISHOP_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[EG] += scoreEG(BISHOP_MOBILITIES[bits(mobilitySquares)]);
 
     if (side == WHITE) {
       if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7)) {
-        data->bishops[0] += scoreMG(BISHOP_TRAPPED);
-        data->bishops[1] += scoreEG(BISHOP_TRAPPED);
+        data->bishops[MG] += scoreMG(BISHOP_TRAPPED);
+        data->bishops[EG] += scoreEG(BISHOP_TRAPPED);
       } else if ((sq == H7 || sq == G8) && getBit(opponentPawns, F7) && getBit(opponentPawns, G6)) {
-        data->bishops[0] += scoreMG(BISHOP_TRAPPED);
-        data->bishops[1] += scoreEG(BISHOP_TRAPPED);
+        data->bishops[MG] += scoreMG(BISHOP_TRAPPED);
+        data->bishops[EG] += scoreEG(BISHOP_TRAPPED);
       }
     } else {
       if ((sq == A2 || sq == B1) && getBit(opponentPawns, B3) && getBit(opponentPawns, C2)) {
-        data->bishops[0] += scoreMG(BISHOP_TRAPPED);
-        data->bishops[1] += scoreEG(BISHOP_TRAPPED);
+        data->bishops[MG] += scoreMG(BISHOP_TRAPPED);
+        data->bishops[EG] += scoreEG(BISHOP_TRAPPED);
       } else if ((sq == H2 || sq == G1) && getBit(opponentPawns, G3) && getBit(opponentPawns, F2)) {
-        data->bishops[0] += scoreMG(BISHOP_TRAPPED);
-        data->bishops[1] += scoreEG(BISHOP_TRAPPED);
+        data->bishops[MG] += scoreMG(BISHOP_TRAPPED);
+        data->bishops[EG] += scoreEG(BISHOP_TRAPPED);
       }
     }
   }
 
-  data->bishops[0] += scoreMG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[BISHOP[side]]);
-  data->bishops[1] += scoreEG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[BISHOP[side]]);
+  data->bishops[MG] += scoreMG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[BISHOP[side]]);
+  data->bishops[EG] += scoreEG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[BISHOP[side]]);
 
   // ROOKS
   for (BitBoard rooks = board->pieces[ROOK[side]]; rooks; popLsb(rooks)) {
@@ -464,64 +464,64 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard sqBb = rooks & -rooks;
     int file = file(sq);
 
-    data->material[0] += scoreMG(MATERIAL_VALUES[ROOK[side]]);
-    data->material[1] += scoreEG(MATERIAL_VALUES[ROOK[side]]);
-    data->rooks[0] += scoreMG(PSQT[ROOK[side]][sq]);
-    data->rooks[1] += scoreEG(PSQT[ROOK[side]][sq]);
+    data->material[MG] += scoreMG(MATERIAL_VALUES[ROOK[side]]);
+    data->material[EG] += scoreEG(MATERIAL_VALUES[ROOK[side]]);
+    data->rooks[MG] += scoreMG(PSQT[ROOK[side]][sq]);
+    data->rooks[EG] += scoreEG(PSQT[ROOK[side]][sq]);
 
     BitBoard movement =
         getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]);
     data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[ROOK[side] >> 1] |= movement;
+    data->attacks[ROOK_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[3];
+      data->attackWeight += KS_ATTACKER_WEIGHTS[ROOK_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[0] += scoreMG(ROOK_MOBILITIES[bits(mobilitySquares)]);
-    data->mobility[1] += scoreEG(ROOK_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[MG] += scoreMG(ROOK_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[EG] += scoreEG(ROOK_MOBILITIES[bits(mobilitySquares)]);
 
     if (sqBb & PROMOTION_RANKS[side]) {
-      data->rooks[0] += scoreMG(ROOK_SEVENTH_RANK);
-      data->rooks[1] += scoreEG(ROOK_SEVENTH_RANK);
+      data->rooks[MG] += scoreMG(ROOK_SEVENTH_RANK);
+      data->rooks[EG] += scoreEG(ROOK_SEVENTH_RANK);
     }
 
     if (!(FILE_MASKS[file] & myPawns)) {
       if (!(FILE_MASKS[file] & opponentPawns)) {
-        data->rooks[0] += scoreMG(ROOK_OPEN_FILE);
-        data->rooks[1] += scoreEG(ROOK_OPEN_FILE);
+        data->rooks[MG] += scoreMG(ROOK_OPEN_FILE);
+        data->rooks[EG] += scoreEG(ROOK_OPEN_FILE);
       } else {
-        data->rooks[0] += scoreMG(ROOK_SEMI_OPEN);
-        data->rooks[1] += scoreEG(ROOK_SEMI_OPEN);
+        data->rooks[MG] += scoreMG(ROOK_SEMI_OPEN);
+        data->rooks[EG] += scoreEG(ROOK_SEMI_OPEN);
       }
 
       if (FILE_MASKS[file] & board->pieces[KING[xside]]) {
-        data->rooks[0] += scoreMG(ROOK_OPPOSITE_KING);
-        data->rooks[1] += scoreEG(ROOK_OPPOSITE_KING);
+        data->rooks[MG] += scoreMG(ROOK_OPPOSITE_KING);
+        data->rooks[EG] += scoreEG(ROOK_OPPOSITE_KING);
       } else if (ADJACENT_FILE_MASKS[file] & board->pieces[KING[xside]]) {
-        data->rooks[0] += scoreMG(ROOK_ADJACENT_KING);
-        data->rooks[1] += scoreEG(ROOK_ADJACENT_KING);
+        data->rooks[MG] += scoreMG(ROOK_ADJACENT_KING);
+        data->rooks[EG] += scoreEG(ROOK_ADJACENT_KING);
       }
     }
 
     if (side == WHITE) {
       if ((sq == A1 || sq == A2 || sq == B1) && (kingSq == C1 || kingSq == B1)) {
-        data->rooks[0] += scoreMG(ROOK_TRAPPED);
-        data->rooks[1] += scoreEG(ROOK_TRAPPED);
+        data->rooks[MG] += scoreMG(ROOK_TRAPPED);
+        data->rooks[EG] += scoreEG(ROOK_TRAPPED);
       } else if ((sq == H1 || sq == H2 || sq == G1) && (kingSq == F1 || kingSq == G1)) {
-        data->rooks[0] += scoreMG(ROOK_TRAPPED);
-        data->rooks[1] += scoreEG(ROOK_TRAPPED);
+        data->rooks[MG] += scoreMG(ROOK_TRAPPED);
+        data->rooks[EG] += scoreEG(ROOK_TRAPPED);
       }
     } else {
       if ((sq == A8 || sq == A7 || sq == B8) && (kingSq == B8 || kingSq == C8)) {
-        data->rooks[0] += scoreMG(ROOK_TRAPPED);
-        data->rooks[1] += scoreEG(ROOK_TRAPPED);
+        data->rooks[MG] += scoreMG(ROOK_TRAPPED);
+        data->rooks[EG] += scoreEG(ROOK_TRAPPED);
       } else if ((sq == H8 || sq == H7 || sq == G8) && (kingSq == F8 || kingSq == G8)) {
-        data->rooks[0] += scoreMG(ROOK_TRAPPED);
-        data->rooks[1] += scoreEG(ROOK_TRAPPED);
+        data->rooks[MG] += scoreMG(ROOK_TRAPPED);
+        data->rooks[EG] += scoreEG(ROOK_TRAPPED);
       }
     }
   }
@@ -530,97 +530,97 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   for (BitBoard queens = board->pieces[QUEEN[side]]; queens; popLsb(queens)) {
     int sq = lsb(queens);
 
-    data->material[0] += scoreMG(MATERIAL_VALUES[QUEEN[side]]);
-    data->material[1] += scoreEG(MATERIAL_VALUES[QUEEN[side]]);
-    data->queens[0] += scoreMG(PSQT[QUEEN[side]][sq]);
-    data->queens[1] += scoreEG(PSQT[QUEEN[side]][sq]);
+    data->material[MG] += scoreMG(MATERIAL_VALUES[QUEEN[side]]);
+    data->material[EG] += scoreEG(MATERIAL_VALUES[QUEEN[side]]);
+    data->queens[MG] += scoreMG(PSQT[QUEEN[side]][sq]);
+    data->queens[EG] += scoreEG(PSQT[QUEEN[side]][sq]);
 
     BitBoard movement = getQueenAttacks(sq, board->occupancies[BOTH]);
     data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[QUEEN[side] >> 1] |= movement;
+    data->attacks[QUEEN_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[4];
+      data->attackWeight += KS_ATTACKER_WEIGHTS[QUEEN_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[0] += scoreMG(QUEEN_MOBILITIES[bits(mobilitySquares)]);
-    data->mobility[1] += scoreEG(QUEEN_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[MG] += scoreMG(QUEEN_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[EG] += scoreEG(QUEEN_MOBILITIES[bits(mobilitySquares)]);
   }
 
   // KINGS
   for (BitBoard kings = board->pieces[KING[side]]; kings; popLsb(kings)) {
     int sq = lsb(kings);
 
-    data->material[0] += scoreMG(MATERIAL_VALUES[KING[side]]);
-    data->material[1] += scoreEG(MATERIAL_VALUES[KING[side]]);
-    data->kings[0] += scoreMG(PSQT[KING[side]][sq]);
-    data->kings[1] += scoreEG(PSQT[KING[side]][sq]);
+    data->material[MG] += scoreMG(MATERIAL_VALUES[KING[side]]);
+    data->material[EG] += scoreEG(MATERIAL_VALUES[KING[side]]);
+    data->kings[MG] += scoreMG(PSQT[KING[side]][sq]);
+    data->kings[EG] += scoreEG(PSQT[KING[side]][sq]);
 
     BitBoard movement = getKingAttacks(sq) & ~getKingAttacks(lsb(board->pieces[KING[xside]]));
     data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[KING[side] >> 1] |= movement;
+    data->attacks[KING_TYPE] |= movement;
     data->allAttacks |= movement;
   }
 }
 
 void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData) {
-  data->threats[0] = 0;
-  data->threats[1] = 0;
+  data->threats[MG] = 0;
+  data->threats[EG] = 0;
 
   int xside = 1 - side;
 
   BitBoard* myAttacks = data->attacks;
   BitBoard* enemyAttacks = enemyData->attacks;
 
-  BitBoard weak = board->occupancies[xside] & ~enemyAttacks[0] & data->allAttacks;
+  BitBoard weak = board->occupancies[xside] & ~enemyAttacks[PAWN_TYPE] & data->allAttacks;
 
-  for (BitBoard knightThreats = weak & myAttacks[1]; knightThreats; popLsb(knightThreats)) {
+  for (BitBoard knightThreats = weak & myAttacks[KNIGHT_TYPE]; knightThreats; popLsb(knightThreats)) {
     int piece = board->squares[lsb(knightThreats)];
 
     assert(piece != NO_PIECE);
 
-    data->threats[0] += scoreMG(KNIGHT_THREATS[piece >> 1]);
-    data->threats[1] += scoreEG(KNIGHT_THREATS[piece >> 1]);
+    data->threats[MG] += scoreMG(KNIGHT_THREATS[PIECE_TYPE[piece]]);
+    data->threats[EG] += scoreEG(KNIGHT_THREATS[PIECE_TYPE[piece]]);
   }
 
-  for (BitBoard bishopThreats = weak & myAttacks[2]; bishopThreats; popLsb(bishopThreats)) {
+  for (BitBoard bishopThreats = weak & myAttacks[BISHOP_TYPE]; bishopThreats; popLsb(bishopThreats)) {
     int piece = board->squares[lsb(bishopThreats)];
 
     assert(piece != NO_PIECE);
 
-    data->threats[0] += scoreMG(BISHOP_THREATS[piece >> 1]);
-    data->threats[1] += scoreEG(BISHOP_THREATS[piece >> 1]);
+    data->threats[MG] += scoreMG(BISHOP_THREATS[PIECE_TYPE[piece]]);
+    data->threats[EG] += scoreEG(BISHOP_THREATS[PIECE_TYPE[piece]]);
   }
 
-  for (BitBoard rookThreats = weak & myAttacks[3]; rookThreats; popLsb(rookThreats)) {
+  for (BitBoard rookThreats = weak & myAttacks[ROOK_TYPE]; rookThreats; popLsb(rookThreats)) {
     int piece = board->squares[lsb(rookThreats)];
 
     assert(piece != NO_PIECE);
 
-    data->threats[0] += scoreMG(ROOK_THREATS[piece >> 1]);
-    data->threats[1] += scoreEG(ROOK_THREATS[piece >> 1]);
+    data->threats[MG] += scoreMG(ROOK_THREATS[PIECE_TYPE[piece]]);
+    data->threats[EG] += scoreEG(ROOK_THREATS[PIECE_TYPE[piece]]);
   }
 
-  for (BitBoard kingThreats = weak & myAttacks[5]; kingThreats; popLsb(kingThreats)) {
+  for (BitBoard kingThreats = weak & myAttacks[KING_TYPE]; kingThreats; popLsb(kingThreats)) {
     int piece = board->squares[lsb(kingThreats)];
 
     assert(piece != NO_PIECE);
 
-    data->threats[0] += scoreMG(KING_THREATS[piece >> 1]);
-    data->threats[1] += scoreEG(KING_THREATS[piece >> 1]);
+    data->threats[MG] += scoreMG(KING_THREATS[PIECE_TYPE[piece]]);
+    data->threats[EG] += scoreEG(KING_THREATS[PIECE_TYPE[piece]]);
   }
 
   BitBoard hanging = data->allAttacks & ~enemyData->allAttacks & board->occupancies[xside];
-  data->threats[0] += scoreMG(HANGING_THREAT) * bits(hanging);
-  data->threats[1] += scoreEG(HANGING_THREAT) * bits(hanging);
+  data->threats[MG] += scoreMG(HANGING_THREAT) * bits(hanging);
+  data->threats[EG] += scoreEG(HANGING_THREAT) * bits(hanging);
 }
 
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
-  data->kingSafety[0] = 0;
-  data->kingSafety[1] = 0;
+  data->kingSafety[MG] = 0;
+  data->kingSafety[EG] = 0;
 
   int xside = 1 - side;
 
@@ -631,22 +631,23 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
     BitBoard weak = enemyData->allAttacks & ~data->attacks2 & (~data->allAttacks | data->attacks[4] | data->attacks[5]);
     BitBoard vulnerable = (~data->allAttacks | (weak & enemyData->attacks2)) & ~board->occupancies[xside];
 
-    BitBoard possibleKnightChecks = getKnightAttacks(kingSq) & enemyData->attacks[1] & ~board->occupancies[xside];
+    BitBoard possibleKnightChecks =
+        getKnightAttacks(kingSq) & enemyData->attacks[KNIGHT_TYPE] & ~board->occupancies[xside];
     int safeChecks = bits(possibleKnightChecks & vulnerable);
     int unsafeChecks = bits(possibleKnightChecks & ~vulnerable);
 
-    BitBoard possibleBishopChecks =
-        getBishopAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[2] & ~board->occupancies[xside];
+    BitBoard possibleBishopChecks = getBishopAttacks(kingSq, board->occupancies[BOTH]) &
+                                    enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
     safeChecks += bits(possibleBishopChecks & vulnerable);
     unsafeChecks += bits(possibleBishopChecks & ~vulnerable);
 
     BitBoard possibleRookChecks =
-        getRookAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[3] & ~board->occupancies[xside];
+        getRookAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
     safeChecks += bits(possibleRookChecks & vulnerable);
     unsafeChecks += bits(possibleRookChecks & ~vulnerable);
 
     BitBoard possibleQueenChecks =
-        getQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[4] & ~board->occupancies[xside];
+        getQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
     safeChecks += bits(possibleQueenChecks & vulnerable);
     unsafeChecks += bits(possibleQueenChecks & ~vulnerable);
 
@@ -657,8 +658,8 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
                  KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]) + KS_ALLIES * (bits(allies) - 2));
 
     if (score > 0) {
-      data->kingSafety[0] += -score * score / 1000;
-      data->kingSafety[1] += -score / 30;
+      data->kingSafety[MG] += -score * score / 1000;
+      data->kingSafety[EG] += -score / 30;
     }
   }
 
@@ -671,15 +672,15 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
     BitBoard pawnFile = board->pieces[PAWN[side]] & FILE_MASKS[c];
     int pawnRank = pawnFile ? (side ? 7 - rank(lsb(pawnFile)) : rank(msb(pawnFile))) : 0;
 
-    data->kingSafety[0] += scoreMG(PAWN_SHELTER[c == file(kingSq)][pawnRank]);
-    data->kingSafety[1] += scoreEG(PAWN_SHELTER[c == file(kingSq)][pawnRank]);
+    data->kingSafety[MG] += scoreMG(PAWN_SHELTER[c == file(kingSq)][pawnRank]);
+    data->kingSafety[EG] += scoreEG(PAWN_SHELTER[c == file(kingSq)][pawnRank]);
 
     BitBoard enemyFile = board->pieces[PAWN[xside]] & FILE_MASKS[c];
     if (enemyFile) {
       int pushRank = (side ? 7 - rank(lsb(enemyFile)) : rank(msb(enemyFile)));
 
-      data->kingSafety[0] += scoreMG(PAWN_STORM[pushRank]);
-      data->kingSafety[1] += scoreEG(PAWN_STORM[pushRank]);
+      data->kingSafety[MG] += scoreMG(PAWN_STORM[pushRank]);
+      data->kingSafety[EG] += scoreEG(PAWN_STORM[pushRank]);
     }
   }
 }
@@ -701,10 +702,10 @@ int Evaluate(Board* board) {
 }
 
 inline int toScore(EvalData* data, Board* board) {
-  int mg = data->pawns[0] + data->knights[0] + data->bishops[0] + data->rooks[0] + data->queens[0] + data->kings[0] +
-           data->kingSafety[0] + data->material[0] + data->mobility[0] + data->threats[0];
-  int eg = data->pawns[1] + data->knights[1] + data->bishops[1] + data->rooks[1] + data->queens[1] + data->kings[1] +
-           data->kingSafety[1] + data->material[1] + data->mobility[1] + data->threats[1];
+  int mg = data->pawns[MG] + data->knights[MG] + data->bishops[MG] + data->rooks[MG] + data->queens[MG] +
+           data->kings[MG] + data->kingSafety[MG] + data->material[MG] + data->mobility[MG] + data->threats[MG];
+  int eg = data->pawns[EG] + data->knights[EG] + data->bishops[EG] + data->rooks[EG] + data->queens[EG] +
+           data->kings[EG] + data->kingSafety[EG] + data->material[EG] + data->mobility[EG] + data->threats[EG];
 
   return taper(mg, eg, getPhase(board));
 }
@@ -726,60 +727,63 @@ void PrintEvaluation(Board* board) {
 
   printf("|            | WHITE mg,eg,taper | BLACK mg,eg,taper | DIFF  mg,eg,taper |\n");
   printf("|------------|-------------------|-------------------|-------------------|\n");
-  printf(
-      "| material   | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->material[0], whiteEval->material[1],
-      taper(whiteEval->material[0], whiteEval->material[1], phase), blackEval->material[0], blackEval->material[1],
-      taper(blackEval->material[0], blackEval->material[1], phase), whiteEval->material[0] - blackEval->material[0],
-      whiteEval->material[1] - blackEval->material[1],
-      taper(whiteEval->material[0] - blackEval->material[0], whiteEval->material[1] - blackEval->material[1], phase));
-  printf("| pawns      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->pawns[0], whiteEval->pawns[1],
-         taper(whiteEval->pawns[0], whiteEval->pawns[1], phase), blackEval->pawns[0], blackEval->pawns[1],
-         taper(blackEval->pawns[0], blackEval->pawns[1], phase), whiteEval->pawns[0] - blackEval->pawns[0],
-         whiteEval->pawns[1] - blackEval->pawns[1],
-         taper(whiteEval->pawns[0] - blackEval->pawns[0], whiteEval->pawns[1] - blackEval->pawns[1], phase));
-  printf("| knights    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->knights[0], whiteEval->knights[1],
-         taper(whiteEval->knights[0], whiteEval->knights[1], phase), blackEval->knights[0], blackEval->knights[1],
-         taper(blackEval->knights[0], blackEval->knights[1], phase), whiteEval->knights[0] - blackEval->knights[0],
-         whiteEval->knights[1] - blackEval->knights[1],
-         taper(whiteEval->knights[0] - blackEval->knights[0], whiteEval->knights[1] - blackEval->knights[1], phase));
-  printf("| bishops    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->bishops[0], whiteEval->bishops[1],
-         taper(whiteEval->bishops[0], whiteEval->bishops[1], phase), blackEval->bishops[0], blackEval->bishops[1],
-         taper(blackEval->bishops[0], blackEval->bishops[1], phase), whiteEval->bishops[0] - blackEval->bishops[0],
-         whiteEval->bishops[1] - blackEval->bishops[1],
-         taper(whiteEval->bishops[0] - blackEval->bishops[0], whiteEval->bishops[1] - blackEval->bishops[1], phase));
-  printf("| rooks      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->rooks[0], whiteEval->rooks[1],
-         taper(whiteEval->rooks[0], whiteEval->rooks[1], phase), blackEval->rooks[0], blackEval->rooks[1],
-         taper(blackEval->rooks[0], blackEval->rooks[1], phase), whiteEval->rooks[0] - blackEval->rooks[0],
-         whiteEval->rooks[1] - blackEval->rooks[1],
-         taper(whiteEval->rooks[0] - blackEval->rooks[0], whiteEval->rooks[1] - blackEval->rooks[1], phase));
-  printf("| queens     | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->queens[0], whiteEval->queens[1],
-         taper(whiteEval->queens[0], whiteEval->queens[1], phase), blackEval->queens[0], blackEval->queens[1],
-         taper(blackEval->queens[0], blackEval->queens[1], phase), whiteEval->queens[0] - blackEval->queens[0],
-         whiteEval->queens[1] - blackEval->queens[1],
-         taper(whiteEval->queens[0] - blackEval->queens[0], whiteEval->queens[1] - blackEval->queens[1], phase));
-  printf("| kings      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->kings[0], whiteEval->kings[1],
-         taper(whiteEval->kings[0], whiteEval->kings[1], phase), blackEval->kings[0], blackEval->kings[1],
-         taper(blackEval->kings[0], blackEval->kings[1], phase), whiteEval->kings[0] - blackEval->kings[0],
-         whiteEval->kings[1] - blackEval->kings[1],
-         taper(whiteEval->kings[0] - blackEval->kings[0], whiteEval->kings[1] - blackEval->kings[1], phase));
-  printf(
-      "| mobility   | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->mobility[0], whiteEval->mobility[1],
-      taper(whiteEval->mobility[0], whiteEval->mobility[1], phase), blackEval->mobility[0], blackEval->mobility[1],
-      taper(blackEval->mobility[0], blackEval->mobility[1], phase), whiteEval->mobility[0] - blackEval->mobility[0],
-      whiteEval->mobility[1] - blackEval->mobility[1],
-      taper(whiteEval->mobility[0] - blackEval->mobility[0], whiteEval->mobility[1] - blackEval->mobility[1], phase));
-  printf("| threats    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->threats[0], whiteEval->threats[1],
-         taper(whiteEval->threats[0], whiteEval->threats[1], phase), blackEval->threats[0], blackEval->threats[1],
-         taper(blackEval->threats[0], blackEval->threats[1], phase), whiteEval->threats[0] - blackEval->threats[0],
-         whiteEval->threats[1] - blackEval->threats[1],
-         taper(whiteEval->threats[0] - blackEval->threats[0], whiteEval->threats[1] - blackEval->threats[1], phase));
-  printf("| kingSafety | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->kingSafety[0],
-         whiteEval->kingSafety[1], taper(whiteEval->kingSafety[0], whiteEval->kingSafety[1], phase),
-         blackEval->kingSafety[0], blackEval->kingSafety[1],
-         taper(blackEval->kingSafety[0], blackEval->kingSafety[1], phase),
-         whiteEval->kingSafety[0] - blackEval->kingSafety[0], whiteEval->kingSafety[1] - blackEval->kingSafety[1],
-         taper(whiteEval->kingSafety[0] - blackEval->kingSafety[0], whiteEval->kingSafety[1] - blackEval->kingSafety[1],
+  printf("| material   | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->material[MG], whiteEval->material[EG],
+         taper(whiteEval->material[MG], whiteEval->material[EG], phase), blackEval->material[MG],
+         blackEval->material[EG], taper(blackEval->material[MG], blackEval->material[EG], phase),
+         whiteEval->material[MG] - blackEval->material[MG], whiteEval->material[EG] - blackEval->material[EG],
+         taper(whiteEval->material[MG] - blackEval->material[MG], whiteEval->material[EG] - blackEval->material[EG],
                phase));
+  printf("| pawns      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->pawns[MG], whiteEval->pawns[EG],
+         taper(whiteEval->pawns[MG], whiteEval->pawns[EG], phase), blackEval->pawns[MG], blackEval->pawns[EG],
+         taper(blackEval->pawns[MG], blackEval->pawns[EG], phase), whiteEval->pawns[MG] - blackEval->pawns[MG],
+         whiteEval->pawns[EG] - blackEval->pawns[EG],
+         taper(whiteEval->pawns[MG] - blackEval->pawns[MG], whiteEval->pawns[EG] - blackEval->pawns[EG], phase));
+  printf(
+      "| knights    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->knights[MG], whiteEval->knights[EG],
+      taper(whiteEval->knights[MG], whiteEval->knights[EG], phase), blackEval->knights[MG], blackEval->knights[EG],
+      taper(blackEval->knights[MG], blackEval->knights[EG], phase), whiteEval->knights[MG] - blackEval->knights[MG],
+      whiteEval->knights[EG] - blackEval->knights[EG],
+      taper(whiteEval->knights[MG] - blackEval->knights[MG], whiteEval->knights[EG] - blackEval->knights[EG], phase));
+  printf(
+      "| bishops    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->bishops[MG], whiteEval->bishops[EG],
+      taper(whiteEval->bishops[MG], whiteEval->bishops[EG], phase), blackEval->bishops[MG], blackEval->bishops[EG],
+      taper(blackEval->bishops[MG], blackEval->bishops[EG], phase), whiteEval->bishops[MG] - blackEval->bishops[MG],
+      whiteEval->bishops[EG] - blackEval->bishops[EG],
+      taper(whiteEval->bishops[MG] - blackEval->bishops[MG], whiteEval->bishops[EG] - blackEval->bishops[EG], phase));
+  printf("| rooks      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->rooks[MG], whiteEval->rooks[EG],
+         taper(whiteEval->rooks[MG], whiteEval->rooks[EG], phase), blackEval->rooks[MG], blackEval->rooks[EG],
+         taper(blackEval->rooks[MG], blackEval->rooks[EG], phase), whiteEval->rooks[MG] - blackEval->rooks[MG],
+         whiteEval->rooks[EG] - blackEval->rooks[EG],
+         taper(whiteEval->rooks[MG] - blackEval->rooks[MG], whiteEval->rooks[EG] - blackEval->rooks[EG], phase));
+  printf("| queens     | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->queens[MG], whiteEval->queens[EG],
+         taper(whiteEval->queens[MG], whiteEval->queens[EG], phase), blackEval->queens[MG], blackEval->queens[EG],
+         taper(blackEval->queens[MG], blackEval->queens[EG], phase), whiteEval->queens[MG] - blackEval->queens[MG],
+         whiteEval->queens[EG] - blackEval->queens[EG],
+         taper(whiteEval->queens[MG] - blackEval->queens[MG], whiteEval->queens[EG] - blackEval->queens[EG], phase));
+  printf("| kings      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->kings[MG], whiteEval->kings[EG],
+         taper(whiteEval->kings[MG], whiteEval->kings[EG], phase), blackEval->kings[MG], blackEval->kings[EG],
+         taper(blackEval->kings[MG], blackEval->kings[EG], phase), whiteEval->kings[MG] - blackEval->kings[MG],
+         whiteEval->kings[EG] - blackEval->kings[EG],
+         taper(whiteEval->kings[MG] - blackEval->kings[MG], whiteEval->kings[EG] - blackEval->kings[EG], phase));
+  printf("| mobility   | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->mobility[MG], whiteEval->mobility[EG],
+         taper(whiteEval->mobility[MG], whiteEval->mobility[EG], phase), blackEval->mobility[MG],
+         blackEval->mobility[EG], taper(blackEval->mobility[MG], blackEval->mobility[EG], phase),
+         whiteEval->mobility[MG] - blackEval->mobility[MG], whiteEval->mobility[EG] - blackEval->mobility[EG],
+         taper(whiteEval->mobility[MG] - blackEval->mobility[MG], whiteEval->mobility[EG] - blackEval->mobility[EG],
+               phase));
+  printf(
+      "| threats    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->threats[MG], whiteEval->threats[EG],
+      taper(whiteEval->threats[MG], whiteEval->threats[EG], phase), blackEval->threats[MG], blackEval->threats[EG],
+      taper(blackEval->threats[MG], blackEval->threats[EG], phase), whiteEval->threats[MG] - blackEval->threats[MG],
+      whiteEval->threats[EG] - blackEval->threats[EG],
+      taper(whiteEval->threats[MG] - blackEval->threats[MG], whiteEval->threats[EG] - blackEval->threats[EG], phase));
+  printf("| kingSafety | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval->kingSafety[MG],
+         whiteEval->kingSafety[EG], taper(whiteEval->kingSafety[MG], whiteEval->kingSafety[EG], phase),
+         blackEval->kingSafety[MG], blackEval->kingSafety[EG],
+         taper(blackEval->kingSafety[MG], blackEval->kingSafety[EG], phase),
+         whiteEval->kingSafety[MG] - blackEval->kingSafety[MG], whiteEval->kingSafety[EG] - blackEval->kingSafety[EG],
+         taper(whiteEval->kingSafety[MG] - blackEval->kingSafety[MG],
+               whiteEval->kingSafety[EG] - blackEval->kingSafety[EG], phase));
   printf("|------------|-------------------|-------------------|-------------------|\n");
   printf("\nResult (white): %5d\n\n", toScore(whiteEval, board) - toScore(blackEval, board));
 }
