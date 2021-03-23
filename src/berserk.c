@@ -8,6 +8,7 @@
 #include "eval.h"
 #include "random.h"
 #include "search.h"
+#include "texel.h"
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
@@ -33,11 +34,12 @@ int main(int argc, char** argv) {
   parseFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", board);
 
   // This is to be compliant for OpenBench
-  if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
-    Bench();
-  } else {
-    UCI(board);
-  }
+  // if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
+  //   Bench();
+  // } else {
+  //   UCI(board);
+  // }
+  texel();
 
   ttFree();
   return 0;
