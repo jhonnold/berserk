@@ -30,6 +30,7 @@ void SGD(TexelParam* params, int numParams, Position* positions, int numPosition
 void CalculateGradients(double* gradients, TexelParam* params, int numParams, Position* positions, int numPositions,
                         double base);
 Position* loadPositions();
+void addParam(char* name, Score* p, TexelParam* params, int* n);
 void determineK(Position* positions, int n);
 double totalError(Position* positions, int n);
 void* batchError(void* arg);

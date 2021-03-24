@@ -11,10 +11,17 @@
 #include "texel.h"
 #include "types.h"
 
-#define THREADS 4
+#define THREADS 1
 
 const int sideScalar[] = {1, -1};
 double K = 1;
+
+void addParam(char* name, Score* p, TexelParam* params, int* n) {
+  params[*n].name = name;
+  params[*n].param = p;
+
+  *n += 1;
+}
 
 void Texel() {
   int n = 0;
@@ -23,36 +30,20 @@ void Texel() {
   K = -1.035509;
   // determineK(positions, n);
 
+  int numParams = 0;
   TexelParam params[128];
 
-  params[0].name = "KS_ATTACKER_WEIGHTS[1]";
-  params[0].param = &KS_ATTACKER_WEIGHTS[1];
+  addParam("MATERIAL_VALUES_PAWN[EG]", &MATERIAL_VALUES[PAWN_TYPE][EG], params, &numParams);
+  addParam("MATERIAL_VALUES_KNIGHT[MG]", &MATERIAL_VALUES[KNIGHT_TYPE][MG], params, &numParams);
+  addParam("MATERIAL_VALUES_KNIGHT[EG]", &MATERIAL_VALUES[KNIGHT_TYPE][EG], params, &numParams);
+  addParam("MATERIAL_VALUES_BISHOP[MG]", &MATERIAL_VALUES[BISHOP_TYPE][MG], params, &numParams);
+  addParam("MATERIAL_VALUES_BISHOP[EG]", &MATERIAL_VALUES[BISHOP_TYPE][EG], params, &numParams);
+  addParam("MATERIAL_VALUES_ROOK[MG]", &MATERIAL_VALUES[ROOK_TYPE][MG], params, &numParams);
+  addParam("MATERIAL_VALUES_ROOK[EG]", &MATERIAL_VALUES[ROOK_TYPE][EG], params, &numParams);
+  addParam("MATERIAL_VALUES_QUEEN[MG]", &MATERIAL_VALUES[QUEEN_TYPE][MG], params, &numParams);
+  addParam("MATERIAL_VALUES_QUEEN[EG]", &MATERIAL_VALUES[QUEEN_TYPE][EG], params, &numParams);
 
-  params[1].name = "KS_ATTACKER_WEIGHTS[2]";
-  params[1].param = &KS_ATTACKER_WEIGHTS[2];
-
-  params[2].name = "KS_ATTACKER_WEIGHTS[3]";
-  params[2].param = &KS_ATTACKER_WEIGHTS[3];
-
-  params[3].name = "KS_ATTACKER_WEIGHTS[4]";
-  params[3].param = &KS_ATTACKER_WEIGHTS[4];
-
-  params[4].name = "KS_ATTACK";
-  params[4].param = &KS_ATTACK;
-
-  params[5].name = "KS_SAFE_CHECK";
-  params[5].param = &KS_SAFE_CHECK;
-
-  params[6].name = "KS_UNSAFE_CHECK";
-  params[6].param = &KS_UNSAFE_CHECK;
-
-  params[7].name = "KS_ENEMY_QUEEN";
-  params[7].param = &KS_ENEMY_QUEEN;
-
-  params[8].name = "KS_ALLIES";
-  params[8].param = &KS_ALLIES;
-
-  SGD(params, 9, positions, n);
+  SGD(params, numParams, positions, n);
 
   free(positions);
 }
@@ -93,7 +84,7 @@ void SGD(TexelParam* params, int numParams, Position* positions, int numPosition
     }
 
     double curr = totalError(positions, numPositions);
-    printf("Base: %.8f, Current: %.8f\n", base, curr);
+    printf("\nBase: %.8f, Current: %.8f\n", base, curr);
 
     if (epoch % 10 == 0) {
       double completed = totalError(positions, numPositions);

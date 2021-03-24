@@ -20,13 +20,13 @@ inline int see(Board* board, Move move) {
 
   BitBoard attackers = attacksTo(board, end);
   // We can run see against a non-capture
-  int attackedPieceVal = scoreMG(MATERIAL_VALUES[board->squares[moveEnd(move)]]);
+  int attackedPieceVal = MATERIAL_VALUES[PIECE_TYPE[board->squares[moveEnd(move)]]][MG];
 
   side ^= 1;
   gain[0] = attackedPieceVal;
 
   int piece = movePiece(move);
-  attackedPieceVal = scoreMG(MATERIAL_VALUES[piece]);
+  attackedPieceVal = MATERIAL_VALUES[PIECE_TYPE[piece]][MG];
   popBit(occupied, start);
 
   // If pawn/bishop/queen captures
@@ -63,7 +63,7 @@ inline int see(Board* board, Move move) {
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
     gain[captureCount] = -gain[captureCount - 1] + attackedPieceVal;
-    attackedPieceVal = scoreMG(MATERIAL_VALUES[piece]);
+    attackedPieceVal = MATERIAL_VALUES[PIECE_TYPE[piece]][MG];
     if (gain[captureCount++] - attackedPieceVal > 0)
       break;
 

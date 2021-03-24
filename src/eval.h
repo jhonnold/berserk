@@ -9,15 +9,7 @@
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 
-extern const Score PAWN_VALUE;
-extern const Score KNIGHT_VALUE;
-extern const Score BISHOP_VALUE;
-extern const Score ROOK_VALUE;
-extern const Score QUEEN_VALUE;
-extern const Score KING_VALUE;
-extern const Score MATERIAL_VALUES[];
-
-extern Score MATERIAL_AND_PSQT_VALUES[12][64];
+extern Score MATERIAL_VALUES[7][2];
 
 extern Score KS_ATTACKER_WEIGHTS[];
 extern Score KS_ATTACK;

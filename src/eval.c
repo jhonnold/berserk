@@ -16,201 +16,193 @@
 #define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
 #define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
 
-const Score PAWN_VALUE = S(100, 150);
-const Score KNIGHT_VALUE = S(475, 475);
-const Score BISHOP_VALUE = S(475, 475);
-const Score ROOK_VALUE = S(700, 775);
-const Score QUEEN_VALUE = S(1600, 1450);
-const Score KING_VALUE = S(30000, 30000);
-
-const Score BISHOP_PAIR = S(50, 50);
+int MAX_PHASE = 24;
+int PHASE_MULTIPLIERS[12] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
 
 // clang-format off
-const Score PAWN_PSQT[] = {
-  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
-  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
-  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
-  S( -15,   0), S(  -5,   0), S(   0,   0), S(  15,   0), S(  15,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
-  S( -15,   0), S(  -5,   0), S(   0,   0), S(  25,   0), S(  25,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
-  S( -15,   0), S(  -5,   0), S(   0,   0), S(  15,   0), S(  15,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
-  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
-  S( -15,   0), S(  -5,   0), S(   0,   0), S(   5,   0), S(   5,   0), S(   0,   0), S(  -5,   0), S( -15,   0),
+Score PAWN_PSQT[32][2] = {
+  { -15,   0}, {  -5,   0}, {   0,   0}, {   5,   0}, 
+  { -15,   0}, {  -5,   0}, {   0,   0}, {   5,   0}, 
+  { -15,   0}, {  -5,   0}, {   0,   0}, {   5,   0}, 
+  { -15,   0}, {  -5,   0}, {   0,   0}, {  15,   0}, 
+  { -15,   0}, {  -5,   0}, {   0,   0}, {  25,   0}, 
+  { -15,   0}, {  -5,   0}, {   0,   0}, {  15,   0}, 
+  { -15,   0}, {  -5,   0}, {   0,   0}, {   5,   0}, 
+  { -15,   0}, {  -5,   0}, {   0,   0}, {   5,   0}, 
 };
 
-const Score KNIGHT_PSQT[] = {
-  S( -60, -30), S( -15, -25), S( -10, -20), S(  -5, -15), S(  -5, -15), S( -10, -20), S( -15, -25), S( -60, -30),
-  S( -10, -25), S(   0, -20), S(   5, -10), S(  10,  -5), S(  10,  -5), S(   5, -10), S(   0, -20), S( -10, -25),
-  S( -10, -20), S(  10, -10), S(  20,   0), S(  30,  10), S(  30,  10), S(  20,   0), S(  10, -10), S( -10, -20),
-  S( -10, -15), S(  10,  -5), S(  20,  10), S(  30,  20), S(  30,  20), S(  20,  10), S(  10,  -5), S( -10, -15),
-  S(  -5, -15), S(   5,  -5), S(  10,  10), S(  20,  20), S(  20,  20), S(  10,  10), S(   5,  -5), S(  -5, -15),
-  S( -10, -20), S(   0, -10), S(   5,   0), S(  10,  10), S(  10,  10), S(   5,   0), S(   0, -10), S( -10, -20),
-  S( -20, -25), S( -15, -20), S(  -5, -10), S(   0,  -5), S(   0,  -5), S(  -5, -10), S( -15, -20), S( -20, -25),
-  S( -30, -30), S( -25, -25), S( -20, -20), S( -15, -15), S( -15, -15), S( -20, -20), S( -25, -25), S( -30, -30)
+Score KNIGHT_PSQT[32][2] = {
+  { -60, -30}, { -15, -25}, { -10, -20}, {  -5, -15}, 
+  { -10, -25}, {   0, -20}, {   5, -10}, {  10,  -5}, 
+  { -10, -20}, {  10, -10}, {  20,   0}, {  30,  10}, 
+  { -10, -15}, {  10,  -5}, {  20,  10}, {  30,  20}, 
+  {  -5, -15}, {   5,  -5}, {  10,  10}, {  20,  20}, 
+  { -10, -20}, {   0, -10}, {   5,   0}, {  10,  10}, 
+  { -20, -25}, { -15, -20}, {  -5, -10}, {   0,  -5}, 
+  { -30, -30}, { -25, -25}, { -20, -20}, { -15, -15},
 };
 
-const Score KNIGHT_POST_PSQT[] = {
-  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
-  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
-  S(   0,   0), S(  30,  20), S(  40,  28), S(  48,  32), S(  48,  32), S(  40,  28), S(  30,  20), S(   0,   0),
-  S(   0,   0), S(  30,  20), S(  40,  28), S(  48,  32), S(  48,  32), S(  40,  28), S(  30,  20), S(   0,   0),
-  S(   0,   0), S(  30,  20), S(  36,  24), S(  40,  28), S(  40,  28), S(  36,  24), S(  30,  20), S(   0,   0),
-  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
-  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
-  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0)
+Score KNIGHT_POST_PSQT[32][2] = {
+  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
+  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
+  {   0,   0}, {  30,  20}, {  40,  28}, {  48,  32}, 
+  {   0,   0}, {  30,  20}, {  40,  28}, {  48,  32}, 
+  {   0,   0}, {  30,  20}, {  36,  24}, {  40,  28}, 
+  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
+  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
+  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0},
 };
 
-const Score BISHOP_PSQT[] = {
-  S( -10, -12), S( -10, -12), S( -10, -12), S(  -6,  -8), S(  -6,  -8), S( -10, -12), S( -10, -12), S( -10, -12),
-  S( -10, -12), S(   2,   2), S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0), S(   2,   2), S( -10, -12),
-  S( -10, -12), S(   0,   0), S(   4,   6), S(   4,   6), S(   4,   6), S(   4,   6), S(   0,   0), S( -10, -12),
-  S(  -6,  -8), S(   0,   0), S(   4,   6), S(  10,  10), S(  10,  10), S(   4,   6), S(   0,   0), S(  -6,  -8),
-  S(  -6,  -8), S(   0,   0), S(   4,   6), S(  10,  10), S(  10,  10), S(   4,   6), S(   0,   0), S(  -6,  -8),
-  S( -10, -12), S(   1,   0), S(   4,   6), S(   4,   6), S(   4,   6), S(   4,   6), S(   1,   0), S( -10, -12),
-  S( -14, -14), S(   2,   2), S(   1,   0), S(   2,   2), S(   2,   2), S(   1,   0), S(   2,   2), S( -14, -14),
-  S( -14, -14), S( -14, -14), S( -10, -10), S(  -6,  -6), S(  -6,  -6), S( -10, -10), S( -14, -14), S( -14, -14)
+Score BISHOP_PSQT[32][2] = {
+  { -10, -12}, { -10, -12}, { -10, -12}, {  -6,  -8}, 
+  { -10, -12}, {   2,   2}, {   0,   0}, {   0,   0}, 
+  { -10, -12}, {   0,   0}, {   4,   6}, {   4,   6}, 
+  {  -6,  -8}, {   0,   0}, {   4,   6}, {  10,  10}, 
+  {  -6,  -8}, {   0,   0}, {   4,   6}, {  10,  10}, 
+  { -10, -12}, {   1,   0}, {   4,   6}, {   4,   6}, 
+  { -14, -14}, {   2,   2}, {   1,   0}, {   2,   2}, 
+  { -14, -14}, { -14, -14}, { -10, -10}, {  -6,  -6}, 
 };
 
-const Score ROOK_PSQT[] = {
-  S(  -5,   0), S(   0,   0), S(   5,   0), S(  10,   0), S(  10,   0), S(   5,   0), S(   0,   0), S(  -5,   0),
-  S(  -5,   0), S(   0,   0), S(   5,   0), S(  10,   0), S(  10,   0), S(   5,   0), S(   0,   0), S(  -5,   0),
-  S(  -5,   0), S(   0,   0), S(   5,   0), S(  10,   0), S(  10,   0), S(   5,   0), S(   0,   0), S(  -5,   0),
-  S(  -5,   0), S(   0,   0), S(   5,   0), S(  10,   0), S(  10,   0), S(   5,   0), S(   0,   0), S(  -5,   0),
-  S(  -5,   0), S(   0,   0), S(   5,   0), S(  10,   0), S(  10,   0), S(   5,   0), S(   0,   0), S(  -5,   0),
-  S(  -5,   0), S(   0,   0), S(   5,   0), S(  10,   0), S(  10,   0), S(   5,   0), S(   0,   0), S(  -5,   0),
-  S(  -5,   0), S(   0,   0), S(   5,   0), S(  10,   0), S(  10,   0), S(   5,   0), S(   0,   0), S(  -5,   0),
-  S(  -5,   0), S(   0,   0), S(   5,   0), S(  10,   0), S(  10,   0), S(   5,   0), S(   0,   0), S(  -5,   0),
+Score ROOK_PSQT[32][2] = {
+  {  -5,   0}, {   0,   0}, {   5,   0}, {  10,   0}, 
+  {  -5,   0}, {   0,   0}, {   5,   0}, {  10,   0}, 
+  {  -5,   0}, {   0,   0}, {   5,   0}, {  10,   0}, 
+  {  -5,   0}, {   0,   0}, {   5,   0}, {  10,   0}, 
+  {  -5,   0}, {   0,   0}, {   5,   0}, {  10,   0}, 
+  {  -5,   0}, {   0,   0}, {   5,   0}, {  10,   0}, 
+  {  -5,   0}, {   0,   0}, {   5,   0}, {  10,   0}, 
+  {  -5,   0}, {   0,   0}, {   5,   0}, {  10,   0}, 
 };
 
-const Score QUEEN_PSQT[] = {
-  S(   0, -25), S(   0, -20), S(   0, -15), S(   0, -10), S(   0, -10), S(   0, -15), S(   0, -20), S(   0, -25),
-  S(   0, -20), S(   0, -10), S(   0,  -5), S(   0,   0), S(   0,   0), S(   0,  -5), S(   0, -10), S(   0, -20),
-  S(   0, -15), S(   0,  -5), S(   0,   0), S(   0,   5), S(   0,   5), S(   0,   0), S(   0,  -5), S(   0, -15),
-  S(   0, -10), S(   0,   0), S(   0,   5), S(   0,  10), S(   0,  10), S(   0,   5), S(   0,   0), S(   0, -10),
-  S(   0, -10), S(   0,   0), S(   0,   5), S(   0,  10), S(   0,  10), S(   0,   5), S(   0,   0), S(   0, -10),
-  S(   0, -15), S(   0,  -5), S(   0,   0), S(   0,   5), S(   0,   5), S(   0,   0), S(   0,  -5), S(   0, -15),
-  S(   0, -20), S(   0, -10), S(   0,  -5), S(   0,   0), S(   0,   0), S(   5,  -5), S(   0, -10), S(   0, -20),
-  S( -10, -25), S( -10, -20), S( -10, -15), S( -10, -10), S( -10, -10), S( -10, -15), S( -10, -20), S( -10, -25),
+Score QUEEN_PSQT[32][2] = {
+  {   0, -25}, {   0, -20}, {   0, -15}, {   0, -10}, 
+  {   0, -20}, {   0, -10}, {   0,  -5}, {   0,   0}, 
+  {   0, -15}, {   0,  -5}, {   0,   0}, {   0,   5}, 
+  {   0, -10}, {   0,   0}, {   0,   5}, {   0,  10}, 
+  {   0, -10}, {   0,   0}, {   0,   5}, {   0,  10}, 
+  {   0, -15}, {   0,  -5}, {   0,   0}, {   0,   5}, 
+  {   0, -20}, {   0, -10}, {   0,  -5}, {   0,   0}, 
+  { -10, -25}, { -10, -20}, { -10, -15}, { -10, -10}, 
 };
 
-const Score KING_PSQT[] = {
-  S( -40, -70), S( -30, -50), S( -50, -35), S( -70, -25), S( -70, -25), S( -50, -35), S( -30, -50), S( -40, -70),
-  S( -30, -50), S( -20, -25), S( -40, -10), S( -60,   0), S( -60,   0), S( -40, -10), S( -20, -25), S( -30, -50),
-  S( -20, -35), S( -10, -10), S( -30,   0), S( -50,  15), S( -50,  15), S( -30,   0), S( -10, -10), S( -20, -35),
-  S( -10, -25), S(   0,   0), S( -20,  15), S( -40,  30), S( -40,  30), S( -20,  15), S(   0,   0), S( -10, -25),
-  S(   0, -25), S(  10,   0), S( -10,  15), S( -30,  30), S( -30,  30), S( -10,  15), S(  10,   0), S(   0, -25),
-  S(  10, -35), S(  20, -10), S(   0,   0), S( -20,  15), S( -20,  15), S(   0,   0), S(  20, -10), S(  10, -35),
-  S(  20, -50), S(  30, -25), S(  20, -10), S(   0,   0), S(   0,   0), S(  20, -10), S(  30, -25), S(  20, -50),
-  S(  30, -70), S(  40, -50), S(  20, -35), S(  10, -25), S(  10, -25), S(  20, -35), S(  40, -50), S(  30, -70),
+Score KING_PSQT[32][2] = {
+  { -40, -70}, { -30, -50}, { -50, -35}, { -70, -25}, 
+  { -30, -50}, { -20, -25}, { -40, -10}, { -60,   0}, 
+  { -20, -35}, { -10, -10}, { -30,   0}, { -50,  15}, 
+  { -10, -25}, {   0,   0}, { -20,  15}, { -40,  30}, 
+  {   0, -25}, {  10,   0}, { -10,  15}, { -30,  30}, 
+  {  10, -35}, {  20, -10}, {   0,   0}, { -20,  15}, 
+  {  20, -50}, {  30, -25}, {  20, -10}, {   0,   0}, 
+  {  30, -70}, {  40, -50}, {  20, -35}, {  10, -25}, 
 };
 
-const Score MATERIAL_VALUES[13] = {
-  PAWN_VALUE, PAWN_VALUE, 
-  KNIGHT_VALUE, KNIGHT_VALUE, 
-  BISHOP_VALUE, BISHOP_VALUE,
-  ROOK_VALUE, ROOK_VALUE, 
-  QUEEN_VALUE,  QUEEN_VALUE, 
-  KING_VALUE,   KING_VALUE,
-  S(0, 0) // NO_PIECE
+Score MATERIAL_VALUES[7][2] = {
+  { 100, 150 },
+  { 475, 475 },
+  { 475, 475 },
+  { 700, 775 },
+  { 1600, 1450 },
+  { 30000, 30000 },
+  { 0, 0 },
 };
 
 // clang-format on
 
-const Score KNIGHT_MOBILITIES[] = {
-    S(-60, -75), S(-30, -60), S(-10, -45), S(0, -30), S(5, -15), S(10, 0), S(15, 0), S(30, 0), S(50, 0),
+Score KNIGHT_MOBILITIES[9][2] = {
+    {-60, -75}, {-30, -60}, {-10, -45}, {0, -30}, {5, -15}, {10, 0}, {15, 0}, {30, 0}, {50, 0},
 };
 
-const Score BISHOP_MOBILITIES[] = {
-    S(-50, -75), S(-25, -50), S(0, -25), S(0, 0),   S(0, 15),  S(5, 30),  S(10, 40),
-    S(15, 50),   S(20, 55),   S(25, 60), S(30, 65), S(35, 70), S(40, 75), S(45, 80),
+Score BISHOP_MOBILITIES[14][2] = {
+    {-50, -75}, {-25, -50}, {0, -25}, {0, 0},   {0, 15},  {5, 30},  {10, 40},
+    {15, 50},   {20, 55},   {25, 60}, {30, 65}, {35, 70}, {40, 75}, {45, 80},
 };
 
-const Score ROOK_MOBILITIES[] = {
-    S(0, -60), S(0, -45), S(0, -30), S(0, -15), S(0, 0),  S(1, 5),  S(2, 10),  S(3, 15),
-    S(4, 20),  S(5, 25),  S(6, 30),  S(7, 40),  S(8, 50), S(9, 60), S(10, 70),
+Score ROOK_MOBILITIES[15][2] = {
+    {0, -60}, {0, -45}, {0, -30}, {0, -15}, {0, 0},  {1, 5},  {2, 10},  {3, 15},
+    {4, 20},  {5, 25},  {6, 30},  {7, 40},  {8, 50}, {9, 60}, {10, 70},
 };
 
-const Score QUEEN_MOBILITIES[] = {
-    S(-10, -75), S(-7, -50), S(-4, -25), S(-1, 0),  S(2, 2),   S(3, 5),   S(4, 10),  S(5, 15),  S(6, 20),  S(7, 12),
-    S(8, 30),    S(9, 35),   S(10, 36),  S(10, 37), S(10, 38), S(10, 39), S(11, 42), S(11, 45), S(11, 48), S(12, 51),
-    S(12, 54),   S(12, 57),  S(13, 60),  S(13, 63), S(13, 66), S(14, 69), S(14, 72), S(14, 75),
+Score QUEEN_MOBILITIES[28][2] = {
+    {-10, -75}, {-7, -50}, {-4, -25}, {-1, 0},  {2, 2},   {3, 5},   {4, 10},  {5, 15},  {6, 20},  {7, 12},
+    {8, 30},    {9, 35},   {10, 36},  {10, 37}, {10, 38}, {10, 39}, {11, 42}, {11, 45}, {11, 48}, {12, 51},
+    {12, 54},   {12, 57},  {13, 60},  {13, 63}, {13, 66}, {14, 69}, {14, 72}, {14, 75},
 };
 
-const Score MAX_PHASE = 24;
-const Score PHASE_MULTIPLIERS[] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
+Score BISHOP_PAIR[2] = {50, 50};
+Score DOUBLED_PAWN[2] = {-10, -10};
+Score OPPOSED_ISOLATED_PAWN[2] = {-2, -5};
+Score OPEN_ISOLATED_PAWN[2] = {-6, -16};
+Score BACKWARDS_PAWN[2] = {-20, -7};
+Score DEFENDED_PAWN[2] = {8, 2};
+Score CONNECTED_PAWN[2][8][2] = {{
+                                     {0, 0},
+                                     {75, 100},
+                                     {40, 40},
+                                     {20, 15},
+                                     {10, 5},
+                                     {6, 1},
+                                     {4, 0},
+                                     {0, 0},
+                                 },
+                                 {
+                                     {0, 0},
+                                     {4, 0},
+                                     {6, 1},
+                                     {10, 5},
+                                     {20, 15},
+                                     {40, 40},
+                                     {75, 100},
+                                     {0, 0},
+                                 }};
 
-const Score DOUBLED_PAWN = S(-10, -10);
-const Score OPPOSED_ISOLATED_PAWN = S(-2, -5);
-const Score OPEN_ISOLATED_PAWN = S(-6, -16);
-const Score BACKWARDS_PAWN = S(-20, -7);
-const Score DEFENDED_PAWN = S(8, 2);
-const Score CONNECTED_PAWN[2][8] = {{
-                                        S(0, 0),
-                                        S(75, 100),
-                                        S(40, 40),
-                                        S(20, 15),
-                                        S(10, 5),
-                                        S(6, 1),
-                                        S(4, 0),
-                                        S(0, 0),
-                                    },
-                                    {
-                                        S(0, 0),
-                                        S(4, 0),
-                                        S(6, 1),
-                                        S(10, 5),
-                                        S(20, 15),
-                                        S(40, 40),
-                                        S(75, 100),
-                                        S(0, 0),
-                                    }};
-
-const Score PASSED_PAWN[2][8] = {
+Score PASSED_PAWN[2][8][2] = {
     {
-        S(0, 0),
-        S(223, 210),
-        S(138, 143),
-        S(52, 56),
-        S(14, 32),
-        S(12, 25),
-        S(7, 23),
-        S(0, 0),
+        {0, 0},
+        {223, 210},
+        {138, 143},
+        {52, 56},
+        {14, 32},
+        {12, 25},
+        {7, 23},
+        {0, 0},
     },
     {
-        S(0, 0),
-        S(7, 23),
-        S(12, 25),
-        S(14, 32),
-        S(52, 56),
-        S(138, 143),
-        S(223, 210),
-        S(0, 0),
+        {0, 0},
+        {7, 23},
+        {12, 25},
+        {14, 32},
+        {52, 56},
+        {138, 143},
+        {223, 210},
+        {0, 0},
     },
 };
 
-const Score DEFENDED_MINOR = S(5, 2);
+Score DEFENDED_MINOR[2] = {5, 2};
 
-const Score ROOK_OPEN_FILE = S(20, 20);
-const Score ROOK_SEMI_OPEN = S(10, 10);
-const Score ROOK_SEVENTH_RANK = S(20, 40);
-const Score ROOK_OPPOSITE_KING = S(20, 0);
-const Score ROOK_ADJACENT_KING = S(10, 0);
+Score ROOK_OPEN_FILE[2] = {20, 20};
+Score ROOK_SEMI_OPEN[2] = {10, 10};
+Score ROOK_SEVENTH_RANK[2] = {20, 40};
+Score ROOK_OPPOSITE_KING[2] = {20, 0};
+Score ROOK_ADJACENT_KING[2] = {10, 0};
 
-const Score ROOK_TRAPPED = S(-75, -75);
-const Score BISHOP_TRAPPED = S(-150, -150);
+Score ROOK_TRAPPED[2] = {-75, -75};
+Score BISHOP_TRAPPED[2] = {-150, -150};
 
-const Score KNIGHT_THREATS[] = {S(0, 0), S(5, 30), S(30, 30), S(45, 45), S(60, 60), S(50, 50)};
-const Score BISHOP_THREATS[] = {S(0, 0), S(5, 30), S(30, 30), S(45, 45), S(60, 60), S(50, 50)};
-const Score ROOK_THREATS[] = {S(0, 0), S(0, 30), S(30, 30), S(45, 45), S(20, 30), S(50, 50)};
-const Score KING_THREATS[] = {S(0, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60), S(15, 60)};
-const Score HANGING_THREAT = S(45, 22);
+Score KNIGHT_THREATS[][2] = {{0, 0}, {5, 30}, {30, 30}, {45, 45}, {60, 60}, {50, 50}};
+Score BISHOP_THREATS[][2] = {{0, 0}, {5, 30}, {30, 30}, {45, 45}, {60, 60}, {50, 50}};
+Score ROOK_THREATS[][2] = {{0, 0}, {0, 30}, {30, 30}, {45, 45}, {20, 30}, {50, 50}};
+Score KING_THREATS[][2] = {{0, 60}, {15, 60}, {15, 60}, {15, 60}, {15, 60}, {15, 60}};
+Score HANGING_THREAT[2] = {45, 22};
 
-const Score PAWN_SHELTER[2][8] = {
-    {S(-36, -36), S(-35, -35), S(-32, -32), S(-27, -27), S(-20, -20), S(-11, -11), 0, 0},
-    {S(-72, -72), S(-70, -70), S(-64, -64), S(-54, -54), S(-40, -40), S(-22, -22), 0, 0},
+Score PAWN_SHELTER[2][8][2] = {
+    {{-36, -36}, {-35, -35}, {-32, -32}, {-27, -27}, {-20, -20}, {-11, -11}, {0, 0}, {0, 0}},
+    {{-72, -72}, {-70, -70}, {-64, -64}, {-54, -54}, {-40, -40}, {-22, -22}, {0, 0}, {0, 0}},
 };
-const Score PAWN_STORM[8] = {0, 0, 0, S(-10, -10), S(-30, -30), S(-60, -60), 0, 0};
+Score PAWN_STORM[8][2] = {{0, 0}, {0, 0}, {0, 0}, {-10, -10}, {-30, -30}, {-60, -60}, {0, 0}, {0, 0}};
 
-Score KS_ATTACKER_WEIGHTS[] = {0, 60, 30, 40, 35}; // Inspired by ethereal's values
+Score KS_ATTACKER_WEIGHTS[5] = {0, 60, 30, 40, 35}; // Inspired by ethereal's values
 Score KS_ATTACK = 47;
 Score KS_WEAK_SQS = 47;
 Score KS_SAFE_CHECK = 105;
@@ -218,26 +210,48 @@ Score KS_UNSAFE_CHECK = 12;
 Score KS_ENEMY_QUEEN = -280;
 Score KS_ALLIES = -24;
 
-// clang-format off
-Score PSQT[12][64];
+Score* PSQT[12][64];
+Score* KNIGHT_POSTS[64];
 
 void initPSQT() {
-  for (int sq = 0; sq < 64; sq++) {
-    PSQT[PAWN[WHITE]][sq] = PAWN_PSQT[sq];
-    PSQT[PAWN[BLACK]][MIRROR[sq]] = PAWN_PSQT[sq];
-    PSQT[KNIGHT[WHITE]][sq] = KNIGHT_PSQT[sq];
-    PSQT[KNIGHT[BLACK]][MIRROR[sq]] = KNIGHT_PSQT[sq];
-    PSQT[BISHOP[WHITE]][sq] = BISHOP_PSQT[sq];
-    PSQT[BISHOP[BLACK]][MIRROR[sq]] = BISHOP_PSQT[sq];
-    PSQT[ROOK[WHITE]][sq] = ROOK_PSQT[sq];
-    PSQT[ROOK[BLACK]][MIRROR[sq]] = ROOK_PSQT[sq];
-    PSQT[QUEEN[WHITE]][sq] = QUEEN_PSQT[sq];
-    PSQT[QUEEN[BLACK]][MIRROR[sq]] = QUEEN_PSQT[sq];
-    PSQT[KING[WHITE]][sq] = KING_PSQT[sq];
-    PSQT[KING[BLACK]][MIRROR[sq]] = KING_PSQT[sq];
+  for (int sq = 0; sq < 32; sq++) {
+    int r = sq / 4;
+    int f = sq % 4;
+
+    PSQT[PAWN[WHITE]][r * 8 + f] = PAWN_PSQT[sq];
+    PSQT[PAWN[WHITE]][r * 8 + (7 - f)] = PAWN_PSQT[sq];
+    PSQT[PAWN[BLACK]][MIRROR[r * 8 + f]] = PAWN_PSQT[sq];
+    PSQT[PAWN[BLACK]][MIRROR[r * 8 + (7 - f)]] = PAWN_PSQT[sq];
+
+    PSQT[KNIGHT[WHITE]][r * 8 + f] = KNIGHT_PSQT[sq];
+    PSQT[KNIGHT[WHITE]][r * 8 + (7 - f)] = KNIGHT_PSQT[sq];
+    PSQT[KNIGHT[BLACK]][MIRROR[r * 8 + f]] = KNIGHT_PSQT[sq];
+    PSQT[KNIGHT[BLACK]][MIRROR[r * 8 + (7 - f)]] = KNIGHT_PSQT[sq];
+
+    PSQT[BISHOP[WHITE]][r * 8 + f] = BISHOP_PSQT[sq];
+    PSQT[BISHOP[WHITE]][r * 8 + (7 - f)] = BISHOP_PSQT[sq];
+    PSQT[BISHOP[BLACK]][MIRROR[r * 8 + f]] = BISHOP_PSQT[sq];
+    PSQT[BISHOP[BLACK]][MIRROR[r * 8 + (7 - f)]] = BISHOP_PSQT[sq];
+
+    PSQT[ROOK[WHITE]][r * 8 + f] = ROOK_PSQT[sq];
+    PSQT[ROOK[WHITE]][r * 8 + (7 - f)] = ROOK_PSQT[sq];
+    PSQT[ROOK[BLACK]][MIRROR[r * 8 + f]] = ROOK_PSQT[sq];
+    PSQT[ROOK[BLACK]][MIRROR[r * 8 + (7 - f)]] = ROOK_PSQT[sq];
+
+    PSQT[QUEEN[WHITE]][r * 8 + f] = QUEEN_PSQT[sq];
+    PSQT[QUEEN[WHITE]][r * 8 + (7 - f)] = QUEEN_PSQT[sq];
+    PSQT[QUEEN[BLACK]][MIRROR[r * 8 + f]] = QUEEN_PSQT[sq];
+    PSQT[QUEEN[BLACK]][MIRROR[r * 8 + (7 - f)]] = QUEEN_PSQT[sq];
+
+    PSQT[KING[WHITE]][r * 8 + f] = KING_PSQT[sq];
+    PSQT[KING[WHITE]][r * 8 + (7 - f)] = KING_PSQT[sq];
+    PSQT[KING[BLACK]][MIRROR[r * 8 + f]] = KING_PSQT[sq];
+    PSQT[KING[BLACK]][MIRROR[r * 8 + (7 - f)]] = KING_PSQT[sq];
+
+    KNIGHT_POSTS[r * 8 + f] = KNIGHT_POST_PSQT[sq];
+    KNIGHT_POSTS[r * 8 + (7 - f)] = KNIGHT_POST_PSQT[sq];
   }
 }
-// clang-format on
 
 // TODO: Convert this to use board->pieceCounts?
 inline int getPhase(Board* board) {
@@ -322,10 +336,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard sqBitboard = pawns & -pawns;
     int sq = lsb(pawns);
 
-    data->material[MG] += scoreMG(MATERIAL_VALUES[PAWN[side]]);
-    data->material[EG] += scoreEG(MATERIAL_VALUES[PAWN[side]]);
-    data->pawns[MG] += scoreMG(PSQT[PAWN[side]][sq]);
-    data->pawns[EG] += scoreEG(PSQT[PAWN[side]][sq]);
+    data->material[MG] += MATERIAL_VALUES[PAWN_TYPE][MG];
+    data->material[EG] += MATERIAL_VALUES[PAWN_TYPE][EG];
+    data->pawns[MG] += PSQT[PAWN[side]][sq][MG];
+    data->pawns[EG] += PSQT[PAWN[side]][sq][EG];
 
     int file = file(sq);
     int rank = rank(sq);
@@ -342,23 +356,23 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
         !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
 
     if (doubled) {
-      data->pawns[MG] += scoreMG(DOUBLED_PAWN);
-      data->pawns[EG] += scoreEG(DOUBLED_PAWN);
+      data->pawns[MG] += DOUBLED_PAWN[MG];
+      data->pawns[EG] += DOUBLED_PAWN[EG];
     }
 
     if (!neighbors) {
-      data->pawns[MG] += scoreMG(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN);
-      data->pawns[EG] += scoreEG(opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN);
+      data->pawns[MG] += opposed ? OPPOSED_ISOLATED_PAWN[MG] : OPEN_ISOLATED_PAWN[MG];
+      data->pawns[EG] += opposed ? OPPOSED_ISOLATED_PAWN[EG] : OPEN_ISOLATED_PAWN[EG];
     }
 
     if (backwards) {
-      data->pawns[MG] += scoreMG(BACKWARDS_PAWN);
-      data->pawns[EG] += scoreEG(BACKWARDS_PAWN);
+      data->pawns[MG] += BACKWARDS_PAWN[MG];
+      data->pawns[EG] += BACKWARDS_PAWN[EG];
     }
 
     if (passed) {
-      data->pawns[MG] += scoreMG(PASSED_PAWN[side][rank]);
-      data->pawns[EG] += scoreEG(PASSED_PAWN[side][rank]);
+      data->pawns[MG] += PASSED_PAWN[side][rank][MG];
+      data->pawns[EG] += PASSED_PAWN[side][rank][EG];
     }
 
     if (defenders | connected) {
@@ -368,8 +382,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
       if (opposed)
         s--;
 
-      data->pawns[MG] += scoreMG(CONNECTED_PAWN[side][rank]) * s + scoreMG(DEFENDED_PAWN) * bits(defenders);
-      data->pawns[EG] += scoreEG(CONNECTED_PAWN[side][rank]) * s + scoreEG(DEFENDED_PAWN) * bits(defenders);
+      data->pawns[MG] += CONNECTED_PAWN[side][rank][MG] * s + DEFENDED_PAWN[MG] * bits(defenders);
+      data->pawns[EG] += CONNECTED_PAWN[side][rank][EG] * s + DEFENDED_PAWN[EG] * bits(defenders);
     }
   }
 
@@ -380,10 +394,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     int sq = lsb(knights);
     BitBoard sqBb = knights & -knights;
 
-    data->material[MG] += scoreMG(MATERIAL_VALUES[KNIGHT[side]]);
-    data->material[EG] += scoreEG(MATERIAL_VALUES[KNIGHT[side]]);
-    data->knights[MG] += scoreMG(PSQT[KNIGHT[side]][sq]);
-    data->knights[EG] += scoreEG(PSQT[KNIGHT[side]][sq]);
+    data->material[MG] += MATERIAL_VALUES[KNIGHT_TYPE][MG];
+    data->material[EG] += MATERIAL_VALUES[KNIGHT_TYPE][EG];
+    data->knights[MG] += PSQT[KNIGHT[side]][sq][MG];
+    data->knights[EG] += PSQT[KNIGHT[side]][sq][EG];
 
     BitBoard movement = getKnightAttacks(sq);
     data->attacks2 |= (movement & data->allAttacks);
@@ -396,31 +410,31 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     }
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[MG] += scoreMG(KNIGHT_MOBILITIES[bits(mobilitySquares)]);
-    data->mobility[EG] += scoreEG(KNIGHT_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[MG] += KNIGHT_MOBILITIES[bits(mobilitySquares)][MG];
+    data->mobility[EG] += KNIGHT_MOBILITIES[bits(mobilitySquares)][EG];
 
-    if (KNIGHT_POST_PSQT[rel(sq, side)] && (outposts & sqBb)) {
-      data->knights[MG] += scoreMG(KNIGHT_POST_PSQT[rel(sq, side)]);
-      data->knights[EG] += scoreEG(KNIGHT_POST_PSQT[rel(sq, side)]);
+    if (outposts & sqBb) {
+      data->knights[MG] += KNIGHT_POSTS[rel(sq, side)][MG];
+      data->knights[EG] += KNIGHT_POSTS[rel(sq, side)][EG];
     }
   }
 
-  data->knights[MG] += scoreMG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
-  data->knights[EG] += scoreEG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
+  data->knights[MG] += DEFENDED_MINOR[MG] * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
+  data->knights[EG] += DEFENDED_MINOR[EG] * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
 
   // BISHOPS
   if (bits(board->pieces[BISHOP[side]]) > 1) {
-    data->bishops[MG] += scoreMG(BISHOP_PAIR);
-    data->bishops[EG] += scoreEG(BISHOP_PAIR);
+    data->bishops[MG] += BISHOP_PAIR[MG];
+    data->bishops[EG] += BISHOP_PAIR[EG];
   }
 
   for (BitBoard bishops = board->pieces[BISHOP[side]]; bishops; popLsb(bishops)) {
     int sq = lsb(bishops);
 
-    data->material[MG] += scoreMG(MATERIAL_VALUES[BISHOP[side]]);
-    data->material[EG] += scoreEG(MATERIAL_VALUES[BISHOP[side]]);
-    data->bishops[MG] += scoreMG(PSQT[BISHOP[side]][sq]);
-    data->bishops[EG] += scoreEG(PSQT[BISHOP[side]][sq]);
+    data->material[MG] += MATERIAL_VALUES[BISHOP_TYPE][MG];
+    data->material[EG] += MATERIAL_VALUES[BISHOP_TYPE][EG];
+    data->bishops[MG] += PSQT[BISHOP[side]][sq][MG];
+    data->bishops[EG] += PSQT[BISHOP[side]][sq][EG];
 
     BitBoard movement = getBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
     data->attacks2 |= (movement & data->allAttacks);
@@ -433,30 +447,30 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     }
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[MG] += scoreMG(BISHOP_MOBILITIES[bits(mobilitySquares)]);
-    data->mobility[EG] += scoreEG(BISHOP_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[MG] += BISHOP_MOBILITIES[bits(mobilitySquares)][MG];
+    data->mobility[EG] += BISHOP_MOBILITIES[bits(mobilitySquares)][EG];
 
     if (side == WHITE) {
       if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7)) {
-        data->bishops[MG] += scoreMG(BISHOP_TRAPPED);
-        data->bishops[EG] += scoreEG(BISHOP_TRAPPED);
+        data->bishops[MG] += BISHOP_TRAPPED[MG];
+        data->bishops[EG] += BISHOP_TRAPPED[EG];
       } else if ((sq == H7 || sq == G8) && getBit(opponentPawns, F7) && getBit(opponentPawns, G6)) {
-        data->bishops[MG] += scoreMG(BISHOP_TRAPPED);
-        data->bishops[EG] += scoreEG(BISHOP_TRAPPED);
+        data->bishops[MG] += BISHOP_TRAPPED[MG];
+        data->bishops[EG] += BISHOP_TRAPPED[EG];
       }
     } else {
       if ((sq == A2 || sq == B1) && getBit(opponentPawns, B3) && getBit(opponentPawns, C2)) {
-        data->bishops[MG] += scoreMG(BISHOP_TRAPPED);
-        data->bishops[EG] += scoreEG(BISHOP_TRAPPED);
+        data->bishops[MG] += BISHOP_TRAPPED[MG];
+        data->bishops[EG] += BISHOP_TRAPPED[EG];
       } else if ((sq == H2 || sq == G1) && getBit(opponentPawns, G3) && getBit(opponentPawns, F2)) {
-        data->bishops[MG] += scoreMG(BISHOP_TRAPPED);
-        data->bishops[EG] += scoreEG(BISHOP_TRAPPED);
+        data->bishops[MG] += BISHOP_TRAPPED[MG];
+        data->bishops[EG] += BISHOP_TRAPPED[EG];
       }
     }
   }
 
-  data->bishops[MG] += scoreMG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[BISHOP[side]]);
-  data->bishops[EG] += scoreEG(DEFENDED_MINOR) * bits(pawnAttacks & board->pieces[BISHOP[side]]);
+  data->bishops[MG] += DEFENDED_MINOR[MG] * bits(pawnAttacks & board->pieces[BISHOP[side]]);
+  data->bishops[EG] += DEFENDED_MINOR[EG] * bits(pawnAttacks & board->pieces[BISHOP[side]]);
 
   // ROOKS
   for (BitBoard rooks = board->pieces[ROOK[side]]; rooks; popLsb(rooks)) {
@@ -464,10 +478,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard sqBb = rooks & -rooks;
     int file = file(sq);
 
-    data->material[MG] += scoreMG(MATERIAL_VALUES[ROOK[side]]);
-    data->material[EG] += scoreEG(MATERIAL_VALUES[ROOK[side]]);
-    data->rooks[MG] += scoreMG(PSQT[ROOK[side]][sq]);
-    data->rooks[EG] += scoreEG(PSQT[ROOK[side]][sq]);
+    data->material[MG] += MATERIAL_VALUES[ROOK_TYPE][MG];
+    data->material[EG] += MATERIAL_VALUES[ROOK_TYPE][EG];
+    data->rooks[MG] += PSQT[ROOK[side]][sq][MG];
+    data->rooks[EG] += PSQT[ROOK[side]][sq][EG];
 
     BitBoard movement =
         getRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]);
@@ -481,47 +495,47 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     }
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[MG] += scoreMG(ROOK_MOBILITIES[bits(mobilitySquares)]);
-    data->mobility[EG] += scoreEG(ROOK_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[MG] += ROOK_MOBILITIES[bits(mobilitySquares)][MG];
+    data->mobility[EG] += ROOK_MOBILITIES[bits(mobilitySquares)][EG];
 
     if (sqBb & PROMOTION_RANKS[side]) {
-      data->rooks[MG] += scoreMG(ROOK_SEVENTH_RANK);
-      data->rooks[EG] += scoreEG(ROOK_SEVENTH_RANK);
+      data->rooks[MG] += ROOK_SEVENTH_RANK[MG];
+      data->rooks[EG] += ROOK_SEVENTH_RANK[EG];
     }
 
     if (!(FILE_MASKS[file] & myPawns)) {
       if (!(FILE_MASKS[file] & opponentPawns)) {
-        data->rooks[MG] += scoreMG(ROOK_OPEN_FILE);
-        data->rooks[EG] += scoreEG(ROOK_OPEN_FILE);
+        data->rooks[MG] += ROOK_OPEN_FILE[MG];
+        data->rooks[EG] += ROOK_OPEN_FILE[EG];
       } else {
-        data->rooks[MG] += scoreMG(ROOK_SEMI_OPEN);
-        data->rooks[EG] += scoreEG(ROOK_SEMI_OPEN);
+        data->rooks[MG] += ROOK_SEMI_OPEN[MG];
+        data->rooks[EG] += ROOK_SEMI_OPEN[EG];
       }
 
       if (FILE_MASKS[file] & board->pieces[KING[xside]]) {
-        data->rooks[MG] += scoreMG(ROOK_OPPOSITE_KING);
-        data->rooks[EG] += scoreEG(ROOK_OPPOSITE_KING);
+        data->rooks[MG] += ROOK_OPPOSITE_KING[MG];
+        data->rooks[EG] += ROOK_OPPOSITE_KING[EG];
       } else if (ADJACENT_FILE_MASKS[file] & board->pieces[KING[xside]]) {
-        data->rooks[MG] += scoreMG(ROOK_ADJACENT_KING);
-        data->rooks[EG] += scoreEG(ROOK_ADJACENT_KING);
+        data->rooks[MG] += ROOK_ADJACENT_KING[MG];
+        data->rooks[EG] += ROOK_ADJACENT_KING[EG];
       }
     }
 
     if (side == WHITE) {
       if ((sq == A1 || sq == A2 || sq == B1) && (kingSq == C1 || kingSq == B1)) {
-        data->rooks[MG] += scoreMG(ROOK_TRAPPED);
-        data->rooks[EG] += scoreEG(ROOK_TRAPPED);
+        data->rooks[MG] += ROOK_TRAPPED[MG];
+        data->rooks[EG] += ROOK_TRAPPED[EG];
       } else if ((sq == H1 || sq == H2 || sq == G1) && (kingSq == F1 || kingSq == G1)) {
-        data->rooks[MG] += scoreMG(ROOK_TRAPPED);
-        data->rooks[EG] += scoreEG(ROOK_TRAPPED);
+        data->rooks[MG] += ROOK_TRAPPED[MG];
+        data->rooks[EG] += ROOK_TRAPPED[EG];
       }
     } else {
       if ((sq == A8 || sq == A7 || sq == B8) && (kingSq == B8 || kingSq == C8)) {
-        data->rooks[MG] += scoreMG(ROOK_TRAPPED);
-        data->rooks[EG] += scoreEG(ROOK_TRAPPED);
+        data->rooks[MG] += ROOK_TRAPPED[MG];
+        data->rooks[EG] += ROOK_TRAPPED[EG];
       } else if ((sq == H8 || sq == H7 || sq == G8) && (kingSq == F8 || kingSq == G8)) {
-        data->rooks[MG] += scoreMG(ROOK_TRAPPED);
-        data->rooks[EG] += scoreEG(ROOK_TRAPPED);
+        data->rooks[MG] += ROOK_TRAPPED[MG];
+        data->rooks[EG] += ROOK_TRAPPED[EG];
       }
     }
   }
@@ -530,10 +544,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   for (BitBoard queens = board->pieces[QUEEN[side]]; queens; popLsb(queens)) {
     int sq = lsb(queens);
 
-    data->material[MG] += scoreMG(MATERIAL_VALUES[QUEEN[side]]);
-    data->material[EG] += scoreEG(MATERIAL_VALUES[QUEEN[side]]);
-    data->queens[MG] += scoreMG(PSQT[QUEEN[side]][sq]);
-    data->queens[EG] += scoreEG(PSQT[QUEEN[side]][sq]);
+    data->material[MG] += MATERIAL_VALUES[QUEEN_TYPE][MG];
+    data->material[EG] += MATERIAL_VALUES[QUEEN_TYPE][EG];
+    data->queens[MG] += PSQT[QUEEN[side]][sq][MG];
+    data->queens[EG] += PSQT[QUEEN[side]][sq][EG];
 
     BitBoard movement = getQueenAttacks(sq, board->occupancies[BOTH]);
     data->attacks2 |= (movement & data->allAttacks);
@@ -546,18 +560,16 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     }
 
     BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[MG] += scoreMG(QUEEN_MOBILITIES[bits(mobilitySquares)]);
-    data->mobility[EG] += scoreEG(QUEEN_MOBILITIES[bits(mobilitySquares)]);
+    data->mobility[MG] += QUEEN_MOBILITIES[bits(mobilitySquares)][MG];
+    data->mobility[EG] += QUEEN_MOBILITIES[bits(mobilitySquares)][EG];
   }
 
   // KINGS
   for (BitBoard kings = board->pieces[KING[side]]; kings; popLsb(kings)) {
     int sq = lsb(kings);
 
-    data->material[MG] += scoreMG(MATERIAL_VALUES[KING[side]]);
-    data->material[EG] += scoreEG(MATERIAL_VALUES[KING[side]]);
-    data->kings[MG] += scoreMG(PSQT[KING[side]][sq]);
-    data->kings[EG] += scoreEG(PSQT[KING[side]][sq]);
+    data->kings[MG] += PSQT[KING[side]][sq][MG];
+    data->kings[EG] += PSQT[KING[side]][sq][EG];
 
     BitBoard movement = getKingAttacks(sq) & ~getKingAttacks(lsb(board->pieces[KING[xside]]));
     data->attacks2 |= (movement & data->allAttacks);
@@ -582,8 +594,8 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
 
     assert(piece != NO_PIECE);
 
-    data->threats[MG] += scoreMG(KNIGHT_THREATS[PIECE_TYPE[piece]]);
-    data->threats[EG] += scoreEG(KNIGHT_THREATS[PIECE_TYPE[piece]]);
+    data->threats[MG] += KNIGHT_THREATS[PIECE_TYPE[piece]][MG];
+    data->threats[EG] += KNIGHT_THREATS[PIECE_TYPE[piece]][EG];
   }
 
   for (BitBoard bishopThreats = weak & myAttacks[BISHOP_TYPE]; bishopThreats; popLsb(bishopThreats)) {
@@ -591,8 +603,8 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
 
     assert(piece != NO_PIECE);
 
-    data->threats[MG] += scoreMG(BISHOP_THREATS[PIECE_TYPE[piece]]);
-    data->threats[EG] += scoreEG(BISHOP_THREATS[PIECE_TYPE[piece]]);
+    data->threats[MG] += BISHOP_THREATS[PIECE_TYPE[piece]][MG];
+    data->threats[EG] += BISHOP_THREATS[PIECE_TYPE[piece]][EG];
   }
 
   for (BitBoard rookThreats = weak & myAttacks[ROOK_TYPE]; rookThreats; popLsb(rookThreats)) {
@@ -600,8 +612,8 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
 
     assert(piece != NO_PIECE);
 
-    data->threats[MG] += scoreMG(ROOK_THREATS[PIECE_TYPE[piece]]);
-    data->threats[EG] += scoreEG(ROOK_THREATS[PIECE_TYPE[piece]]);
+    data->threats[MG] += ROOK_THREATS[PIECE_TYPE[piece]][MG];
+    data->threats[EG] += ROOK_THREATS[PIECE_TYPE[piece]][EG];
   }
 
   for (BitBoard kingThreats = weak & myAttacks[KING_TYPE]; kingThreats; popLsb(kingThreats)) {
@@ -609,13 +621,13 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
 
     assert(piece != NO_PIECE);
 
-    data->threats[MG] += scoreMG(KING_THREATS[PIECE_TYPE[piece]]);
-    data->threats[EG] += scoreEG(KING_THREATS[PIECE_TYPE[piece]]);
+    data->threats[MG] += KING_THREATS[PIECE_TYPE[piece]][MG];
+    data->threats[EG] += KING_THREATS[PIECE_TYPE[piece]][EG];
   }
 
   BitBoard hanging = data->allAttacks & ~enemyData->allAttacks & board->occupancies[xside];
-  data->threats[MG] += scoreMG(HANGING_THREAT) * bits(hanging);
-  data->threats[EG] += scoreEG(HANGING_THREAT) * bits(hanging);
+  data->threats[MG] += HANGING_THREAT[MG] * bits(hanging);
+  data->threats[EG] += HANGING_THREAT[EG] * bits(hanging);
 }
 
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
@@ -672,15 +684,15 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
     BitBoard pawnFile = board->pieces[PAWN[side]] & FILE_MASKS[c];
     int pawnRank = pawnFile ? (side ? 7 - rank(lsb(pawnFile)) : rank(msb(pawnFile))) : 0;
 
-    data->kingSafety[MG] += scoreMG(PAWN_SHELTER[c == file(kingSq)][pawnRank]);
-    data->kingSafety[EG] += scoreEG(PAWN_SHELTER[c == file(kingSq)][pawnRank]);
+    data->kingSafety[MG] += PAWN_SHELTER[c == file(kingSq)][pawnRank][MG];
+    data->kingSafety[EG] += PAWN_SHELTER[c == file(kingSq)][pawnRank][EG];
 
     BitBoard enemyFile = board->pieces[PAWN[xside]] & FILE_MASKS[c];
     if (enemyFile) {
       int pushRank = (side ? 7 - rank(lsb(enemyFile)) : rank(msb(enemyFile)));
 
-      data->kingSafety[MG] += scoreMG(PAWN_STORM[pushRank]);
-      data->kingSafety[EG] += scoreEG(PAWN_STORM[pushRank]);
+      data->kingSafety[MG] += PAWN_STORM[pushRank][MG];
+      data->kingSafety[EG] += PAWN_STORM[pushRank][EG];
     }
   }
 }
