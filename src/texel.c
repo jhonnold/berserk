@@ -11,7 +11,7 @@
 #include "texel.h"
 #include "types.h"
 
-#define THREADS 1
+#define THREADS 32
 
 const int sideScalar[] = {1, -1};
 double K = 1;
@@ -27,12 +27,13 @@ void Texel() {
   int n = 0;
   Position* positions = loadPositions(&n);
 
-  K = -1.035509;
-  // determineK(positions, n);
+  // K = -1.035509;
+  determineK(positions, n);
 
   int numParams = 0;
   TexelParam params[128];
 
+  addParam("MATERIAL_VALUES_PAWN[MG]", &MATERIAL_VALUES[PAWN_TYPE][MG], params, &numParams);
   addParam("MATERIAL_VALUES_PAWN[EG]", &MATERIAL_VALUES[PAWN_TYPE][EG], params, &numParams);
   addParam("MATERIAL_VALUES_KNIGHT[MG]", &MATERIAL_VALUES[KNIGHT_TYPE][MG], params, &numParams);
   addParam("MATERIAL_VALUES_KNIGHT[EG]", &MATERIAL_VALUES[KNIGHT_TYPE][EG], params, &numParams);

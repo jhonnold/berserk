@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define EPD_FILE_PATH "/Users/jhonnold/Programming/berserk/resources/quiet-labeled.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk\\resources\\quiet-labeled.epd"
 
 typedef struct {
   double result;
