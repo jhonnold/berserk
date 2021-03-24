@@ -34,12 +34,17 @@ int main(int argc, char** argv) {
   parseFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", board);
 
   // This is to be compliant for OpenBench
-  // if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
-  //   Bench();
-  // } else {
-  //   UCI(board);
-  // }
-  texel();
+  if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
+    Bench();
+  }
+#ifdef TUNE
+  else if (argc > 1 && !strncmp(argv[1], "tune", 4)) {
+    Texel();
+  }
+#endif
+  else {
+    UCI(board);
+  }
 
   ttFree();
   return 0;

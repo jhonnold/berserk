@@ -5,6 +5,12 @@
 
 #define MAX_DEPTH 64
 
+#ifndef TUNE
+typedef int Score;
+#else
+typedef double Score;
+#endif
+
 typedef uint64_t BitBoard;
 
 typedef uint64_t TTValue;
@@ -78,22 +84,22 @@ typedef struct {
 } SearchParams;
 
 typedef struct {
-  int material[2];
-  int pawns[2];
-  int knights[2];
-  int bishops[2];
-  int rooks[2];
-  int queens[2];
-  int kings[2];
+  Score material[2];
+  Score pawns[2];
+  Score knights[2];
+  Score bishops[2];
+  Score rooks[2];
+  Score queens[2];
+  Score kings[2];
 
-  int mobility[2];
-  int kingSafety[2];
-  int threats[2];
+  Score mobility[2];
+  Score kingSafety[2];
+  Score threats[2];
 
   BitBoard attacks[6];
   BitBoard allAttacks;
   BitBoard attacks2;
-  int attackWeight;
+  Score attackWeight;
   int attackCount;
   int attackers;
 } EvalData;

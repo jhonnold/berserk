@@ -1,10 +1,11 @@
+#ifdef TUNE
 #ifndef TEXEL_H
 #define TEXEL_H
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#define EPD_FILE_PATH "quiet-labeled.epd"
+#define EPD_FILE_PATH "/Users/jhonnold/Programming/berserk/resources/quiet-labeled.epd"
 
 typedef struct {
   double result;
@@ -12,11 +13,21 @@ typedef struct {
   char fen[100];
 } Position;
 
+typedef struct {
+  Score* param;
+  char* name;
+} TexelParam;
+
+void Texel();
+void SGD(TexelParam* params, int numParams, Position* positions, int numPositions);
+void CalculateGradients(double* gradients, TexelParam* params, int numParams, Position* positions, int numPositions,
+                        double base);
 Position* loadPositions();
 void determineK(Position* positions, int n);
-void texel();
 double totalError(Position* positions, int n);
 double error(Position* p);
 double sigmoid(int score);
+void PrintParams(TexelParam* params, int numParams);
 
+#endif
 #endif
