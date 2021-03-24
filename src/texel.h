@@ -14,6 +14,13 @@ typedef struct {
 } Position;
 
 typedef struct {
+  double* errors;
+  Position* positions;
+  int n;
+  int threadid;
+} BatchJob;
+
+typedef struct {
   Score* param;
   char* name;
 } TexelParam;
@@ -25,6 +32,7 @@ void CalculateGradients(double* gradients, TexelParam* params, int numParams, Po
 Position* loadPositions();
 void determineK(Position* positions, int n);
 double totalError(Position* positions, int n);
+void* batchError(void* arg);
 double error(Position* p);
 double sigmoid(int score);
 void PrintParams(TexelParam* params, int numParams);

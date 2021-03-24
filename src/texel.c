@@ -11,6 +11,8 @@
 #include "texel.h"
 #include "types.h"
 
+#define THREADS 4
+
 const int sideScalar[] = {1, -1};
 double K = 1;
 
@@ -187,12 +189,41 @@ void determineK(Position* positions, int n) {
 }
 
 double totalError(Position* positions, int n) {
-  double t = 0;
+  double* errors = calloc(n, sizeof(double));
 
+  pthread_t threads[THREADS];
+  BatchJob jobs[THREADS];
+
+  int chunkSize = (n / THREADS) + 1;
+
+  for (int t = 0; t < THREADS; t++) {
+    jobs[t].errors = errors + (t * chunkSize);
+    jobs[t].positions = positions + (t * chunkSize);
+    jobs[t].n = t != THREADS - 1 ? chunkSize : (n - ((THREADS - 1) * chunkSize));
+    jobs[t].threadid = t;
+
+    pthread_create(&threads[t], NULL, batchError, (void*)(jobs + t));
+  }
+
+  for (int t = 0; t < THREADS; t++)
+    pthread_join(threads[t], NULL);
+
+  double totalE = 0;
   for (int i = 0; i < n; i++)
-    t += error(&positions[i]);
+    totalE += errors[i];
 
-  return t / n;
+  free(errors);
+  return totalE / n;
+}
+
+void* batchError(void* arg) {
+  BatchJob* batch = (BatchJob*)arg;
+
+  for (int i = 0; i < batch->n; i++) {
+    batch->errors[i] = error(batch->positions + i);
+  }
+
+  pthread_exit(NULL);
 }
 
 double error(Position* p) {
