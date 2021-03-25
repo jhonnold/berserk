@@ -1,11 +1,12 @@
 CC = gcc
 SRC = *.c
 EXE = berserk
-VERSION = 3.1.0
+VERSION = 3.2.0
 
 LIBS = -lm
-WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow 
+WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
 CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG
+TFLAGS = -O3 $(WFLAGS) -flto -march=native -DTUNE
 RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG
 DFLAGS = -O0 $(WFLAGS) -g
 
@@ -29,6 +30,9 @@ release:
 
 debug:
 	$(CC) $(DFLAGS) $(LIBS) $(POPCOUNT) $(SRC) -o $(EXE)
+
+tune:
+	$(CC) $(TFLAGS) $(LIBS) $(POPCOUNT) $(SRC) -o $(EXE)
 
 clean:
 	rm -rf $(EXE)

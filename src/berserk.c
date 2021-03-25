@@ -8,6 +8,7 @@
 #include "eval.h"
 #include "random.h"
 #include "search.h"
+#include "texel.h"
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
@@ -35,7 +36,13 @@ int main(int argc, char** argv) {
   // This is to be compliant for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
     Bench();
-  } else {
+  }
+#ifdef TUNE
+  else if (argc > 1 && !strncmp(argv[1], "tune", 4)) {
+    Texel();
+  }
+#endif
+  else {
     UCI(board);
   }
 

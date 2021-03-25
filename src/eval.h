@@ -9,27 +9,67 @@
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 
-extern const int PAWN_VALUE;
-extern const int KNIGHT_VALUE;
-extern const int BISHOP_VALUE;
-extern const int ROOK_VALUE;
-extern const int QUEEN_VALUE;
-extern const int KING_VALUE;
-extern const int MATERIAL_VALUES[];
+extern Score PAWN_PSQT[32][2];
+extern Score KNIGHT_PSQT[32][2];
+extern Score BISHOP_PSQT[32][2];
+extern Score ROOK_PSQT[32][2];
+extern Score QUEEN_PSQT[32][2];
+extern Score KING_PSQT[32][2];
+extern Score KNIGHT_POST_PSQT[32][2];
+extern Score MATERIAL_VALUES[7][2];
 
-extern int MATERIAL_AND_PSQT_VALUES[12][64];
+extern Score KNIGHT_MOBILITIES[9][2];
+extern Score BISHOP_MOBILITIES[14][2];
+extern Score ROOK_MOBILITIES[15][2];
+extern Score QUEEN_MOBILITIES[28][2];
+
+extern Score BISHOP_PAIR[2];
+extern Score DOUBLED_PAWN[2];
+extern Score OPPOSED_ISOLATED_PAWN[2];
+extern Score OPEN_ISOLATED_PAWN[2];
+extern Score BACKWARDS_PAWN[2];
+extern Score DEFENDED_PAWN[2];
+extern Score CONNECTED_PAWN[8][2];
+extern Score PASSED_PAWN[8][2];
+
+extern Score DEFENDED_MINOR[2];
+
+extern Score ROOK_OPEN_FILE[2];
+extern Score ROOK_SEMI_OPEN[2];
+extern Score ROOK_SEVENTH_RANK[2];
+extern Score ROOK_OPPOSITE_KING[2];
+extern Score ROOK_ADJACENT_KING[2];
+extern Score ROOK_TRAPPED[2];
+extern Score BISHOP_TRAPPED[2];
+
+extern Score KNIGHT_THREATS[6][2];
+extern Score BISHOP_THREATS[6][2];
+extern Score ROOK_THREATS[6][2];
+extern Score KING_THREATS[6][2];
+extern Score HANGING_THREAT[2];
+
+extern Score PAWN_SHELTER[2][8][2];
+extern Score PAWN_STORM[8][2];
+
+extern Score KS_ATTACKER_WEIGHTS[5];
+extern Score KS_ATTACK;
+extern Score KS_WEAK_SQS;
+extern Score KS_SAFE_CHECK;
+extern Score KS_UNSAFE_CHECK;
+extern Score KS_ENEMY_QUEEN;
+extern Score KS_ALLIES;
 
 void initPSQT();
 
 int getPhase(Board* board);
-int taper(int mg, int eg, int phase);
+Score taper(Score mg, Score eg, int phase);
 
-int toScore(EvalData* data, Board* board);
+Score toScore(EvalData* data, Board* board);
 int isMaterialDraw(Board* board);
 void EvaluateSide(Board* board, int side, EvalData* data);
 void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData);
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData);
-int Evaluate(Board* board);
+Score Evaluate(Board* board);
 void PrintEvaluation(Board* board);
 
 #endif

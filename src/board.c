@@ -21,9 +21,10 @@ const int QUEEN[] = {QUEEN_WHITE, QUEEN_BLACK};
 const int KING[] = {KING_WHITE, KING_BLACK};
 
 // way to identify if PAWN[WHITE] == PAWN[BLACK]
-const int PIECE_TYPE[12] = {
+const int PIECE_TYPE[13] = {
     PAWN_TYPE, PAWN_TYPE, KNIGHT_TYPE, KNIGHT_TYPE, BISHOP_TYPE, BISHOP_TYPE,
     ROOK_TYPE, ROOK_TYPE, QUEEN_TYPE,  QUEEN_TYPE,  KING_TYPE,   KING_TYPE,
+    6 // No piece
 };
 
 // clang-format off

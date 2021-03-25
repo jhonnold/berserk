@@ -459,7 +459,7 @@ void generateQuiesceMoves(MoveList* moveList, SearchData* data) {
     Move move = moveList->moves[i];
 
     if (movePromo(move)) {
-      moveList->scores[i] = scoreMG(MATERIAL_VALUES[movePromo(move)]);
+      moveList->scores[i] = MATERIAL_VALUES[PIECE_TYPE[movePromo(move)]][MG];
     } else if (moveEP(move)) {
       moveList->scores[i] = MVV_LVA[PAWN[board->side]][PAWN[board->xside]];
     } else {
@@ -570,7 +570,7 @@ void generateMoves(MoveList* moveList, SearchData* data) {
         moveList->scores[i] = GOOD_CAPTURE + MVV_LVA[mover][captured];
       }
     } else if (movePromo(move) >= 8) {
-      moveList->scores[i] = GOOD_CAPTURE + scoreMG(QUEEN_VALUE);
+      moveList->scores[i] = GOOD_CAPTURE + MATERIAL_VALUES[QUEEN_TYPE][MG];
     } else if (move == data->killers[data->ply][0]) {
       moveList->scores[i] = KILLER1;
     } else if (move == data->killers[data->ply][1]) {
