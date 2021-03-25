@@ -9,9 +9,49 @@
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 
+extern Score PAWN_PSQT[32][2];
+extern Score KNIGHT_PSQT[32][2];
+extern Score BISHOP_PSQT[32][2];
+extern Score ROOK_PSQT[32][2];
+extern Score QUEEN_PSQT[32][2];
+extern Score KING_PSQT[32][2];
+extern Score KNIGHT_POST_PSQT[32][2];
 extern Score MATERIAL_VALUES[7][2];
 
-extern Score KS_ATTACKER_WEIGHTS[];
+extern Score KNIGHT_MOBILITIES[9][2];
+extern Score BISHOP_MOBILITIES[14][2];
+extern Score ROOK_MOBILITIES[15][2];
+extern Score QUEEN_MOBILITIES[28][2];
+
+extern Score BISHOP_PAIR[2];
+extern Score DOUBLED_PAWN[2];
+extern Score OPPOSED_ISOLATED_PAWN[2];
+extern Score OPEN_ISOLATED_PAWN[2];
+extern Score BACKWARDS_PAWN[2];
+extern Score DEFENDED_PAWN[2];
+extern Score CONNECTED_PAWN[8][2];
+extern Score PASSED_PAWN[8][2];
+
+extern Score DEFENDED_MINOR[2];
+
+extern Score ROOK_OPEN_FILE[2];
+extern Score ROOK_SEMI_OPEN[2];
+extern Score ROOK_SEVENTH_RANK[2];
+extern Score ROOK_OPPOSITE_KING[2];
+extern Score ROOK_ADJACENT_KING[2];
+extern Score ROOK_TRAPPED[2];
+extern Score BISHOP_TRAPPED[2];
+
+extern Score KNIGHT_THREATS[6][2];
+extern Score BISHOP_THREATS[6][2];
+extern Score ROOK_THREATS[6][2];
+extern Score KING_THREATS[6][2];
+extern Score HANGING_THREAT[2];
+
+extern Score PAWN_SHELTER[2][8][2];
+extern Score PAWN_STORM[8][2];
+
+extern Score KS_ATTACKER_WEIGHTS[5];
 extern Score KS_ATTACK;
 extern Score KS_WEAK_SQS;
 extern Score KS_SAFE_CHECK;
