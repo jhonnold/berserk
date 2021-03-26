@@ -6,6 +6,7 @@
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
+#include "filter.h"
 #include "random.h"
 #include "search.h"
 #include "texel.h"
@@ -40,6 +41,8 @@ int main(int argc, char** argv) {
 #ifdef TUNE
   else if (argc > 1 && !strncmp(argv[1], "tune", 4)) {
     Texel();
+  } else if (argc > 1 && !strncmp(argv[1], "quiets", 4)) {
+    FilterAll();
   }
 #endif
   else {

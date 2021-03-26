@@ -6,7 +6,7 @@ VERSION = 3.2.0
 LIBS = -lm
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
 CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG
-TFLAGS = -O3 $(WFLAGS) -flto -march=native -DTUNE
+TFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG -DTUNE
 RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG
 DFLAGS = -O0 $(WFLAGS) -g
 
