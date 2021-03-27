@@ -6,15 +6,19 @@
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
-#include "filter.h"
 #include "random.h"
 #include "search.h"
-#include "texel.h"
+
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
 #include "util.h"
 #include "zobrist.h"
+
+#ifdef TUNE
+#include "texel.h"
+#include "texelfilter.h"
+#endif
 
 int main(int argc, char** argv) {
   seedRandom(0);
@@ -38,11 +42,13 @@ int main(int argc, char** argv) {
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
     Bench();
   }
+
+// TODO: Texel code could use some cleanup
 #ifdef TUNE
   else if (argc > 1 && !strncmp(argv[1], "tune", 4)) {
     Texel();
-  } else if (argc > 1 && !strncmp(argv[1], "quiets", 4)) {
-    FilterAll();
+  } else if (argc > 1 && !strncmp(argv[1], "filter", 4)) {
+    RunFilter();
   }
 #endif
   else {

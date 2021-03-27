@@ -288,7 +288,6 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data) {
   if (data->ply > MAX_DEPTH - 1)
     return Evaluate(data->board);
 
-#ifndef TUNE
   if ((data->nodes & 2047) == 0)
     communicate(params);
 
@@ -311,9 +310,6 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data) {
     if (ttFlag(ttValue) == (ttEval > eval ? TT_LOWER : TT_UPPER))
       eval = ttEval;
   }
-#else
-  int eval = Evaluate(data->board);
-#endif
 
   if (eval >= beta)
     return eval;
@@ -330,7 +326,6 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data) {
     bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
-#ifndef TUNE
     if (movePromo(move)) {
       if (movePromo(move) < QUEEN[WHITE])
         continue;
@@ -345,7 +340,6 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data) {
 
     if (moveList->scores[i] < 0)
       break;
-#endif
 
     data->moves[data->ply++] = move;
     makeMove(move, data->board);

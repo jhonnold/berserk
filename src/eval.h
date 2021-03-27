@@ -9,6 +9,8 @@
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 
+extern Score PHASE_MULTIPLIERS[5];
+
 extern Score PAWN_PSQT[32][2];
 extern Score KNIGHT_PSQT[32][2];
 extern Score BISHOP_PSQT[32][2];
@@ -61,8 +63,9 @@ extern Score KS_ALLIES;
 
 void initPSQT();
 
-int getPhase(Board* board);
-Score taper(Score mg, Score eg, int phase);
+Score maxPhase();
+Score getPhase(Board* board);
+Score taper(Score mg, Score eg, Score phase);
 
 Score toScore(EvalData* data, Board* board);
 int isMaterialDraw(Board* board);

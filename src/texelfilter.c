@@ -1,4 +1,5 @@
 #ifdef TUNE
+
 #include <math.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -9,13 +10,14 @@
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
-#include "filter.h"
+#include "move.h"
 #include "search.h"
+#include "texelfilter.h"
 #include "types.h"
 
 const int ss[] = {1, -1};
 
-void FilterAll() {
+void RunFilter() {
   int n = 0;
   PotentialQuietFen* positions = loadFilteringPositions(&n);
 
@@ -44,8 +46,11 @@ PotentialQuietFen* loadFilteringPositions(int* n) {
       if (buffer[i] == 'c')
         break;
 
-    memcpy(positions[p++].fen, buffer, i * sizeof(char));
-    memcpy(positions[p - 1].orig, buffer, sizeof(buffer));
+    memcpy(positions[p].fen, buffer, i * sizeof(char));
+    memcpy(positions[p].result, buffer + i, 16 * sizeof(char));
+    positions[p].quiet = 0;
+
+    p++;
   }
 
   *n = p;
@@ -61,6 +66,7 @@ void filter(PotentialQuietFen* positions, int n) {
   for (int t = 0; t < THREADS; t++) {
     filters[t].count = t != THREADS - 1 ? chunkSize : (n - ((THREADS - 1) * chunkSize));
     filters[t].positions = positions + (t * chunkSize);
+    filters[t].thread = t;
 
     pthread_create(&threads[t], NULL, batchFilter, (void*)(filters + t));
   }
@@ -75,8 +81,9 @@ void filter(PotentialQuietFen* positions, int n) {
   }
 
   for (int i = 0; i < n; i++) {
-    if (positions[i].quiet)
-      fputs(positions[i].orig, fp);
+    if (positions[i].quiet) {
+      fprintf(fp, "%s %s", positions[i].fen, positions[i].result);
+    }
   }
 
   fclose(fp);
@@ -85,8 +92,12 @@ void filter(PotentialQuietFen* positions, int n) {
 void* batchFilter(void* arg) {
   BatchFilter* job = (BatchFilter*)arg;
 
-  for (int i = 0; i < job->count; i++)
+  for (int i = 0; i < job->count; i++) {
+    if ((i & 255) == 0)
+      printf("Thread %2d at position count %6d\n", job->thread, i);
+
     quiet(job->positions + i);
+  }
 
   pthread_exit(NULL);
 }
@@ -95,12 +106,17 @@ void quiet(PotentialQuietFen* p) {
   Board* board = malloc(sizeof(Board));
   parseFen(p->fen, board);
 
-  if (board->checkers)
+  if (board->checkers) {
+    free(board);
     return;
+  }
 
   int staticEval = ss[board->side] * Evaluate(board);
 
+  PV* pv = malloc(sizeof(PV));
+
   SearchData* data = malloc(sizeof(SearchData));
+  data->board = board;
   data->nodes = 0;
   data->seldepth = 0;
   data->ply = 0;
@@ -110,18 +126,37 @@ void quiet(PotentialQuietFen* p) {
   memset(data->counters, 0, sizeof(data->counters));
   memset(data->hh, 0, sizeof(data->hh));
   memset(data->bf, 0, sizeof(data->bf));
-  data->board = board;
 
   SearchParams* params = malloc(sizeof(SearchParams));
+  params->depth = 8;
+  params->endTime = INT32_MAX;
+  params->stopped = 0;
+  params->quit = 0;
 
-  int qs = ss[board->side] * quiesce(-CHECKMATE, CHECKMATE, params, data);
+  int score = ss[board->side] * negamax(-CHECKMATE, CHECKMATE, 1, params, data, pv);
 
-  if (abs(staticEval - qs) <= 100) {
-    p->quiet = 1;
-  } else {
-    p->quiet = 0;
+  if (pv->count) {
+    int quiet = 1;
+
+    int i;
+    for (i = 0; i < pv->count; i++) {
+      Move m = pv->moves[i];
+
+      if (board->checkers || moveCapture(m) || movePromo(m) == QUEEN_WHITE || movePromo(m) == QUEEN_BLACK) {
+        quiet = 0;
+        break;
+      }
+
+      makeMove(pv->moves[i], board);
+    }
+
+    if (quiet && abs(staticEval - score) <= 75) {
+      p->quiet = 1;
+      toFen(p->fen, board);
+    }
   }
 
+  free(pv);
   free(data);
   free(params);
   free(board);

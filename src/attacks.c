@@ -8,7 +8,6 @@
 #include "movegen.h"
 #include "random.h"
 
-
 // clang-format off
 const int BISHOP_RELEVANT_BITS[64] = {
   6, 5, 5, 5, 5, 5, 5, 6, 

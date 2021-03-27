@@ -1,11 +1,13 @@
-#ifdef TUNE
 #ifndef TEXEL_H
 #define TEXEL_H
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\berserk-texel-quiets.epd"
+#include "types.h"
+
+#define THREADS 32
+#define EPD_FILE_PATH "C:\\Programming\\berserk\\resources\\quiet-labeled.epd"
 
 typedef struct {
   double result;
@@ -39,5 +41,4 @@ double sigmoid(Score score);
 void shuffle(Position* array, int n);
 void PrintParams(TexelParam* params, int numParams, double best, double current, int epoch);
 
-#endif
 #endif
