@@ -14,10 +14,10 @@ typedef struct {
 } Position;
 
 typedef struct {
-  double* errors;
   Position* positions;
   int n;
   int threadid;
+  double totalError;
 } BatchJob;
 
 typedef struct {
@@ -35,8 +35,9 @@ void determineK(Position* positions, int n);
 double totalError(Position* positions, int n);
 void* batchError(void* arg);
 double error(Position* p);
-double sigmoid(int score);
-void PrintParams(TexelParam* params, int numParams);
+double sigmoid(Score score);
+void shuffle(Position* array, int n);
+void PrintParams(TexelParam* params, int numParams, double best, double current, int epoch);
 
 #endif
 #endif
