@@ -130,7 +130,7 @@ void UCI(Board* board) {
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
-  char in[2048];
+  char in[8192];
   SearchParams searchParams[1];
   searchParams->quit = 0;
 
@@ -145,7 +145,7 @@ void UCI(Board* board) {
 
     fflush(stdout);
 
-    if (!fgets(in, 2048, stdin))
+    if (!fgets(in, 8192, stdin))
       continue;
 
     if (in[0] == '\n')
