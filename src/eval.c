@@ -16,148 +16,148 @@
 #define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
 #define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
 
-int MAX_PHASE = 24;
-int PHASE_MULTIPLIERS[12] = {0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0};
+int MAX_PHASE = 102;
+int PHASE_MULTIPLIERS[12] = {0, 0, 3, 3, 5, 5, 9, 9, 17, 17, 0, 0};
 
 Score MATERIAL_VALUES[7][2] = {
-    {100, 153}, {593, 432}, {616, 415}, {789, 782}, {1576, 1476}, {30000, 30000}, {0, 0},
+    {147, 155}, {399, 443}, {424, 453}, {541, 753}, {1023, 1384}, {30000, 30000}, {0, 0},
 };
 
 // clang-format off
 Score PAWN_PSQT[32][2] = {
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-  {   4,  32}, {   9,  26}, {   1,  14}, {  -1,  -1}, 
-  {   5,  29}, {  13,  25}, {  25,  -1}, {  -4, -29}, 
-  {  -9,  16}, {   8,  -1}, {  19, -19}, {  29, -29}, 
-  { -25,  -2}, { -18,  -9}, {   1, -22}, {  10, -23}, 
-  { -21, -11}, {  -8, -13}, {  -2, -17}, {  -3, -11}, 
-  { -25,  -9}, {  16, -12}, {   5,  -4}, {  -8,   0}, 
+  {  20, 182}, {  33, 172}, {  49, 149}, {  61, 105}, 
+  { -83,  28}, { -73,  20}, { -39,  18}, { -40, -63}, 
+  { -96,   1}, { -90, -13}, { -82, -31}, { -71, -44}, 
+  { -99, -20}, { -98, -21}, { -88, -34}, { -80, -36}, 
+  { -96, -23}, { -89, -25}, { -88, -31}, { -81, -31}, 
+  { -96, -19}, { -72, -20}, { -76, -23}, { -74, -19}, 
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
 };
 
 Score KNIGHT_PSQT[32][2] = {
-  { -95, -61}, { -35, -52}, { -37, -26}, {  -8, -30}, 
-  { -40, -41}, { -30,  -8}, {  31, -22}, {   8,   1}, 
-  { -26, -39}, {   8, -23}, {  11,  11}, {  19,   9}, 
-  {  13, -13}, {  16,  -4}, {  12,  18}, {  21,  24}, 
-  {   1,  -8}, {  20,  -9}, {  17,  16}, {  17,  20}, 
-  { -23, -13}, {  -2, -16}, {   0,  -5}, {   8,  18}, 
-  { -14, -30}, { -22, -12}, {  -6, -10}, {   5,   1}, 
-  { -38, -24}, { -11, -26}, { -31,  -8}, {  -4,  -4},
+  {-150, -88}, {-141, -40}, {-202, -22}, {-208,   1},  
+  { -66, -36}, { -57,  -8}, {  -5, -12}, { -40,   3},  
+  { -30, -33}, { -34, -11}, { -37,   8}, { -19,  -6},  
+  {   1, -14}, { -20, -10}, {   8, -11}, {   6,  -7},  
+  {  -8,  -4}, {   9, -16}, {   1,   0}, {   3,   8},  
+  { -31, -16}, { -17, -13}, { -17,  -3}, {  -7,  -7},  
+  { -19,   7}, { -21, -13}, { -22, -13}, { -11,  -9},  
+  { -36,  -6}, { -27, -11}, { -17, -15}, { -19,  -1}, 
 };
 
 Score KNIGHT_POST_PSQT[32][2] = {
-  {   2,   2}, {  -2,  -3}, {   0,   3}, {  -2,  -1}, 
-  {  -5,  -4}, {  -2,   6}, {  -6, -18}, {  -3,   2}, 
-  {  10,  19}, {  49,  23}, {  37,  24}, {  41,  20}, 
-  {  22,   9}, {  45,   3}, {  37,  18}, {  56,  17}, 
-  {  22,  10}, {  28,  11}, {  38,  16}, {  40,  32}, 
-  {   6, -10}, {  -6,  18}, {   4,  19}, {   6,  17}, 
-  {   8,  -8}, {   7,  17}, {  -7,  21}, { -11,  26}, 
-  {   4,  14}, {  16,   7}, {   3,   3}, {   1,  14},
+  {0,0}, {0,0}, {0,0}, {0,0}, 
+  {0,0}, {0,0}, {0,0}, {0,0}, 
+  {   0,   0}, {  19,  20}, {  66,  13}, {  46,  36}, 
+  {   0,   0}, {  50,  20}, {  33,  38}, {  56,  35}, 
+  {   0,   0}, {  29,  23}, {  27,  23}, {  28,  29}, 
+  {0,0}, {0,0}, {0,0}, {0,0}, 
+  {0,0}, {0,0}, {0,0}, {0,0}, 
+  {0,0}, {0,0}, {0,0}, {0,0},
 };
 
 Score BISHOP_PSQT[32][2] = {
-  { -24, -15}, {  -2, -18}, { -38, -23}, { -29, -14}, 
-  { -47,  -6}, {  -25, -7}, { -27,  -3}, { -20, -14}, 
-  { -24,  -1}, {   4, -11}, {   7,  -4}, { -13, -10}, 
-  { -23,   0}, { -15,  -6}, { -11,   2}, {  13,  -2}, 
-  {  -6, -10}, { -16,  -9}, { -15,   2}, {  14,  -1}, 
-  { -19,  -3}, {   3, -10}, {   5,  -3}, {  -3,   7}, 
-  {  -5, -14}, {  23, -19}, {   7, -11}, {  -8,   2}, 
-  { -34,  -9}, { -14,   7}, { -15,   8}, { -15,   3}, 
+  {-110,  -4}, {-109,   4}, {-177,  13}, {-203,  19}, 
+  { -56, -15}, { -67,  -8}, { -45,  -9}, { -75,   7}, 
+  { -29,  -9}, { -27,  -5}, { -61,  10}, { -27, -12}, 
+  { -54,   2}, { -27,   0}, { -33,  -1}, { -10,  -2}, 
+  { -22, -14}, { -44,  -2}, { -27,   1}, { -16,  -1}, 
+  { -32, -12}, { -10,  -4}, { -21,  -1}, { -20,   9}, 
+  { -16, -15}, { -11, -13}, { -14, -16}, { -26,  -1}, 
+  { -14, -17}, { -15, -11}, { -25,   0}, { -30,  -3}, 
 };
 
 Score ROOK_PSQT[32][2] = {
-  {   4,  15}, {  16,  14}, {   7,  16}, {  26,  17}, 
-  { -15, -14}, { -14, -12}, {  10, -17}, {   5, -19}, 
-  {  -4,   0}, {  16,   5}, {  15,   0}, {  18,   0}, 
-  { -19,   8}, {  -8,   0}, {  21,   8}, {  22,  -3}, 
-  { -32,   4}, {  -7,   2}, { -10,   5}, {   4,  -3}, 
-  { -28,  -5}, {  -3,  -3}, {   4, -13}, {   2,  -7}, 
-  { -33,  -1}, {   2, -10}, {   5,  -6}, {  20,  -8}, 
-  {   3, -14}, {  -7,  -3}, {  15,  -7}, {  20, -11}, 
+  { -24,  26}, { -57,  38}, { -65,  49}, { -72,  49},
+  {  18,  17}, {  -7,  36}, {  12,  35}, {  19,  29}, 
+  { -31,  10}, {  -1,   9}, {  -8,  15}, {  -2,   4}, 
+  { -36,  17}, { -33,  17}, { -19,  14}, { -24,  14}, 
+  { -47,  14}, { -42,   9}, { -51,  22}, { -40,  19}, 
+  { -46,   5}, { -39,   2}, { -38,  11}, { -37,  12}, 
+  { -41,   9}, { -41,   7}, { -33,   8}, { -26,   9}, 
+  { -30,  10}, { -34,   6}, { -29,  13}, { -25,   6}, 
 };
 
 Score QUEEN_PSQT[32][2] = {
-  {   6, -16}, {  15,  -6}, {  14,  -2}, {  18,   4}, 
-  { -13, -33}, { -37, -33}, { -19, -10}, { -23,   7}, 
-  {   0, -22}, {  -8, -17}, {   6,  -7}, {  -6,  25}, 
-  { -23,  16}, { -26,  26}, { -23,  14}, { -28,  25}, 
-  { -12,  -3}, { -22,  23}, { -20,  26}, { -25,  37}, 
-  { -17,  -2}, {   4, -13}, { -14,  19}, { -11,  14}, 
-  { -18, -28}, { -13, -31}, {  17, -31}, {   6,  -7}, 
-  { -15, -38}, { -19, -33}, { -15, -27}, {  12, -35}, 
+  { -65,  -4}, { -66,  -5}, { -47,  18}, { -68,  30}, 
+  { -81, -13}, {-127,  47}, {-130,  78}, {-125,  74}, 
+  { -78, -19}, { -87,  16}, { -87,  58}, { -89,  59}, 
+  { -82,  14}, { -80,  45}, { -91,  50}, { -95,  79}, 
+  { -76,  28}, { -82,  46}, { -86,  48}, { -87,  70}, 
+  { -74,  -3}, { -68,  18}, { -79,  42}, { -83,  45}, 
+  { -66, -33}, { -68, -20}, { -67,  -1}, { -67,  13}, 
+  { -63, -49}, { -82, -15}, { -85, -12}, { -75, -12}, 
 };
 
 Score KING_PSQT[32][2] = {
-  { -43, -71}, { -22, -42}, { -38, -21}, { -67, -33}, 
-  { -23, -28}, {  -4,  -4}, { -21,  13}, { -40,  12}, 
-  {  -8, -19}, {  13,  10}, {  -3,  23}, { -31,   6}, 
-  { -20, -33}, {  14,  -2}, {  -2,  17}, { -23,  19}, 
-  { -29, -46}, {  -8, -19}, { -22,  12}, { -46,  24}, 
-  { -12, -39}, {  12, -15}, { -15,   6}, { -32,  18}, 
-  {  31, -52}, {  45, -31}, {  -7,  -3}, { -32,   5}, 
-  {  13, -95}, {  62, -64}, {  23, -39}, {  22, -47}, 
+  { -39,-263}, { -11,-143}, { -52,-111}, { -22, -96}, 
+  { -71,-123}, { -85, -58}, { -66, -44}, {-111, -34}, 
+  {-185,-106}, {-121, -61}, {-101, -47}, {-142, -31}, 
+  {-225,-105}, {-150, -70}, {-198, -42}, {-212, -28}, 
+  {-250,-100}, {-186, -77}, {-175, -60}, {-172, -49}, 
+  {-165,-113}, {-118,-100}, {-136, -82}, {-137, -70}, 
+  {-120,-126}, { -89,-113}, {-107, -98}, {-135, -85}, 
+  {-119,-163}, { -74,-145}, { -83,-128}, {-102,-131}, 
 };
 
 // clang-format on
 
 Score KNIGHT_MOBILITIES[9][2] = {
-    {-67, -95}, {-44, -75}, {-26, -39}, {-21, -15}, {-1, -11}, {10, 0}, {21, -2}, {32, -2}, {43, -11},
+    {-150, -82}, {-113, -34}, {-92, -8}, {-83, 6}, {-73, 16}, {-66, 24}, {-57, 25}, {-47, 22}, {-40, 14},
 };
 
 Score BISHOP_MOBILITIES[14][2] = {
-    {-58, -60}, {-40, -57}, {-18, -20}, {-11, 7}, {-1, 22}, {13, 31}, {20, 40},
-    {25, 45},   {30, 53},   {32, 54},   {49, 48}, {66, 54}, {39, 76}, {52, 63},
+    {-135, -38}, {-107, -31}, {-90, -21}, {-82, -2}, {-71, 9},  {-64, 18}, {-60, 26},
+    {-58, 31},   {-54, 35},   {-56, 39},  {-51, 35}, {-25, 31}, {-22, 30}, {0, 31},
 };
 
 Score ROOK_MOBILITIES[15][2] = {
-    {-3, -63}, {-29, -67}, {-19, -41}, {-16, -31}, {-19, -3}, {-19, 17}, {-16, 25}, {-15, 27},
-    {-7, 29},  {5, 33},    {14, 37},   {26, 41},   {32, 47},  {38, 50},  {35, 52},
+    {-97, -109}, {-87, -35}, {-73, -21}, {-70, -23}, {-69, -5}, {-72, 6},  {-76, 18}, {-74, 14},
+    {-68, 14},   {-65, 21},  {-61, 23},  {-62, 26},  {-59, 29}, {-51, 25}, {-46, 23},
 };
 
-Score QUEEN_MOBILITIES[28][2] = {{-10, -75}, {-12, -52}, {-14, -36}, {-26, -20}, {-18, -14}, {-13, -16}, {-12, -17},
-                                 {-2, -6},   {5, -4},    {9, -5},    {10, 18},   {11, 30},   {18, 23},   {12, 54},
-                                 {16, 58},   {16, 61},   {13, 66},   {13, 68},   {16, 67},   {39, 75},   {30, 65},
-                                 {33, 79},   {31, 60},   {19, 61},   {14, 53},   {4, 72},    {3, 55},    {2, 54}};
+Score QUEEN_MOBILITIES[28][2] = {{-32, -4},  {-63, -18}, {-172, -57}, {-166, -40}, {-157, 11}, {-154, 19}, {-155, 62},
+                                 {-150, 70}, {-147, 86}, {-142, 83},  {-139, 89},  {-137, 93}, {-136, 99}, {-133, 97},
+                                 {-131, 99}, {-129, 95}, {-134, 101}, {-132, 102}, {-135, 99}, {-124, 79}, {-116, 68},
+                                 {-111, 68}, {-84, 25},  {-71, 10},   {-78, -21},  {-18, -27}, {-3, -24},  {-12, -10}};
 
-Score BISHOP_PAIR[2] = {45, 73};
-Score DOUBLED_PAWN[2] = {-4, -37};
-Score OPPOSED_ISOLATED_PAWN[2] = {-12, 0};
-Score OPEN_ISOLATED_PAWN[2] = {-18, -11};
-Score BACKWARDS_PAWN[2] = {-8, -10};
-Score DEFENDED_PAWN[2] = {17, 1};
+Score BISHOP_PAIR[2] = {29, 62};
+Score DOUBLED_PAWN[2] = {-3, -35};
+Score OPPOSED_ISOLATED_PAWN[2] = {-8, -1};
+Score OPEN_ISOLATED_PAWN[2] = {-15, -7};
+Score BACKWARDS_PAWN[2] = {-8, -9};
+Score DEFENDED_PAWN[2] = {7, 3};
 Score CONNECTED_PAWN[8][2] = {
-    {0, 0}, {45, 58}, {30, 24}, {14, 8}, {11, 1}, {8, -1}, {4, -2}, {0, 0},
+    {0, 0}, {62, 27}, {27, 20}, {12, 11}, {7, 4}, {3, 3}, {0, 0}, {0, 0},
 };
 
 Score PASSED_PAWN[8][2] = {
-    {0, 0}, {237, 238}, {100, 165}, {30, 75}, {5, 41}, {9, 8}, {12, 2}, {0, 0},
+    {0, 0}, {-25, 27}, {10, 132}, {9, 72}, {-4, 44}, {-14, 18}, {-9, 7}, {0, 0},
 };
 
-Score DEFENDED_MINOR[2] = {6, 10};
+Score DEFENDED_MINOR[2] = {0, 0};
 
-Score ROOK_OPEN_FILE[2] = {48, 0};
-Score ROOK_SEMI_OPEN[2] = {12, 8};
-Score ROOK_SEVENTH_RANK[2] = {11, 24};
-Score ROOK_OPPOSITE_KING[2] = {36, 0};
-Score ROOK_ADJACENT_KING[2] = {12, -19}; // interesting EG value
+Score ROOK_OPEN_FILE[2] = {21, 18};
+Score ROOK_SEMI_OPEN[2] = {4, 8};
+Score ROOK_SEVENTH_RANK[2] = {-55, -3}; // not even sure really
+Score ROOK_OPPOSITE_KING[2] = {41, -23};
+Score ROOK_ADJACENT_KING[2] = {1, -21};
 
-Score ROOK_TRAPPED[2] = {-68, -42};
-Score BISHOP_TRAPPED[2] = {-155, -147};
+Score ROOK_TRAPPED[2] = {-57, -32};
+Score BISHOP_TRAPPED[2] = {-98, -98};
 
-Score KNIGHT_THREATS[6][2] = {{-13, 20}, {-5, 9}, {37, 17}, {32, 18}, {29, 28}, {86, 30}};
-Score BISHOP_THREATS[6][2] = {{-7, 17}, {25, 41}, {6, 9}, {22, 19}, {32, 39}, {81, 78}};
-Score ROOK_THREATS[6][2] = {{-6, 20}, {28, 21}, {40, 34}, {17, 13}, {53, 17}, {87, 39}};
-Score KING_THREATS[6][2] = {{27, 80}, {-8, 32}, {-2, 35}, {-14, 30}, {-22, 28}, {15, 60}};
-Score HANGING_THREAT[2] = {16, -6}; // what is that eg value??
+Score KNIGHT_THREATS[6][2] = {{-9, 19}, {12, 29}, {36, 34}, {67, 4}, {25, -25}, {0, 0}};
+Score BISHOP_THREATS[6][2] = {{-2, 17}, {27, 35}, {21, 22}, {34, 11}, {6, 136}, {0, 0}};
+Score ROOK_THREATS[6][2] = {{-5, 25}, {19, 41}, {27, 49}, {-23, 41}, {42, 50}, {0, 0}};
+Score KING_THREATS[6][2] = {{76, 58}, {-24, 42}, {54, 24}, {12, 7}, {0, 0}, {0, 0}};
+Score HANGING_THREAT[2] = {0, 0};
 
 Score PAWN_SHELTER[2][8][2] = {
-    {{-48, 0}, {-27, -20}, {-27, -13}, {-21, -51}, {-14, -36}, {-14, 0}, {3, 24}, {0, 0}},
-    {{-70, -40}, {-74, -65}, {-64, -50}, {-45, -65}, {-34, -34}, {-17, -16}, {-9, -10}, {0, 0}},
+    {{-60, 18}, {-36, 72}, {-34, 30}, {-43, -14}, {-43, -23}, {-46, 26}, {-34, 24}, {0, 0}},
+    {{-109, -10}, {-83, 27}, {-81, -8}, {-79, -46}, {-76, -35}, {-65, -11}, {-58, -12}, {0, 0}},
 };
-Score PAWN_STORM[8][2] = {{0, 0}, {0, 0}, {12, -14}, {-4, 8}, {-16, -1}, {-69, -57}, {16, 24}, {0, 0}};
+Score PAWN_STORM[8][2] = {{0, 0}, {0, 0}, {3, -8}, {-1, 5}, {-14, 6}, {-26, -17}, {40, 107}, {0, 0}};
 
 Score KS_ATTACKER_WEIGHTS[5] = {0, 64, 53, 67, 25};
 Score KS_ATTACK = 39;
@@ -680,6 +680,7 @@ inline Score toScore(EvalData* data, Board* board) {
   return taper(mg, eg, getPhase(board));
 }
 
+#ifndef TUNE
 void PrintEvaluation(Board* board) {
   EvalData whiteEval[1];
   EvalData blackEval[1];
@@ -757,3 +758,84 @@ void PrintEvaluation(Board* board) {
   printf("|------------|-------------------|-------------------|-------------------|\n");
   printf("\nResult (white): %5d\n\n", toScore(whiteEval, board) - toScore(blackEval, board));
 }
+#else
+void PrintEvaluation(Board* board) {
+  EvalData whiteEval[1];
+  EvalData blackEval[1];
+
+  EvaluateSide(board, WHITE, whiteEval);
+  EvaluateSide(board, BLACK, blackEval);
+
+  EvaluateThreats(board, WHITE, whiteEval, blackEval);
+  EvaluateThreats(board, BLACK, blackEval, whiteEval);
+
+  EvaluateKingSafety(board, WHITE, whiteEval, blackEval);
+  EvaluateKingSafety(board, BLACK, blackEval, whiteEval);
+
+  int phase = getPhase(board);
+
+  printf("|            | WHITE mg,eg,taper | BLACK mg,eg,taper | DIFF  mg,eg,taper |\n");
+  printf("|------------|-------------------|-------------------|-------------------|\n");
+  printf("| material   | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->material[MG],
+         whiteEval->material[EG], taper(whiteEval->material[MG], whiteEval->material[EG], phase),
+         blackEval->material[MG], blackEval->material[EG],
+         taper(blackEval->material[MG], blackEval->material[EG], phase),
+         whiteEval->material[MG] - blackEval->material[MG], whiteEval->material[EG] - blackEval->material[EG],
+         taper(whiteEval->material[MG] - blackEval->material[MG], whiteEval->material[EG] - blackEval->material[EG],
+               phase));
+  printf("| pawns      | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->pawns[MG],
+         whiteEval->pawns[EG], taper(whiteEval->pawns[MG], whiteEval->pawns[EG], phase), blackEval->pawns[MG],
+         blackEval->pawns[EG], taper(blackEval->pawns[MG], blackEval->pawns[EG], phase),
+         whiteEval->pawns[MG] - blackEval->pawns[MG], whiteEval->pawns[EG] - blackEval->pawns[EG],
+         taper(whiteEval->pawns[MG] - blackEval->pawns[MG], whiteEval->pawns[EG] - blackEval->pawns[EG], phase));
+  printf(
+      "| knights    | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->knights[MG],
+      whiteEval->knights[EG], taper(whiteEval->knights[MG], whiteEval->knights[EG], phase), blackEval->knights[MG],
+      blackEval->knights[EG], taper(blackEval->knights[MG], blackEval->knights[EG], phase),
+      whiteEval->knights[MG] - blackEval->knights[MG], whiteEval->knights[EG] - blackEval->knights[EG],
+      taper(whiteEval->knights[MG] - blackEval->knights[MG], whiteEval->knights[EG] - blackEval->knights[EG], phase));
+  printf(
+      "| bishops    | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->bishops[MG],
+      whiteEval->bishops[EG], taper(whiteEval->bishops[MG], whiteEval->bishops[EG], phase), blackEval->bishops[MG],
+      blackEval->bishops[EG], taper(blackEval->bishops[MG], blackEval->bishops[EG], phase),
+      whiteEval->bishops[MG] - blackEval->bishops[MG], whiteEval->bishops[EG] - blackEval->bishops[EG],
+      taper(whiteEval->bishops[MG] - blackEval->bishops[MG], whiteEval->bishops[EG] - blackEval->bishops[EG], phase));
+  printf("| rooks      | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->rooks[MG],
+         whiteEval->rooks[EG], taper(whiteEval->rooks[MG], whiteEval->rooks[EG], phase), blackEval->rooks[MG],
+         blackEval->rooks[EG], taper(blackEval->rooks[MG], blackEval->rooks[EG], phase),
+         whiteEval->rooks[MG] - blackEval->rooks[MG], whiteEval->rooks[EG] - blackEval->rooks[EG],
+         taper(whiteEval->rooks[MG] - blackEval->rooks[MG], whiteEval->rooks[EG] - blackEval->rooks[EG], phase));
+  printf("| queens     | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->queens[MG],
+         whiteEval->queens[EG], taper(whiteEval->queens[MG], whiteEval->queens[EG], phase), blackEval->queens[MG],
+         blackEval->queens[EG], taper(blackEval->queens[MG], blackEval->queens[EG], phase),
+         whiteEval->queens[MG] - blackEval->queens[MG], whiteEval->queens[EG] - blackEval->queens[EG],
+         taper(whiteEval->queens[MG] - blackEval->queens[MG], whiteEval->queens[EG] - blackEval->queens[EG], phase));
+  printf("| kings      | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->kings[MG],
+         whiteEval->kings[EG], taper(whiteEval->kings[MG], whiteEval->kings[EG], phase), blackEval->kings[MG],
+         blackEval->kings[EG], taper(blackEval->kings[MG], blackEval->kings[EG], phase),
+         whiteEval->kings[MG] - blackEval->kings[MG], whiteEval->kings[EG] - blackEval->kings[EG],
+         taper(whiteEval->kings[MG] - blackEval->kings[MG], whiteEval->kings[EG] - blackEval->kings[EG], phase));
+  printf("| mobility   | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->mobility[MG],
+         whiteEval->mobility[EG], taper(whiteEval->mobility[MG], whiteEval->mobility[EG], phase),
+         blackEval->mobility[MG], blackEval->mobility[EG],
+         taper(blackEval->mobility[MG], blackEval->mobility[EG], phase),
+         whiteEval->mobility[MG] - blackEval->mobility[MG], whiteEval->mobility[EG] - blackEval->mobility[EG],
+         taper(whiteEval->mobility[MG] - blackEval->mobility[MG], whiteEval->mobility[EG] - blackEval->mobility[EG],
+               phase));
+  printf(
+      "| threats    | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->threats[MG],
+      whiteEval->threats[EG], taper(whiteEval->threats[MG], whiteEval->threats[EG], phase), blackEval->threats[MG],
+      blackEval->threats[EG], taper(blackEval->threats[MG], blackEval->threats[EG], phase),
+      whiteEval->threats[MG] - blackEval->threats[MG], whiteEval->threats[EG] - blackEval->threats[EG],
+      taper(whiteEval->threats[MG] - blackEval->threats[MG], whiteEval->threats[EG] - blackEval->threats[EG], phase));
+  printf("| kingSafety | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval->kingSafety[MG],
+         whiteEval->kingSafety[EG], taper(whiteEval->kingSafety[MG], whiteEval->kingSafety[EG], phase),
+         blackEval->kingSafety[MG], blackEval->kingSafety[EG],
+         taper(blackEval->kingSafety[MG], blackEval->kingSafety[EG], phase),
+         whiteEval->kingSafety[MG] - blackEval->kingSafety[MG], whiteEval->kingSafety[EG] - blackEval->kingSafety[EG],
+         taper(whiteEval->kingSafety[MG] - blackEval->kingSafety[MG],
+               whiteEval->kingSafety[EG] - blackEval->kingSafety[EG], phase));
+  printf("|------------|-------------------|-------------------|-------------------|\n");
+  printf("\nResult (white): %5.0f\n\n", toScore(whiteEval, board) - toScore(blackEval, board));
+}
+#endif

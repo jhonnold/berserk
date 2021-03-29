@@ -38,6 +38,9 @@ inline int ttScore(TTValue value, int ply) {
 }
 
 inline TTValue ttProbe(uint64_t hash) {
+#ifdef TUNE
+  return NO_ENTRY;
+#else
   int idx = ttIdx(hash);
 
   for (int i = idx; i < idx + BUCKET_SIZE * 2; i += 2)
@@ -45,9 +48,14 @@ inline TTValue ttProbe(uint64_t hash) {
       return TRANSPOSITION_ENTRIES[i + 1];
 
   return NO_ENTRY;
+#endif
 }
 
 inline TTValue ttPut(uint64_t hash, int depth, int score, int flag, Move move, int ply, int eval) {
+#ifdef TUNE
+  return NO_ENTRY;
+#else
+
   int idx = ttIdx(hash);
   int replacementDepth = INT32_MAX;
   int replacementIdx = idx;
@@ -95,4 +103,5 @@ inline TTValue ttPut(uint64_t hash, int depth, int score, int flag, Move move, i
   assert(eval == ttEval(tt));
 
   return tt;
+#endif
 }

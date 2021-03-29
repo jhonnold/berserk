@@ -23,9 +23,11 @@ extern const int MIRROR[];
 
 extern const uint64_t PIECE_COUNT_IDX[];
 
-void clear(Board* board);
 uint64_t zobrist(Board* board);
+
+void clear(Board* board);
 void parseFen(char* fen, Board* board);
+void toFen(char* fen, Board* board);
 void printBoard(Board* board);
 
 void setSpecialPieces(Board* board);
