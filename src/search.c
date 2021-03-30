@@ -43,7 +43,8 @@ void initLMR() {
   }
 }
 
-void Search(SearchParams* params, SearchData* data) {
+// DOESN'T TOUCH `->board`
+void initSearchData(SearchData* data) {
   data->nodes = 0;
   data->seldepth = 0;
   data->ply = 0;
@@ -53,8 +54,11 @@ void Search(SearchParams* params, SearchData* data) {
   memset(data->counters, 0, sizeof(data->counters));
   memset(data->hh, 0, sizeof(data->hh));
   memset(data->bf, 0, sizeof(data->bf));
+}
 
+void Search(SearchParams* params, SearchData* data) {
   ttClear();
+  initSearchData(data);
 
   PV pv[1];
 
@@ -102,7 +106,7 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   Move bestMove = 0;
 
   if (depth == 0)
-    return quiesce(alpha, beta, params, data);
+    return quiesce(alpha, beta, params, data, pv);
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
@@ -278,7 +282,10 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   return bestScore;
 }
 
-int quiesce(int alpha, int beta, SearchParams* params, SearchData* data) {
+int quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv) {
+  PV childPv[1];
+  pv->count = 0;
+
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
 
@@ -344,7 +351,7 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data) {
     data->moves[data->ply++] = move;
     makeMove(move, data->board);
 
-    int score = -quiesce(-beta, -alpha, params, data);
+    int score = -quiesce(-beta, -alpha, params, data, childPv);
 
     undoMove(move, data->board);
     data->ply--;
@@ -354,7 +361,14 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data) {
 
     if (score > bestScore) {
       bestScore = score;
-      alpha = max(alpha, score);
+
+      if (score > alpha) {
+        alpha = score;
+
+        pv->count = childPv->count + 1;
+        pv->moves[0] = move;
+        memcpy(pv->moves + 1, childPv->moves, childPv->count * sizeof(Move));
+      }
 
       if (alpha >= beta)
         break;

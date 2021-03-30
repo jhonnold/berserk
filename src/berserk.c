@@ -18,9 +18,6 @@
 int main(int argc, char** argv) {
   seedRandom(0);
 
-#ifndef WIN32
-  initSignalHandlers();
-#endif
   initPSQT();
   initAttacks();
   initPawnSpans();

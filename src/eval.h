@@ -9,6 +9,9 @@
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 
+extern int MAX_PHASE;
+extern int PHASE_MULTIPLIERS[12];
+
 extern Score PAWN_PSQT[32][2];
 extern Score KNIGHT_PSQT[32][2];
 extern Score BISHOP_PSQT[32][2];

@@ -160,14 +160,58 @@ void parseFen(char* fen, Board* board) {
 
   while (*fen != ' ')
     fen++;
-  fen++;
 
-  sscanf(fen, "%d", &board->halfMove);
+  sscanf(fen, " %d", &board->halfMove);
 
   setOccupancies(board);
   setSpecialPieces(board);
 
   board->zobrist = zobrist(board);
+}
+
+void toFen(char* fen, Board* board) {
+  for (int r = 0; r < 8; r++) {
+    int c = 0;
+    for (int f = 0; f < 8; f++) {
+      int sq = 8 * r + f;
+      int piece = board->squares[sq];
+
+      if (piece != NO_PIECE) {
+        if (c)
+          *fen++ = c + '0'; // append the amount of empty sqs
+
+        *fen++ = PIECE_TO_CHAR[piece];
+        c = 0;
+      } else {
+        c++;
+      }
+    }
+
+    if (c)
+      *fen++ = c + '0';
+
+    *fen++ = (r == 7) ? ' ' : '/';
+  }
+
+  *fen++ = board->side ? 'b' : 'w';
+  *fen++ = ' ';
+
+  if (board->castling) {
+    if (board->castling & 0x8)
+      *fen++ = 'K';
+    if (board->castling & 0x4)
+      *fen++ = 'Q';
+    if (board->castling & 0x2)
+      *fen++ = 'k';
+    if (board->castling & 0x1)
+      *fen++ = 'q';
+  } else {
+    *fen++ = '-';
+  }
+
+  *fen++ = ' ';
+
+  sprintf(fen, "%s %d %d", board->epSquare ? SQ_TO_COORD[board->epSquare] : "-", board->halfMove, board->moveNo);
 }
 
 void printBoard(Board* board) {
