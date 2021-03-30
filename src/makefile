@@ -1,7 +1,7 @@
 CC = gcc
 SRC = *.c
 EXE = berserk
-VERSION = 3.2.0
+VERSION = 3.2.1
 
 LIBS = -lm
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow

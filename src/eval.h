@@ -12,6 +12,8 @@
 extern int MAX_PHASE;
 extern int PHASE_MULTIPLIERS[12];
 
+extern int STATIC_MATERIAL_VALUE[7];
+
 extern Score PAWN_PSQT[32][2];
 extern Score KNIGHT_PSQT[32][2];
 extern Score BISHOP_PSQT[32][2];

@@ -18,6 +18,7 @@ A UCI chess engine written in C.
 | ----------- | ------- | ------ |
 | 2.0.0       | ~2600   | 15'    |
 | 3.0.0       | 2818    | 15'    |
+| 3.2.0       | 2899    | 15'    |
 
 ## Features
 
@@ -53,6 +54,7 @@ Evaluation is tapered.
 - [Mobility](https://www.chessprogramming.org/Mobility)
 - [Pawn Structure](https://www.chessprogramming.org/Pawn_Structure)
 - [King Safety](https://www.chessprogramming.org/King_Safety)
+- [Texel Tuned](https://www.chessprogramming.org/Texel's_Tuning_Method)
 
 ### Future Improvements
 
@@ -60,7 +62,7 @@ Evaluation is tapered.
 - Candidate passed pawns
 - More positional analysis
 - Singularity extension
-- Texel tuning
+- ~~Texel tuning~~
 - Other things...
 
 ## Building
@@ -83,6 +85,8 @@ This engine could not be written without some influence and they are...
 - [chess22k](https://github.com/sandermvdb/chess22k)
 - [bbc](https://github.com/maksimKorzh/chess_programming)
   - [youtube](https://www.youtube.com/channel/UCB9-prLkPwgvlKKqDgXhsMQ)
+- [Martin Sedlak](https://www.chessprogramming.org/Cheng)
+  - Very nice and helpful in later development of Berserk
 - [Vice](https://github.com/bluefeversoft/Vice_Chess_Engine)
 - [Stockfish](https://github.com/official-stockfish/Stockfish)
 - [Ethereal](https://github.com/AndyGrant/Ethereal)
@@ -97,3 +101,4 @@ This engine could not be written without some influence and they are...
 - [JCER](https://chessengines.blogspot.com/p/rating-jcer.html)
 - [Cute Chess](https://cutechess.com/)
 - [Arena](http://www.playwitharena.de/)
+- Lars in Graham's CCRL rooms for a nice engine list

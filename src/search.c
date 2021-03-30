@@ -341,7 +341,7 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
 
       assert(captured != NO_PIECE);
 
-      if (eval + DELTA_CUTOFF + MATERIAL_VALUES[PIECE_TYPE[captured]][MG] < alpha)
+      if (eval + DELTA_CUTOFF + STATIC_MATERIAL_VALUE[PIECE_TYPE[captured]] < alpha)
         continue;
     }
 
