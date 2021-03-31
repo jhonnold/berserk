@@ -26,26 +26,26 @@
 #define Beta2 0.999
 #define Epsilon 1e-8
 
-#define Batch 2400000
+#define Batch 1000000
 
 #define QS 0
 
-#define TUNE_MATERIAL 1
-#define TUNE_PAWN_PSQT 1
-#define TUNE_KNIGHT_PSQT 1
-#define TUNE_BISHOP_PSQT 1
-#define TUNE_ROOK_PSQT 1
-#define TUNE_QUEEN_PSQT 1
-#define TUNE_KING_PSQT 1
-#define TUNE_MINOR_PARAMS 1
-#define TUNE_KNIGHT_MOBILITIES 1
-#define TUNE_BISHOP_MOBILITIES 1
-#define TUNE_ROOK_MOBILITIES 1
-#define TUNE_QUEEN_MOBILITIES 1
+#define TUNE_MATERIAL 0
+#define TUNE_PAWN_PSQT 0
+#define TUNE_KNIGHT_PSQT 0
+#define TUNE_BISHOP_PSQT 0
+#define TUNE_ROOK_PSQT 0
+#define TUNE_QUEEN_PSQT 0
+#define TUNE_KING_PSQT 0
+#define TUNE_MINOR_PARAMS 0
+#define TUNE_KNIGHT_MOBILITIES 0
+#define TUNE_BISHOP_MOBILITIES 0
+#define TUNE_ROOK_MOBILITIES 0
+#define TUNE_QUEEN_MOBILITIES 0
 #define TUNE_PAWN_PARAMS 1
-#define TUNE_ROOK_PARAMS 1
-#define TUNE_THREATS 1
-#define TUNE_SHELTER_STORM 1
+#define TUNE_ROOK_PARAMS 0
+#define TUNE_THREATS 0
+#define TUNE_SHELTER_STORM 0
 #define TUNE_KING_SAFETY 0
 
 double K = 1.4258;
@@ -62,7 +62,7 @@ void Texel() {
   int n = 0;
   Position* positions = loadPositions(&n);
 
-  // determineK(positions, n);
+  determineK(positions, n);
 
   SGD(params, numParams, positions, n);
   free(positions);
@@ -1037,6 +1037,13 @@ void addParams(TexelParam* params, int* numParams) {
     addParam("PASSED_PAWN[5][EG]", &PASSED_PAWN[5][EG], params, numParams);
     addParam("PASSED_PAWN[6][MG]", &PASSED_PAWN[6][MG], params, numParams);
     addParam("PASSED_PAWN[6][EG]", &PASSED_PAWN[6][EG], params, numParams);
+
+    addParam("PASSED_PAWN_GUIDER[0][MG]", &PASSED_PAWN_GUIDER[0][MG], params, numParams);
+    addParam("PASSED_PAWN_GUIDER[0][EG]", &PASSED_PAWN_GUIDER[0][EG], params, numParams);
+    addParam("PASSED_PAWN_GUIDER[1][MG]", &PASSED_PAWN_GUIDER[1][MG], params, numParams);
+    addParam("PASSED_PAWN_GUIDER[1][EG]", &PASSED_PAWN_GUIDER[1][EG], params, numParams);
+    addParam("PASSED_PAWN_GUIDER[2][MG]", &PASSED_PAWN_GUIDER[2][MG], params, numParams);
+    addParam("PASSED_PAWN_GUIDER[2][EG]", &PASSED_PAWN_GUIDER[2][EG], params, numParams);
   }
 
   if (TUNE_ROOK_PARAMS) {

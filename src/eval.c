@@ -125,18 +125,22 @@ Score QUEEN_MOBILITIES[28][2] = {{-32, -4},  {-63, -18}, {-172, -57}, {-166, -40
                                  {-111, 68}, {-84, 25},  {-71, 10},   {-78, -21},  {-18, -27}, {-3, -24},  {-12, -10}};
 
 Score BISHOP_PAIR[2] = {29, 62};
-Score DOUBLED_PAWN[2] = {-3, -35};
-Score OPPOSED_ISOLATED_PAWN[2] = {-8, -1};
-Score OPEN_ISOLATED_PAWN[2] = {-15, -7};
+
+Score DOUBLED_PAWN[2] = {-4, -33};
+Score OPPOSED_ISOLATED_PAWN[2] = {-7, -1};
+Score OPEN_ISOLATED_PAWN[2] = {-15, -8};
 Score BACKWARDS_PAWN[2] = {-8, -9};
 Score DEFENDED_PAWN[2] = {7, 3};
 Score CONNECTED_PAWN[8][2] = {
-    {0, 0}, {62, 27}, {27, 20}, {12, 11}, {7, 4}, {3, 3}, {0, 0}, {0, 0},
+    {0, 0}, {62, 22}, {27, 17}, {12, 11}, {7, 4}, {3, 3}, {-1, 0}, {0, 0},
 };
 
 Score PASSED_PAWN[8][2] = {
-    {0, 0}, {25, 157}, {10, 132}, {9, 72}, {-4, 44}, {-14, 18}, {-9, 7}, {0, 0},
+    {0, 0}, {22, 152}, {0, 120}, {3, 64}, {-13, 37}, {-24, 10}, {-21, -3}, {0, 0},
 };
+
+// connected -> rook/queen behind -> other guidances
+Score PASSED_PAWN_GUIDER[3][2] = {{15, 12}, {21, 36}, {5, 30}};
 
 Score DEFENDED_MINOR[2] = {0, 0};
 
@@ -286,66 +290,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   int enemyKingSq = lsb(board->pieces[KING[xside]]);
   BitBoard enemyKingArea = getKingAttacks(enemyKingSq);
 
-  // PAWNS
+  // Initial attack stuff from pawns (pawn eval done elsewhere)
   data->attacks[PAWN_TYPE] = pawnAttacks;
   data->allAttacks = pawnAttacks;
   data->attacks2 = shift(myPawns, PAWN_DIRECTIONS[side] + E) & shift(myPawns, PAWN_DIRECTIONS[side] + W);
-
-  for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
-    BitBoard sqBitboard = pawns & -pawns;
-    int sq = lsb(pawns);
-
-    data->material[MG] += MATERIAL_VALUES[PAWN_TYPE][MG];
-    data->material[EG] += MATERIAL_VALUES[PAWN_TYPE][EG];
-    data->pawns[MG] += PSQT[PAWN[side]][sq][MG];
-    data->pawns[EG] += PSQT[PAWN[side]][sq][EG];
-
-    int file = file(sq);
-    int rank = rank(sq);
-
-    BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
-    BitBoard doubled = board->pieces[PAWN[side]] & shift(sqBitboard, PAWN_DIRECTIONS[xside]);
-    BitBoard neighbors = board->pieces[PAWN[side]] & ADJACENT_FILE_MASKS[file];
-    BitBoard connected = neighbors & RANK_MASKS[rank];
-    BitBoard defenders = board->pieces[PAWN[side]] & getPawnAttacks(sq, xside);
-    BitBoard forwardLever = board->pieces[PAWN[xside]] & getPawnAttacks(sq + PAWN_DIRECTIONS[side], side);
-
-    int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][rank(sq + PAWN_DIRECTIONS[side])]) && forwardLever;
-    int passed =
-        !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
-
-    if (doubled) {
-      data->pawns[MG] += DOUBLED_PAWN[MG];
-      data->pawns[EG] += DOUBLED_PAWN[EG];
-    }
-
-    if (!neighbors) {
-      data->pawns[MG] += opposed ? OPPOSED_ISOLATED_PAWN[MG] : OPEN_ISOLATED_PAWN[MG];
-      data->pawns[EG] += opposed ? OPPOSED_ISOLATED_PAWN[EG] : OPEN_ISOLATED_PAWN[EG];
-    }
-
-    if (backwards) {
-      data->pawns[MG] += BACKWARDS_PAWN[MG];
-      data->pawns[EG] += BACKWARDS_PAWN[EG];
-    }
-
-    int adjustedRank = side ? 7 - rank : rank;
-    if (passed) {
-      data->pawns[MG] += PASSED_PAWN[adjustedRank][MG];
-      data->pawns[EG] += PASSED_PAWN[adjustedRank][EG];
-    }
-
-    if (defenders | connected) {
-      int s = 2;
-      if (connected)
-        s++;
-      if (opposed)
-        s--;
-
-      data->pawns[MG] += CONNECTED_PAWN[adjustedRank][MG] * s + DEFENDED_PAWN[MG] * bits(defenders);
-      data->pawns[EG] += CONNECTED_PAWN[adjustedRank][EG] * s + DEFENDED_PAWN[EG] * bits(defenders);
-    }
-  }
 
   BitBoard outposts = ~fill(oppoPawnAttacks, PAWN_DIRECTIONS[xside]) &
                       (pawnAttacks | shift(myPawns | opponentPawns, PAWN_DIRECTIONS[xside]));
@@ -535,6 +483,82 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks2 |= (movement & data->allAttacks);
     data->attacks[KING_TYPE] |= movement;
     data->allAttacks |= movement;
+  }
+
+  // TODO: Probably separate this function
+  // PAWNS
+  for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
+    BitBoard sqBitboard = pawns & -pawns;
+    int sq = lsb(pawns);
+
+    data->material[MG] += MATERIAL_VALUES[PAWN_TYPE][MG];
+    data->material[EG] += MATERIAL_VALUES[PAWN_TYPE][EG];
+    data->pawns[MG] += PSQT[PAWN[side]][sq][MG];
+    data->pawns[EG] += PSQT[PAWN[side]][sq][EG];
+
+    int file = file(sq);
+    int rank = rank(sq);
+
+    BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
+    BitBoard doubled = board->pieces[PAWN[side]] & shift(sqBitboard, PAWN_DIRECTIONS[xside]);
+    BitBoard neighbors = board->pieces[PAWN[side]] & ADJACENT_FILE_MASKS[file];
+    BitBoard connected = neighbors & RANK_MASKS[rank];
+    BitBoard defenders = board->pieces[PAWN[side]] & getPawnAttacks(sq, xside);
+    BitBoard forwardLever = board->pieces[PAWN[xside]] & getPawnAttacks(sq + PAWN_DIRECTIONS[side], side);
+
+    int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][rank(sq + PAWN_DIRECTIONS[side])]) && forwardLever;
+    int passed =
+        !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
+
+    if (doubled) {
+      data->pawns[MG] += DOUBLED_PAWN[MG];
+      data->pawns[EG] += DOUBLED_PAWN[EG];
+    }
+
+    if (!neighbors) {
+      data->pawns[MG] += opposed ? OPPOSED_ISOLATED_PAWN[MG] : OPEN_ISOLATED_PAWN[MG];
+      data->pawns[EG] += opposed ? OPPOSED_ISOLATED_PAWN[EG] : OPEN_ISOLATED_PAWN[EG];
+    }
+
+    if (backwards) {
+      data->pawns[MG] += BACKWARDS_PAWN[MG];
+      data->pawns[EG] += BACKWARDS_PAWN[EG];
+    }
+
+    int adjustedRank = side ? 7 - rank : rank;
+    if (passed) {
+      data->pawns[MG] += PASSED_PAWN[adjustedRank][MG];
+      data->pawns[EG] += PASSED_PAWN[adjustedRank][EG];
+
+      BitBoard advance = 0;
+      setBit(advance, sq + PAWN_DIRECTIONS[side]);
+      if (!(board->occupancies[BOTH] & advance)) {
+        if (connected) {
+          // pawn guidance
+          data->pawns[MG] += PASSED_PAWN_GUIDER[0][MG];
+          data->pawns[EG] += PASSED_PAWN_GUIDER[0][EG];
+        } else if (getRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] & ~FORWARD_RANK_MASKS[side][rank] &
+                   (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]])) {
+          // rook/queen pushing it
+          data->pawns[MG] += PASSED_PAWN_GUIDER[1][MG];
+          data->pawns[EG] += PASSED_PAWN_GUIDER[1][EG];
+        } else if (data->allAttacks & advance) {
+          data->pawns[MG] += PASSED_PAWN_GUIDER[2][MG];
+          data->pawns[EG] += PASSED_PAWN_GUIDER[2][EG];
+        }
+      }
+    }
+
+    if (defenders | connected) {
+      int s = 2;
+      if (connected)
+        s++;
+      if (opposed)
+        s--;
+
+      data->pawns[MG] += CONNECTED_PAWN[adjustedRank][MG] * s + DEFENDED_PAWN[MG] * bits(defenders);
+      data->pawns[EG] += CONNECTED_PAWN[adjustedRank][EG] * s + DEFENDED_PAWN[EG] * bits(defenders);
+    }
   }
 }
 

@@ -36,6 +36,7 @@ extern Score BACKWARDS_PAWN[2];
 extern Score DEFENDED_PAWN[2];
 extern Score CONNECTED_PAWN[8][2];
 extern Score PASSED_PAWN[8][2];
+extern Score PASSED_PAWN_GUIDER[3][2];
 
 extern Score DEFENDED_MINOR[2];
 
