@@ -158,7 +158,7 @@ void parseFen(char* fen, Board* board) {
     board->epSquare = 0;
   }
 
-  while (*fen != ' ')
+  while (*fen && *fen != ' ')
     fen++;
 
   sscanf(fen, " %d", &board->halfMove);

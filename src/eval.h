@@ -9,8 +9,7 @@
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 
-extern int MAX_PHASE;
-extern int PHASE_MULTIPLIERS[12];
+extern Score PHASE_MULTIPLIERS[5];
 
 extern int STATIC_MATERIAL_VALUE[7];
 
@@ -28,7 +27,6 @@ extern Score BISHOP_MOBILITIES[14][2];
 extern Score ROOK_MOBILITIES[15][2];
 extern Score QUEEN_MOBILITIES[28][2];
 
-extern Score BISHOP_PAIR[2];
 extern Score DOUBLED_PAWN[2];
 extern Score OPPOSED_ISOLATED_PAWN[2];
 extern Score OPEN_ISOLATED_PAWN[2];
@@ -36,7 +34,8 @@ extern Score BACKWARDS_PAWN[2];
 extern Score DEFENDED_PAWN[2];
 extern Score CONNECTED_PAWN[8][2];
 extern Score PASSED_PAWN[8][2];
-extern Score PASSED_PAWN_GUIDER[3][2];
+extern Score PASSED_PAWN_ADVANCE_DEFENDED[2];
+extern Score PASSED_PAWN_EDGE_DISTANCE[2];
 
 extern Score DEFENDED_MINOR[2];
 
@@ -47,6 +46,7 @@ extern Score ROOK_OPPOSITE_KING[2];
 extern Score ROOK_ADJACENT_KING[2];
 extern Score ROOK_TRAPPED[2];
 extern Score BISHOP_TRAPPED[2];
+extern Score BISHOP_PAIR[2];
 
 extern Score KNIGHT_THREATS[6][2];
 extern Score BISHOP_THREATS[6][2];
@@ -67,8 +67,9 @@ extern Score KS_ALLIES;
 
 void initPSQT();
 
-int getPhase(Board* board);
-Score taper(Score mg, Score eg, int phase);
+Score maxPhase();
+Score getPhase(Board* board);
+Score taper(Score mg, Score eg, Score phase);
 
 Score toScore(EvalData* data, Board* board);
 int isMaterialDraw(Board* board);

@@ -16,154 +16,144 @@
 #define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
 #define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
 
-int MAX_PHASE = 102;
-int PHASE_MULTIPLIERS[12] = {0, 0, 3, 3, 5, 5, 9, 9, 17, 17, 0, 0};
+Score PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
 
-int STATIC_MATERIAL_VALUE[7] = {147, 399, 424, 541, 1023, 30000, 0};
+int STATIC_MATERIAL_VALUE[7] = {100, 325, 325, 550, 1050, 30000, 0};
 
 Score MATERIAL_VALUES[7][2] = {
-    {79, 143}, {361, 431}, {379, 450}, {512, 769}, {942, 1405}, {30000, 30000}, {0, 0},
+    {100, 100}, {325, 325}, {325, 325}, {550, 550}, {1050, 1050}, {30000, 30000}, {0, 0},
 };
 
 // clang-format off
 Score PAWN_PSQT[32][2] = {
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-  {  38,  64}, {  51,  54}, {  67,  31}, {  79, -13},
-  { -15,  40}, {  -5,  32}, {  29,  30}, {  28, -51},
-  { -28,  13}, { -22,  -1}, { -14, -19}, {  -3, -32},
-  { -31,  -8}, { -30,  -9}, { -20, -22}, { -12, -24},
-  { -28, -11}, { -21, -13}, { -20, -19}, { -13, -19},
-  { -28,  -7}, {  -4,  -8}, {  -8, -11}, {  -6,  -7}, 
+  {  -9,  26}, {  -1,  25}, {  24,  15}, {  43, -10},
+  { -44,  36}, { -41,  37}, {  -9,  16}, {  -5, -11},
+  { -46,  21}, { -40,  15}, { -27,   5}, { -21,   3},
+  { -44,   6}, { -37,  10}, { -25,   3}, { -19,   8},
+  { -37,   2}, { -25,   6}, { -26,   6}, { -19,  10},
+  { -43,   3}, { -27,   6}, { -28,   9}, { -22,  19}, 
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
 };
 
 Score KNIGHT_PSQT[32][2] = {
-  {-112, -76}, {-103, -28}, {-164, -10}, {-170,  13},
-  { -28, -24}, { -19,   4}, {  33,   0}, {  -2,  15},
-  {   8, -21}, {   4,   1}, {   1,  20}, {  19,   6},
-  {  39,  -2}, {  18,   2}, {  46,   1}, {  44,   5},
-  {  30,   8}, {  47,  -4}, {  39,  12}, {  41,  20},
-  {   7,  -4}, {  21,  -1}, {  21,   9}, {  31,   5},
-  {  19,  19}, {  17,  -1}, {  16,  -1}, {  27,   3},
-  {   2,   6}, {  11,   1}, {  21,  -3}, {  19,  11},
+  {-100, -12}, {-135,   7}, {-172,  20}, {-172,  36},
+  { -31,   4}, { -25,  15}, {  14,   1}, { -15,  21},
+  {  -4,   0}, { -11,   5}, { -10,  10}, {  -3,   7},
+  {  22,  16}, {  -7,   9}, {   9,   1}, {  12,   3},
+  {  22,  27}, {  30,   0}, {  15,   4}, {  17,  10},
+  {  -3,  18}, {  -1,   7}, {   1,   6}, {  10,   9},
+  {  10,  42}, {   6,  16}, {  -4,   5}, {   8,  10},
+  {   6,  32}, {  11,  20}, {  18,  13}, {  29,  21},
 };
 
 Score KNIGHT_POST_PSQT[32][2] = {
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-  {   0,   0}, {  19,  20}, {  66,  13}, {  46,  36}, 
-  {   0,   0}, {  50,  20}, {  33,  38}, {  56,  35}, 
-  {   0,   0}, {  29,  23}, {  27,  23}, {  28,  29}, 
+  {   0,   0}, {   0,   8}, {  38,  11}, {  23,  22}, 
+  {   0,   0}, {  25,  14}, {  47,  21}, {  60,  28}, 
+  {   0,   0}, {  46,   2}, {  35,  22}, {  33,  36}, 
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
   {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0},
 };
 
 Score BISHOP_PSQT[32][2] = {
-  { -65,  -1}, { -64,   7}, {-132,  16}, {-158,  22},
-  { -11, -12}, { -22,  -5}, {   0,  -6}, { -30,  10},
-  {  16,  -6}, {  18,  -2}, { -16,  13}, {  18,  -9},
-  {  -9,   5}, {  18,   3}, {  12,   2}, {  35,   1},
-  {  23, -11}, {   1,   1}, {  18,   4}, {  29,   2},
-  {  13,  -9}, {  35,  -1}, {  24,   2}, {  25,  12},
-  {  29, -12}, {  34, -10}, {  31, -13}, {  19,   2},
-  {  31, -14}, {  30,  -8}, {  20,   3}, {  15,   0}, 
+  { -84,   8}, { -91,  10}, {-139,  16}, {-182,  27},
+  { -23,  -8}, { -37,  -5}, { -25,  -3}, { -56,  11},
+  { -15,   1}, { -13,   0}, { -38,   9}, { -13,  -3},
+  { -37,   7}, { -11,   5}, { -22,   6}, {  -1,   5},
+  {  -1,  -6}, { -28,   2}, { -14,   4}, {  -3,   0},
+  { -16,  -4}, {   5,   4}, {  -6,   2}, {  -6,   9},
+  {  -1,   2}, {   0,  -4}, {  -1,  -9}, { -11,   4},
+  {   4,   0}, {  10,  -3}, {   5,  12}, {   3,   3}, 
 };
 
 Score ROOK_PSQT[32][2] = {
-  {   5,  10}, { -28,  22}, { -36,  33}, { -43,  33},
-  {  47,   1}, {  22,  20}, {  41,  19}, {  48,  13},
-  {  -2,  -6}, {  28,  -7}, {  21,  -1}, {  27, -12},
-  {  -7,   1}, {  -4,   1}, {  10,  -2}, {   5,  -2},
-  { -18,  -2}, { -13,  -7}, { -22,   6}, { -11,   3},
-  { -17, -11}, { -10, -14}, {  -9,  -5}, {  -8,  -4},
-  { -12,  -7}, { -12,  -9}, {  -4,  -8}, {   3,  -7},
-  {  -1,  -6}, {  -5, -10}, {   0,  -3}, {   4, -10}, 
+  {  -4,  11}, { -38,  24}, { -57,  38}, { -67,  35},
+  { -21,  -2}, { -40,  12}, { -33,  15}, { -23,  10},
+  { -14,   9}, {  11,  12}, {   4,  15}, {  13,   7},
+  { -19,  17}, { -15,  19}, {  -3,  16}, {  -8,  14},
+  { -34,  21}, { -24,  14}, { -36,  23}, { -22,  17},
+  { -22,  11}, { -18,   8}, { -15,  12}, { -15,   9},
+  { -22,  14}, { -22,   9}, { -12,   7}, {  -2,   9},
+  { -15,  18}, { -21,   6}, { -10,   8}, { -10,   1}, 
 };
 
 Score QUEEN_PSQT[32][2] = {
-  {  16, -25}, {  15, -26}, {  34,  -3}, {  13,   9},
-  {   0, -34}, { -46,  26}, { -49,  57}, { -44,  53},
-  {   3, -40}, {  -6,  -5}, {  -6,  37}, {  -8,  38},
-  {  -1,  -7}, {   1,  24}, { -10,  29}, { -14,  58},
-  {   5,   7}, {  -1,  25}, {  -5,  27}, {  -6,  49},
-  {   7, -24}, {  13,  -3}, {   2,  21}, {  -2,  24},
-  {  15, -54}, {  13, -41}, {  14, -22}, {  14,  -8},
-  {  18, -70}, {  -1, -36}, {  -4, -33}, {   6, -33},
+  { -47,  13}, { -54,  12}, { -41,  29}, { -66,  41},
+  { -79,  21}, {-110,  54}, {-118,  85}, {-117,  82},
+  { -84,  31}, { -94,  61}, { -83,  72}, { -78,  70},
+  { -83,  54}, { -71,  63}, { -85,  66}, { -85,  87},
+  { -73,  58}, { -76,  67}, { -76,  62}, { -77,  78},
+  { -71,  32}, { -64,  46}, { -72,  61}, { -75,  65},
+  { -63,   6}, { -65,  11}, { -63,  27}, { -64,  46},
+  { -63,  -6}, { -79,  25}, { -77,  17}, { -71,  23},
 };
 
 Score KING_PSQT[32][2] = {
-  { -39,-263}, { -11,-143}, { -52,-111}, { -22, -96}, 
-  { -71,-123}, { -85, -58}, { -66, -44}, {-111, -34}, 
-  {-185,-106}, {-121, -61}, {-101, -47}, {-142, -31}, 
-  {-225,-105}, {-150, -70}, {-198, -42}, {-212, -28}, 
-  {-250,-100}, {-186, -77}, {-175, -60}, {-172, -49}, 
-  {-165,-113}, {-118,-100}, {-136, -82}, {-137, -70}, 
-  {-120,-126}, { -89,-113}, {-107, -98}, {-135, -85}, 
-  {-119,-163}, { -74,-145}, { -83,-128}, {-102,-131}, 
+  { -66,-178}, {   8, -90}, { -31, -58}, {  34, -56}, 
+  { -39, -68}, { -24, -26}, {  -5, -14}, { -28,  -8}, 
+  {-132, -55}, { -55, -28}, { -44, -12}, { -57,  -2}, 
+  {-170, -46}, { -80, -30}, {-131,  -5}, {-134,   5}, 
+  {-166, -48}, {-120, -33}, {-111, -19}, {-117, -10}, 
+  { -84, -59}, { -69, -46}, { -86, -33}, { -89, -24}, 
+  { -46, -70}, { -52, -52}, { -66, -42}, { -88, -34}, 
+  { -42, -99}, { -36, -74}, { -39, -64}, { -44, -69}, 
 };
 
 // clang-format on
 
-Score KNIGHT_MOBILITIES[9][2] = {
-    {-150, -82}, {-113, -34}, {-92, -8}, {-83, 6}, {-73, 16}, {-66, 24}, {-57, 25}, {-47, 22}, {-40, 14},
-};
+Score KNIGHT_MOBILITIES[9][2] = {{-129, -113}, {-83, -77}, {-64, -43}, {-44, -26}, {-26, -10},
+                                 {-17, 4},     {-11, 8},   {-5, 13},   {-3, 8}};
 
-Score BISHOP_MOBILITIES[14][2] = {
-    {-135, -38}, {-107, -31}, {-90, -21}, {-82, -2}, {-71, 9},  {-64, 18}, {-60, 26},
-    {-58, 31},   {-54, 35},   {-56, 39},  {-51, 35}, {-25, 31}, {-22, 30}, {0, 31},
-};
+Score BISHOP_MOBILITIES[14][2] = {{-61, -54}, {-29, -52}, {-13, -35}, {-5, -10}, {12, 0},  {19, 12}, {24, 19},
+                                  {26, 21},   {28, 27},   {26, 25},   {33, 24},  {49, 22}, {59, 18}, {67, 21}};
 
-Score ROOK_MOBILITIES[15][2] = {
-    {-97, -109}, {-87, -35}, {-73, -21}, {-70, -23}, {-69, -5}, {-72, 6},  {-76, 18}, {-74, 14},
-    {-68, 14},   {-65, 21},  {-61, 23},  {-62, 26},  {-59, 29}, {-51, 25}, {-46, 23},
-};
+Score ROOK_MOBILITIES[15][2] = {{-170, -188}, {-138, -31}, {-126, -29}, {-137, -27}, {-125, -15},
+                                {-125, -5},   {-118, 4},   {-120, 7},   {-111, 11},  {-103, 19},
+                                {-95, 21},    {-87, 23},   {-86, 25},   {-89, 21},   {-98, 31}};
 
-Score QUEEN_MOBILITIES[28][2] = {{-32, -4},  {-63, -18}, {-172, -57}, {-166, -40}, {-157, 11}, {-154, 19}, {-155, 62},
-                                 {-150, 70}, {-147, 86}, {-142, 83},  {-139, 89},  {-137, 93}, {-136, 99}, {-133, 97},
-                                 {-131, 99}, {-129, 95}, {-134, 101}, {-132, 102}, {-135, 99}, {-124, 79}, {-116, 68},
-                                 {-111, 68}, {-84, 25},  {-71, 10},   {-78, -21},  {-18, -27}, {-3, -24},  {-12, -10}};
+Score QUEEN_MOBILITIES[28][2] = {{-115, -5},  {-199, -78}, {-200, -140}, {-200, -103}, {-194, -64}, {-190, -62},
+                                 {-191, -30}, {-188, -20}, {-187, -3},   {-183, -5},   {-182, 2},   {-181, 8},
+                                 {-183, 16},  {-182, 21},  {-184, 27},   {-185, 29},   {-193, 38},  {-197, 44},
+                                 {-200, 47},  {-196, 32},  {-198, 32},   {-197, 39},   {-179, 10},  {-189, 8},
+                                 {-193, -23}, {-69, -91},  {-61, -123},  {-67, -59}};
 
-Score BISHOP_PAIR[2] = {29, 62};
-
-Score DOUBLED_PAWN[2] = {-4, -33};
-Score OPPOSED_ISOLATED_PAWN[2] = {-7, -1};
-Score OPEN_ISOLATED_PAWN[2] = {-15, -8};
-Score BACKWARDS_PAWN[2] = {-8, -9};
-Score DEFENDED_PAWN[2] = {7, 3};
-Score CONNECTED_PAWN[8][2] = {
-    {0, 0}, {62, 22}, {27, 17}, {12, 11}, {7, 4}, {3, 3}, {-1, 0}, {0, 0},
-};
-
-Score PASSED_PAWN[8][2] = {
-    {0, 0}, {22, 152}, {0, 120}, {3, 64}, {-13, 37}, {-24, 10}, {-21, -3}, {0, 0},
-};
-
-// connected -> rook/queen behind -> other guidances
-Score PASSED_PAWN_GUIDER[3][2] = {{15, 12}, {21, 36}, {5, 30}};
+Score DOUBLED_PAWN[2] = {-23, -26};
+Score OPPOSED_ISOLATED_PAWN[2] = {-3, -5};
+Score OPEN_ISOLATED_PAWN[2] = {-32, -9};
+Score BACKWARDS_PAWN[2] = {-12, -14};
+Score DEFENDED_PAWN[2] = {0, 2};
+Score CONNECTED_PAWN[8][2] = {{0, 0}, {50, 21}, {24, 14}, {0, 5}, {0, 0}, {1, 0}, {0, 0}, {0, 0}};
+Score PASSED_PAWN_ADVANCE_DEFENDED[2] = {2, 38};
+Score PASSED_PAWN[8][2] = {{0, 0}, {32, 152}, {34, 100}, {22, 48}, {0, 21}, {0, 4}, {0, 0}, {0, 0}};
+Score PASSED_PAWN_EDGE_DISTANCE[2] = {-9, -6};
 
 Score DEFENDED_MINOR[2] = {0, 0};
 
-Score ROOK_OPEN_FILE[2] = {21, 18};
-Score ROOK_SEMI_OPEN[2] = {4, 8};
-Score ROOK_SEVENTH_RANK[2] = {-55, -3}; // not even sure really
-Score ROOK_OPPOSITE_KING[2] = {41, -23};
-Score ROOK_ADJACENT_KING[2] = {1, -21};
+Score ROOK_OPEN_FILE[2] = {18, 12};
+Score ROOK_SEMI_OPEN[2] = {5, 15};
+Score ROOK_SEVENTH_RANK[2] = {0, 17};
+Score ROOK_OPPOSITE_KING[2] = {49, -34};
+Score ROOK_ADJACENT_KING[2] = {2, -27};
 
-Score ROOK_TRAPPED[2] = {-57, -32};
-Score BISHOP_TRAPPED[2] = {-98, -98};
+Score ROOK_TRAPPED[2] = {-36, -11};
 
-Score KNIGHT_THREATS[6][2] = {{-9, 19}, {12, 29}, {36, 34}, {67, 4}, {25, -25}, {0, 0}};
-Score BISHOP_THREATS[6][2] = {{-2, 17}, {27, 35}, {21, 22}, {34, 11}, {6, 136}, {0, 0}};
-Score ROOK_THREATS[6][2] = {{-5, 25}, {19, 41}, {27, 49}, {-23, 41}, {42, 50}, {0, 0}};
-Score KING_THREATS[6][2] = {{76, 58}, {-24, 42}, {54, 24}, {12, 7}, {0, 0}, {0, 0}};
+Score BISHOP_TRAPPED[2] = {-135, -102};
+Score BISHOP_PAIR[2] = {8, 48};
+
+Score KNIGHT_THREATS[6][2] = {{-6, 17}, {9, 28}, {46, 23}, {55, 1}, {18, -2}, {0, 0}};
+Score BISHOP_THREATS[6][2] = {{-1, 15}, {16, 32}, {11, 18}, {11, 16}, {0, 100}, {0, 0}};
+Score ROOK_THREATS[6][2] = {{-6, 13}, {19, 25}, {28, 34}, {-25, 33}, {43, 34}, {0, 0}};
+Score KING_THREATS[6][2] = {{57, 51}, {-15, 49}, {89, 25}, {19, 7}, {0, 0}, {0, 0}};
 Score HANGING_THREAT[2] = {0, 0};
 
 Score PAWN_SHELTER[2][8][2] = {
-    {{-60, 18}, {-36, 72}, {-34, 30}, {-43, -14}, {-43, -23}, {-46, 26}, {-34, 24}, {0, 0}},
-    {{-109, -10}, {-83, 27}, {-81, -8}, {-79, -46}, {-76, -35}, {-65, -11}, {-58, -12}, {0, 0}},
+    {{-14, 21}, {21, 92}, {13, 35}, {-6, -10}, {-6, -20}, {-4, 14}, {3, 9}, {0, 0}},
+    {{-56, -24}, {-26, 53}, {-47, 10}, {-45, -53}, {-44, -48}, {-21, -47}, {-17, -50}, {0, 0}},
 };
-Score PAWN_STORM[8][2] = {{0, 0}, {0, 0}, {3, -8}, {-1, 5}, {-14, 6}, {-26, -17}, {40, 107}, {0, 0}};
+Score PAWN_STORM[8][2] = {{0, 0}, {0, 0}, {-1, 5}, {-2, 22}, {-10, 14}, {-19, -43}, {23, 54}, {0, 0}};
 
 Score KS_ATTACKER_WEIGHTS[5] = {0, 64, 53, 67, 25};
 Score KS_ATTACK = 39;
@@ -216,17 +206,27 @@ void initPSQT() {
   }
 }
 
-// TODO: Convert this to use board->pieceCounts?
-inline int getPhase(Board* board) {
-  int currentPhase = 0;
-  for (int i = 2; i < 10; i++)
-    currentPhase += PHASE_MULTIPLIERS[i] * bits(board->pieces[i]);
-  currentPhase = MAX_PHASE - currentPhase;
-
-  return ((currentPhase << 8) + (MAX_PHASE / 2)) / MAX_PHASE;
+inline Score maxPhase() {
+  return 4 * PHASE_MULTIPLIERS[KNIGHT_TYPE] + 4 * PHASE_MULTIPLIERS[BISHOP_TYPE] + 4 * PHASE_MULTIPLIERS[ROOK_TYPE] +
+         2 * PHASE_MULTIPLIERS[QUEEN_TYPE];
 }
 
-inline Score taper(Score mg, Score eg, int phase) { return (mg * (256 - phase) + (eg * phase)) / 256; }
+inline Score getPhase(Board* board) {
+  Score maxP = maxPhase();
+
+  Score phase = 0;
+  for (int i = KNIGHT_WHITE; i <= QUEEN_BLACK; i++)
+    phase += PHASE_MULTIPLIERS[PIECE_TYPE[i]] * bits(board->pieces[i]);
+
+  phase = min(maxP, phase);
+  return phase;
+}
+
+inline Score taper(Score mg, Score eg, Score phase) {
+  Score maxP = maxPhase();
+
+  return (phase * mg + (maxP - phase) * eg) / maxP;
+}
 
 inline int isMaterialDraw(Board* board) {
   switch (board->piecesCounts) {
@@ -498,6 +498,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
     int file = file(sq);
     int rank = rank(sq);
+    int adjustedRank = side ? 7 - rank : rank;
+    int adjustedFile = file > 3 ? 7 - file : file;
 
     BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
     BitBoard doubled = board->pieces[PAWN[side]] & shift(sqBitboard, PAWN_DIRECTIONS[xside]);
@@ -507,8 +509,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     BitBoard forwardLever = board->pieces[PAWN[xside]] & getPawnAttacks(sq + PAWN_DIRECTIONS[side], side);
 
     int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][rank(sq + PAWN_DIRECTIONS[side])]) && forwardLever;
-    int passed =
-        !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]));
+    int passed = !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] &
+                   (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file])) &&
+                 !(board->pieces[PAWN[side]] & FORWARD_RANK_MASKS[side][rank] & FILE_MASKS[file]);
 
     if (doubled) {
       data->pawns[MG] += DOUBLED_PAWN[MG];
@@ -518,38 +521,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     if (!neighbors) {
       data->pawns[MG] += opposed ? OPPOSED_ISOLATED_PAWN[MG] : OPEN_ISOLATED_PAWN[MG];
       data->pawns[EG] += opposed ? OPPOSED_ISOLATED_PAWN[EG] : OPEN_ISOLATED_PAWN[EG];
-    }
-
-    if (backwards) {
+    } else if (backwards) {
       data->pawns[MG] += BACKWARDS_PAWN[MG];
       data->pawns[EG] += BACKWARDS_PAWN[EG];
-    }
-
-    int adjustedRank = side ? 7 - rank : rank;
-    if (passed) {
-      data->pawns[MG] += PASSED_PAWN[adjustedRank][MG];
-      data->pawns[EG] += PASSED_PAWN[adjustedRank][EG];
-
-      BitBoard advance = 0;
-      setBit(advance, sq + PAWN_DIRECTIONS[side]);
-      if (!(board->occupancies[BOTH] & advance)) {
-        if (connected) {
-          // pawn guidance
-          data->pawns[MG] += PASSED_PAWN_GUIDER[0][MG];
-          data->pawns[EG] += PASSED_PAWN_GUIDER[0][EG];
-        } else if (getRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] & ~FORWARD_RANK_MASKS[side][rank] &
-                   (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]])) {
-          // rook/queen pushing it
-          data->pawns[MG] += PASSED_PAWN_GUIDER[1][MG];
-          data->pawns[EG] += PASSED_PAWN_GUIDER[1][EG];
-        } else if (data->allAttacks & advance) {
-          data->pawns[MG] += PASSED_PAWN_GUIDER[2][MG];
-          data->pawns[EG] += PASSED_PAWN_GUIDER[2][EG];
-        }
-      }
-    }
-
-    if (defenders | connected) {
+    } else if (defenders | connected) {
       int s = 2;
       if (connected)
         s++;
@@ -558,6 +533,28 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
       data->pawns[MG] += CONNECTED_PAWN[adjustedRank][MG] * s + DEFENDED_PAWN[MG] * bits(defenders);
       data->pawns[EG] += CONNECTED_PAWN[adjustedRank][EG] * s + DEFENDED_PAWN[EG] * bits(defenders);
+    }
+
+    if (passed) {
+      data->pawns[MG] += PASSED_PAWN[adjustedRank][MG];
+      data->pawns[EG] += PASSED_PAWN[adjustedRank][EG];
+
+      data->pawns[MG] += PASSED_PAWN_EDGE_DISTANCE[MG] * adjustedFile;
+      data->pawns[EG] += PASSED_PAWN_EDGE_DISTANCE[EG] * adjustedFile;
+
+      // TODO: enemy piece proximity and king proximity
+      // king proximity seems to exist in the shelter/storm values
+
+      BitBoard advance = bit(sq + PAWN_DIRECTIONS[side]);
+      if (adjustedRank <= 4 && !(board->occupancies[BOTH] & advance)) {
+        BitBoard pusher = getRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] &
+                          FORWARD_RANK_MASKS[xside][rank] & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
+
+        if ((pusher | data->allAttacks) & advance) {
+          data->pawns[MG] += PASSED_PAWN_ADVANCE_DEFENDED[MG];
+          data->pawns[EG] += PASSED_PAWN_ADVANCE_DEFENDED[EG];
+        }
+      }
     }
   }
 }

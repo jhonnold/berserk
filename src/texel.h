@@ -42,9 +42,12 @@ void determineK(Position* positions, int n);
 double totalError(Position* positions, int n);
 void* batchError(void* arg);
 double error(Position* p);
-
 double sigmoid(Score score);
 
+double scale(TexelParam param);
+Score scaleUp(TexelParam param, double scaled);
+
+void addParamBounded(char* name, Score* p, Score min, Score max, TexelParam* params, int* n);
 void addParam(char* name, Score* p, TexelParam* params, int* n);
 void addParams(TexelParam* params, int* numParams);
 
