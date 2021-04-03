@@ -20,146 +20,45 @@ Score PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
 
 int STATIC_MATERIAL_VALUE[7] = {100, 325, 325, 550, 1050, 30000, 0};
 
-Score MATERIAL_VALUES[7][2] = {
-    {68, 102}, {240, 323}, {276, 346}, {384, 570}, {758, 1078}, {30000, 30000}, {0, 0},
-};
-
 // clang-format off
-Score PAWN_PSQT[32][2] = {
-  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-  {  23,  27}, {  33,  25}, {  59,  12}, {  81, -17},
-  { -18,  30}, {  -9,  27}, {  23,   3}, {  28, -27},
-  { -27,   9}, { -19,   0}, {  -9,  -9}, {   1, -15},
-  { -27,  -6}, { -25,  -5}, { -12, -10}, {  -5,  -8},
-  { -22,  -9}, { -11, -10}, { -10,  -8}, {  -4,  -5},
-  { -27,  -5}, {  -8,  -4}, {  -9,   1}, {  -7,   7},
-  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-};
+TScore MATERIAL_VALUES[7] = {{60, 93}, {310, 310}, {323, 323}, {435, 548}, {910, 970}, {30000, 30000}, {0, 0}};
 
-Score KNIGHT_PSQT[32][2] = {
-  { -95, -49}, {-112, -13}, {-146,  -1}, {-149,  16},
-  { -19, -18}, { -12,   2}, {  28,  -2}, {  -2,  12},
-  {   6, -15}, {   5,   1}, {   4,  13}, {  15,   6},
-  {  32,  -1}, {  14,   1}, {  35,   2}, {  34,   6},
-  {  28,   5}, {  41,  -5}, {  33,   7}, {  36,  12},
-  {   8,  -4}, {  19,  -1}, {  19,   7}, {  27,  14},
-  {  19,  15}, {  17,  -1}, {  14,  -1}, {  24,   3},
-  {  10,   1}, {  13,   0}, {  21,  -4}, {  23,   4},
-};
-
-Score KNIGHT_POST_PSQT[32][2] = {
-  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-  {   0,   0}, {   8,  15}, {  46,  14}, {  32,  29}, 
-  {   0,   0}, {  35,  21}, {  37,  22}, {  51,  22}, 
-  {   0,   0}, {  38,   6}, {  26,  15}, {  24,  27}, 
-  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0}, 
-  {   0,   0}, {   0,   0}, {   0,   0}, {   0,   0},
-};
-
-Score BISHOP_PSQT[32][2] = {
-  { -58,   2}, { -54,   7}, {-103,  12}, {-131,  17},
-  {  -2,  -9}, { -17,  -3}, {   0,  -3}, { -26,   8},
-  {  10,  -2}, {  12,   1}, { -15,  13}, {  12,  -4},
-  { -11,   7}, {  14,   4}, {   7,   5}, {  26,   5},
-  {  20,  -9}, {   0,   1}, {  14,   5}, {  22,   3},
-  {  11,  -7}, {  29,   1}, {  19,   3}, {  20,  11},
-  {  24,  -8}, {  28,  -7}, {  25, -10}, {  15,   3},
-  {  26, -12}, {  26,  -7}, {  19,   1}, {  15,   0},
-};
-
-Score ROOK_PSQT[32][2] = {
-  {  11,   8}, { -12,  17}, { -24,  28}, { -30,  27},
-  {   1, -21}, { -22,  -4}, {  -7,  -4}, {   0, -10},
-  {   3,  -4}, {  29,  -5}, {  24,   0}, {  29,  -9},
-  {  -2,   3}, {   2,   2}, {  14,   0}, {  11,   0},
-  { -12,   2}, {  -6,  -2}, { -15,   9}, {  -4,   6},
-  { -10,  -6}, {  -5,  -8}, {  -2,  -1}, {  -2,  -1},
-  {  -5,  -3}, {  -6,  -4}, {   1,  -3}, {   8,  -2},
-  {   3,  -1}, {  -1,  -4}, {   4,   1}, {   7,  -4},
-};
-
-Score QUEEN_PSQT[32][2] = {
-  {  24, -36}, {  23, -36}, {  39, -18}, {  17,  -4},
-  {  -1, -28}, { -37,  14}, { -44,  41}, { -38,  37},
-  { -11, -19}, { -20,   9}, {  -8,  26}, {  -4,  21},
-  {  -8,   3}, {   2,  16}, {  -9,  21}, { -11,  45},
-  {   4,   8}, {  -1,  19}, {  -3,  21}, {  -4,  39},
-  {   4, -15}, {  10,   0}, {   1,  19}, {  -1,  23},
-  {  13, -40}, {  12, -32}, {  12, -15}, {  11,   1},
-  {  20, -60}, {  -2, -19}, {  -3, -19}, {   5, -18},
-};
-
-Score KING_PSQT[32][2] = {
-  { -69,-200}, {   3,-113}, { -41, -82}, {  30, -78}, 
-  { -53, -99}, { -39, -53}, { -20, -42}, { -43, -35}, 
-  {-149, -86}, { -71, -57}, { -63, -42}, { -76, -32}, 
-  {-188, -79}, {-100, -60}, {-150, -35}, {-157, -25}, 
-  {-190, -80}, {-144, -63}, {-133, -49}, {-132, -40}, 
-  {-190, -80}, {-144, -63}, {-133, -49}, {-132, -40}, 
-  { -79,-104}, { -75, -86}, { -88, -75}, {-110, -66}, 
-  { -76,-134}, { -62,-110}, { -69, -98}, { -84,-101}, 
-};
-
-// clang-format on
-
-Score KNIGHT_MOBILITIES[9][2] = {{-59, -73}, {-28, -29}, {-12, -3}, {-4, 9}, {5, 17},
-                                 {12, 22},   {19, 22},   {28, 20},  {34, 13}};
-
-Score BISHOP_MOBILITIES[14][2] = {{-59, -42}, {-38, -34}, {-24, -26}, {-17, -11}, {-7, -2}, {-1, 5},  {2, 10},
-                                  {3, 14},    {6, 17},    {5, 20},    {9, 17},    {29, 13}, {33, 11}, {46, 12}};
-
-Score ROOK_MOBILITIES[15][2] = {{-40, -174}, {-17, -21}, {-7, -8}, {-2, -13}, {-1, 2},  {-3, 10}, {-6, 20}, {-5, 17},
-                                {1, 17},     {4, 21},    {8, 22},  {9, 22},   {10, 26}, {15, 24}, {22, 22}};
-
-Score QUEEN_MOBILITIES[28][2] = {{54, 12},  {-20, -63}, {-20, -133}, {-20, -99}, {-20, -47}, {-20, -37},  {-20, -8},
-                                 {-20, 12}, {-20, 32},  {-17, 32},   {-14, 35},  {-13, 38},  {-14, 44},   {-12, 45},
-                                 {-12, 48}, {-11, 45},  {-17, 52},   {-15, 51},  {-20, 51},  {-15, 37},   {-12, 33},
-                                 {-17, 39}, {-10, 17},  {-20, 12},   {-20, -21}, {97, -83},  {117, -110}, {106, -48}};
-
-Score DOUBLED_PAWN[2] = {-16, -19};
-Score OPPOSED_ISOLATED_PAWN[2] = {-7, -7};
-Score OPEN_ISOLATED_PAWN[2] = {-26, -4};
-Score BACKWARDS_PAWN[2] = {-12, -12};
-Score DEFENDED_PAWN[2] = {3, 5};
-Score CONNECTED_PAWN[8][2] = {{0, 0}, {51, 14}, {24, 11}, {8, 8}, {4, 3}, {0, 2}, {0, 0}, {0, 0}};
-Score PASSED_PAWN_ADVANCE_DEFENDED[2] = {5, 33};
-Score PASSED_PAWN[8][2] = {{0, 0}, {38, 151}, {29, 111}, {31, 60}, {12, 34}, {4, 23}, {1, 17}, {0, 0}};
-Score PASSED_PAWN_EDGE_DISTANCE[2] = {-8, -6};
-
-Score DEFENDED_MINOR[2] = {0, 0};
-
-Score ROOK_OPEN_FILE[2] = {16, 16};
-Score ROOK_SEMI_OPEN[2] = {3, 11};
-Score ROOK_SEVENTH_RANK[2] = {0, 19};
-Score ROOK_OPPOSITE_KING[2] = {40, -28};
-Score ROOK_ADJACENT_KING[2] = {0, -19};
-
-Score ROOK_TRAPPED[2] = {-38, -24};
-
-Score BISHOP_TRAPPED[2] = {-122, -90};
-Score BISHOP_PAIR[2] = {17, 56};
-
-Score KNIGHT_THREATS[6][2] = {{-7, 15}, {9, 26}, {32, 23}, {57, 1}, {20, -12}, {0, 0}};
-Score BISHOP_THREATS[6][2] = {{-1, 12}, {23, 27}, {17, 20}, {26, 14}, {6, 100}, {0, 0}};
-Score ROOK_THREATS[6][2] = {{-6, 19}, {15, 33}, {22, 39}, {-20, 29}, {35, 39}, {0, 0}};
-Score KING_THREATS[6][2] = {{69, 43}, {-17, 36}, {70, 10}, {25, 0}, {0, 0}, {0, 0}};
-Score HANGING_THREAT[2] = {0, 0};
-
-Score PAWN_SHELTER[2][8][2] = {
-    {{-26, 11}, {4, 83}, {-5, 22}, {-13, -18}, {-15, -20}, {-16, 15}, {-6, 12}, {0, 0}},
-    {{-69, -31}, {-39, 48}, {-59, 1}, {-47, -62}, {-46, -51}, {-35, -34}, {-30, -35}, {0, 0}},
-};
-Score PAWN_STORM[8][2] = {{0, 0}, {0, 0}, {2, -6}, {-2, 8}, {-13, 8}, {-21, -27}, {36, 68}, {0, 0}};
-
-Score KS_ATTACKER_WEIGHTS[5] = {0, 64, 53, 67, 25};
-Score KS_ATTACK = 39;
-Score KS_WEAK_SQS = 74;
-Score KS_SAFE_CHECK = 90;
-Score KS_UNSAFE_CHECK = 12;
-Score KS_ENEMY_QUEEN = -247;
-Score KS_ALLIES = -17;
+TScore PAWN_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {56,138}, {72,130}, {71,109}, {80,104}, {-26,46}, {-14,47}, {20,22}, {13,11}, {-16,0}, {3,-8}, {9,-15}, {19,-21}, {-24,-8}, {-16,-10}, {0,-16}, {4,-13}, {-12,-16}, {4,-16}, {10,-15}, {9,-8}, {-19,-13}, {13,-17}, {6,-6}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}};
+TScore KNIGHT_PSQT[32] = {{-100,-61}, {-49,-58}, {-53,-32}, {8,-45}, {-45,-40}, {-43,-18}, {16,-36}, {-9,-16}, {-22,-46}, {-2,-33}, {-1,-11}, {17,-15}, {15,-35}, {11,-24}, {11,-10}, {20,-7}, {-3,-29}, {18,-27}, {11,-9}, {12,-7}, {-14,-31}, {1,-28}, {1,-19}, {6,-5}, {-9,-46}, {-13,-29}, {-3,-25}, {3,-19}, {-34,-33}, {-9,-38}, {-15,-30}, {-2,-25}};
+TScore BISHOP_PSQT[32] = {{-16,-36}, {-19,-33}, {-90,-21}, {-78,-20}, {-52,-18}, {-31,-20}, {-32,-17}, {-30,-24}, {-29,-17}, {-5,-23}, {-13,-15}, {-16,-20}, {-17,-22}, {-14,-20}, {-10,-13}, {8,-15}, {-6,-30}, {-8,-27}, {-13,-16}, {6,-16}, {-10,-25}, {0,-25}, {3,-20}, {-4,-13}, {-10,-32}, {13,-34}, {2,-26}, {-7,-20}, {-24,-27}, {-8,-19}, {-7,-19}, {-7,-21}};
+TScore ROOK_PSQT[32] = {{-11,-20}, {-7,-19}, {-37,-9}, {3,-17}, {-3,-26}, {-1,-24}, {24,-34}, {30,-40}, {-12,-30}, {6,-29}, {6,-31}, {-3,-29}, {-25,-21}, {-21,-26}, {1,-24}, {-4,-27}, {-33,-23}, {-13,-26}, {-21,-22}, {-16,-23}, {-36,-26}, {-11,-28}, {-11,-33}, {-15,-27}, {-41,-20}, {-5,-35}, {-9,-29}, {-3,-28}, {-15,-33}, {-20,-26}, {-11,-27}, {-8,-30}};
+TScore QUEEN_PSQT[32] = {{3,-54}, {-1,-33}, {12,-25}, {43,-44}, {-23,-39}, {-63,-9}, {-34,0}, {-63,29}, {-15,-37}, {-28,-19}, {-16,-15}, {-29,20}, {-42,-4}, {-55,14}, {-48,6}, {-55,27}, {-41,-20}, {-47,4}, {-50,4}, {-52,14}, {-42,-17}, {-29,-34}, {-45,-6}, {-46,-13}, {-46,-40}, {-35,-54}, {-24,-51}, {-34,-33}, {-38,-59}, {-45,-53}, {-43,-51}, {-30,-68}};
+TScore KING_PSQT[32] = {{-45,-72}, {97,-74}, {40,-53}, {-9,-54}, {-11,-44}, {14,-35}, {0,-19}, {29,-33}, {8,-43}, {63,-34}, {42,-22}, {6,-31}, {-71,-36}, {-31,-24}, {-39,-11}, {-67,-9}, {-106,-37}, {-51,-30}, {-85,-6}, {-129,5}, {-51,-39}, {-27,-28}, {-62,-12}, {-82,-4}, {-17,-50}, {0,-40}, {-43,-21}, {-74,-11}, {-25,-81}, {15,-65}, {-12,-48}, {-15,-53}};
+TScore BISHOP_PAIR = {33,42};
+TScore BISHOP_TRAPPED = {-88,-83};
+TScore KNIGHT_POST_PSQT[32] = {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{14,20}, {41,13}, {28,17}, {10,25}, {20,4}, {30,4}, {19,17}, {33,17}, {21,0}, {10,11}, {19,10}, {19,21}, {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}};
+TScore KNIGHT_MOBILITIES[9] = {{-39,-115}, {-30,-57}, {-21,-36}, {-21,-23}, {-8,-24}, {-2,-18}, {2,-20}, {8,-21}, {14,-27}};
+TScore BISHOP_MOBILITIES[14] = {{-56,-64}, {-42,-62}, {-27,-46}, {-22,-31}, {-15,-23}, {-6,-19}, {-1,-15}, {1,-13}, {4,-8}, {6,-10}, {21,-17}, {44,-18}, {27,-5}, {70,-23}};
+TScore ROOK_MOBILITIES[15] = {{-58,-94}, {-56,-80}, {-49,-64}, {-45,-56}, {-47,-40}, {-47,-28}, {-44,-23}, {-43,-22}, {-38,-22}, {-30,-20}, {-22,-19}, {-11,-20}, {-1,-19}, {8,-19}, {24,-23}};
+TScore QUEEN_MOBILITIES[28] = {{0,0}, {-106,-51}, {-72,-188}, {-73,-191}, {-72,-90}, {-68,-85}, {-66,-90}, {-61,-56}, {-56,-47}, {-53,-38}, {-51,-23}, {-50,-14}, {-45,-16}, {-46,0}, {-41,-1}, {-37,1}, {-38,5}, {-31,2}, {-32,6}, {-2,0}, {-6,0}, {0,6}, {28,-17}, {18,-6}, {28,-12}, {41,-29}, {-1,-6}, {33,-23}};
+TScore DOUBLED_PAWN = {0,-17};
+TScore OPPOSED_ISOLATED_PAWN = {-11,-5};
+TScore OPEN_ISOLATED_PAWN = {-14,-6};
+TScore BACKWARDS_PAWN = {-9,-8};
+TScore DEFENDED_PAWN = {0,0};
+TScore CONNECTED_PAWN[8] = {{0,0}, {16,14}, {13,11}, {9,4}, {5,0}, {0,0}, {0,0}, {0,0}};
+TScore PASSED_PAWN[8] = {{0,0}, {34,62}, {47,75}, {19,56}, {8,29}, {14,17}, {14,13}, {0,0}};
+TScore PASSED_PAWN_ADVANCE_DEFENDED = {7,20};
+TScore PASSED_PAWN_EDGE_DISTANCE = {-8,-4};
+TScore ROOK_OPEN_FILE = {22,3};
+TScore ROOK_SEMI_OPEN = {1,7};
+TScore ROOK_SEVENTH_RANK = {1,0};
+TScore ROOK_OPPOSITE_KING = {38,-10};
+TScore ROOK_ADJACENT_KING = {23,-17};
+TScore ROOK_TRAPPED = {-41,-4};
+TScore KNIGHT_THREATS[6] = {{-1,16}, {-2,1}, {34,28}, {56,10}, {43,-18}, {100,26}};
+TScore BISHOP_THREATS[6] = {{1,12}, {21,28}, {4,7}, {46,15}, {46,43}, {98,78}};
+TScore ROOK_THREATS[6] = {{-2,19}, {19,23}, {18,35}, {9,-6}, {77,4}, {100,41}};
+TScore KING_THREATS[6] = {{3,59}, {-21,33}, {-23,38}, {-68,39}, {-100,-100}, {0,0}};
+TScore PAWN_SHELTER[2][8] = {{{-33,-9}, {-13,17}, {-29,8}, {-15,-38}, {-14,-16}, {-10,0}, {-4,25}, {0,0}}, {{-34,-2}, {-60,-3}, {-44,22}, {-23,-13}, {-14,4}, {1,6}, {1,20}, {0,0}}};
+TScore PAWN_STORM[8] = {{0,0}, {-4,0}, {4,-9}, {-6,4}, {-12,4}, {-42,-17}, {3,72}, {0,0}};
+TScore TEMPO = {23,0};
+//clang-format on
 
 Score* PSQT[12][64];
 Score* KNIGHT_POSTS[64];
@@ -262,6 +161,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   data->kings[EG] = 0;
   data->mobility[MG] = 0;
   data->mobility[EG] = 0;
+  data->tempo[MG] = 0;
+  data->tempo[EG] = 0;
 
   data->attacks2 = 0;
   data->allAttacks = 0;
@@ -271,6 +172,11 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   memset(data->attacks, 0, sizeof(data->attacks));
 
   int xside = 1 - side;
+
+  if (side == board->side) {
+    data->tempo[MG] += TEMPO[MG];
+    data->tempo[EG] += TEMPO[EG];
+  }
 
   // Random utility stuff
   BitBoard myPawns = board->pieces[PAWN[side]];
@@ -294,7 +200,8 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   data->attacks2 = shift(myPawns, PAWN_DIRECTIONS[side] + E) & shift(myPawns, PAWN_DIRECTIONS[side] + W);
 
   BitBoard outposts = ~fill(oppoPawnAttacks, PAWN_DIRECTIONS[xside]) &
-                      (pawnAttacks | shift(myPawns | opponentPawns, PAWN_DIRECTIONS[xside]));
+                      (pawnAttacks | shift(myPawns | opponentPawns, PAWN_DIRECTIONS[xside])) & 
+                      (RANK_4 | RANK_5 | THIRD_RANKS[xside]);
   // KNIGHTS
   for (BitBoard knights = board->pieces[KNIGHT[side]]; knights; popLsb(knights)) {
     int sq = lsb(knights);
@@ -310,7 +217,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks[KNIGHT_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[KNIGHT_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
@@ -324,9 +230,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
       data->knights[EG] += KNIGHT_POSTS[rel(sq, side)][EG];
     }
   }
-
-  data->knights[MG] += DEFENDED_MINOR[MG] * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
-  data->knights[EG] += DEFENDED_MINOR[EG] * bits(pawnAttacks & board->pieces[KNIGHT[side]]);
 
   // BISHOPS
   if (bits(board->pieces[BISHOP[side]]) > 1) {
@@ -347,7 +250,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks[BISHOP_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[BISHOP_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
@@ -375,9 +277,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     }
   }
 
-  data->bishops[MG] += DEFENDED_MINOR[MG] * bits(pawnAttacks & board->pieces[BISHOP[side]]);
-  data->bishops[EG] += DEFENDED_MINOR[EG] * bits(pawnAttacks & board->pieces[BISHOP[side]]);
-
   // ROOKS
   for (BitBoard rooks = board->pieces[ROOK[side]]; rooks; popLsb(rooks)) {
     int sq = lsb(rooks);
@@ -395,7 +294,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks[ROOK_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[ROOK_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
@@ -460,7 +358,6 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks[QUEEN_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[QUEEN_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
@@ -603,10 +500,6 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
     data->threats[MG] += KING_THREATS[PIECE_TYPE[piece]][MG];
     data->threats[EG] += KING_THREATS[PIECE_TYPE[piece]][EG];
   }
-
-  BitBoard hanging = data->allAttacks & ~enemyData->allAttacks & board->occupancies[xside];
-  data->threats[MG] += HANGING_THREAT[MG] * bits(hanging);
-  data->threats[EG] += HANGING_THREAT[EG] * bits(hanging);
 }
 
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
@@ -616,43 +509,6 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   int xside = 1 - side;
 
   int kingSq = lsb(board->pieces[KING[side]]);
-
-  if (!!(board->pieces[QUEEN[xside]]) + enemyData->attackers > 1) {
-    BitBoard kingArea = getKingAttacks(kingSq);
-    BitBoard weak = enemyData->allAttacks & ~data->attacks2 & (~data->allAttacks | data->attacks[4] | data->attacks[5]);
-    BitBoard vulnerable = (~data->allAttacks | (weak & enemyData->attacks2)) & ~board->occupancies[xside];
-
-    BitBoard possibleKnightChecks =
-        getKnightAttacks(kingSq) & enemyData->attacks[KNIGHT_TYPE] & ~board->occupancies[xside];
-    int safeChecks = bits(possibleKnightChecks & vulnerable);
-    int unsafeChecks = bits(possibleKnightChecks & ~vulnerable);
-
-    BitBoard possibleBishopChecks = getBishopAttacks(kingSq, board->occupancies[BOTH]) &
-                                    enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
-    safeChecks += bits(possibleBishopChecks & vulnerable);
-    unsafeChecks += bits(possibleBishopChecks & ~vulnerable);
-
-    BitBoard possibleRookChecks =
-        getRookAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
-    safeChecks += bits(possibleRookChecks & vulnerable);
-    unsafeChecks += bits(possibleRookChecks & ~vulnerable);
-
-    BitBoard possibleQueenChecks =
-        getQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
-    safeChecks += bits(possibleQueenChecks & vulnerable);
-    unsafeChecks += bits(possibleQueenChecks & ~vulnerable);
-
-    BitBoard allies = kingArea & (board->occupancies[side] & ~board->pieces[QUEEN[side]]);
-
-    int score = (enemyData->attackWeight + KS_SAFE_CHECK * safeChecks + KS_UNSAFE_CHECK * unsafeChecks +
-                 KS_WEAK_SQS * bits(vulnerable & kingArea) + KS_ATTACK * (enemyData->attackCount * 8 / bits(kingArea)) +
-                 KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]) + KS_ALLIES * (bits(allies) - 2));
-
-    if (score > 0) {
-      data->kingSafety[MG] += -score * score / 1000;
-      data->kingSafety[EG] += -score / 30;
-    }
-  }
 
   if (!board->pieces[QUEEN[xside]] ||
       !(board->pieces[ROOK[xside]] | board->pieces[BISHOP[xside]] | board->pieces[KNIGHT[xside]]))
@@ -694,9 +550,11 @@ Score Evaluate(Board* board) {
 
 inline Score toScore(EvalData* data, Board* board) {
   Score mg = data->pawns[MG] + data->knights[MG] + data->bishops[MG] + data->rooks[MG] + data->queens[MG] +
-             data->kings[MG] + data->kingSafety[MG] + data->material[MG] + data->mobility[MG] + data->threats[MG];
+             data->kings[MG] + data->kingSafety[MG] + data->material[MG] + data->mobility[MG] + data->threats[MG] +
+             data->tempo[MG];
   Score eg = data->pawns[EG] + data->knights[EG] + data->bishops[EG] + data->rooks[EG] + data->queens[EG] +
-             data->kings[EG] + data->kingSafety[EG] + data->material[EG] + data->mobility[EG] + data->threats[EG];
+             data->kings[EG] + data->kingSafety[EG] + data->material[EG] + data->mobility[EG] + data->threats[EG] +
+             data->tempo[MG];
 
   return taper(mg, eg, getPhase(board));
 }

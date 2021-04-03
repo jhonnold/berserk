@@ -7,8 +7,10 @@
 
 #ifndef TUNE
 typedef int Score;
+typedef Score TScore[2];
 #else
 typedef double Score;
+typedef Score TScore[2];
 #endif
 
 typedef uint64_t BitBoard;
@@ -84,17 +86,18 @@ typedef struct {
 } SearchParams;
 
 typedef struct {
-  Score material[2];
-  Score pawns[2];
-  Score knights[2];
-  Score bishops[2];
-  Score rooks[2];
-  Score queens[2];
-  Score kings[2];
+  TScore material;
+  TScore pawns;
+  TScore knights;
+  TScore bishops;
+  TScore rooks;
+  TScore queens;
+  TScore kings;
 
-  Score mobility[2];
-  Score kingSafety[2];
-  Score threats[2];
+  TScore mobility;
+  TScore kingSafety;
+  TScore threats;
+  TScore tempo;
 
   BitBoard attacks[6];
   BitBoard allAttacks;
