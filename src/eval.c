@@ -23,41 +23,42 @@ int STATIC_MATERIAL_VALUE[7] = {100, 325, 325, 550, 1050, 30000, 0};
 // clang-format off
 TScore MATERIAL_VALUES[7] = {{60, 93}, {310, 310}, {323, 323}, {435, 548}, {910, 970}, {30000, 30000}, {0, 0}};
 
-TScore PAWN_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {56,138}, {72,130}, {71,109}, {80,104}, {-26,46}, {-14,47}, {20,22}, {13,11}, {-16,0}, {3,-8}, {9,-15}, {19,-21}, {-24,-8}, {-16,-10}, {0,-16}, {4,-13}, {-12,-16}, {4,-16}, {10,-15}, {9,-8}, {-19,-13}, {13,-17}, {6,-6}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}};
-TScore KNIGHT_PSQT[32] = {{-100,-61}, {-49,-58}, {-53,-32}, {8,-45}, {-45,-40}, {-43,-18}, {16,-36}, {-9,-16}, {-22,-46}, {-2,-33}, {-1,-11}, {17,-15}, {15,-35}, {11,-24}, {11,-10}, {20,-7}, {-3,-29}, {18,-27}, {11,-9}, {12,-7}, {-14,-31}, {1,-28}, {1,-19}, {6,-5}, {-9,-46}, {-13,-29}, {-3,-25}, {3,-19}, {-34,-33}, {-9,-38}, {-15,-30}, {-2,-25}};
-TScore BISHOP_PSQT[32] = {{-16,-36}, {-19,-33}, {-90,-21}, {-78,-20}, {-52,-18}, {-31,-20}, {-32,-17}, {-30,-24}, {-29,-17}, {-5,-23}, {-13,-15}, {-16,-20}, {-17,-22}, {-14,-20}, {-10,-13}, {8,-15}, {-6,-30}, {-8,-27}, {-13,-16}, {6,-16}, {-10,-25}, {0,-25}, {3,-20}, {-4,-13}, {-10,-32}, {13,-34}, {2,-26}, {-7,-20}, {-24,-27}, {-8,-19}, {-7,-19}, {-7,-21}};
-TScore ROOK_PSQT[32] = {{-11,-20}, {-7,-19}, {-37,-9}, {3,-17}, {-3,-26}, {-1,-24}, {24,-34}, {30,-40}, {-12,-30}, {6,-29}, {6,-31}, {-3,-29}, {-25,-21}, {-21,-26}, {1,-24}, {-4,-27}, {-33,-23}, {-13,-26}, {-21,-22}, {-16,-23}, {-36,-26}, {-11,-28}, {-11,-33}, {-15,-27}, {-41,-20}, {-5,-35}, {-9,-29}, {-3,-28}, {-15,-33}, {-20,-26}, {-11,-27}, {-8,-30}};
-TScore QUEEN_PSQT[32] = {{3,-54}, {-1,-33}, {12,-25}, {43,-44}, {-23,-39}, {-63,-9}, {-34,0}, {-63,29}, {-15,-37}, {-28,-19}, {-16,-15}, {-29,20}, {-42,-4}, {-55,14}, {-48,6}, {-55,27}, {-41,-20}, {-47,4}, {-50,4}, {-52,14}, {-42,-17}, {-29,-34}, {-45,-6}, {-46,-13}, {-46,-40}, {-35,-54}, {-24,-51}, {-34,-33}, {-38,-59}, {-45,-53}, {-43,-51}, {-30,-68}};
-TScore KING_PSQT[32] = {{-45,-72}, {97,-74}, {40,-53}, {-9,-54}, {-11,-44}, {14,-35}, {0,-19}, {29,-33}, {8,-43}, {63,-34}, {42,-22}, {6,-31}, {-71,-36}, {-31,-24}, {-39,-11}, {-67,-9}, {-106,-37}, {-51,-30}, {-85,-6}, {-129,5}, {-51,-39}, {-27,-28}, {-62,-12}, {-82,-4}, {-17,-50}, {0,-40}, {-43,-21}, {-74,-11}, {-25,-81}, {15,-65}, {-12,-48}, {-15,-53}};
-TScore BISHOP_PAIR = {33,42};
-TScore BISHOP_TRAPPED = {-88,-83};
-TScore KNIGHT_POST_PSQT[32] = {{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{14,20}, {41,13}, {28,17}, {10,25}, {20,4}, {30,4}, {19,17}, {33,17}, {21,0}, {10,11}, {19,10}, {19,21}, {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0}};
-TScore KNIGHT_MOBILITIES[9] = {{-39,-115}, {-30,-57}, {-21,-36}, {-21,-23}, {-8,-24}, {-2,-18}, {2,-20}, {8,-21}, {14,-27}};
-TScore BISHOP_MOBILITIES[14] = {{-56,-64}, {-42,-62}, {-27,-46}, {-22,-31}, {-15,-23}, {-6,-19}, {-1,-15}, {1,-13}, {4,-8}, {6,-10}, {21,-17}, {44,-18}, {27,-5}, {70,-23}};
-TScore ROOK_MOBILITIES[15] = {{-58,-94}, {-56,-80}, {-49,-64}, {-45,-56}, {-47,-40}, {-47,-28}, {-44,-23}, {-43,-22}, {-38,-22}, {-30,-20}, {-22,-19}, {-11,-20}, {-1,-19}, {8,-19}, {24,-23}};
-TScore QUEEN_MOBILITIES[28] = {{0,0}, {-106,-51}, {-72,-188}, {-73,-191}, {-72,-90}, {-68,-85}, {-66,-90}, {-61,-56}, {-56,-47}, {-53,-38}, {-51,-23}, {-50,-14}, {-45,-16}, {-46,0}, {-41,-1}, {-37,1}, {-38,5}, {-31,2}, {-32,6}, {-2,0}, {-6,0}, {0,6}, {28,-17}, {18,-6}, {28,-12}, {41,-29}, {-1,-6}, {33,-23}};
-TScore DOUBLED_PAWN = {0,-17};
+TScore PAWN_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {73,144}, {80,135}, {76,112}, {82,104}, {-24,52}, {-14,52}, {26,25}, {15,16}, {-13,0}, {6,-8}, {11,-14}, {23,-22}, {-21,-7}, {-14,-10}, {2,-16}, {8,-14}, {-11,-14}, {5,-15}, {8,-14}, {10,-8}, {-19,-11}, {13,-17}, {5,-7}, {-1,1}, {0,0}, {0,0}, {0,0}, {0,0}};
+TScore KNIGHT_PSQT[32] = {{-102,-58}, {-52,-56}, {-52,-31}, {7,-41}, {-46,-36}, {-40,-14}, {14,-31}, {-14,-15}, {-22,-42}, {-9,-28}, {-8,-7}, {2,-13}, {7,-29}, {3,-21}, {1,-9}, {8,-4}, {-4,-24}, {10,-23}, {7,-9}, {8,-8}, {-13,-25}, {0,-24}, {-1,-18}, {3,-3}, {-10,-42}, {-14,-26}, {-6,-20}, {0,-16}, {-33,-28}, {-9,-34}, {-18,-27}, {-4,-22}};
+TScore BISHOP_PSQT[32] = {{-19,-31}, {-15,-30}, {-83,-19}, {-75,-17}, {-60,-11}, {-28,-16}, {-31,-13}, {-33,-20}, {-33,-14}, {-20,-17}, {-16,-12}, {-19,-17}, {-22,-17}, {-15,-18}, {-15,-8}, {0,-11}, {-7,-25}, {-13,-23}, {-15,-14}, {-1,-12}, {-14,-21}, {-3,-20}, {0,-16}, {-7,-10}, {-13,-28}, {9,-31}, {-3,-23}, {-11,-15}, {-27,-22}, {-13,-15}, {-10,-16}, {-11,-18}};
+TScore ROOK_PSQT[32] = {{-10,-34}, {1,-35}, {-34,-24}, {8,-32}, {-3,-41}, {3,-39}, {23,-46}, {28,-52}, {-5,-46}, {16,-46}, {18,-50}, {10,-46}, {-15,-36}, {-10,-42}, {15,-41}, {8,-44}, {-23,-35}, {-3,-40}, {-7,-37}, {-4,-37}, {-29,-37}, {-6,-40}, {0,-45}, {-7,-40}, {-34,-29}, {-2,-44}, {-4,-38}, {4,-39}, {-7,-39}, {-14,-33}, {-3,-35}, {-1,-37}};
+TScore QUEEN_PSQT[32] = {{2,-68}, {-16,-47}, {9,-58}, {12,-58}, {-36,-48}, {-74,-28}, {-50,-18}, {-80,4}, {-37,-47}, {-45,-35}, {-23,-45}, {-43,-2}, {-59,-12}, {-56,-7}, {-58,-9}, {-63,2}, {-40,-40}, {-51,-12}, {-52,-14}, {-55,-5}, {-42,-29}, {-27,-47}, {-44,-20}, {-41,-26}, {-43,-45}, {-33,-63}, {-19,-60}, {-31,-42}, {-32,-58}, {-41,-55}, {-37,-55}, {-25,-66}};
+TScore KING_PSQT[32] = {{-74,-67}, {54,-65}, {33,-46}, {2,-51}, {-17,-39}, {9,-30}, {11,-17}, {52,-29}, {-11,-36}, {61,-29}, {72,-20}, {48,-30}, {-57,-32}, {2,-22}, {8,-9}, {-8,-8}, {-89,-33}, {-21,-29}, {-34,-6}, {-65,4}, {-48,-37}, {-17,-24}, {-32,-9}, {-43,0}, {-23,-47}, {-6,-35}, {-38,-14}, {-68,-3}, {-33,-73}, {4,-57}, {-19,-38}, {-26,-41}};
+TScore BISHOP_PAIR = {32,43};
+TScore BISHOP_TRAPPED = {-88,-86};
+TScore KNIGHT_POST_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {9,21}, {36,14}, {18,13}, {16,24}, {18,2}, {32,3}, {23,17}, {33,16}, {23,0}, {13,11}, {20,10}, {23,20}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}};
+TScore KNIGHT_MOBILITIES[9] = {{-39,-113}, {-34,-54}, {-24,-33}, {-23,-21}, {-11,-20}, {-5,-14}, {0,-16}, {4,-17}, {10,-22}};
+TScore BISHOP_MOBILITIES[14] = {{-55,-57}, {-41,-56}, {-27,-41}, {-23,-26}, {-16,-18}, {-8,-14}, {-5,-11}, {-2,-8}, {-1,-3}, {0,-5}, {12,-12}, {28,-11}, {6,2}, {35,-13}};
+TScore ROOK_MOBILITIES[15] = {{-44,-95}, {-47,-84}, {-41,-71}, {-36,-64}, {-39,-49}, {-39,-38}, {-35,-36}, {-34,-35}, {-27,-38}, {-21,-35}, {-13,-36}, {-3,-39}, {3,-38}, {11,-38}, {27,-45}};
+TScore QUEEN_MOBILITIES[28] = {{0,0}, {-89,-44}, {-67,-180}, {-69,-176}, {-66,-80}, {-63,-82}, {-62,-88}, {-58,-62}, {-54,-50}, {-52,-43}, {-51,-30}, {-50,-24}, {-47,-27}, {-48,-15}, {-45,-14}, {-44,-14}, {-46,-13}, {-40,-18}, {-45,-17}, {-14,-26}, {-17,-34}, {-14,-30}, {12,-57}, {0,-51}, {4,-62}, {29,-84}, {-31,-58}, {-10,-76}};
+TScore DOUBLED_PAWN = {-1,-17};
 TScore OPPOSED_ISOLATED_PAWN = {-11,-5};
 TScore OPEN_ISOLATED_PAWN = {-14,-6};
 TScore BACKWARDS_PAWN = {-9,-8};
 TScore DEFENDED_PAWN = {0,0};
-TScore CONNECTED_PAWN[8] = {{0,0}, {16,14}, {13,11}, {9,4}, {5,0}, {0,0}, {0,0}, {0,0}};
-TScore PASSED_PAWN[8] = {{0,0}, {34,62}, {47,75}, {19,56}, {8,29}, {14,17}, {14,13}, {0,0}};
-TScore PASSED_PAWN_ADVANCE_DEFENDED = {7,20};
+TScore CONNECTED_PAWN[8] = {{0,0}, {18,17}, {11,12}, {9,5}, {5,0}, {0,0}, {0,0}, {0,0}};
+TScore PASSED_PAWN[8] = {{0,0}, {39,64}, {49,74}, {18,58}, {10,29}, {12,17}, {12,14}, {0,0}};
+TScore PASSED_PAWN_ADVANCE_DEFENDED = {8,19};
 TScore PASSED_PAWN_EDGE_DISTANCE = {-8,-4};
-TScore ROOK_OPEN_FILE = {22,3};
-TScore ROOK_SEMI_OPEN = {1,7};
-TScore ROOK_SEVENTH_RANK = {1,0};
-TScore ROOK_OPPOSITE_KING = {38,-10};
-TScore ROOK_ADJACENT_KING = {23,-17};
-TScore ROOK_TRAPPED = {-41,-4};
-TScore KNIGHT_THREATS[6] = {{-1,16}, {-2,1}, {34,28}, {56,10}, {43,-18}, {100,26}};
-TScore BISHOP_THREATS[6] = {{1,12}, {21,28}, {4,7}, {46,15}, {46,43}, {98,78}};
-TScore ROOK_THREATS[6] = {{-2,19}, {19,23}, {18,35}, {9,-6}, {77,4}, {100,41}};
-TScore KING_THREATS[6] = {{3,59}, {-21,33}, {-23,38}, {-68,39}, {-100,-100}, {0,0}};
-TScore PAWN_SHELTER[2][8] = {{{-33,-9}, {-13,17}, {-29,8}, {-15,-38}, {-14,-16}, {-10,0}, {-4,25}, {0,0}}, {{-34,-2}, {-60,-3}, {-44,22}, {-23,-13}, {-14,4}, {1,6}, {1,20}, {0,0}}};
-TScore PAWN_STORM[8] = {{0,0}, {-4,0}, {4,-9}, {-6,4}, {-12,4}, {-42,-17}, {3,72}, {0,0}};
-TScore TEMPO = {23,0};
+TScore ROOK_OPEN_FILE = {23,4};
+TScore ROOK_SEMI_OPEN = {2,9};
+TScore ROOK_SEVENTH_RANK = {2,0};
+TScore ROOK_OPPOSITE_KING = {32,-6};
+TScore ROOK_ADJACENT_KING = {16,-23};
+TScore ROOK_TRAPPED = {-45,-7};
+TScore KNIGHT_THREATS[6] = {{-1,16}, {-2,2}, {34,28}, {58,9}, {44,-21}, {100,30}};
+TScore BISHOP_THREATS[6] = {{1,11}, {22,28}, {5,8}, {49,17}, {46,46}, {100,80}};
+TScore ROOK_THREATS[6] = {{-2,19}, {20,23}, {18,37}, {8,-7}, {70,19}, {100,44}};
+TScore KING_THREATS[6] = {{33,55}, {0,29}, {-5,31}, {-17,31}, {-100,-100}, {0,0}};
+TScore PAWN_SHELTER[2][8] = {{{-31,8}, {-8,18}, {-25,14}, {-15,-26}, {-15,-11}, {-10,0}, {-6,13}, {0,0}},{{-31,14}, {-56,-3}, {-41,21}, {-23,-11}, {-17,0}, {0,-2}, {0,-2}, {0,0}}};
+TScore PAWN_STORM[8] = {{0,0}, {-5,0}, {2,-8}, {-6,7}, {-13,13}, {-36,-13}, {7,77}, {0,0}};
+TScore TEMPO = {21,0};
+TScore KING_SAFETY_WEIGHTS[21] = {{-52,-30}, {-55,-33}, {-52,-35}, {-50,-34}, {-55,-32}, {-60,-36}, {-68,-39}, {-80,-38}, {-88,-39}, {-90,-46}, {-109,-49}, {-130,-42}, {-146,-41}, {-171,-37}, {-212,-32}, {-229,-31}, {-248,-28}, {-316,-2}, {-330,-11}, {-353,-6}, {-406,0}};
 //clang-format on
 
 Score* PSQT[12][64];
@@ -502,6 +503,8 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
   }
 }
 
+const int KS_ATTACK_COMBO[32] = {0, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2, 2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
+
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
   data->kingSafety[MG] = 0;
   data->kingSafety[EG] = 0;
@@ -509,6 +512,79 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   int xside = 1 - side;
 
   int kingSq = lsb(board->pieces[KING[side]]);
+
+  if (board->pieces[QUEEN[xside]] | board->pieces[ROOK[xside]]) {
+    BitBoard kingArea = getKingAttacks(kingSq);
+    BitBoard weakSqs = enemyData->allAttacks & ~data->attacks2 & (~data->allAttacks | data->attacks[4] | data->attacks[5]);
+    BitBoard vulnerable = (~data->allAttacks | (weakSqs & enemyData->attacks2)) & ~board->occupancies[xside];
+
+    // start with side to move
+    int counter = (side != board->side);
+
+    // how many protectors do we have
+    int allies = bits(kingArea & (board->occupancies[side] & ~board->pieces[QUEEN[side]]));
+    counter += max(0, (5 - allies) / 2);
+
+    // pressure
+    int pressure = bits(kingArea & enemyData->allAttacks) * 8 / bits(kingArea);
+    if (pressure)
+      counter += 1 + min(1, pressure - 4);
+
+    // weak sqs
+    int weak = bits(kingArea & weakSqs);
+    if (weak)
+      counter += min(2, weak);
+    // coordinated threats
+    int doubles = bits(kingArea & enemyData->attacks2 & ~data->attacks[PAWN_TYPE]);
+    if (doubles)
+      counter += 1 + (doubles - 1) * 2;
+
+    counter += !(data->attacks[KNIGHT_TYPE] & kingArea);
+
+    // checks
+    BitBoard possibleKnightChecks =
+        getKnightAttacks(kingSq) & enemyData->attacks[KNIGHT_TYPE] & ~board->occupancies[xside];
+    counter += 3 * bits(possibleKnightChecks & vulnerable);
+    counter += 1 * bits(possibleKnightChecks & ~vulnerable);
+
+    BitBoard possibleBishopChecks = getBishopAttacks(kingSq, board->occupancies[BOTH]) &
+                                    enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
+    counter += 3 * bits(possibleBishopChecks & vulnerable);
+    counter += 1 * bits(possibleBishopChecks & ~vulnerable);
+
+    BitBoard possibleRookChecks =
+        getRookAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
+    counter += 3 * bits(possibleRookChecks & vulnerable);
+    counter += 1 * bits(possibleRookChecks & ~vulnerable);
+
+    BitBoard possibleQueenChecks =
+        getQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
+    counter += 3 * bits(possibleQueenChecks & vulnerable);
+
+    // very close queen check
+    if (possibleQueenChecks & kingArea & enemyData->attacks2 & ~data->attacks2)
+      counter += 2;
+
+    // queen tropism
+    if (board->pieces[QUEEN[xside]]) {
+      int distance = distance(lsb(board->pieces[QUEEN[xside]]), kingSq);
+      counter += min((8 - distance) / 2, 2);
+    }
+
+    // attack combo
+    int attackCombo = 0;
+    for (int pc = PAWN_TYPE; pc <= QUEEN_TYPE; pc++)
+      if (enemyData->attacks[pc] & kingArea)
+        attackCombo |= (1 << pc);
+
+    counter += KS_ATTACK_COMBO[attackCombo];
+
+    counter = min(20, counter);
+
+    data->kingSafety[MG] += KING_SAFETY_WEIGHTS[counter][MG];
+    data->kingSafety[EG] += KING_SAFETY_WEIGHTS[counter][EG];
+  }
+
 
   if (!board->pieces[QUEEN[xside]] ||
       !(board->pieces[ROOK[xside]] | board->pieces[BISHOP[xside]] | board->pieces[KNIGHT[xside]]))

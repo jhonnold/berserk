@@ -50,7 +50,7 @@
 #define TUNE_THREATS 1
 #define TUNE_SHELTER_STORM 1
 #define TUNE_TEMPO 1
-#define TUNE_KING_SAFETY 0
+#define TUNE_KING_SAFETY 1
 
 #define CHOOSE_K 0
 
@@ -474,6 +474,9 @@ void addParams(TexelParam* params, int* numParams) {
 
   if (TUNE_TEMPO)
     addParamBounded("TEMPO", 1, &TEMPO, 0, 50, params, numParams);
+
+  if (TUNE_KING_SAFETY)
+    addParamBounded("KING_SAFETY_WEIGHTS", 21, &KING_SAFETY_WEIGHTS, -1200, 0, params, numParams);
 }
 
 void shufflePositions(Position* positions, int n) {
