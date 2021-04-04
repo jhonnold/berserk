@@ -468,9 +468,7 @@ void addParams(TexelParam* params, int* numParams) {
   }
 
   if (TUNE_SHELTER_STORM) {
-    addParamBounded("PAWN_SHELTER[0]", 8, &PAWN_SHELTER[0], -100, 100, params, numParams);
-    addParamBounded("PAWN_SHELTER[1]", 8, &PAWN_SHELTER[1], -100, 100, params, numParams);
-    addParamBounded("PAWN_STORM", 8, &PAWN_STORM, -100, 100, params, numParams);
+    // TODO
   }
 
   if (TUNE_TEMPO)

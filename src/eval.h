@@ -51,9 +51,6 @@ extern TScore BISHOP_THREATS[6];
 extern TScore ROOK_THREATS[6];
 extern TScore KING_THREATS[6];
 
-extern TScore PAWN_SHELTER[2][8];
-extern TScore PAWN_STORM[8];
-
 extern TScore TEMPO;
 
 void initPSQT();
