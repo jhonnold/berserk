@@ -36,15 +36,16 @@ TScore KNIGHT_MOBILITIES[9] = {{-57,-98}, {-51,-37}, {-43,-16}, {-37,-9}, {-25,-
 TScore BISHOP_MOBILITIES[14] = {{-49,-44}, {-34,-48}, {-23,-28}, {-19,-12}, {-12,-6}, {-6,-1}, {-4,0}, {0,1}, {0,5}, {3,1}, {11,-5}, {21,-5}, {-4,11}, {6,0}};
 TScore ROOK_MOBILITIES[15] = {{-57,-95}, {-59,-48}, {-53,-29}, {-46,-23}, {-50,-7}, {-49,4}, {-45,3}, {-42,3}, {-36,1}, {-31,2}, {-27,1}, {-23,0}, {-21,1}, {-22,4}, {-12,-4}};
 TScore QUEEN_MOBILITIES[28] = {{0,0}, {-117,-57}, {-79,-200}, {-88,-146}, {-89,-25}, {-89,-5}, {-92,-8}, {-90,24}, {-90,42}, {-90,47}, {-91,60}, {-92,67}, {-90,63}, {-92,70}, {-90,75}, {-87,65}, {-88,61}, {-91,66}, {-93,67}, {-55,29}, {-71,31}, {-59,28}, {-11,-54}, {-4,-61}, {32,-108}, {24,-119}, {-35,-66}, {-6,-114}};
-TScore DOUBLED_PAWN = {-4,-12};
-TScore OPPOSED_ISOLATED_PAWN = {-12,-8};
-TScore OPEN_ISOLATED_PAWN = {-13,-7};
+TScore DOUBLED_PAWN = {-3,-11};
+TScore OPPOSED_ISOLATED_PAWN = {-12,-9};
+TScore OPEN_ISOLATED_PAWN = {-13,-9};
 TScore BACKWARDS_PAWN = {-10,-6};
 TScore DEFENDED_PAWN = {0,0};
-TScore CONNECTED_PAWN[8] = {{0,0}, {41,0}, {22,11}, {10,5}, {6,0}, {0,0}, {0,0}, {0,0}};
-TScore PASSED_PAWN[8] = {{0,0}, {42,83}, {41,140}, {22,74}, {13,43}, {10,31}, {11,29}, {0,0}};
-TScore PASSED_PAWN_ADVANCE_DEFENDED = {0,26};
-TScore PASSED_PAWN_EDGE_DISTANCE = {-7,-9};
+TScore CONNECTED_PAWN[8] = {{0,0}, {49,0}, {23,11}, {11,4}, {6,0}, {1,0}, {0,0}, {0,0}};
+TScore PASSED_PAWN[8] = {{0,0}, {53,101}, {43,156}, {19,83}, {4,45}, {6,32}, {8,31}, {0,0}};
+TScore PASSED_PAWN_ADVANCE_DEFENDED = {11,19};
+TScore PASSED_PAWN_EDGE_DISTANCE = {-5,-8};
+TScore PASSED_PAWN_KING_PROXIMITY = {0,14};
 TScore ROOK_OPEN_FILE = {30,4};
 TScore ROOK_SEMI_OPEN = {6,9};
 TScore ROOK_SEVENTH_RANK = {7,7};
@@ -77,7 +78,7 @@ TScore BLOCKED_PAWN_STORM[8] = {
 };
 
 TScore KS_KING_FILE[4] = {
-  { 9, -4}, { 4, 0 }, {0, 0}, {-4, 2 }
+  {9, -4}, {4, 0}, {0, 0}, {-4, 2}
 };
 
 
@@ -471,17 +472,23 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
       data->pawns[MG] += PASSED_PAWN_EDGE_DISTANCE[MG] * adjustedFile;
       data->pawns[EG] += PASSED_PAWN_EDGE_DISTANCE[EG] * adjustedFile;
 
-      // TODO: enemy piece proximity and king proximity
-      // king proximity seems to exist in the shelter/storm values
+      int advSq = sq + PAWN_DIRECTIONS[side];
+      BitBoard advance = bit(advSq);
+      if (adjustedRank <= 4) {
+        int myDistance = distance(advSq, kingSq);
+        int enemyDistance = distance(advSq, enemyKingSq);
 
-      BitBoard advance = bit(sq + PAWN_DIRECTIONS[side]);
-      if (adjustedRank <= 4 && !(board->occupancies[BOTH] & advance)) {
-        BitBoard pusher = getRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] &
-                          FORWARD_RANK_MASKS[xside][rank] & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
+        data->pawns[MG] += PASSED_PAWN_KING_PROXIMITY[MG] * min(4, max(enemyDistance - myDistance, -4));
+        data->pawns[EG] += PASSED_PAWN_KING_PROXIMITY[EG] * min(4, max(enemyDistance - myDistance, -4));
+      
+        if (!(board->occupancies[xside] & advance)) {
+          BitBoard pusher = getRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] &
+                            FORWARD_RANK_MASKS[xside][rank] & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
 
-        if ((pusher | data->allAttacks) & advance) {
-          data->pawns[MG] += PASSED_PAWN_ADVANCE_DEFENDED[MG];
-          data->pawns[EG] += PASSED_PAWN_ADVANCE_DEFENDED[EG];
+          if (pusher | (data->allAttacks & advance)) {
+            data->pawns[MG] += PASSED_PAWN_ADVANCE_DEFENDED[MG];
+            data->pawns[EG] += PASSED_PAWN_ADVANCE_DEFENDED[EG];
+          }
         }
       }
     }
@@ -572,6 +579,7 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
     BitBoard ourPawnFile = ourPawns & FILE_MASKS[f];
     int pawnRank = ourPawnFile ? (side ? 7 - rank(lsb(ourPawnFile)) : rank(msb(ourPawnFile))) : 0;
     shelterScoreMg += PAWN_SHELTER[adjustedFile][pawnRank];
+    // 0 for eg
 
     BitBoard enemyPawnFile = enemyPawns & FILE_MASKS[f];
     int theirRank = enemyPawnFile ? (side ? 7 - rank(lsb(enemyPawnFile)) : rank(msb(enemyPawnFile))) : 0;
@@ -580,10 +588,11 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
       shelterScoreEg += BLOCKED_PAWN_STORM[theirRank][EG];
     } else {
       shelterScoreMg += PAWN_STORM[adjustedFile][theirRank];
+      // 0 for eg
     }
 
     if (f == file(kingSq)) {
-      int idx = 2 * !ourPawnFile + !enemyPawnFile;
+      int idx = 2 * !(board->pieces[PAWN[side]] & FILE_MASKS[f]) + !(board->pieces[PAWN[xside]] & FILE_MASKS[f]);
 
       shelterScoreMg += KS_KING_FILE[idx][MG];
       shelterScoreEg += KS_KING_FILE[idx][EG];
