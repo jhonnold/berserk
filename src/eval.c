@@ -565,9 +565,8 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   int noQueenScore = KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]);
   int knightProtectorScore = KS_KNIGHT_PROTECTOR * !!(data->attacks[KNIGHT_TYPE] & kingArea);
   int mobilityGapScore = (enemyData->mobility[MG] - data->mobility[MG]) / 3;
-  int defenseScore = KS_DISTANCE_DEFENSE * bits(data->allAttacks & MY_SIDE[side] & BOARD_SIDE[file(kingSq)]);
 
-  int score = attackWeight + safeCheckScore + unsafeCheckScore + weakScore + sqAttackScore + noQueenScore + knightProtectorScore + mobilityGapScore + defenseScore + 18;
+  int score = attackWeight + safeCheckScore + unsafeCheckScore + weakScore + sqAttackScore + noQueenScore + knightProtectorScore + mobilityGapScore + 18;
 
   if (score > 0) {
     data->kingSafety[MG] += -score * score / 1000;
