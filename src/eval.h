@@ -56,8 +56,6 @@ extern TScore PAWN_STORM[8];
 
 extern TScore TEMPO;
 
-extern TScore KING_SAFETY_WEIGHTS[21];
-
 void initPSQT();
 
 Score maxPhase();

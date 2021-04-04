@@ -102,7 +102,7 @@ typedef struct {
   BitBoard attacks[6];
   BitBoard allAttacks;
   BitBoard attacks2;
-  Score attackWeight;
+  int attackWeight;
   int attackCount;
   int attackers;
 } EvalData;

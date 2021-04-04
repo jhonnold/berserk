@@ -58,8 +58,16 @@ TScore KING_THREATS[6] = {{33,55}, {0,29}, {-5,31}, {-17,31}, {-100,-100}, {0,0}
 TScore PAWN_SHELTER[2][8] = {{{-31,8}, {-8,18}, {-25,14}, {-15,-26}, {-15,-11}, {-10,0}, {-6,13}, {0,0}},{{-31,14}, {-56,-3}, {-41,21}, {-23,-11}, {-17,0}, {0,-2}, {0,-2}, {0,0}}};
 TScore PAWN_STORM[8] = {{0,0}, {-5,0}, {2,-8}, {-6,7}, {-13,13}, {-36,-13}, {7,77}, {0,0}};
 TScore TEMPO = {21,0};
-TScore KING_SAFETY_WEIGHTS[21] = {{-52,-30}, {-55,-33}, {-52,-35}, {-50,-34}, {-55,-32}, {-60,-36}, {-68,-39}, {-80,-38}, {-88,-39}, {-90,-46}, {-109,-49}, {-130,-42}, {-146,-41}, {-171,-37}, {-212,-32}, {-229,-31}, {-248,-28}, {-316,-2}, {-330,-11}, {-353,-6}, {-406,0}};
 //clang-format on
+
+Score KS_ATTACKER_WEIGHTS[5] = {0, 28, 18, 15, 4};
+Score KS_SAFE_CHECKS[5][2] = {{0, 0}, {278, 447}, {221, 337}, {376, 650}, {263, 392}};
+Score KS_ATTACK = 24;
+Score KS_WEAK_SQS = 63;
+Score KS_UNSAFE_CHECK = 51;
+Score KS_ENEMY_QUEEN = -300;
+Score KS_KNIGHT_PROTECTOR = -35;
+Score KS_DISTANCE_DEFENSE = -3;
 
 Score* PSQT[12][64];
 Score* KNIGHT_POSTS[64];
@@ -218,6 +226,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks[KNIGHT_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
+      data->attackWeight += KS_ATTACKER_WEIGHTS[KNIGHT_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
@@ -251,6 +260,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks[BISHOP_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
+      data->attackWeight += KS_ATTACKER_WEIGHTS[BISHOP_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
@@ -295,6 +305,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks[ROOK_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
+      data->attackWeight += KS_ATTACKER_WEIGHTS[ROOK_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
@@ -359,6 +370,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     data->attacks[QUEEN_TYPE] |= movement;
     data->allAttacks |= movement;
     if (movement & enemyKingArea) {
+      data->attackWeight += KS_ATTACKER_WEIGHTS[QUEEN_TYPE];
       data->attackCount += bits(movement & enemyKingArea);
       data->attackers++;
     }
@@ -503,8 +515,6 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
   }
 }
 
-const int KS_ATTACK_COMBO[32] = {0, 1, 2, 2, 2, 2, 2, 3, 1, 0, 1, 2, 1, 1, 1, 2, 2, 2, 2, 3, 2, 2, 3, 4, 1, 2, 3, 3, 2, 3, 3, 5};
-
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
   data->kingSafety[MG] = 0;
   data->kingSafety[EG] = 0;
@@ -513,76 +523,55 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
 
   int kingSq = lsb(board->pieces[KING[side]]);
 
-  if (board->pieces[QUEEN[xside]] | board->pieces[ROOK[xside]]) {
-    BitBoard kingArea = getKingAttacks(kingSq);
-    BitBoard weakSqs = enemyData->allAttacks & ~data->attacks2 & (~data->allAttacks | data->attacks[4] | data->attacks[5]);
-    BitBoard vulnerable = (~data->allAttacks | (weakSqs & enemyData->attacks2)) & ~board->occupancies[xside];
+  BitBoard kingArea = getKingAttacks(kingSq);
+  BitBoard weak = enemyData->allAttacks & ~data->attacks2 & (~data->allAttacks | data->attacks[4] | data->attacks[5]);
+  BitBoard vulnerable = (~data->allAttacks | (weak & enemyData->attacks2)) & ~board->occupancies[xside];
 
-    // start with side to move
-    int counter = (side != board->side);
+  int safeCheckScore = 0;
+  BitBoard unsafeChecks = 0ULL;
 
-    // how many protectors do we have
-    int allies = bits(kingArea & (board->occupancies[side] & ~board->pieces[QUEEN[side]]));
-    counter += max(0, (5 - allies) / 2);
+  BitBoard possibleKnightChecks =
+      getKnightAttacks(kingSq) & enemyData->attacks[KNIGHT_TYPE] & ~board->occupancies[xside];
+  if (vulnerable & possibleKnightChecks)
+    safeCheckScore += KS_SAFE_CHECKS[KNIGHT_TYPE][bits(vulnerable & possibleKnightChecks) > 1];
+  else 
+    unsafeChecks |= possibleKnightChecks;
 
-    // pressure
-    int pressure = bits(kingArea & enemyData->allAttacks) * 8 / bits(kingArea);
-    if (pressure)
-      counter += 1 + min(1, pressure - 4);
+  BitBoard possibleRookChecks =
+      getRookAttacks(kingSq, board->occupancies[BOTH] ^ board->occupancies[QUEEN[side]]) & enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
+  if (possibleRookChecks & vulnerable)
+    safeCheckScore += KS_SAFE_CHECKS[ROOK_TYPE][bits(possibleRookChecks & vulnerable) > 1];
+  else
+    unsafeChecks |= possibleRookChecks;
 
-    // weak sqs
-    int weak = bits(kingArea & weakSqs);
-    if (weak)
-      counter += min(2, weak);
-    // coordinated threats
-    int doubles = bits(kingArea & enemyData->attacks2 & ~data->attacks[PAWN_TYPE]);
-    if (doubles)
-      counter += 1 + (doubles - 1) * 2;
+  BitBoard possibleQueenChecks =
+      getQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
+  if (possibleQueenChecks & vulnerable & ~possibleRookChecks)
+    safeCheckScore += KS_SAFE_CHECKS[QUEEN_TYPE][bits(possibleQueenChecks & vulnerable & ~possibleRookChecks) > 1];
+  
+  // ignore unsafe queen checks
 
-    counter += !(data->attacks[KNIGHT_TYPE] & kingArea);
+  BitBoard possibleBishopChecks = getBishopAttacks(kingSq, board->occupancies[BOTH] ^ board->occupancies[QUEEN[side]]) &
+                                  enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
+  if (possibleBishopChecks & vulnerable & ~possibleQueenChecks)
+    safeCheckScore += KS_SAFE_CHECKS[BISHOP_TYPE][bits(possibleBishopChecks & vulnerable & ~possibleQueenChecks) > 1];
+  else
+    unsafeChecks |= possibleBishopChecks;
 
-    // checks
-    BitBoard possibleKnightChecks =
-        getKnightAttacks(kingSq) & enemyData->attacks[KNIGHT_TYPE] & ~board->occupancies[xside];
-    counter += 3 * bits(possibleKnightChecks & vulnerable);
-    counter += 1 * bits(possibleKnightChecks & ~vulnerable);
+  int attackWeight = enemyData->attackers * enemyData->attackWeight;
+  int unsafeCheckScore = KS_UNSAFE_CHECK * bits(unsafeChecks);
+  int weakScore = KS_WEAK_SQS * bits(weak & kingArea);
+  int sqAttackScore = KS_ATTACK * enemyData->attackCount;
+  int noQueenScore = KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]);
+  int knightProtectorScore = KS_KNIGHT_PROTECTOR * !!(data->attacks[KNIGHT_TYPE] & kingArea);
+  int mobilityGapScore = (enemyData->mobility[MG] - data->mobility[MG]) / 3;
+  int defenseScore = KS_DISTANCE_DEFENSE * bits(data->allAttacks & MY_SIDE[side] & BOARD_SIDE[file(kingSq)]);
 
-    BitBoard possibleBishopChecks = getBishopAttacks(kingSq, board->occupancies[BOTH]) &
-                                    enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
-    counter += 3 * bits(possibleBishopChecks & vulnerable);
-    counter += 1 * bits(possibleBishopChecks & ~vulnerable);
+  int score = attackWeight + safeCheckScore + unsafeCheckScore + weakScore + sqAttackScore + noQueenScore + knightProtectorScore + mobilityGapScore + defenseScore + 18;
 
-    BitBoard possibleRookChecks =
-        getRookAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
-    counter += 3 * bits(possibleRookChecks & vulnerable);
-    counter += 1 * bits(possibleRookChecks & ~vulnerable);
-
-    BitBoard possibleQueenChecks =
-        getQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
-    counter += 3 * bits(possibleQueenChecks & vulnerable);
-
-    // very close queen check
-    if (possibleQueenChecks & kingArea & enemyData->attacks2 & ~data->attacks2)
-      counter += 2;
-
-    // queen tropism
-    if (board->pieces[QUEEN[xside]]) {
-      int distance = distance(lsb(board->pieces[QUEEN[xside]]), kingSq);
-      counter += min((8 - distance) / 2, 2);
-    }
-
-    // attack combo
-    int attackCombo = 0;
-    for (int pc = PAWN_TYPE; pc <= QUEEN_TYPE; pc++)
-      if (enemyData->attacks[pc] & kingArea)
-        attackCombo |= (1 << pc);
-
-    counter += KS_ATTACK_COMBO[attackCombo];
-
-    counter = min(20, counter);
-
-    data->kingSafety[MG] += KING_SAFETY_WEIGHTS[counter][MG];
-    data->kingSafety[EG] += KING_SAFETY_WEIGHTS[counter][EG];
+  if (score > 0) {
+    data->kingSafety[MG] += -score * score / 1000;
+    data->kingSafety[EG] += -score / 30;
   }
 
 
