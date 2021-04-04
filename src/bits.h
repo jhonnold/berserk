@@ -7,6 +7,8 @@ extern const BitBoard FILE_MASKS[8];
 extern const BitBoard RANK_MASKS[8];
 extern const BitBoard ADJACENT_FILE_MASKS[8];
 extern const BitBoard FORWARD_RANK_MASKS[2][8];
+extern const BitBoard BOARD_SIDE[8];
+extern const BitBoard MY_SIDE[2];
 
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL
@@ -26,9 +28,10 @@ extern const BitBoard FORWARD_RANK_MASKS[2][8];
 #define RANK_7 0x000000000000FF00ULL
 #define RANK_8 0x00000000000000FFULL
 
-#define setBit(bb, sq) (bb |= 1ULL << (sq))
-#define getBit(bb, sq) (bb & (1ULL << (sq)))
-#define popBit(bb, sq) (bb &= ~(1ULL << (sq)))
+#define bit(sq) (1ULL << (sq))
+#define setBit(bb, sq) (bb |= bit(sq))
+#define getBit(bb, sq) (bb & bit(sq))
+#define popBit(bb, sq) (bb &= ~bit(sq))
 #define popLsb(bb) (bb &= bb - 1)
 #define lsb(bb) (__builtin_ctzll(bb))
 #define msb(bb) (63 ^ __builtin_clzll(bb))

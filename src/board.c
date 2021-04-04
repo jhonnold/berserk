@@ -158,7 +158,7 @@ void parseFen(char* fen, Board* board) {
     board->epSquare = 0;
   }
 
-  while (*fen != ' ')
+  while (*fen && *fen != ' ')
     fen++;
 
   sscanf(fen, " %d", &board->halfMove);
@@ -215,6 +215,8 @@ void toFen(char* fen, Board* board) {
 }
 
 void printBoard(Board* board) {
+  static char fenBuffer[128];
+
   for (int i = 0; i < 64; i++) {
     if (file(i) == 0)
       printf(" %d ", 8 - rank(i));
@@ -228,10 +230,10 @@ void printBoard(Board* board) {
       printf("\n");
   }
 
-  printf("\n    a b c d e f g h\n Pieces: ");
-  for (int i = PAWN_WHITE; i <= QUEEN_BLACK; i++) {
-    printf("%d%c, ", (int)(board->piecesCounts >> (i * 4)) & 0xF, PIECE_TO_CHAR[i]);
-  }
+  printf("\n    a b c d e f g h\n");
+
+  toFen(fenBuffer, board);
+  printf(" %s\n", fenBuffer);
   printf("\n\n");
 }
 

@@ -9,8 +9,6 @@
 
 typedef struct {
   double result;
-  int phase;
-  double factors[2];
   char fen[128];
 } Position;
 
@@ -21,31 +19,37 @@ typedef struct {
   double error;
 } BatchJob;
 
+typedef double TexelGradient[2];
+
 typedef struct {
-  Score* param;
+  int idx;
+  int count;
   Score min;
   Score max;
   char* name;
+  TScore* vals;
+  TexelGradient* gradients;
 } TexelParam;
 
 void Texel();
 void SGD(TexelParam* params, int numParams, Position* positions, int numPositions);
-void LocalSearch(TexelParam* params, int numParams, Position* positions, int numPositions);
-void CalculateGradients(double* gradients, TexelParam* params, int numParams, Position* positions, int numPositions,
-                        double base);
-Position* loadPositions();
+
+void CalculateSingleGradient(TexelParam param, Position* positions, int numPositions, double base);
+void CalculateGradients(TexelParam* params, int numParams, Position* positions, int numPositions, double base);
+Position* LoadPositions();
 
 void PrintParams(TexelParam* params, int numParams, double best, double current, int epoch);
 
 void determineK(Position* positions, int n);
-
 double totalError(Position* positions, int n);
 void* batchError(void* arg);
 double error(Position* p);
-
 double sigmoid(Score score);
 
-void addParam(char* name, Score* p, TexelParam* params, int* n);
+double scaleDown(Score val, Score min, Score max);
+Score scaleUp(Score val, Score min, Score max);
+
+void addParamBounded(char* name, int count, TScore* score, Score min, Score max, TexelParam* params, int* n);
 void addParams(TexelParam* params, int* numParams);
 
 void shufflePositions(Position* positions, int n);

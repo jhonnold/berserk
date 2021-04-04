@@ -9,66 +9,56 @@
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 
-extern int MAX_PHASE;
-extern int PHASE_MULTIPLIERS[12];
+extern Score PHASE_MULTIPLIERS[5];
 
 extern int STATIC_MATERIAL_VALUE[7];
 
-extern Score PAWN_PSQT[32][2];
-extern Score KNIGHT_PSQT[32][2];
-extern Score BISHOP_PSQT[32][2];
-extern Score ROOK_PSQT[32][2];
-extern Score QUEEN_PSQT[32][2];
-extern Score KING_PSQT[32][2];
-extern Score KNIGHT_POST_PSQT[32][2];
-extern Score MATERIAL_VALUES[7][2];
+extern TScore PAWN_PSQT[32];
+extern TScore KNIGHT_PSQT[32];
+extern TScore BISHOP_PSQT[32];
+extern TScore ROOK_PSQT[32];
+extern TScore QUEEN_PSQT[32];
+extern TScore KING_PSQT[32];
+extern TScore KNIGHT_POST_PSQT[32];
+extern TScore MATERIAL_VALUES[7];
 
-extern Score KNIGHT_MOBILITIES[9][2];
-extern Score BISHOP_MOBILITIES[14][2];
-extern Score ROOK_MOBILITIES[15][2];
-extern Score QUEEN_MOBILITIES[28][2];
+extern TScore KNIGHT_MOBILITIES[9];
+extern TScore BISHOP_MOBILITIES[14];
+extern TScore ROOK_MOBILITIES[15];
+extern TScore QUEEN_MOBILITIES[28];
 
-extern Score BISHOP_PAIR[2];
-extern Score DOUBLED_PAWN[2];
-extern Score OPPOSED_ISOLATED_PAWN[2];
-extern Score OPEN_ISOLATED_PAWN[2];
-extern Score BACKWARDS_PAWN[2];
-extern Score DEFENDED_PAWN[2];
-extern Score CONNECTED_PAWN[8][2];
-extern Score PASSED_PAWN[8][2];
-extern Score PASSED_PAWN_GUIDER[3][2];
+extern TScore DOUBLED_PAWN;
+extern TScore OPPOSED_ISOLATED_PAWN;
+extern TScore OPEN_ISOLATED_PAWN;
+extern TScore BACKWARDS_PAWN;
+extern TScore DEFENDED_PAWN;
+extern TScore CONNECTED_PAWN[8];
+extern TScore PASSED_PAWN[8];
+extern TScore PASSED_PAWN_ADVANCE_DEFENDED;
+extern TScore PASSED_PAWN_EDGE_DISTANCE;
+extern TScore PASSED_PAWN_KING_PROXIMITY;
 
-extern Score DEFENDED_MINOR[2];
+extern TScore ROOK_OPEN_FILE;
+extern TScore ROOK_SEMI_OPEN;
+extern TScore ROOK_SEVENTH_RANK;
+extern TScore ROOK_OPPOSITE_KING;
+extern TScore ROOK_ADJACENT_KING;
+extern TScore ROOK_TRAPPED;
+extern TScore BISHOP_TRAPPED;
+extern TScore BISHOP_PAIR;
 
-extern Score ROOK_OPEN_FILE[2];
-extern Score ROOK_SEMI_OPEN[2];
-extern Score ROOK_SEVENTH_RANK[2];
-extern Score ROOK_OPPOSITE_KING[2];
-extern Score ROOK_ADJACENT_KING[2];
-extern Score ROOK_TRAPPED[2];
-extern Score BISHOP_TRAPPED[2];
+extern TScore KNIGHT_THREATS[6];
+extern TScore BISHOP_THREATS[6];
+extern TScore ROOK_THREATS[6];
+extern TScore KING_THREATS[6];
 
-extern Score KNIGHT_THREATS[6][2];
-extern Score BISHOP_THREATS[6][2];
-extern Score ROOK_THREATS[6][2];
-extern Score KING_THREATS[6][2];
-extern Score HANGING_THREAT[2];
-
-extern Score PAWN_SHELTER[2][8][2];
-extern Score PAWN_STORM[8][2];
-
-extern Score KS_ATTACKER_WEIGHTS[5];
-extern Score KS_ATTACK;
-extern Score KS_WEAK_SQS;
-extern Score KS_SAFE_CHECK;
-extern Score KS_UNSAFE_CHECK;
-extern Score KS_ENEMY_QUEEN;
-extern Score KS_ALLIES;
+extern TScore TEMPO;
 
 void initPSQT();
 
-int getPhase(Board* board);
-Score taper(Score mg, Score eg, int phase);
+Score maxPhase();
+Score getPhase(Board* board);
+Score taper(Score mg, Score eg, Score phase);
 
 Score toScore(EvalData* data, Board* board);
 int isMaterialDraw(Board* board);
