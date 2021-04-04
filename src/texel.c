@@ -21,7 +21,7 @@
 #define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\quiet-set.epd"
 
 #define THREADS 32
-#define Alpha 0.015
+#define Alpha 0.003
 #define Beta1 0.9
 #define Beta2 0.999
 #define Epsilon 1e-8
