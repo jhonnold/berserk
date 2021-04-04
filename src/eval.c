@@ -18,7 +18,7 @@
 
 Score PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
 
-int STATIC_MATERIAL_VALUE[7] = {100, 325, 325, 550, 1050, 30000, 0};
+int STATIC_MATERIAL_VALUE[7] = {93, 310, 323, 548, 970, 30000, 0};
 
 // clang-format off
 TScore MATERIAL_VALUES[7] = {{60, 93}, {310, 310}, {323, 323}, {435, 548}, {910, 970}, {30000, 30000}, {0, 0}};
