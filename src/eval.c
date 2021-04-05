@@ -57,30 +57,29 @@ TScore BISHOP_THREATS[6] = {{0,13}, {22,31}, {5,11}, {51,16}, {46,47}, {100,81}}
 TScore ROOK_THREATS[6] = {{-3,21}, {20,23}, {18,39}, {10,-7}, {83,6}, {100,45}};
 TScore KING_THREATS[6] = {{17,67}, {26,38}, {-9,40}, {48,10}, {-100,-100}, {0,0}};
 TScore TEMPO = {24,0};
-//clang-format on
+// clang-format on
+
+const int SHELTER_STORM_FILES[8][2] = {{0, 2}, {0, 2}, {1, 3}, {2, 4}, {3, 5}, {4, 6}, {5, 7}, {5, 7}};
 
 Score PAWN_SHELTER[4][8] = {
-  { -2,  12,  12,  15,  22,  38,  34,  0},
-  {-18, -18,  -5, -12, -21,  14,  28,  0},
-  { -5, -15,   3,  13,  -2,  10,  32,  0},
-  {-16, -50, -24, -16, -21, -14,  -5,  0},
+    {-2, 12, 12, 15, 22, 38, 34, 0},
+    {-18, -18, -5, -12, -21, 14, 28, 0},
+    {-5, -15, 3, 13, -2, 10, 32, 0},
+    {-16, -50, -24, -16, -21, -14, -5, 0},
 };
 
 Score PAWN_STORM[4][8] = {
-  { -36, -20, -20, -20, -40,  70, 119, 0 },
-  { -18,  -9,   4, -14, -20, -50,  10, 0 },
-  {   3,   4,   5,   1, -14, -65, -21, 0 },
-  {   6,  12,   6,  -2,   0, -45,   5, 0 },
+    {-36, -20, -20, -20, -40, 70, 119, 0},
+    {-18, -9, 4, -14, -20, -50, 10, 0},
+    {3, 4, 5, 1, -14, -65, -21, 0},
+    {6, 12, 6, -2, 0, -45, 5, 0},
 };
 
 TScore BLOCKED_PAWN_STORM[8] = {
-  {0}, {0}, {2, -2}, {2, -2}, {2, -4}, {-31, -32}, {0}, {0},
+    {0}, {0}, {2, -2}, {2, -2}, {2, -4}, {-31, -32}, {0}, {0},
 };
 
-TScore KS_KING_FILE[4] = {
-  {9, -4}, {4, 0}, {0, 0}, {-4, 2}
-};
-
+TScore KS_KING_FILE[4] = {{9, -4}, {4, 0}, {0, 0}, {-4, 2}};
 
 Score KS_ATTACKER_WEIGHTS[5] = {0, 28, 18, 15, 4};
 Score KS_SAFE_CHECKS[5][2] = {{0, 0}, {278, 447}, {221, 337}, {376, 650}, {263, 392}};
@@ -231,7 +230,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
   data->attacks2 = shift(myPawns, PAWN_DIRECTIONS[side] + E) & shift(myPawns, PAWN_DIRECTIONS[side] + W);
 
   BitBoard outposts = ~fill(oppoPawnAttacks, PAWN_DIRECTIONS[xside]) &
-                      (pawnAttacks | shift(myPawns | opponentPawns, PAWN_DIRECTIONS[xside])) & 
+                      (pawnAttacks | shift(myPawns | opponentPawns, PAWN_DIRECTIONS[xside])) &
                       (RANK_4 | RANK_5 | THIRD_RANKS[xside]);
   // KNIGHTS
   for (BitBoard knights = board->pieces[KNIGHT[side]]; knights; popLsb(knights)) {
@@ -480,7 +479,7 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
 
         data->pawns[MG] += PASSED_PAWN_KING_PROXIMITY[MG] * min(4, max(enemyDistance - myDistance, -4));
         data->pawns[EG] += PASSED_PAWN_KING_PROXIMITY[EG] * min(4, max(enemyDistance - myDistance, -4));
-      
+
         if (!(board->occupancies[xside] & advance)) {
           BitBoard pusher = getRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] &
                             FORWARD_RANK_MASKS[xside][rank] & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
@@ -543,7 +542,6 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
   }
 }
 
-
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
   data->kingSafety[MG] = 0;
   data->kingSafety[EG] = 0;
@@ -552,28 +550,11 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   int kingSq = lsb(board->pieces[KING[side]]);
   int kingFile = file(kingSq);
 
-  int leftMostFile, rightMostFile;
-  switch (kingFile) {
-  case 0:
-    leftMostFile = 0;
-    rightMostFile = 2;
-    break;
-  case 7:
-    leftMostFile = 5;
-    rightMostFile = 7;
-    break;
-  default:
-    leftMostFile = kingFile - 1;
-    rightMostFile = kingFile + 1;
-    break;
-  }
-
-  int shelterScoreMg = 2;
-  int shelterScoreEg = 2;
-  
-  BitBoard ourPawns = board->pieces[PAWN[side]] & ~enemyData->attacks[PAWN_TYPE] & ~FORWARD_RANK_MASKS[xside][rank(kingSq)];
+  int shelterScoreMg = 2, shelterScoreEg = 2;
+  BitBoard ourPawns =
+      board->pieces[PAWN[side]] & ~enemyData->attacks[PAWN_TYPE] & ~FORWARD_RANK_MASKS[xside][rank(kingSq)];
   BitBoard enemyPawns = board->pieces[PAWN[xside]] & ~FORWARD_RANK_MASKS[xside][rank(kingSq)];
-  for (int f = leftMostFile; f <= rightMostFile; f++) {
+  for (int f = SHELTER_STORM_FILES[kingFile][0]; f <= SHELTER_STORM_FILES[kingFile][1]; f++) {
     int adjustedFile = f > 3 ? 7 - f : f;
 
     BitBoard ourPawnFile = ourPawns & FILE_MASKS[f];
@@ -603,46 +584,41 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   BitBoard weak = enemyData->allAttacks & ~data->attacks2 & (~data->allAttacks | data->attacks[4] | data->attacks[5]);
   BitBoard vulnerable = (~data->allAttacks | (weak & enemyData->attacks2)) & ~board->occupancies[xside];
 
-  int safeCheckScore = 0;
+  int score = 0;
   BitBoard unsafeChecks = 0ULL;
 
   BitBoard possibleKnightChecks =
       getKnightAttacks(kingSq) & enemyData->attacks[KNIGHT_TYPE] & ~board->occupancies[xside];
-  if (vulnerable & possibleKnightChecks)
-    safeCheckScore += KS_SAFE_CHECKS[KNIGHT_TYPE][bits(vulnerable & possibleKnightChecks) > 1];
-  else 
+  if (possibleKnightChecks & vulnerable)
+    score += KS_SAFE_CHECKS[KNIGHT_TYPE][bits(vulnerable & possibleKnightChecks) > 1];
+  else
     unsafeChecks |= possibleKnightChecks;
 
-  BitBoard possibleRookChecks =
-      getRookAttacks(kingSq, board->occupancies[BOTH] ^ board->occupancies[QUEEN[side]]) & enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
+  BitBoard possibleRookChecks = getRookAttacks(kingSq, board->occupancies[BOTH] ^ board->occupancies[QUEEN[side]]) &
+                                enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
   if (possibleRookChecks & vulnerable)
-    safeCheckScore += KS_SAFE_CHECKS[ROOK_TYPE][bits(possibleRookChecks & vulnerable) > 1];
+    score += KS_SAFE_CHECKS[ROOK_TYPE][bits(possibleRookChecks & vulnerable) > 1];
   else
     unsafeChecks |= possibleRookChecks;
 
   BitBoard possibleQueenChecks =
       getQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
   if (possibleQueenChecks & vulnerable & ~possibleRookChecks)
-    safeCheckScore += KS_SAFE_CHECKS[QUEEN_TYPE][bits(possibleQueenChecks & vulnerable & ~possibleRookChecks) > 1];
-  
+    score += KS_SAFE_CHECKS[QUEEN_TYPE][bits(possibleQueenChecks & vulnerable & ~possibleRookChecks) > 1];
   // ignore unsafe queen checks
 
   BitBoard possibleBishopChecks = getBishopAttacks(kingSq, board->occupancies[BOTH] ^ board->occupancies[QUEEN[side]]) &
                                   enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
   if (possibleBishopChecks & vulnerable & ~possibleQueenChecks)
-    safeCheckScore += KS_SAFE_CHECKS[BISHOP_TYPE][bits(possibleBishopChecks & vulnerable & ~possibleQueenChecks) > 1];
+    score += KS_SAFE_CHECKS[BISHOP_TYPE][bits(possibleBishopChecks & vulnerable & ~possibleQueenChecks) > 1];
   else
     unsafeChecks |= possibleBishopChecks;
 
-  int attackWeight = enemyData->attackers * enemyData->attackWeight;
-  int unsafeCheckScore = KS_UNSAFE_CHECK * bits(unsafeChecks);
-  int weakScore = KS_WEAK_SQS * bits(weak & kingArea);
-  int sqAttackScore = KS_ATTACK * enemyData->attackCount;
-  int noQueenScore = KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]);
-  int knightProtectorScore = KS_KNIGHT_PROTECTOR * !!(data->attacks[KNIGHT_TYPE] & kingArea);
-  int mobilityGapScore = (enemyData->mobility[MG] - data->mobility[MG]) / 2;
-  
-  int score = attackWeight + safeCheckScore + unsafeCheckScore + weakScore + sqAttackScore + noQueenScore + knightProtectorScore + mobilityGapScore - shelterScoreMg / 2 + 18;
+  score += (enemyData->attackers * enemyData->attackWeight) + (KS_UNSAFE_CHECK * bits(unsafeChecks)) +
+           (KS_WEAK_SQS * bits(weak & kingArea)) + (KS_ATTACK * enemyData->attackCount) +
+           (KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]])) +
+           (KS_KNIGHT_PROTECTOR * !!(data->attacks[KNIGHT_TYPE] & kingArea)) +
+           (enemyData->mobility[MG] - data->mobility[MG]) / 2 - shelterScoreMg / 2 + 18;
 
   if (score > 0) {
     data->kingSafety[MG] += -score * score / 1000;
