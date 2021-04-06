@@ -20,6 +20,7 @@ extern TScore ROOK_PSQT[32];
 extern TScore QUEEN_PSQT[32];
 extern TScore KING_PSQT[32];
 extern TScore KNIGHT_POST_PSQT[32];
+extern TScore BISHOP_POST_PSQT[32];
 extern TScore MATERIAL_VALUES[7];
 
 extern TScore KNIGHT_MOBILITIES[9];
