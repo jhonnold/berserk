@@ -422,6 +422,7 @@ void addParams(TexelParam* params, int* numParams) {
   if (TUNE_MINOR_PARAMS) {
     addParamBounded("BISHOP_PAIR", 1, &BISHOP_PAIR, 0, 100, params, numParams);
     addParamBounded("BISHOP_TRAPPED", 1, &BISHOP_TRAPPED, -200, 0, params, numParams);
+    addParamBounded("BISHOP_POST_PSQT", 32, &BISHOP_POST_PSQT, 0, 100, params, numParams);
     addParamBounded("KNIGHT_POST_PSQT", 32, &KNIGHT_POST_PSQT, 0, 100, params, numParams);
   }
 
@@ -462,10 +463,10 @@ void addParams(TexelParam* params, int* numParams) {
   }
 
   if (TUNE_THREATS) {
-    addParamBounded("KNIGHT_THREATS", 6, &KNIGHT_THREATS, -100, 100, params, numParams);
-    addParamBounded("BISHOP_THREATS", 6, &BISHOP_THREATS, -100, 100, params, numParams);
-    addParamBounded("ROOK_THREATS", 6, &ROOK_THREATS, -100, 100, params, numParams);
-    addParamBounded("KING_THREATS", 6, &KING_THREATS, -100, 100, params, numParams);
+    addParamBounded("KNIGHT_THREATS", 6, &KNIGHT_THREATS, -200, 200, params, numParams);
+    addParamBounded("BISHOP_THREATS", 6, &BISHOP_THREATS, -200, 200, params, numParams);
+    addParamBounded("ROOK_THREATS", 6, &ROOK_THREATS, -200, 200, params, numParams);
+    addParamBounded("KING_THREATS", 6, &KING_THREATS, -200, 200, params, numParams);
   }
 
   if (TUNE_SHELTER_STORM) {
