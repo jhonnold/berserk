@@ -443,7 +443,6 @@ void addParams(TexelParam* params, int* numParams) {
     addParamBounded("OPPOSED_ISOLATED_PAWN", 1, &OPPOSED_ISOLATED_PAWN, -50, 0, params, numParams);
     addParamBounded("OPEN_ISOLATED_PAWN", 1, &OPEN_ISOLATED_PAWN, -50, 0, params, numParams);
     addParamBounded("BACKWARDS_PAWN", 1, &BACKWARDS_PAWN, -50, 0, params, numParams);
-    addParamBounded("DEFENDED_PAWN", 1, &DEFENDED_PAWN, -50, 0, params, numParams);
 
     addParamBounded("CONNECTED_PAWN", 8, &CONNECTED_PAWN, 0, 100, params, numParams);
     addParamBounded("PASSED_PAWN", 8, &PASSED_PAWN, 0, 200, params, numParams);

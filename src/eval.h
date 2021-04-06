@@ -32,7 +32,6 @@ extern TScore DOUBLED_PAWN;
 extern TScore OPPOSED_ISOLATED_PAWN;
 extern TScore OPEN_ISOLATED_PAWN;
 extern TScore BACKWARDS_PAWN;
-extern TScore DEFENDED_PAWN;
 extern TScore CONNECTED_PAWN[8];
 extern TScore PASSED_PAWN[8];
 extern TScore PASSED_PAWN_ADVANCE_DEFENDED;

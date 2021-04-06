@@ -41,7 +41,6 @@ TScore DOUBLED_PAWN = {-4,-14};
 TScore OPPOSED_ISOLATED_PAWN = {-10,-9};
 TScore OPEN_ISOLATED_PAWN = {-15,-7};
 TScore BACKWARDS_PAWN = {-11,-8};
-TScore DEFENDED_PAWN = {0,0};
 TScore CONNECTED_PAWN[8] = {{0,0}, {54,4}, {25,12}, {11,7}, {5,2}, {0,2}, {0,0}, {0,0}};
 TScore PASSED_PAWN[8] = {{0,0}, {43,92}, {34,153}, {18,87}, {4,47}, {3,31}, {4,27}, {0,0}};
 TScore PASSED_PAWN_ADVANCE_DEFENDED = {15,18};
@@ -465,14 +464,10 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
       data->pawns[MG] += BACKWARDS_PAWN[MG];
       data->pawns[EG] += BACKWARDS_PAWN[EG];
     } else if (defenders | connected) {
-      int s = 2;
-      if (connected)
-        s++;
-      if (opposed)
-        s--;
+      int s = 2 + !!connected - !!opposed;
 
-      data->pawns[MG] += CONNECTED_PAWN[adjustedRank][MG] * s + DEFENDED_PAWN[MG] * bits(defenders);
-      data->pawns[EG] += CONNECTED_PAWN[adjustedRank][EG] * s + DEFENDED_PAWN[EG] * bits(defenders);
+      data->pawns[MG] += CONNECTED_PAWN[adjustedRank][MG] * s;
+      data->pawns[EG] += CONNECTED_PAWN[adjustedRank][EG] * s;
     }
 
     if (passed) {
