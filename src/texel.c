@@ -18,7 +18,7 @@
 #include "types.h"
 #include "util.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\quiet-set.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set.epd"
 
 #define THREADS 32
 #define Alpha 0.003
@@ -26,30 +26,30 @@
 #define Beta2 0.999
 #define Epsilon 1e-8
 
-#define Batch 1000000
-#define MaxPositions 2500000
+#define Batch 3250000
+#define MaxPositions 3250000
 
 #define QS 0
-#define FILTER 0
+#define FILTER 1
 #define REMOVE_CHECKS 0
 
 #define TUNE_MATERIAL 0
-#define TUNE_PAWN_PSQT 0
-#define TUNE_KNIGHT_PSQT 0
-#define TUNE_BISHOP_PSQT 0
-#define TUNE_ROOK_PSQT 0
-#define TUNE_QUEEN_PSQT 0
-#define TUNE_KING_PSQT 0
-#define TUNE_MINOR_PARAMS 0
-#define TUNE_KNIGHT_MOBILITIES 0
-#define TUNE_BISHOP_MOBILITIES 0
-#define TUNE_ROOK_MOBILITIES 0
-#define TUNE_QUEEN_MOBILITIES 0
+#define TUNE_PAWN_PSQT 1
+#define TUNE_KNIGHT_PSQT 1
+#define TUNE_BISHOP_PSQT 1
+#define TUNE_ROOK_PSQT 1
+#define TUNE_QUEEN_PSQT 1
+#define TUNE_KING_PSQT 1
+#define TUNE_MINOR_PARAMS 1
+#define TUNE_KNIGHT_MOBILITIES 1
+#define TUNE_BISHOP_MOBILITIES 1
+#define TUNE_ROOK_MOBILITIES 1
+#define TUNE_QUEEN_MOBILITIES 1
 #define TUNE_PAWN_PARAMS 1
-#define TUNE_ROOK_PARAMS 0
-#define TUNE_THREATS 0
+#define TUNE_ROOK_PARAMS 1
+#define TUNE_THREATS 1
 #define TUNE_SHELTER_STORM 0
-#define TUNE_TEMPO 0
+#define TUNE_TEMPO 1
 #define TUNE_KING_SAFETY 0
 
 #define CHOOSE_K 1
