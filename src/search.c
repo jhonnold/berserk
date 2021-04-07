@@ -210,9 +210,9 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
     }
 
     int singularExtension = 0;
-    if (depth >= 8 && !skipMove && move == ttMove(ttValue) && ttDepth(ttValue) >= depth - 2 &&
-        ttFlag(ttValue) == TT_LOWER && !isRoot) {
-      int sBeta = max(ttScore(ttValue, data->ply) - depth, -CHECKMATE);
+    if (depth >= 8 && !skipMove && move == ttMove(ttValue) && ttDepth(ttValue) >= depth - 3 &&
+        abs(ttScore(ttValue, data->ply)) < MATE_BOUND && ttFlag(ttValue) == TT_LOWER && !isRoot) {
+      int sBeta = max(ttScore(ttValue, data->ply) - depth * 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
