@@ -240,6 +240,12 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
 
       R += !isPV + !improving - !!(moveList->scores[i] >= COUNTER);
 
+      if (moveList->scores[i] >= COUNTER)
+        R--;
+      else
+        // reduce based on history score
+        R -= min(2, (moveList->scores[i] - 149) / 50);
+
       R = min(depth - 1, max(R, 1));
     }
 
