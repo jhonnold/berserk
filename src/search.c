@@ -48,6 +48,7 @@ void initSearchData(SearchData* data) {
   data->nodes = 0;
   data->seldepth = 0;
   data->ply = 0;
+  memset(data->skipMove, 0, sizeof(data->skipMove));
   memset(data->evals, 0, sizeof(data->evals));
   memset(data->moves, 0, sizeof(data->moves));
   memset(data->killers, 0, sizeof(data->killers));
@@ -103,7 +104,7 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   int isPV = beta - alpha != 1;
   int isRoot = !data->ply;
   int bestScore = -CHECKMATE, a0 = alpha;
-  Move bestMove = 0;
+  Move bestMove = 0, skipMove = data->skipMove[data->ply];
 
   if (depth == 0)
     return quiesce(alpha, beta, params, data, pv);
@@ -130,7 +131,7 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
     communicate(params);
 
   TTValue ttValue = ttProbe(data->board->zobrist);
-  if (ttValue) {
+  if (!skipMove && ttValue) {
     if (ttDepth(ttValue) >= depth) {
       int score = ttScore(ttValue, data->ply);
       int flag = ttFlag(ttValue);
@@ -149,6 +150,7 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
 
   assert(eval == Evaluate(data->board));
 
+  data->skipMove[data->ply + 1] = NULL_MOVE;
   data->killers[data->ply + 1][0] = NULL_MOVE;
   data->killers[data->ply + 1][1] = NULL_MOVE;
 
@@ -194,9 +196,10 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
     bubbleTopMove(moveList, i);
     Move move = moveList->moves[i];
 
-    int tactical = movePromo(move) || moveCapture(move);
+    if (skipMove == move)
+      continue;
 
-    int score = alpha + 1;
+    int tactical = movePromo(move) || moveCapture(move);
 
     if (!isPV && bestScore > -MATE_BOUND) {
       if (depth <= 8 && !tactical && numMoves >= LMP[improving][depth])
@@ -206,13 +209,30 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
         continue;
     }
 
-    numMoves++; // TODO: should this be in an array on SearchData?
+    int singularExtension = 0;
+    if (depth >= 8 && !skipMove && move == ttMove(ttValue) && ttDepth(ttValue) >= depth - 2 &&
+        ttFlag(ttValue) == TT_LOWER && !isRoot) {
+      int sBeta = max(ttScore(ttValue, data->ply) - depth, -CHECKMATE);
+      int sDepth = depth / 2 - 1;
+
+      data->skipMove[data->ply] = move;
+      int score = negamax(sBeta - 1, sBeta, sDepth, params, data, pv);
+      data->skipMove[data->ply] = NULL_MOVE;
+
+      if (score < sBeta)
+        singularExtension = 1;
+      else if (sBeta >= beta)
+        return sBeta;
+    }
+
+    numMoves++;
     data->moves[data->ply++] = move;
     makeMove(move, data->board);
 
+    int score = alpha + 1;
     int newDepth = depth;
-    if (data->board->checkers)
-      newDepth++; // check extension
+    if (singularExtension || data->board->checkers)
+      newDepth++; // extension
 
     int R = 1;
     if (depth >= 2 && numMoves > 1 && !tactical) {
