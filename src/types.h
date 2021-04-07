@@ -67,6 +67,7 @@ typedef struct {
   int nodes;
   int seldepth;
 
+  Move skipMove[MAX_DEPTH];
   int evals[MAX_DEPTH];
   Move moves[MAX_DEPTH];
   Move killers[MAX_DEPTH][2];
