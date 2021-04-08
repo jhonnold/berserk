@@ -31,6 +31,8 @@ TScore QUEEN_PSQT[32] = {{-24,-16}, {-25,3}, {19,-17}, {-4,6}, {-61,34}, {-85,70
 TScore KING_PSQT[32] = {{-97,-141}, {42,-118}, {14,-95}, {-42,-91}, {10,-100}, {92,-80}, {83,-74}, {84,-85}, {23,-99}, {150,-90}, {135,-83}, {65,-78}, {-42,-92}, {83,-88}, {49,-72}, {0,-64}, {-80,-85}, {23,-84}, {22,-72}, {-20,-64}, {-31,-92}, {10,-84}, {19,-78}, {13,-73}, {-50,-100}, {-36,-81}, {-38,-73}, {-54,-68}, {-57,-127}, {-50,-104}, {-43,-90}, {-49,-91}};
 TScore BISHOP_PAIR = {27,41};
 TScore BISHOP_TRAPPED = {-116,-83};
+TScore KNIGHT_OUTPOST_REACHABLE = {5,9};
+TScore BISHOP_OUTPOST_REACHABLE = {3,3};
 TScore BISHOP_POST_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {13,9}, {15,10}, {18,16}, {16,9}, {10,8}, {16,14}, {16,12}, {16,12}, {3,9}, {15,14}, {15,12}, {16,15}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}};
 TScore KNIGHT_POST_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {3,13}, {45,0}, {30,5}, {27,24}, {22,0}, {43,11}, {37,17}, {43,21}, {20,0}, {33,8}, {22,12}, {25,21}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}};
 TScore KNIGHT_MOBILITIES[9] = {{-87,-82}, {-70,-32}, {-57,-8}, {-48,0}, {-40,5}, {-33,11}, {-28,12}, {-22,10}, {-17,0}};
@@ -263,6 +265,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     if (outposts & sqBb) {
       data->knights[MG] += KNIGHT_POSTS[rel(sq, side)][MG];
       data->knights[EG] += KNIGHT_POSTS[rel(sq, side)][EG];
+    } else if (movement & outposts) {
+      data->knights[MG] += KNIGHT_OUTPOST_REACHABLE[MG];
+      data->knights[EG] += KNIGHT_OUTPOST_REACHABLE[EG];
     }
   }
 
@@ -298,6 +303,9 @@ void EvaluateSide(Board* board, int side, EvalData* data) {
     if (outposts & sqBb) {
       data->bishops[MG] += BISHOP_POSTS[rel(sq, side)][MG];
       data->bishops[EG] += BISHOP_POSTS[rel(sq, side)][EG];
+    } else if (movement & outposts) {
+      data->bishops[MG] += BISHOP_OUTPOST_REACHABLE[MG];
+      data->bishops[EG] += BISHOP_OUTPOST_REACHABLE[EG];
     }
 
     if (side == WHITE) {
