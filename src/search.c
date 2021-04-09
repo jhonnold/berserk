@@ -146,8 +146,8 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   if ((data->nodes & 2047) == 0)
     communicate(params);
 
-  TTValue ttValue = ttProbe(data->board->zobrist);
-  if (!skipMove && ttValue) {
+  TTValue ttValue = skipMove ? NO_ENTRY : ttProbe(data->board->zobrist);
+  if (ttValue) {
     if (ttDepth(ttValue) >= depth) {
       int score = ttScore(ttValue, data->ply);
       int flag = ttFlag(ttValue);
@@ -182,7 +182,7 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
       return eval;
 
     // Null move pruning
-    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && eval >= beta && hasNonPawn(data->board)) {
+    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta && hasNonPawn(data->board)) {
       int R = 3 + depth / 6 + min((eval - beta) / 200, 3);
 
       if (R > depth)
@@ -226,8 +226,8 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
     }
 
     int singularExtension = 0;
-    if (depth >= 8 && !skipMove && move == ttMove(ttValue) && ttDepth(ttValue) >= depth - 3 &&
-        abs(ttScore(ttValue, data->ply)) < MATE_BOUND && ttFlag(ttValue) == TT_LOWER && !isRoot) {
+    if (depth >= 8 && !skipMove && !isRoot && move == ttMove(ttValue) && ttDepth(ttValue) >= depth - 3 &&
+        abs(ttScore(ttValue, data->ply)) < MATE_BOUND && ttFlag(ttValue) == TT_LOWER) {
       int sBeta = max(ttScore(ttValue, data->ply) - depth * 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
@@ -315,8 +315,10 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   if (!moveList->count)
     return data->board->checkers ? -CHECKMATE + data->ply : 0;
 
-  int ttFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
-  ttPut(data->board->zobrist, depth, bestScore, ttFlag, bestMove, data->ply, data->evals[data->ply]);
+  if (!skipMove) {
+    int ttFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
+    ttPut(data->board->zobrist, depth, bestScore, ttFlag, bestMove, data->ply, data->evals[data->ply]);
+  }
 
   assert(bestScore >= -CHECKMATE);
   assert(bestScore <= CHECKMATE);
