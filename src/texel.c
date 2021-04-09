@@ -34,22 +34,22 @@
 #define REMOVE_CHECKS 0
 
 #define TUNE_MATERIAL 0
-#define TUNE_PAWN_PSQT 1
-#define TUNE_KNIGHT_PSQT 1
-#define TUNE_BISHOP_PSQT 1
-#define TUNE_ROOK_PSQT 1
-#define TUNE_QUEEN_PSQT 1
-#define TUNE_KING_PSQT 1
+#define TUNE_PAWN_PSQT 0
+#define TUNE_KNIGHT_PSQT 0
+#define TUNE_BISHOP_PSQT 0
+#define TUNE_ROOK_PSQT 0
+#define TUNE_QUEEN_PSQT 0
+#define TUNE_KING_PSQT 0
 #define TUNE_MINOR_PARAMS 1
-#define TUNE_KNIGHT_MOBILITIES 1
-#define TUNE_BISHOP_MOBILITIES 1
-#define TUNE_ROOK_MOBILITIES 1
-#define TUNE_QUEEN_MOBILITIES 1
-#define TUNE_PAWN_PARAMS 1
-#define TUNE_ROOK_PARAMS 1
-#define TUNE_THREATS 1
+#define TUNE_KNIGHT_MOBILITIES 0
+#define TUNE_BISHOP_MOBILITIES 0
+#define TUNE_ROOK_MOBILITIES 0
+#define TUNE_QUEEN_MOBILITIES 0
+#define TUNE_PAWN_PARAMS 0
+#define TUNE_ROOK_PARAMS 0
+#define TUNE_THREATS 0
 #define TUNE_SHELTER_STORM 0
-#define TUNE_TEMPO 1
+#define TUNE_TEMPO 0
 #define TUNE_KING_SAFETY 0
 
 #define CHOOSE_K 1
@@ -342,7 +342,7 @@ void PrintParams(TexelParam* params, int numParams, double best, double current,
       if (j % 8 == 0)
         printf("\n");
 
-      printf(" {%4d,%4d},", (int)param.vals[j][MG], (int)param.vals[j][EG]);
+      printf(" {%6.2f,%6.2f},", param.vals[j][MG], param.vals[j][EG]);
     }
     printf("\n\n");
   }
@@ -353,7 +353,8 @@ void PrintParams(TexelParam* params, int numParams, double best, double current,
   if (fp == NULL)
     return;
 
-  fprintf(fp, "// Base: %9.8f, Diff: %9.8f, Diff: %12.8f\n\n", best, current, (best - current) * 10e6);
+  fprintf(fp, "\n// Epoch: %d, Base: %9.8f, Diff: %9.8f, Diff: %12.8f\n\n", epoch, best, current,
+          (best - current) * 10e6);
   for (int i = 0; i < numParams; i++) {
     TexelParam param = params[i];
 
@@ -420,10 +421,12 @@ void addParams(TexelParam* params, int* numParams) {
     addParamBounded("KING_PSQT", 32, &KING_PSQT, -200, 200, params, numParams);
 
   if (TUNE_MINOR_PARAMS) {
-    addParamBounded("BISHOP_PAIR", 1, &BISHOP_PAIR, 0, 100, params, numParams);
-    addParamBounded("BISHOP_TRAPPED", 1, &BISHOP_TRAPPED, -200, 0, params, numParams);
-    addParamBounded("BISHOP_POST_PSQT", 32, &BISHOP_POST_PSQT, 0, 100, params, numParams);
-    addParamBounded("KNIGHT_POST_PSQT", 32, &KNIGHT_POST_PSQT, 0, 100, params, numParams);
+    // addParamBounded("BISHOP_PAIR", 1, &BISHOP_PAIR, 0, 100, params, numParams);
+    // addParamBounded("BISHOP_TRAPPED", 1, &BISHOP_TRAPPED, -200, 0, params, numParams);
+    // addParamBounded("BISHOP_POST_PSQT", 32, &BISHOP_POST_PSQT, 0, 100, params, numParams);
+    // addParamBounded("KNIGHT_POST_PSQT", 32, &KNIGHT_POST_PSQT, 0, 100, params, numParams);
+    addParamBounded("KNIGHT_OUTPOST_REACHABLE", 1, &KNIGHT_OUTPOST_REACHABLE, 0, 100, params, numParams);
+    addParamBounded("BISHOP_OUTPOST_REACHABLE", 1, &BISHOP_OUTPOST_REACHABLE, 0, 100, params, numParams);
   }
 
   if (TUNE_KNIGHT_MOBILITIES)
