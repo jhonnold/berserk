@@ -19,9 +19,9 @@
 
 #include <stdint.h>
 
-#define MAX_SEARCH_PLY 64
+#define MAX_SEARCH_PLY 128
 #define MAX_MOVES 256
-#define MAX_GAME_PLY 512
+#define MAX_GAME_PLY 1024
 
 // Tune on doubles for more accuracy
 #ifndef TUNE

@@ -296,18 +296,14 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
       // increase reduction if nonPv or not improving
-      // decrease reduction if this is a killer or counter
-      R += !isPV + !improving - !!(moveList.scores[i] >= COUNTER_SCORE);
+      R += !isPV + !improving;
 
-      // Whoa this is an oversight
-      if (moveList.scores[i] >= COUNTER_SCORE)
-        R--;
-      else
-        // additional reduction on historical scores
-        // ranging from [-2, 2]
-        // 100 was picked as a mean since that's what the mean was at depth 13 for the bench
-        // TODO: Look at this more closely?
-        R -= min(2, (moveList.scores[i] - 149) / 50);
+      // additional reduction on historical scores
+      // counters/killers have a high score (so they get less reduction by 2)
+      // ranging from [-2, 2]
+      // 100 was picked as a mean since that's what the mean was at depth 13 for the bench
+      // TODO: Look at this more closely?
+      R -= min(2, (moveList.scores[i] - 149) / 50);
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = min(depth - 1, max(R, 1));
