@@ -58,8 +58,8 @@ int bits(BitBoard bb);
 #define bits(bb) (__builtin_popcountll(bb))
 #endif
 
-BitBoard shift(BitBoard bb, int dir);
-BitBoard fill(BitBoard initial, int direction);
-void printBB(BitBoard bb);
+BitBoard Shift(BitBoard bb, int dir);
+BitBoard Fill(BitBoard initial, int direction);
+void PrintBB(BitBoard bb);
 
 #endif

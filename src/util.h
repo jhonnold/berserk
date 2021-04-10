@@ -22,7 +22,9 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
-long getTimeMs();
-void communicate(SearchParams* params);
+long GetTimeMS();
+int IsInputWaiting();
+void ReadInputDuringSearch(SearchParams* params);
+void Communicate(SearchParams* params);
 
 #endif

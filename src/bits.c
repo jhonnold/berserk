@@ -21,6 +21,7 @@
 #include "board.h"
 #include "types.h"
 
+// General helper bit masks
 const BitBoard FILE_MASKS[8] = {A_FILE, B_FILE, C_FILE, D_FILE, E_FILE, F_FILE, G_FILE, H_FILE};
 const BitBoard RANK_MASKS[8] = {RANK_8, RANK_7, RANK_6, RANK_5, RANK_4, RANK_3, RANK_2, RANK_1};
 const BitBoard ADJACENT_FILE_MASKS[8] = {B_FILE,          A_FILE | C_FILE, B_FILE | D_FILE, C_FILE | E_FILE,
@@ -61,7 +62,8 @@ inline int bits(BitBoard bb) {
 }
 #endif
 
-inline BitBoard shift(BitBoard bb, int dir) {
+// Shifts a bitboard in a cardinal direction, with protection against off-the-board problems
+inline BitBoard Shift(BitBoard bb, int dir) {
   switch (dir) {
   case N:
     return bb >> 8;
@@ -88,7 +90,8 @@ inline BitBoard shift(BitBoard bb, int dir) {
   }
 }
 
-inline BitBoard fill(BitBoard initial, int direction) {
+// standard fill algorithm - https://www.chessprogramming.org/Fill_Algorithms
+inline BitBoard Fill(BitBoard initial, int direction) {
   switch (direction) {
   case S:
     initial |= (initial << 8);
@@ -103,7 +106,7 @@ inline BitBoard fill(BitBoard initial, int direction) {
   }
 }
 
-void printBB(BitBoard bitboard) {
+void PrintBB(BitBoard bitboard) {
   for (int i = 0; i < 64; i++) {
     if (file(i) == 0)
       printf(" %d ", 8 - rank(i));

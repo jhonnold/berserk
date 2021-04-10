@@ -36,14 +36,12 @@ const int ROOK[] = {ROOK_WHITE, ROOK_BLACK};
 const int QUEEN[] = {QUEEN_WHITE, QUEEN_BLACK};
 const int KING[] = {KING_WHITE, KING_BLACK};
 
-// way to identify if PAWN[WHITE] == PAWN[BLACK]
-const int PIECE_TYPE[13] = {
-    PAWN_TYPE, PAWN_TYPE, KNIGHT_TYPE, KNIGHT_TYPE, BISHOP_TYPE, BISHOP_TYPE,
-    ROOK_TYPE, ROOK_TYPE, QUEEN_TYPE,  QUEEN_TYPE,  KING_TYPE,   KING_TYPE,
-    6 // No piece
-};
+// way to identify pieces are the same "type" (i.e. WHITE_PAWN and BLACK_PAWN)
+const int PIECE_TYPE[13] = {PAWN_TYPE, PAWN_TYPE,  KNIGHT_TYPE, KNIGHT_TYPE, BISHOP_TYPE, BISHOP_TYPE, ROOK_TYPE,
+                            ROOK_TYPE, QUEEN_TYPE, QUEEN_TYPE,  KING_TYPE,   KING_TYPE,   NO_PIECE / 2};
 
 // clang-format off
+// castling rights mask for start/end squares
 const int CASTLING_RIGHTS[] = {
   14, 15, 15, 15, 12, 15, 15, 13, 
   15, 15, 15, 15, 15, 15, 15, 15, 
@@ -55,6 +53,7 @@ const int CASTLING_RIGHTS[] = {
   11, 15, 15, 15, 3,  15, 15,  7
 };
 
+// square reflection table
 const int MIRROR[] = {
   56, 57, 58, 59, 60, 61, 62, 63, 
   48, 49, 50, 51, 52, 53, 54, 55, 
@@ -67,15 +66,14 @@ const int MIRROR[] = {
 };
 // clang-format on
 
-const uint64_t PIECE_COUNT_IDX[] = {
-    // P           p            N           n           B
-    1ULL << 0, 1ULL << 4, 1ULL << 8, 1ULL << 12, 1ULL << 16,
-    // b           R            r           Q           q
-    1ULL << 20, 1ULL << 24, 1ULL << 28, 1ULL << 32, 1ULL << 36};
+// piece count key bit mask idx
+const uint64_t PIECE_COUNT_IDX[] = {1ULL << 0,  1ULL << 4,  1ULL << 8,  1ULL << 12, 1ULL << 16,
+                                    1ULL << 20, 1ULL << 24, 1ULL << 28, 1ULL << 32, 1ULL << 36};
 
-const uint64_t MAJOR_PIECE_COUNT_MASK[] = {0x0F0F0F0F00, 0xF0F0F0F000};
+const uint64_t NON_PAWN_PIECE_MASK[] = {0x0F0F0F0F00, 0xF0F0F0F000};
 
-void clear(Board* board) {
+// reset the board to an empty state
+void ClearBoard(Board* board) {
   memset(board->pieces, EMPTY, sizeof(board->pieces));
   memset(board->occupancies, EMPTY, sizeof(board->occupancies));
   memset(board->zobristHistory, EMPTY, sizeof(board->zobristHistory));
@@ -97,32 +95,8 @@ void clear(Board* board) {
   board->halfMove = 0;
 }
 
-uint64_t zobrist(Board* board) {
-  uint64_t hash = 0;
-
-  for (int piece = 0; piece < 12; piece++) {
-    BitBoard pieces = board->pieces[piece];
-
-    while (pieces) {
-      int sq = lsb(pieces);
-      hash ^= ZOBRIST_PIECES[piece][sq];
-      popLsb(pieces);
-    }
-  }
-
-  if (board->epSquare)
-    hash ^= ZOBRIST_EP_KEYS[board->epSquare];
-
-  hash ^= ZOBRIST_CASTLE_KEYS[board->castling];
-
-  if (board->side)
-    hash ^= ZOBRIST_SIDE_KEY;
-
-  return hash;
-}
-
-void parseFen(char* fen, Board* board) {
-  clear(board);
+void ParseFen(char* fen, Board* board) {
+  ClearBoard(board);
 
   for (int i = 0; i < 64; i++) {
     if ((*fen >= 'a' && *fen <= 'z') || (*fen >= 'A' && *fen <= 'Z')) {
@@ -179,13 +153,13 @@ void parseFen(char* fen, Board* board) {
 
   sscanf(fen, " %d", &board->halfMove);
 
-  setOccupancies(board);
-  setSpecialPieces(board);
+  SetOccupancies(board);
+  SetSpecialPieces(board);
 
-  board->zobrist = zobrist(board);
+  board->zobrist = Zobrist(board);
 }
 
-void toFen(char* fen, Board* board) {
+void BoardToFen(char* fen, Board* board) {
   for (int r = 0; r < 8; r++) {
     int c = 0;
     for (int f = 0; f < 8; f++) {
@@ -230,7 +204,7 @@ void toFen(char* fen, Board* board) {
   sprintf(fen, "%s %d %d", board->epSquare ? SQ_TO_COORD[board->epSquare] : "-", board->halfMove, board->moveNo);
 }
 
-void printBoard(Board* board) {
+void PrintBoard(Board* board) {
   static char fenBuffer[128];
 
   for (int i = 0; i < 64; i++) {
@@ -248,83 +222,100 @@ void printBoard(Board* board) {
 
   printf("\n    a b c d e f g h\n");
 
-  toFen(fenBuffer, board);
+  BoardToFen(fenBuffer, board);
   printf(" %s\n", fenBuffer);
   printf("\n\n");
 }
 
-inline int isSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* board) {
-  if (getPawnAttacks(sq, attackColor ^ 1) & board->pieces[PAWN[attackColor]])
+inline int hasNonPawn(Board* board) { return (board->piecesCounts & NON_PAWN_PIECE_MASK[board->side]) != 0; }
+
+// Check each type of piece movement from given square and see if an enemy piece of that
+// movement type is there. If so, then it's attacked
+inline int IsSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* board) {
+  if (GetPawnAttacks(sq, attackColor ^ 1) & board->pieces[PAWN[attackColor]])
     return 1;
-  if (getKnightAttacks(sq) & board->pieces[KNIGHT[attackColor]])
+  if (GetKnightAttacks(sq) & board->pieces[KNIGHT[attackColor]])
     return 1;
-  if (getBishopAttacks(sq, occupancy) & (board->pieces[BISHOP[attackColor]] | board->pieces[QUEEN[attackColor]]))
+  if (GetBishopAttacks(sq, occupancy) & (board->pieces[BISHOP[attackColor]] | board->pieces[QUEEN[attackColor]]))
     return 1;
-  if (getRookAttacks(sq, occupancy) & (board->pieces[ROOK[attackColor]] | board->pieces[QUEEN[attackColor]]))
+  if (GetRookAttacks(sq, occupancy) & (board->pieces[ROOK[attackColor]] | board->pieces[QUEEN[attackColor]]))
     return 1;
-  if (getKingAttacks(sq) & board->pieces[KING[attackColor]])
+  if (GetKingAttacks(sq) & board->pieces[KING[attackColor]])
     return 1;
 
   return 0;
 }
 
-inline int hasNonPawn(Board* board) { return (board->piecesCounts & MAJOR_PIECE_COUNT_MASK[board->side]) != 0; }
-
-inline void setOccupancies(Board* board) {
-  memset(board->occupancies, EMPTY, sizeof(board->occupancies));
+// Reset general piece locations on the board
+inline void SetOccupancies(Board* board) {
+  board->occupancies[WHITE] = EMPTY;
+  board->occupancies[BLACK] = EMPTY;
+  board->occupancies[BOTH] = EMPTY;
 
   for (int i = PAWN_WHITE; i <= KING_BLACK; i++)
     board->occupancies[i & 1] |= board->pieces[i];
   board->occupancies[BOTH] = board->occupancies[WHITE] | board->occupancies[BLACK];
 }
 
-inline void setSpecialPieces(Board* board) {
+// Special pieces are those giving check, and those that are pinned
+// these must be recalculated every move for faster move legality purposes
+inline void SetSpecialPieces(Board* board) {
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
+  // Reset pinned pieces
   board->pinners = EMPTY;
-  board->checkers = (getKnightAttacks(kingSq) & board->pieces[KNIGHT[board->xside]]) |
-                    (getPawnAttacks(kingSq, board->side) & board->pieces[PAWN[board->xside]]);
+  // checked can be initialized easily with non-blockable checks
+  board->checkers = (GetKnightAttacks(kingSq) & board->pieces[KNIGHT[board->xside]]) |
+                    (GetPawnAttacks(kingSq, board->side) & board->pieces[PAWN[board->xside]]);
 
+  // for each side
   for (int kingColor = WHITE; kingColor <= BLACK; kingColor++) {
     int enemyColor = 1 - kingColor;
     kingSq = lsb(board->pieces[KING[kingColor]]);
 
+    // get full rook/bishop rays from the king that intersect that piece type of the enemy
     BitBoard enemyPiece =
-        ((board->pieces[BISHOP[enemyColor]] | board->pieces[QUEEN[enemyColor]]) & getBishopAttacks(kingSq, 0)) |
-        ((board->pieces[ROOK[enemyColor]] | board->pieces[QUEEN[enemyColor]]) & getRookAttacks(kingSq, 0));
+        ((board->pieces[BISHOP[enemyColor]] | board->pieces[QUEEN[enemyColor]]) & GetBishopAttacks(kingSq, 0)) |
+        ((board->pieces[ROOK[enemyColor]] | board->pieces[QUEEN[enemyColor]]) & GetRookAttacks(kingSq, 0));
 
     while (enemyPiece) {
       int sq = lsb(enemyPiece);
 
-      BitBoard blockers = getInBetween(kingSq, sq) & board->occupancies[BOTH];
+      // is something in the way
+      BitBoard blockers = GetInBetweenSquares(kingSq, sq) & board->occupancies[BOTH];
 
       if (!blockers)
+        // no? then its check
         board->checkers |= (enemyPiece & -enemyPiece);
       else if (bits(blockers) == 1)
+        // just 1? then its pinned
         board->pinners |= (blockers & board->occupancies[kingColor]);
+
+      // TODO: Similar logic can be applied for discoveries, but apply for self pieces
 
       popLsb(enemyPiece);
     }
   }
 }
 
-void makeMove(Move move, Board* board) {
+void MakeMove(Move move, Board* board) {
   assert(move != NULL_MOVE);
 
-  int start = moveStart(move);
-  int end = moveEnd(move);
-  int piece = movePiece(move);
-  int promoted = movePromo(move);
-  int capture = moveCapture(move);
-  int dub = moveDouble(move);
-  int ep = moveEP(move);
-  int castle = moveCastle(move);
+  int start = MoveStart(move);
+  int end = MoveEnd(move);
+  int piece = MovePiece(move);
+  int promoted = MovePromo(move);
+  int capture = MoveCapture(move);
+  int dub = MoveDoublePush(move);
+  int ep = MoveEP(move);
+  int castle = MoveCastle(move);
   int captured = board->squares[end];
 
+  // store hard to recalculate values
   board->zobristHistory[board->moveNo] = board->zobrist;
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
-  board->captureHistory[board->moveNo] = NO_PIECE;
+  board->captureHistory[board->moveNo] = NO_PIECE; // this might get overwritten
   board->halfMoveHistory[board->moveNo] = board->halfMove;
 
   popBit(board->pieces[piece], start);
@@ -337,7 +328,7 @@ void makeMove(Move move, Board* board) {
   board->zobrist ^= ZOBRIST_PIECES[piece][end];
 
   if (piece == PAWN[board->side])
-    board->halfMove = 0;
+    board->halfMove = 0; // reset on pawn move
   else
     board->halfMove++;
 
@@ -345,8 +336,8 @@ void makeMove(Move move, Board* board) {
     board->captureHistory[board->moveNo] = captured;
     popBit(board->pieces[captured], end);
     board->zobrist ^= ZOBRIST_PIECES[captured][end];
-    board->piecesCounts -= PIECE_COUNT_IDX[captured];
-    board->halfMove = 0;
+    board->piecesCounts -= PIECE_COUNT_IDX[captured]; // when there's a capture, we need to update our piece counts
+    board->halfMove = 0;                              // reset on capture
   }
 
   if (promoted) {
@@ -363,11 +354,12 @@ void makeMove(Move move, Board* board) {
   }
 
   if (ep) {
+    // ep has to be handled specially since the end location won't remove the opponents pawn
     popBit(board->pieces[PAWN[board->xside]], end - PAWN_DIRECTIONS[board->side]);
     board->squares[end - PAWN_DIRECTIONS[board->side]] = NO_PIECE;
     board->zobrist ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
     board->piecesCounts -= PIECE_COUNT_IDX[PAWN[board->xside]];
-    board->halfMove = 0;
+    board->halfMove = 0; // this is a capture
   }
 
   if (board->epSquare) {
@@ -381,6 +373,7 @@ void makeMove(Move move, Board* board) {
   }
 
   if (castle) {
+    // move the rook during a castle, the king encoding is handled automatically
     if (end == G1) {
       popBit(board->pieces[ROOK[WHITE]], H1);
       setBit(board->pieces[ROOK[WHITE]], F1);
@@ -425,29 +418,32 @@ void makeMove(Move move, Board* board) {
   board->castling &= CASTLING_RIGHTS[end];
   board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
 
-  setOccupancies(board);
+  SetOccupancies(board);
 
   board->moveNo++;
   board->xside = board->side;
   board->side ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
 
-  setSpecialPieces(board);
+  // special pieces must be loaded after the side has changed
+  // this is because the new side to move will be the one in check
+  SetSpecialPieces(board);
 }
 
-void undoMove(Move move, Board* board) {
-  int start = moveStart(move);
-  int end = moveEnd(move);
-  int piece = movePiece(move);
-  int promoted = movePromo(move);
-  int capture = moveCapture(move);
-  int ep = moveEP(move);
-  int castle = moveCastle(move);
+void UndoMove(Move move, Board* board) {
+  int start = MoveStart(move);
+  int end = MoveEnd(move);
+  int piece = MovePiece(move);
+  int promoted = MovePromo(move);
+  int capture = MoveCapture(move);
+  int ep = MoveEP(move);
+  int castle = MoveCastle(move);
 
   board->side = board->xside;
   board->xside ^= 1;
   board->moveNo--;
 
+  // reload historical values
   board->epSquare = board->epSquareHistory[board->moveNo];
   board->castling = board->castlingHistory[board->moveNo];
   board->zobrist = board->zobristHistory[board->moveNo];
@@ -481,6 +477,7 @@ void undoMove(Move move, Board* board) {
   }
 
   if (castle) {
+    // put the rook back
     if (end == G1) {
       popBit(board->pieces[ROOK[WHITE]], F1);
       setBit(board->pieces[ROOK[WHITE]], H1);
@@ -508,15 +505,21 @@ void undoMove(Move move, Board* board) {
     }
   }
 
-  setOccupancies(board);
-  setSpecialPieces(board);
+  SetOccupancies(board);
+
+  // TODO: Should these values be cached as well?
+  // only two more bit board arrays
+  SetSpecialPieces(board);
 }
 
-int isLegal(Move move, Board* board) {
-  int start = moveStart(move);
-  int end = moveEnd(move);
+// this is NOT a legality checker for ALL moves
+// it is only used by move generation for king moves, castles, and ep captures
+int IsMoveLegal(Move move, Board* board) {
+  int start = MoveStart(move);
+  int end = MoveEnd(move);
 
-  if (moveEP(move)) {
+  if (MoveEP(move)) {
+    // ep is checked by just applying the move
     int kingSq = lsb(board->pieces[KING[board->side]]);
     int captureSq = end - PAWN_DIRECTIONS[board->side];
     BitBoard newOccupancy = board->occupancies[BOTH];
@@ -525,30 +528,32 @@ int isLegal(Move move, Board* board) {
     setBit(newOccupancy, end);
 
     // EP can only be illegal due to crazy discover checks
-    return !(getBishopAttacks(kingSq, newOccupancy) &
+    return !(GetBishopAttacks(kingSq, newOccupancy) &
              (board->pieces[BISHOP[board->xside]] | board->pieces[QUEEN[board->xside]])) &&
-           !(getRookAttacks(kingSq, newOccupancy) &
+           !(GetRookAttacks(kingSq, newOccupancy) &
              (board->pieces[ROOK[board->xside]] | board->pieces[QUEEN[board->xside]]));
-  } else if (moveCastle(move)) {
+  } else if (MoveCastle(move)) {
     int step = (end > start) ? -1 : 1;
 
+    // pieces in-between have been checked, now check that it's not castling through or into check
     for (int i = end; i != start; i += step) {
-      if (isSquareAttacked(i, board->xside, board->occupancies[BOTH], board))
+      if (IsSquareAttacked(i, board->xside, board->occupancies[BOTH], board))
         return 0;
     }
 
     return 1;
-  } else if (movePiece(move) >= KING[WHITE]) {
+  } else if (MovePiece(move) >= KING[WHITE]) {
     BitBoard kingOff = board->occupancies[BOTH];
     popBit(kingOff, start);
     // check king attacks with it off board, because it may move along the checking line
-    return !isSquareAttacked(end, board->xside, kingOff, board);
+    return !IsSquareAttacked(end, board->xside, kingOff, board);
   }
 
   return 1;
 }
 
-inline int isRepetition(Board* board) {
+inline int IsRepetition(Board* board) {
+  // Check as far back as the last non-reversible move
   for (int i = board->moveNo - 2; i >= 0 && i >= board->moveNo - board->halfMove; i -= 2) {
     if (board->zobristHistory[i] == board->zobrist)
       return 1;
@@ -557,7 +562,7 @@ inline int isRepetition(Board* board) {
   return 0;
 }
 
-void nullMove(Board* board) {
+void MakeNullMove(Board* board) {
   board->zobristHistory[board->moveNo] = board->zobrist;
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
@@ -577,7 +582,7 @@ void nullMove(Board* board) {
   board->xside ^= 1;
 }
 
-void undoNullMove(Board* board) {
+void UndoNullMove(Board* board) {
   board->side = board->xside;
   board->xside ^= 1;
   board->moveNo--;

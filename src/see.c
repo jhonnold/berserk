@@ -24,35 +24,35 @@
 #include "types.h"
 #include "util.h"
 
-inline int see(Board* board, Move move) {
+// Static exchange evaluation using The Swap Algorithm - https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
+inline int SEE(Board* board, Move move) {
   BitBoard occupied = board->occupancies[BOTH];
   int side = board->side;
 
   int gain[32];
   int captureCount = 1;
 
-  int start = moveStart(move);
-  int end = moveEnd(move);
+  int start = MoveStart(move);
+  int end = MoveEnd(move);
 
-  BitBoard attackers = attacksTo(board, end);
-  // We can run see against a non-capture
-  int attackedPieceVal = STATIC_MATERIAL_VALUE[PIECE_TYPE[board->squares[moveEnd(move)]]];
+  BitBoard attackers = AttacksToSquare(board, end);
+  int attackedPieceVal = STATIC_MATERIAL_VALUE[PIECE_TYPE[board->squares[MoveEnd(move)]]];
 
   side ^= 1;
   gain[0] = attackedPieceVal;
 
-  int piece = movePiece(move);
+  int piece = MovePiece(move);
   attackedPieceVal = STATIC_MATERIAL_VALUE[PIECE_TYPE[piece]];
   popBit(occupied, start);
 
-  // If pawn/bishop/queen captures
+  // Recalculate attacks if xray now open
   if (PIECE_TYPE[piece] == PAWN_TYPE || PIECE_TYPE[piece] == BISHOP_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)
-    attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+    attackers |= GetBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
-  // If pawn/rook/queen captures (ep)
+  // Recalculate attacks if xray now open
   if (PIECE_TYPE[piece] == ROOK_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)
-    attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+    attackers |= GetRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                   board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
   BitBoard attackee = 0;
@@ -68,18 +68,20 @@ inline int see(Board* board, Move move) {
 
     occupied ^= (attackee & -attackee);
 
-    // If pawn/bishop/queen captures
+    // Recalculate attacks if xray now open
     if (PIECE_TYPE[piece] == PAWN_TYPE || PIECE_TYPE[piece] == BISHOP_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)
-      attackers |= getBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+      attackers |= GetBishopAttacks(end, occupied) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                       board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
-    // If pawn/rook/queen captures (ep)
+    // Recalculate attacks if xray now open
     if (PIECE_TYPE[piece] == ROOK_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)
-      attackers |= getRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+      attackers |= GetRookAttacks(end, occupied) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
     gain[captureCount] = -gain[captureCount - 1] + attackedPieceVal;
     attackedPieceVal = STATIC_MATERIAL_VALUE[PIECE_TYPE[piece]];
+
+    // Stand pat if the capture is not good
     if (gain[captureCount++] - attackedPieceVal > 0)
       break;
 

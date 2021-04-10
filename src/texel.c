@@ -75,7 +75,7 @@
 double K = 1.0111283200;
 
 void Texel() {
-  ttInit(1);
+  TTInit(1);
 
   int numParams = 0;
   TexelParam params[1024];
@@ -209,24 +209,24 @@ Position* LoadPositions(int* n) {
     int i = 0;
     while (i < p) {
       Position* pos = &positions[i];
-      parseFen(pos->fen, board);
+      ParseFen(pos->fen, board);
 
-      initSearchData(data);
+      ClearSearchData(data);
       data->board = board;
 
       pv->count = 0;
-      quiesce(-CHECKMATE, CHECKMATE, params, data, pv);
+      Quiesce(-CHECKMATE, CHECKMATE, params, data, pv);
 
       for (int m = 0; m < pv->count; m++)
-        makeMove(pv->moves[m], board);
+        MakeMove(pv->moves[m], board);
 
       if (REMOVE_CHECKS && board->checkers) {
         positions[i] = positions[--p];
         continue;
       } else {
-        toFen(pos->fen, board);
+        BoardToFen(pos->fen, board);
 
-        totalPhase += getPhase(board) / maxPhase();
+        totalPhase += GetPhase(board) / MaxPhase();
 
         i++;
 
@@ -312,12 +312,12 @@ void* batchError(void* arg) {
 
 double error(Position* p) {
   Board* board = malloc(sizeof(Board));
-  parseFen(p->fen, board);
+  ParseFen(p->fen, board);
 
   Score score;
   if (QS) {
     SearchData* data = malloc(sizeof(SearchData));
-    initSearchData(data);
+    ClearSearchData(data);
     data->board = board;
 
     SearchParams* params = malloc(sizeof(SearchParams));
@@ -326,7 +326,7 @@ double error(Position* p) {
     PV* pv = malloc(sizeof(PV));
     pv->count = 0;
 
-    score = quiesce(-CHECKMATE, CHECKMATE, params, data, pv);
+    score = Quiesce(-CHECKMATE, CHECKMATE, params, data, pv);
 
     free(data);
     free(params);
@@ -501,8 +501,8 @@ void addParams(TexelParam* params, int* numParams) {
 
 void shufflePositions(Position* positions, int n) {
   for (int i = 0; i < n; i++) {
-    int A = randomLong() % n;
-    int B = randomLong() % n;
+    int A = RandomUInt64() % n;
+    int B = RandomUInt64() % n;
 
     Position temp = positions[A];
     positions[A] = positions[B];

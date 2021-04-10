@@ -24,9 +24,10 @@
 #include <fcntl.h>
 #include <windows.h>
 
-long getTimeMs() { return GetTickCount(); }
+long GetTimeMS() { return GetTickCount(); }
 
-int inputWaiting() {
+// Source: VICE
+int IsInputWaiting() {
   static int init = 0, pipe;
   static HANDLE inh;
   DWORD dw;
@@ -54,14 +55,14 @@ int inputWaiting() {
 #include <sys/time.h>
 #include <unistd.h>
 
-long getTimeMs() {
+long GetTimeMS() {
   struct timeval time;
   gettimeofday(&time, NULL);
 
   return time.tv_sec * 1000 + time.tv_usec / 1000;
 }
 
-int inputWaiting() {
+int IsInputWaiting() {
   struct pollfd pfd[1];
   pfd->fd = STDIN_FILENO;
   pfd->events = POLLIN;
@@ -70,11 +71,14 @@ int inputWaiting() {
 }
 #endif
 
-void readInput(SearchParams* params) {
+// This is reads/parses input when a search is active
+// This DOES block, but if called after `IsInputWaiting`,
+// read will return instantly
+void ReadInputDuringSearch(SearchParams* params) {
   int bytes = 0;
   char in[256], *endc;
 
-  if (inputWaiting()) {
+  if (IsInputWaiting()) {
     do {
       bytes = read(fileno(stdin), in, 256);
     } while (bytes < 0);
@@ -94,11 +98,13 @@ void readInput(SearchParams* params) {
   }
 }
 
-void communicate(SearchParams* params) {
-  if (params->timeset && getTimeMs() > params->endTime) {
+// Main driver for stopping search at time limit or when
+// a given uci command is entered
+void Communicate(SearchParams* params) {
+  if (params->timeset && GetTimeMS() > params->endTime) {
     params->stopped = 1;
     return;
   }
 
-  readInput(params);
+  ReadInputDuringSearch(params);
 }

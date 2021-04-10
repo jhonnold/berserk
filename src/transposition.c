@@ -26,12 +26,19 @@
 #include "transposition.h"
 #include "types.h"
 
-const TTValue NO_ENTRY = 0ULL;
+// Berserk's transposition table is just a giant array of longs
+// Even indicies store the key, odd indicies story the entry
+// For collisions, conflicting hashes have buckets of size 2
+// TODO: Check to see what happens with bucket size 1 or 4?
+
+// Global TT
 TTValue* TRANSPOSITION_ENTRIES = NULL;
 size_t SIZE = 0;
 int POWER = 0;
 
-void ttInit(int mb) {
+const TTValue NO_ENTRY = 0ULL;
+
+void TTInit(int mb) {
   POWER = (int)log2(0x100000 / sizeof(TTValue)) + (int)log2(mb) - (int)log2(BUCKET_SIZE) - 1;
 
   if (TRANSPOSITION_ENTRIES != NULL)
@@ -40,24 +47,24 @@ void ttInit(int mb) {
   SIZE = (1 << POWER) * sizeof(TTValue) * BUCKET_SIZE * 2;
   TRANSPOSITION_ENTRIES = malloc(SIZE);
 
-  ttClear();
+  TTClear();
 }
 
-void ttFree() { free(TRANSPOSITION_ENTRIES); }
+void TTFree() { free(TRANSPOSITION_ENTRIES); }
 
-inline void ttClear() { memset(TRANSPOSITION_ENTRIES, NO_ENTRY, SIZE); }
+inline void TTClear() { memset(TRANSPOSITION_ENTRIES, NO_ENTRY, SIZE); }
 
-inline int ttScore(TTValue value, int ply) {
+inline int TTScore(TTValue value, int ply) {
   int score = (int)((int16_t)((value & 0x0000FFFF00000000) >> 32));
 
   return score > MATE_BOUND ? score - ply : score < -MATE_BOUND ? score + ply : score;
 }
 
-inline TTValue ttProbe(uint64_t hash) {
+inline TTValue TTProbe(uint64_t hash) {
 #ifdef TUNE
   return NO_ENTRY;
 #else
-  int idx = ttIdx(hash);
+  int idx = TTIdx(hash);
 
   for (int i = idx; i < idx + BUCKET_SIZE * 2; i += 2)
     if (TRANSPOSITION_ENTRIES[i] == hash)
@@ -67,12 +74,12 @@ inline TTValue ttProbe(uint64_t hash) {
 #endif
 }
 
-inline TTValue ttPut(uint64_t hash, int depth, int score, int flag, Move move, int ply, int eval) {
+inline TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, int ply, int eval) {
 #ifdef TUNE
   return NO_ENTRY;
 #else
 
-  int idx = ttIdx(hash);
+  int idx = TTIdx(hash);
   int replacementDepth = INT32_MAX;
   int replacementIdx = idx;
 
@@ -83,7 +90,7 @@ inline TTValue ttPut(uint64_t hash, int depth, int score, int flag, Move move, i
       break;
     }
 
-    int currDepth = ttDepth(TRANSPOSITION_ENTRIES[i + 1]);
+    int currDepth = TTDepth(TRANSPOSITION_ENTRIES[i + 1]);
     if (TRANSPOSITION_ENTRIES[i] == hash) {
       if (currDepth > depth && flag != TT_EXACT)
         return TRANSPOSITION_ENTRIES[i + 1];
@@ -110,13 +117,13 @@ inline TTValue ttPut(uint64_t hash, int depth, int score, int flag, Move move, i
   assert(eval >= INT16_MIN);
 
   TRANSPOSITION_ENTRIES[replacementIdx] = hash;
-  TTValue tt = TRANSPOSITION_ENTRIES[replacementIdx + 1] = ttEntry(adjustedScore, flag, depth, move, eval);
+  TTValue tt = TRANSPOSITION_ENTRIES[replacementIdx + 1] = TTEntry(adjustedScore, flag, depth, move, eval);
 
-  assert(depth == ttDepth(tt));
-  assert(score == ttScore(tt, ply));
-  assert(flag == ttFlag(tt));
-  assert(move == ttMove(tt));
-  assert(eval == ttEval(tt));
+  assert(depth == TTDepth(tt));
+  assert(score == TTScore(tt, ply));
+  assert(flag == TTFlag(tt));
+  assert(move == TTMove(tt));
+  assert(eval == TTEval(tt));
 
   return tt;
 #endif

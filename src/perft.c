@@ -16,65 +16,62 @@
 
 #include <inttypes.h>
 #include <stdio.h>
-#include <sys/time.h>
 
 #include "board.h"
 #include "move.h"
 #include "movegen.h"
 #include "types.h"
+#include "util.h"
 
-int64_t perft(int depth, SearchData* data) {
+int Perft(int depth, SearchData* data) {
   if (depth == 0)
     return 1;
 
-  MoveList moveList[1];
-  generateMoves(moveList, data);
+  MoveList moveList = {.count = 0};
+  GenerateAllMoves(&moveList, data);
 
   if (depth == 1)
-    return moveList->count;
+    return moveList.count;
 
-  int64_t nodes = 0;
+  int nodes = 0;
 
-  for (int i = 0; i < moveList->count; i++) {
-    Move m = moveList->moves[i];
+  for (int i = 0; i < moveList.count; i++) {
+    Move move = moveList.moves[i];
 
-    makeMove(m, data->board);
-    nodes += perft(depth - 1, data);
-    undoMove(m, data->board);
+    MakeMove(move, data->board);
+    nodes += Perft(depth - 1, data);
+    UndoMove(move, data->board);
   }
 
   return nodes;
 }
 
 void PerftTest(int depth, Board* board) {
-  int64_t total = 0;
+  int total = 0;
 
   printf("\nRunning performance test to depth %d\n\n", depth);
-  struct timeval stop, start;
-  gettimeofday(&start, NULL);
 
-  MoveList moveList[1];
-  SearchData data[1];
-  data->board = board;
-  data->ply = 0;
+  long startTime = GetTimeMS();
 
-  generateMoves(moveList, data);
+  MoveList moveList = {.count = 0};
+  SearchData data = {.board = board, .ply = 0};
 
-  for (int i = 0; i < moveList->count; i++) {
-    Move m = moveList->moves[i];
+  GenerateAllMoves(&moveList, &data);
 
-    makeMove(m, board);
-    int64_t nodes = perft(depth - 1, data);
-    undoMove(m, board);
+  for (int i = 0; i < moveList.count; i++) {
+    Move move = moveList.moves[i];
 
-    printf("%s: %" PRId64 "\n", moveStr(m), nodes);
+    MakeMove(move, board);
+    int nodes = Perft(depth - 1, &data);
+    UndoMove(move, board);
+
+    printf("%s: %d\n", MoveToStr(move), nodes);
     total += nodes;
   }
 
-  gettimeofday(&stop, NULL);
+  long endTime = GetTimeMS();
 
-  int64_t duration = ((stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec);
-  printf("\nNodes: %" PRId64 "\n", total);
-  printf("Time: %.3fms\n", duration / 1000.0);
-  printf("NPS: %" PRId64 "\n\n", total * 1000000 / duration);
+  printf("\nNodes: %d\n", total);
+  printf("Time: %ldms\n", (endTime - startTime));
+  printf("NPS: %ld\n\n", total / (endTime - startTime) * 1000);
 }

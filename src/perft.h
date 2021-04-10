@@ -19,7 +19,7 @@
 
 #include "types.h"
 
-int64_t perft(int depth, SearchData* data);
+int Perft(int depth, SearchData* data);
 void PerftTest(int depth, Board* board);
 
 #endif

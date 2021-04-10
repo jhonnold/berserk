@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <stdio.h>
 #include <string.h>
 
 #include "attacks.h"
@@ -31,22 +30,18 @@
 #include "util.h"
 #include "zobrist.h"
 
+// Welcome to berserk
 int main(int argc, char** argv) {
-  seedRandom(0);
+  SeedRandom(0);
 
-  initPSQT();
-  initAttacks();
-  initPawnSpans();
-  initZobristKeys();
-  initLMR();
+  InitPSQT();
+  InitAttacks();
+  InitZobristKeys();
+  InitPruningAndReductionTables();
 
-  ttInit(32);
+  TTInit(32);
 
-  Board board[1];
-  memset(board, 0, sizeof(Board));
-  parseFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", board);
-
-  // This is to be compliant for OpenBench
+  // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
     Bench();
   }
@@ -56,9 +51,9 @@ int main(int argc, char** argv) {
   }
 #endif
   else {
-    UCI(board);
+    UCILoop();
   }
 
-  ttFree();
+  TTFree();
   return 0;
 }

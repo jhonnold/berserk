@@ -19,8 +19,11 @@
 
 #include <stdint.h>
 
-#define MAX_DEPTH 64
+#define MAX_SEARCH_PLY 64
+#define MAX_MOVES 256
+#define MAX_GAME_PLY 512
 
+// Tune on doubles for more accuracy
 #ifndef TUNE
 typedef int Score;
 typedef Score TScore[2];
@@ -35,61 +38,65 @@ typedef uint64_t TTValue;
 
 typedef int Move;
 
+// Move generation storage
+// moves/scores idx's match
 typedef struct {
-  Move moves[256];
-  int scores[256];
   int count;
+  Move moves[MAX_MOVES];
+  int scores[MAX_MOVES];
 } MoveList;
 
 typedef struct {
-  // pieces
-  BitBoard pieces[12];
-  BitBoard occupancies[3];
-  int squares[64];
-  BitBoard checkers;
-  BitBoard pinners;
-  uint64_t piecesCounts;
+  BitBoard pieces[12];     // individual piece data
+  BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
+  int squares[64];         // piece per square
+  BitBoard checkers;       // checking piece squares
+  BitBoard pinners;        // pinned pieces
+  uint64_t piecesCounts;   // "material key" - pieces left on the board
 
-  // Game state
-  int side;
-  int xside;
-  int epSquare;
-  int castling;
-  int moveNo;
-  int halfMove;
+  int side;     // side to move
+  int xside;    // side not to move
+  int epSquare; // en passant square (a8 or 0 is not valid so that marks no active ep)
+  int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
+  int moveNo;   // current game move number TODO: Is this still used?
+  int halfMove; // half move count for 50 move rule
 
-  uint64_t zobrist;
-  uint64_t zobristHistory[512];
+  uint64_t zobrist; // zobrist hash of the position
 
-  // history
-  int castlingHistory[512];
-  int epSquareHistory[512];
-  int captureHistory[512];
-  int halfMoveHistory[512];
+  // data that is hard to track, so it is "remembered" when search undoes moves
+  uint64_t zobristHistory[MAX_GAME_PLY];
+  int castlingHistory[MAX_GAME_PLY];
+  int epSquareHistory[MAX_GAME_PLY];
+  int captureHistory[MAX_GAME_PLY];
+  int halfMoveHistory[MAX_GAME_PLY];
 } Board;
 
+// Tracking the principal variation
 typedef struct {
   int count;
-  Move moves[MAX_DEPTH];
+  Move moves[MAX_SEARCH_PLY];
 } PV;
 
+// A general data object for use during search
 typedef struct {
-  int score;
-  Move bestMove;
+  int score;     // analysis score result, from perspective of stm
+  Move bestMove; // best move from analysis
 
-  Board* board;
-  int ply;
+  Board* board; // reference to board
+  int ply;      // ply depth of active search
 
-  int nodes;
-  int seldepth;
+  // TODO: Put depth here as well? Just cause
+  int nodes;    // node count
+  int seldepth; // seldepth count
 
-  Move skipMove[MAX_DEPTH];
-  int evals[MAX_DEPTH];
-  Move moves[MAX_DEPTH];
-  Move killers[MAX_DEPTH][2];
-  Move counters[64 * 64];
-  int hh[2][64 * 64];
-  int bf[2][64 * 64];
+  Move skipMove[MAX_SEARCH_PLY]; // moves to skip during singular search
+  int evals[MAX_SEARCH_PLY];     // static evals at ply stack
+  Move moves[MAX_SEARCH_PLY];    // moves for ply stack
+
+  Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply
+  Move counters[64 * 64];          // counter move butterfly table
+  int hh[2][64 * 64];              // history heuristic butterfly table (side)
+  int bf[2][64 * 64];              // butterfly heuristic butterfly table (side)
 } SearchData;
 
 typedef struct {
@@ -103,25 +110,26 @@ typedef struct {
 } SearchParams;
 
 typedef struct {
-  TScore material;
-  TScore pawns;
-  TScore knights;
-  TScore bishops;
-  TScore rooks;
-  TScore queens;
-  TScore kings;
+  TScore material; // raw material score
+  TScore pawns;    // pawn bonuses, includes all pawn parameters (passers, doubled, etc..)
+  TScore knights;  // knight bonuses
+  TScore bishops;  // bishop bonuses
+  TScore rooks;    // rook bonuses
+  TScore queens;   // queen bonuses
+  TScore kings;    // king bonuses
 
-  TScore mobility;
-  TScore kingSafety;
-  TScore threats;
-  TScore tempo;
+  TScore mobility;   // mobility of all pieces (except kings + pawns)
+  TScore kingSafety; // king safety score
+  TScore threats;    // active threats
+  TScore tempo;      // tempo just didn't fit anywhere else
 
-  BitBoard attacks[6];
-  BitBoard allAttacks;
-  BitBoard attacks2;
-  int attackWeight;
-  int attackCount;
-  int attackers;
+  // these are general data objects, for buildup during eval
+  BitBoard attacks[6]; // attacks by piece type
+  BitBoard allAttacks; // all attacks
+  BitBoard attacks2;   // squares attacked twice
+  int attackWeight;    // king safety attackers weight
+  int attackCount;     // king safety sq attack count
+  int attackers;       // king safety attackers count
 } EvalData;
 
 enum { WHITE, BLACK, BOTH };

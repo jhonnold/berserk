@@ -73,14 +73,14 @@ extern TScore KING_THREATS[6];
 
 extern TScore TEMPO;
 
-void initPSQT();
+void InitPSQT();
 
-Score maxPhase();
-Score getPhase(Board* board);
-Score taper(Score mg, Score eg, Score phase);
+Score MaxPhase();
+Score GetPhase(Board* board);
+Score Taper(Score mg, Score eg, Score phase);
 
-Score toScore(EvalData* data, Board* board);
-int isMaterialDraw(Board* board);
+Score ToScore(EvalData* data, Board* board);
+int IsMaterialDraw(Board* board);
 void EvaluateSide(Board* board, int side, EvalData* data);
 void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData);
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData);
