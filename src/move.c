@@ -31,22 +31,20 @@ const char* SQ_TO_COORD[] = {
     "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2", "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
 };
 
-Move parseMove(char* moveStr, Board* board) {
-  MoveList moveList[1];
-  SearchData data[1];
-  data->board = board;
-  data->ply = 0;
-  generateMoves(moveList, data);
+Move ParseMove(char* moveStr, Board* board) {
+  MoveList moveList = {.count = 0};
+  SearchData data = {.board = board, .ply = 0};
+  GenerateAllMoves(&moveList, &data);
 
   int start = (moveStr[0] - 'a') + (8 - (moveStr[1] - '0')) * 8;
   int end = (moveStr[2] - 'a') + (8 - (moveStr[3] - '0')) * 8;
 
-  for (int i = 0; i < moveList->count; i++) {
-    Move match = moveList->moves[i];
-    if (start != moveStart(match) || end != moveEnd(match))
+  for (int i = 0; i < moveList.count; i++) {
+    Move match = moveList.moves[i];
+    if (start != MoveStart(match) || end != MoveEnd(match))
       continue;
 
-    int promotedPiece = movePromo(match);
+    int promotedPiece = MovePromo(match);
     if (!promotedPiece)
       return match;
 
@@ -57,14 +55,14 @@ Move parseMove(char* moveStr, Board* board) {
   return 0;
 }
 
-char* moveStr(Move move) {
+char* MoveToStr(Move move) {
   static char buffer[6];
 
-  if (movePromo(move)) {
-    sprintf(buffer, "%s%s%c", SQ_TO_COORD[moveStart(move)], SQ_TO_COORD[moveEnd(move)],
-            PROMOTION_TO_CHAR[movePromo(move)]);
+  if (MovePromo(move)) {
+    sprintf(buffer, "%s%s%c", SQ_TO_COORD[MoveStart(move)], SQ_TO_COORD[MoveEnd(move)],
+            PROMOTION_TO_CHAR[MovePromo(move)]);
   } else {
-    sprintf(buffer, "%s%s", SQ_TO_COORD[moveStart(move)], SQ_TO_COORD[moveEnd(move)]);
+    sprintf(buffer, "%s%s", SQ_TO_COORD[MoveStart(move)], SQ_TO_COORD[MoveEnd(move)]);
   }
 
   return buffer;

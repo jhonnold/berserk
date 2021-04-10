@@ -39,25 +39,23 @@ extern const int MIRROR[];
 
 extern const uint64_t PIECE_COUNT_IDX[];
 
-uint64_t zobrist(Board* board);
+void ClearBoard(Board* board);
+void ParseFen(char* fen, Board* board);
+void BoardToFen(char* fen, Board* board);
+void PrintBoard(Board* board);
 
-void clear(Board* board);
-void parseFen(char* fen, Board* board);
-void toFen(char* fen, Board* board);
-void printBoard(Board* board);
+void SetSpecialPieces(Board* board);
+void SetOccupancies(Board* board);
 
-void setSpecialPieces(Board* board);
-void setOccupancies(Board* board);
-
-int isSquareAttacked(int sq, int attacker, BitBoard occupancy, Board* board);
-int isLegal(Move move, Board* board);
-int isRepetition(Board* board);
+int IsSquareAttacked(int sq, int attacker, BitBoard occupancy, Board* board);
+int IsMoveLegal(Move move, Board* board);
+int IsRepetition(Board* board);
 
 int hasNonPawn(Board* board);
 
-void nullMove(Board* board);
-void undoNullMove(Board* board);
-void makeMove(Move move, Board* board);
-void undoMove(Move move, Board* board);
+void MakeNullMove(Board* board);
+void UndoNullMove(Board* board);
+void MakeMove(Move move, Board* board);
+void UndoMove(Move move, Board* board);
 
 #endif

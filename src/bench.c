@@ -24,6 +24,7 @@
 #include "types.h"
 #include "util.h"
 
+// Ethereal's bench set
 char* benchmarks[] = {"r3k2r/2pb1ppp/2pp1q2/p7/1nP1B3/1P2P3/P2N1PPP/R2QK2R w KQkq a6 0 14",
                       "4rrk1/2p1b1p1/p1p3q1/4p3/2P2n1p/1P1NR2P/PB3PP1/3R1QK1 b - - 2 24",
                       "r3qbrk/6p1/2b2pPp/p3pP1Q/PpPpP2P/3P1B2/2PB3K/R5R1 w - - 16 42",
@@ -76,44 +77,34 @@ char* benchmarks[] = {"r3k2r/2pb1ppp/2pp1q2/p7/1nP1B3/1P2P3/P2N1PPP/R2QK2R w KQk
                       "2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93"};
 
 void Bench() {
-
-  Board board[1];
-  memset(board, 0, sizeof(Board));
-
-  SearchParams params[1];
-  params->depth = 13;
-  params->timeset = 0;
-  params->stopped = 0;
-  params->quit = 0;
-  params->endTime = 0;
+  Board board;
+  SearchParams params = {.depth = 13, .timeset = 0, .stopped = 0, .quit = 0, .endTime = 0};
+  SearchData data = {.board = &board};
 
   Move bestMoves[50];
   int scores[50];
   int nodes[50];
   long times[50];
 
-  long startTime = getTimeMs();
+  long startTime = GetTimeMS();
   for (int i = 0; i < 50; i++) {
-    long testStart = getTimeMs();
+    long testStart = GetTimeMS();
 
-    parseFen(benchmarks[i], board);
+    ParseFen(benchmarks[i], data.board);
 
-    SearchData data[1];
-    data->board = board;
+    Search(&params, &data);
 
-    Search(params, data);
-
-    times[i] = getTimeMs() - testStart;
-    bestMoves[i] = data->bestMove;
-    scores[i] = data->score;
-    nodes[i] = data->nodes;
+    times[i] = GetTimeMS() - testStart;
+    bestMoves[i] = data.bestMove;
+    scores[i] = data.score;
+    nodes[i] = data.nodes;
   }
-  long totalTime = getTimeMs() - startTime;
+  long totalTime = GetTimeMS() - startTime;
 
   printf("\n\n");
   for (int i = 0; i < 50; i++) {
-    printf("Bench #%2d: bestmove %5s score %5d %12d nodes %8d nps\n", i + 1, moveStr(bestMoves[i]), scores[i], nodes[i],
-           (int)(1000.0 * nodes[i] / (times[i] + 1)));
+    printf("Bench #%2d: bestmove %5s score %5d %12d nodes %8d nps\n", i + 1, MoveToStr(bestMoves[i]), scores[i],
+           nodes[i], (int)(1000.0 * nodes[i] / (times[i] + 1)));
   }
 
   int totalNodes = 0;

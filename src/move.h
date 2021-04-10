@@ -26,20 +26,21 @@ extern const char* PIECE_TO_CHAR;
 extern const char* PROMOTION_TO_CHAR;
 extern const char* SQ_TO_COORD[];
 
-#define buildMove(start, end, piece, promo, cap, dub, ep, castle)                                                      \
+#define BuildMove(start, end, piece, promo, cap, dub, ep, castle)                                                      \
   (start) | ((end) << 6) | ((piece) << 12) | ((promo) << 16) | ((cap) << 20) | ((dub) << 21) | ((ep) << 22) |          \
       ((castle) << 23)
-#define moveStart(move) ((move)&0x3f)
-#define moveEnd(move) (((move)&0xfc0) >> 6)
-#define movePiece(move) (((move)&0xf000) >> 12)
-#define movePromo(move) (((move)&0xf0000) >> 16)
-#define moveCapture(move) (((move)&0x100000) >> 20)
-#define moveDouble(move) (((move)&0x200000) >> 21)
-#define moveEP(move) (((move)&0x400000) >> 22)
-#define moveCastle(move) (((move)&0x800000) >> 23)
-#define moveSE(move) ((move)&0xfff)
+#define MoveStart(move) ((move)&0x3f)
+#define MoveEnd(move) (((move)&0xfc0) >> 6)
+#define MovePiece(move) (((move)&0xf000) >> 12)
+#define MovePromo(move) (((move)&0xf0000) >> 16)
+#define MoveCapture(move) (((move)&0x100000) >> 20)
+#define MoveDoublePush(move) (((move)&0x200000) >> 21)
+#define MoveEP(move) (((move)&0x400000) >> 22)
+#define MoveCastle(move) (((move)&0x800000) >> 23)
+// just mask the start/end bits into a single int for indexing butterfly tables
+#define MoveStartEnd(move) ((move)&0xfff)
 
-Move parseMove(char* moveStr, Board* board);
-char* moveStr(Move move);
+Move ParseMove(char* moveStr, Board* board);
+char* MoveToStr(Move move);
 
 #endif

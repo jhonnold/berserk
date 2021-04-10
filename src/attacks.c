@@ -24,6 +24,11 @@
 #include "movegen.h"
 #include "random.h"
 
+// This file was built using all the logic found in the BBC video guide on youtube
+// I highly recommend it to understand how magic bitboards work/generated
+// https://www.youtube.com/channel/UCB9-prLkPwgvlKKqDgXhsMQ/videos
+// OTF is abbr for On The Fly
+
 // clang-format off
 const int BISHOP_RELEVANT_BITS[64] = {
   6, 5, 5, 5, 5, 5, 5, 6, 
@@ -50,7 +55,6 @@ const int ROOK_RELEVANT_BITS[64] = {
 
 BitBoard BETWEEN_SQS[64][64];
 BitBoard PINNED_MOVES[64][64];
-BitBoard PAWN_SPANS[2][64];
 
 BitBoard PAWN_ATTACKS[2][64];
 BitBoard KNIGHT_ATTACKS[64];
@@ -63,7 +67,7 @@ BitBoard BISHOP_MASKS[64];
 uint64_t ROOK_MAGICS[64];
 uint64_t BISHOP_MAGICS[64];
 
-void initBetween() {
+void InitBetweenSquares() {
   int i;
   for (int f = 0; f < 64; f++) {
     for (int t = f + 1; t < 64; t++) {
@@ -100,7 +104,7 @@ void initBetween() {
       BETWEEN_SQS[f][t] = BETWEEN_SQS[t][f];
 }
 
-void initPinnedMovement() {
+void InitPinnedMovementSquares() {
   int dirs[] = {W, NE, N, NW, E, SW, S, SE};
 
   for (int pSq = 0; pSq < 64; pSq++) {
@@ -143,66 +147,34 @@ void initPinnedMovement() {
   }
 }
 
-void initPawnSpans() {
-  // WHITE
-  for (int sq = 0; sq < 64; sq++) {
-    BitBoard span = 0;
-    for (int i = sq + PAWN_DIRECTIONS[WHITE]; i >= 0; i += PAWN_DIRECTIONS[WHITE]) {
-      setBit(span, i);
-    }
+inline BitBoard GetInBetweenSquares(int from, int to) { return BETWEEN_SQS[from][to]; }
 
-    span |= PAWN_SPANS[WHITE][sq] = span | shift(span, E) | shift(span, W);
-  }
+inline BitBoard GetPinnedMovementSquares(int p, int k) { return PINNED_MOVES[p][k]; }
 
-  // BLACK
-  for (int sq = 0; sq < 64; sq++) {
-    BitBoard span = 0;
-    for (int i = sq + PAWN_DIRECTIONS[BLACK]; i < 64; i += PAWN_DIRECTIONS[BLACK]) {
-      setBit(span, i);
-    }
-
-    span |= PAWN_SPANS[BLACK][sq] = span | shift(span, E) | shift(span, W);
-  }
-}
-
-inline BitBoard getInBetween(int from, int to) { return BETWEEN_SQS[from][to]; }
-
-inline BitBoard getPinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
-
-inline BitBoard getPawnSpan(int sq, int side) { return PAWN_SPANS[side][sq]; }
-
-inline BitBoard getPawnSpans(BitBoard pawns, int side) {
-  BitBoard span = 0;
-  for (; pawns; popLsb(pawns))
-    span |= PAWN_SPANS[side][lsb(pawns)];
-
-  return span;
-}
-
-BitBoard getGeneratedPawnAttacks(int sq, int color) {
+BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   BitBoard attacks = 0, board = 0;
 
   setBit(board, sq);
 
   if (color == WHITE) {
-    attacks |= shift(board, NW);
-    attacks |= shift(board, NE);
+    attacks |= Shift(board, NW);
+    attacks |= Shift(board, NE);
   } else {
-    attacks |= shift(board, SE);
-    attacks |= shift(board, SW);
+    attacks |= Shift(board, SE);
+    attacks |= Shift(board, SW);
   }
 
   return attacks;
 }
 
-void initPawnAttacks() {
+void InitPawnAttacks() {
   for (int i = 0; i < 64; i++) {
-    PAWN_ATTACKS[WHITE][i] = getGeneratedPawnAttacks(i, WHITE);
-    PAWN_ATTACKS[BLACK][i] = getGeneratedPawnAttacks(i, BLACK);
+    PAWN_ATTACKS[WHITE][i] = GetGeneratedPawnAttacks(i, WHITE);
+    PAWN_ATTACKS[BLACK][i] = GetGeneratedPawnAttacks(i, BLACK);
   }
 }
 
-BitBoard getGeneratedKnightAttacks(int sq) {
+BitBoard GetGeneratedKnightAttacks(int sq) {
   BitBoard attacks = 0, board = 0;
 
   setBit(board, sq);
@@ -228,34 +200,34 @@ BitBoard getGeneratedKnightAttacks(int sq) {
   return attacks;
 }
 
-void initKnightAttacks() {
+void InitKnightAttacks() {
   for (int i = 0; i < 64; i++)
-    KNIGHT_ATTACKS[i] = getGeneratedKnightAttacks(i);
+    KNIGHT_ATTACKS[i] = GetGeneratedKnightAttacks(i);
 }
 
-BitBoard getGeneratedKingAttacks(int sq) {
+BitBoard GetGeneratedKingAttacks(int sq) {
   BitBoard attacks = 0, board = 0;
 
   setBit(board, sq);
 
-  attacks |= shift(board, N);
-  attacks |= shift(board, NE);
-  attacks |= shift(board, E);
-  attacks |= shift(board, SE);
-  attacks |= shift(board, S);
-  attacks |= shift(board, SW);
-  attacks |= shift(board, W);
-  attacks |= shift(board, NW);
+  attacks |= Shift(board, N);
+  attacks |= Shift(board, NE);
+  attacks |= Shift(board, E);
+  attacks |= Shift(board, SE);
+  attacks |= Shift(board, S);
+  attacks |= Shift(board, SW);
+  attacks |= Shift(board, W);
+  attacks |= Shift(board, NW);
 
   return attacks;
 }
 
-void initKingAttacks() {
+void InitKingAttacks() {
   for (int i = 0; i < 64; i++)
-    KING_ATTACKS[i] = getGeneratedKingAttacks(i);
+    KING_ATTACKS[i] = GetGeneratedKingAttacks(i);
 }
 
-BitBoard getBishopMask(int sq) {
+BitBoard GetBishopMask(int sq) {
   BitBoard attacks = 0;
 
   int sr = rank(sq);
@@ -273,13 +245,12 @@ BitBoard getBishopMask(int sq) {
   return attacks;
 }
 
-void initBishopMasks() {
-  for (int i = 0; i < 64; i++) {
-    BISHOP_MASKS[i] = getBishopMask(i);
-  }
+void InitBishopMasks() {
+  for (int i = 0; i < 64; i++)
+    BISHOP_MASKS[i] = GetBishopMask(i);
 }
 
-BitBoard getBishopAttacksOTF(int sq, BitBoard blockers) {
+BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
   int sr = rank(sq);
@@ -312,7 +283,7 @@ BitBoard getBishopAttacksOTF(int sq, BitBoard blockers) {
   return attacks;
 }
 
-BitBoard getRookMask(int sq) {
+BitBoard GetRookMask(int sq) {
   BitBoard attacks = 0;
 
   int sr = rank(sq);
@@ -330,12 +301,12 @@ BitBoard getRookMask(int sq) {
   return attacks;
 }
 
-void initRookMasks() {
+void InitRookMasks() {
   for (int i = 0; i < 64; i++)
-    ROOK_MASKS[i] = getRookMask(i);
+    ROOK_MASKS[i] = GetRookMask(i);
 }
 
-BitBoard getRookAttacksOTF(int sq, BitBoard blockers) {
+BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
   int sr = rank(sq);
@@ -368,7 +339,7 @@ BitBoard getRookAttacksOTF(int sq, BitBoard blockers) {
   return attacks;
 }
 
-BitBoard setOccupancy(int idx, int bits, BitBoard attacks) {
+BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
   BitBoard occupany = 0;
 
   for (int i = 0; i < bits; i++) {
@@ -382,22 +353,22 @@ BitBoard setOccupancy(int idx, int bits, BitBoard attacks) {
   return occupany;
 }
 
-uint64_t findMagicNumber(int sq, int n, int bishop) {
+uint64_t FindMagicNumber(int sq, int n, int isBishop) {
   int numOccupancies = 1 << n;
 
   BitBoard occupancies[4096];
   BitBoard attacks[4096];
   BitBoard usedAttacks[4096];
 
-  BitBoard mask = bishop ? BISHOP_MASKS[sq] : ROOK_MASKS[sq];
+  BitBoard mask = isBishop ? BISHOP_MASKS[sq] : ROOK_MASKS[sq];
 
   for (int i = 0; i < numOccupancies; i++) {
-    occupancies[i] = setOccupancy(i, n, mask);
-    attacks[i] = bishop ? getBishopAttacksOTF(sq, occupancies[i]) : getRookAttacksOTF(sq, occupancies[i]);
+    occupancies[i] = SetPieceLayoutOccupancy(i, n, mask);
+    attacks[i] = isBishop ? GetBishopAttacksOTF(sq, occupancies[i]) : GetRookAttacksOTF(sq, occupancies[i]);
   }
 
   for (int count = 0; count < 10000000; count++) {
-    uint64_t magic = randomMagic();
+    uint64_t magic = RandomMagic();
 
     if (bits((mask * magic) & 0xFF00000000000000) < 6)
       continue;
@@ -422,69 +393,69 @@ uint64_t findMagicNumber(int sq, int n, int bishop) {
   return 0;
 }
 
-void initBishopMagics() {
+void InitBishopMagics() {
   for (int i = 0; i < 64; i++)
-    BISHOP_MAGICS[i] = findMagicNumber(i, BISHOP_RELEVANT_BITS[i], 1);
+    BISHOP_MAGICS[i] = FindMagicNumber(i, BISHOP_RELEVANT_BITS[i], 1);
 }
 
-void initRookMagics() {
+void InitRookMagics() {
   for (int i = 0; i < 64; i++)
-    ROOK_MAGICS[i] = findMagicNumber(i, ROOK_RELEVANT_BITS[i], 0);
+    ROOK_MAGICS[i] = FindMagicNumber(i, ROOK_RELEVANT_BITS[i], 0);
 }
 
-void initBishopAttacks() {
+void InitBishopAttacks() {
   for (int sq = 0; sq < 64; sq++) {
     BitBoard mask = BISHOP_MASKS[sq];
     int bits = BISHOP_RELEVANT_BITS[sq];
     int n = (1 << bits);
 
     for (int i = 0; i < n; i++) {
-      BitBoard occupancy = setOccupancy(i, bits, mask);
+      BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
       int idx = (occupancy * BISHOP_MAGICS[sq]) >> (64 - bits);
 
-      BISHOP_ATTACKS[sq][idx] = getBishopAttacksOTF(sq, occupancy);
+      BISHOP_ATTACKS[sq][idx] = GetBishopAttacksOTF(sq, occupancy);
     }
   }
 }
 
-void initRookAttacks() {
+void InitRookAttacks() {
   for (int sq = 0; sq < 64; sq++) {
     BitBoard mask = ROOK_MASKS[sq];
     int bits = ROOK_RELEVANT_BITS[sq];
     int n = (1 << bits);
 
     for (int i = 0; i < n; i++) {
-      BitBoard occupancy = setOccupancy(i, bits, mask);
+      BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
       int idx = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
 
-      ROOK_ATTACKS[sq][idx] = getRookAttacksOTF(sq, occupancy);
+      ROOK_ATTACKS[sq][idx] = GetRookAttacksOTF(sq, occupancy);
     }
   }
 }
 
-void initAttacks() {
-  initBetween();
-  initPinnedMovement();
+void InitAttacks() {
+  InitBetweenSquares();
+  InitPinnedMovementSquares();
 
-  initPawnAttacks();
-  initKnightAttacks();
-  initKingAttacks();
+  InitPawnAttacks();
+  InitKnightAttacks();
+  InitKingAttacks();
 
-  initBishopMasks();
-  initRookMasks();
+  InitBishopMasks();
+  InitRookMasks();
 
-  initBishopMagics();
-  initRookMagics();
+  InitBishopMagics();
+  InitRookMagics();
 
-  initBishopAttacks();
-  initRookAttacks();
+  InitBishopAttacks();
+  InitRookAttacks();
 }
 
-inline BitBoard getPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][sq]; }
+inline BitBoard GetPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][sq]; }
 
-inline BitBoard getKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
+inline BitBoard GetKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
 
-inline BitBoard getBishopAttacks(int sq, BitBoard occupancy) {
+inline BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
   occupancy &= BISHOP_MASKS[sq];
   occupancy *= BISHOP_MAGICS[sq];
   occupancy >>= 64 - BISHOP_RELEVANT_BITS[sq];
@@ -492,7 +463,7 @@ inline BitBoard getBishopAttacks(int sq, BitBoard occupancy) {
   return BISHOP_ATTACKS[sq][occupancy];
 }
 
-inline BitBoard getRookAttacks(int sq, BitBoard occupancy) {
+inline BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
   occupancy &= ROOK_MASKS[sq];
   occupancy *= ROOK_MAGICS[sq];
   occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];
@@ -500,22 +471,23 @@ inline BitBoard getRookAttacks(int sq, BitBoard occupancy) {
   return ROOK_ATTACKS[sq][occupancy];
 }
 
-inline BitBoard getQueenAttacks(int sq, BitBoard occupancy) {
-  return getBishopAttacks(sq, occupancy) | getRookAttacks(sq, occupancy);
+inline BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
+  return GetBishopAttacks(sq, occupancy) | GetRookAttacks(sq, occupancy);
 }
 
-inline BitBoard getKingAttacks(int sq) { return KING_ATTACKS[sq]; }
+inline BitBoard GetKingAttacks(int sq) { return KING_ATTACKS[sq]; }
 
-inline BitBoard attacksTo(Board* board, int sq) {
-  BitBoard attacks = (getPawnAttacks(sq, WHITE) & board->pieces[PAWN[BLACK]]) |
-                     (getPawnAttacks(sq, BLACK) & board->pieces[PAWN[WHITE]]) |
-                     (getKnightAttacks(sq) & (board->pieces[KNIGHT[WHITE]] | board->pieces[KNIGHT[BLACK]])) |
-                     (getKingAttacks(sq) & (board->pieces[KING[WHITE]] | board->pieces[KING[BLACK]]));
+// get a bitboard of ALL pieces attacking a given square
+inline BitBoard AttacksToSquare(Board* board, int sq) {
+  BitBoard attacks = (GetPawnAttacks(sq, WHITE) & board->pieces[PAWN[BLACK]]) |
+                     (GetPawnAttacks(sq, BLACK) & board->pieces[PAWN[WHITE]]) |
+                     (GetKnightAttacks(sq) & (board->pieces[KNIGHT[WHITE]] | board->pieces[KNIGHT[BLACK]])) |
+                     (GetKingAttacks(sq) & (board->pieces[KING[WHITE]] | board->pieces[KING[BLACK]]));
 
   attacks |=
-      getBishopAttacks(sq, board->occupancies[BOTH]) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+      GetBishopAttacks(sq, board->occupancies[BOTH]) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
                                                         board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
-  attacks |= getRookAttacks(sq, board->occupancies[BOTH]) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+  attacks |= GetRookAttacks(sq, board->occupancies[BOTH]) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
                                                              board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
 
   return attacks;

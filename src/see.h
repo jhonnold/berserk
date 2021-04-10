@@ -19,6 +19,6 @@
 
 #include "types.h"
 
-int see(Board* board, Move move);
+int SEE(Board* board, Move move);
 
 #endif

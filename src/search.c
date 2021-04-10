@@ -30,37 +30,43 @@
 #include "types.h"
 #include "util.h"
 
-const int CHECKMATE = 32767;
+// We have a 16 bit range for scores
+const int CHECKMATE = INT16_MAX;
 const int MATE_BOUND = 30000;
 
+// cutoff factors for certain pruning mechanics
 const int FUTILITY_MARGIN = 85;
 const int SEE_PRUNE_CAPTURE_CUTOFF = -70;
 const int SEE_PRUNE_CUTOFF = -20;
 const int DELTA_CUTOFF = 200;
 
-int LMR[MAX_DEPTH][64];
-int LMP[2][MAX_DEPTH];
-int SEE[2][MAX_DEPTH];
-int FUTILITY[MAX_DEPTH];
+// arrays to store these pruning cutoffs at specific depths
+int LMR[MAX_SEARCH_PLY][64];
+int LMP[2][MAX_SEARCH_PLY];
+int STATIC_PRUNE[2][MAX_SEARCH_PLY];
+int FUTILITY[MAX_SEARCH_PLY];
 
-void initLMR() {
-  for (int depth = 0; depth < MAX_DEPTH; depth++)
+void InitPruningAndReductionTables() {
+  for (int depth = 0; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 0; moves < 64; moves++)
+      // Credit to Ethereal for this LMR
       LMR[depth][moves] = (int)(0.6f + log(depth) * log(1.2f * moves) / 2.5f);
 
-  for (int depth = 0; depth < MAX_DEPTH; depth++) {
-    LMP[0][depth] = (3 + depth * depth) / 2; // not improving
+  for (int depth = 0; depth < MAX_SEARCH_PLY; depth++) {
+    // LMP has both a improving (more strict) and non-improving evalution parameter
+    // for lmp. If the evaluation is getting better we want to check more
+    LMP[0][depth] = (3 + depth * depth) / 2;
     LMP[1][depth] = 3 + depth * depth;
 
-    SEE[0][depth] = SEE_PRUNE_CUTOFF * depth * depth; // quiet
-    SEE[1][depth] = SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture
+    STATIC_PRUNE[0][depth] = SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
+    STATIC_PRUNE[1][depth] = SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
 
     FUTILITY[depth] = FUTILITY_MARGIN * depth;
   }
 }
 
-// DOESN'T TOUCH `->board`
-void initSearchData(SearchData* data) {
+// reset all values (except BOARD) in data
+void ClearSearchData(SearchData* data) {
   data->nodes = 0;
   data->seldepth = 0;
   data->ply = 0;
@@ -74,66 +80,79 @@ void initSearchData(SearchData* data) {
 }
 
 void Search(SearchParams* params, SearchData* data) {
-  ttClear();
-  initSearchData(data);
+  TTClear();
+  ClearSearchData(data);
 
-  PV pv[1];
+  PV pv;
 
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
+  int score = 0;
 
-  int score = negamax(alpha, beta, 1, params, data, pv);
-  printInfo(pv, score, 1, params, data);
-
-  for (int depth = 2; depth <= params->depth && !params->stopped; depth++) {
+  for (int depth = 1; depth <= params->depth && !params->stopped; depth++) {
+    // Ignore aspiration windows till we're at a reasonable depth
+    // aspiration windows start at 1/10th of a pawn and grows outward at 150%, utilizing
+    // returned fail soft values
     int delta = depth >= 5 ? 10 : CHECKMATE;
+
     alpha = max(score - delta, -CHECKMATE);
     beta = min(score + delta, CHECKMATE);
 
     while (!params->stopped) {
-      score = negamax(alpha, beta, depth, params, data, pv);
+      // search!
+      score = Negamax(alpha, beta, depth, params, data, &pv);
 
       if (score <= alpha) {
+        // fail low is no bueno, so lower beta, along with alpha for our window
         beta = (alpha + beta) / 2;
         alpha = max(alpha - delta, -CHECKMATE);
       } else if (score >= beta) {
+        // raise beta on fail high
         beta = min(beta + delta, CHECKMATE);
       } else {
-        printInfo(pv, score, depth, params, data);
+        // we're in window, move onto the next depth
+        PrintInfo(&pv, score, depth, params, data);
         break;
       }
 
+      // increase delta
       delta += delta / 2;
     }
   }
 
-  data->bestMove = ttMove(ttProbe(data->board->zobrist));
+  // we probe the TT for top move just incase of a full fail-low
+  data->bestMove = TTMove(TTProbe(data->board->zobrist));
   data->score = score;
 
-  printf("bestmove %s\n", moveStr(data->bestMove));
+  printf("bestmove %s\n", MoveToStr(data->bestMove));
 }
 
-int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* data, PV* pv) {
-  PV childPv[1];
+int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* data, PV* pv) {
+  PV childPv;
   pv->count = 0;
 
   int isPV = beta - alpha != 1;
   int isRoot = !data->ply;
-  int bestScore = -CHECKMATE, a0 = alpha;
-  Move bestMove = 0, skipMove = data->skipMove[data->ply];
+  int bestScore = -CHECKMATE;
+  int a0 = alpha; // keep track of original alpha for TT flag at the end
 
+  Move bestMove = NULL_MOVE;
+  Move skipMove = data->skipMove[data->ply];
+
+  // drop into tactical moves only
   if (depth == 0)
-    return quiesce(alpha, beta, params, data, pv);
+    return Quiesce(alpha, beta, params, data, pv);
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
 
   if (!isRoot) {
     // draw
-    if (isRepetition(data->board) || isMaterialDraw(data->board) || (data->board->halfMove > 99))
-      return 0;
+    if (IsRepetition(data->board) || IsMaterialDraw(data->board) || (data->board->halfMove > 99))
+      return 0; // TODO: Contempt factor?
 
-    if (data->ply > MAX_DEPTH - 1)
+    // Prevent overflows
+    if (data->ply > MAX_SEARCH_PLY - 1)
       return Evaluate(data->board);
 
     // Mate distance pruning
@@ -143,37 +162,44 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
       return alpha;
   }
 
+  // Every 2048 nodes, we need to check for reaching time and user input
+  // at 1M nps this is every ~2ms
   if ((data->nodes & 2047) == 0)
-    communicate(params);
+    Communicate(params);
 
-  TTValue ttValue = skipMove ? NO_ENTRY : ttProbe(data->board->zobrist);
+  // check the transposition table for previous info
+  TTValue ttValue = skipMove ? NO_ENTRY : TTProbe(data->board->zobrist);
+
+  // TT score pruning
   if (ttValue) {
-    if (ttDepth(ttValue) >= depth) {
-      int score = ttScore(ttValue, data->ply);
-      int flag = ttFlag(ttValue);
+    // TODO: Should I be doing this on PV nodes
+    if (TTDepth(ttValue) >= depth) {
+      int score = TTScore(ttValue, data->ply);
+      int flag = TTFlag(ttValue);
 
-      if (flag == TT_EXACT)
-        return score;
-      if (flag == TT_LOWER && score >= beta)
-        return score;
-      if (flag == TT_UPPER && score <= alpha)
+      if (flag == TT_EXACT || (flag == TT_LOWER && score >= beta) || (flag == TT_UPPER && score <= alpha))
         return score;
     }
   }
 
-  int eval = data->evals[data->ply] = (ttValue ? ttEval(ttValue) : Evaluate(data->board));
+  // pull previous static eval from tt - this is depth independent
+  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(data->board));
+  // getting better if eval has gone up
   int improving = data->ply >= 2 && (data->evals[data->ply] > data->evals[data->ply - 2]);
 
   assert(eval == Evaluate(data->board));
 
+  // reset skip and killers for ply below
   data->skipMove[data->ply + 1] = NULL_MOVE;
   data->killers[data->ply + 1][0] = NULL_MOVE;
   data->killers[data->ply + 1][1] = NULL_MOVE;
 
   if (!isPV && !data->board->checkers) {
-    if (ttValue && ttDepth(ttValue) >= depth) {
-      int ttEvalFromScore = ttScore(ttValue, data->ply);
-      if (ttFlag(ttValue) == (ttEvalFromScore > eval ? TT_LOWER : TT_UPPER))
+
+    // Our TT might have a more accurate evaluation score, use this
+    if (ttValue && TTDepth(ttValue) >= depth) {
+      int ttEvalFromScore = TTScore(ttValue, data->ply);
+      if (TTFlag(ttValue) == (ttEvalFromScore > eval ? TT_LOWER : TT_UPPER))
         eval = ttEvalFromScore;
     }
 
@@ -185,15 +211,18 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
     if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta && hasNonPawn(data->board)) {
       int R = 3 + depth / 6 + min((eval - beta) / 200, 3);
 
+      // don't go too low
+      // its okay to drop into QS after NM because most refutations
+      // would be tactical
       if (R > depth)
         R = depth;
 
       data->moves[data->ply++] = NULL_MOVE;
-      nullMove(data->board);
+      MakeNullMove(data->board);
 
-      int score = -negamax(-beta, -beta + 1, depth - R, params, data, childPv);
+      int score = -Negamax(-beta, -beta + 1, depth - R, params, data, &childPv);
 
-      undoNullMove(data->board);
+      UndoNullMove(data->board);
       data->ply--;
 
       if (params->stopped)
@@ -204,77 +233,99 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
     }
   }
 
-  MoveList moveList[1];
-  generateMoves(moveList, data);
+  MoveList moveList = {.count = 0};
+  GenerateAllMoves(&moveList, data);
 
   int numMoves = 0;
-  for (int i = 0; i < moveList->count; i++) {
-    bubbleTopMove(moveList, i);
-    Move move = moveList->moves[i];
+  for (int i = 0; i < moveList.count; i++) {
+    ChooseTopMove(&moveList, i);
+    Move move = moveList.moves[i];
 
+    // don't search this during singular
     if (skipMove == move)
       continue;
 
-    int tactical = movePromo(move) || moveCapture(move);
+    int tactical = MovePromo(move) || MoveCapture(move);
 
     if (!isPV && bestScore > -MATE_BOUND) {
+      // late move pruning at low depth if it's quiet and we've looked at ALOT
       if (depth <= 8 && !tactical && numMoves >= LMP[improving][depth])
         continue;
 
-      if (see(data->board, move) < SEE[tactical][depth])
+      // Static evaluation pruning, this applies for both quiet and tactical moves
+      // quiet moves use a quadratic scale upwards
+      if (SEE(data->board, move) < STATIC_PRUNE[tactical][depth])
         continue;
     }
 
+    // singular extension
+    // if one move is better than all the rest, then we consider this singular
+    // and look at it more (extend). Singular is determined by checking all other
+    // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     int singularExtension = 0;
-    if (depth >= 8 && !skipMove && !isRoot && move == ttMove(ttValue) && ttDepth(ttValue) >= depth - 3 &&
-        abs(ttScore(ttValue, data->ply)) < MATE_BOUND && ttFlag(ttValue) == TT_LOWER) {
-      int sBeta = max(ttScore(ttValue, data->ply) - depth * 2, -CHECKMATE);
+    if (depth >= 8 && !skipMove && !isRoot && move == TTMove(ttValue) && TTDepth(ttValue) >= depth - 3 &&
+        abs(TTScore(ttValue, data->ply)) < MATE_BOUND && TTFlag(ttValue) == TT_LOWER) {
+      int sBeta = max(TTScore(ttValue, data->ply) - depth * 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
-      int score = negamax(sBeta - 1, sBeta, sDepth, params, data, pv);
+      int score = Negamax(sBeta - 1, sBeta, sDepth, params, data, pv);
       data->skipMove[data->ply] = NULL_MOVE;
 
       if (score < sBeta)
+        // no score failed above beta, so this is singular
         singularExtension = 1;
       else if (sBeta >= beta)
+        // multi-cut - since a move failed above sBeta which is already above beta,
+        // we can prune (its also assumed tt would fail high)
         return sBeta;
     }
 
     numMoves++;
     data->moves[data->ply++] = move;
-    makeMove(move, data->board);
+    MakeMove(move, data->board);
 
     int score = alpha + 1;
     int newDepth = depth;
-    if (singularExtension || data->board->checkers)
-      newDepth++; // extension
+    if (singularExtension || data->board->checkers) // extend if in check
+      newDepth++;                                   // apply the extension
 
+    // start of late move reductions
     int R = 1;
     if (depth >= 2 && numMoves > 1 && !tactical) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
-      R += !isPV + !improving - !!(moveList->scores[i] >= COUNTER);
+      // increase reduction if nonPv or not improving
+      // decrease reduction if this is a killer or counter
+      R += !isPV + !improving - !!(moveList.scores[i] >= COUNTER_SCORE);
 
-      if (moveList->scores[i] >= COUNTER)
+      // Whoa this is an oversight
+      if (moveList.scores[i] >= COUNTER_SCORE)
         R--;
       else
-        // reduce based on history score
-        R -= min(2, (moveList->scores[i] - 149) / 50);
+        // additional reduction on historical scores
+        // ranging from [-2, 2]
+        // 100 was picked as a mean since that's what the mean was at depth 13 for the bench
+        // TODO: Look at this more closely?
+        R -= min(2, (moveList.scores[i] - 149) / 50);
 
+      // prevent dropping into QS, extending, or reducing all extensions
       R = min(depth - 1, max(R, 1));
     }
 
+    // try a reduced null window search
     if (R != 1)
-      score = -negamax(-alpha - 1, -alpha, newDepth - R, params, data, childPv);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - R, params, data, &childPv);
 
+    // if score failed high or this is outside the pv, do null window search at normal depth
     if ((R != 1 && score > alpha) || (R == 1 && (!isPV || numMoves > 1)))
-      score = -negamax(-alpha - 1, -alpha, newDepth - 1, params, data, childPv);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - 1, params, data, &childPv);
 
+    // full window/depth search if first move of PV or we keep failing high
     if (isPV && (numMoves == 1 || (score > alpha && (isRoot || score < beta))))
-      score = -negamax(-beta, -alpha, newDepth - 1, params, data, childPv);
+      score = -Negamax(-beta, -alpha, newDepth - 1, params, data, &childPv);
 
-    undoMove(move, data->board);
+    UndoMove(move, data->board);
     data->ply--;
 
     if (params->stopped)
@@ -287,23 +338,28 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
       if (score > alpha) {
         alpha = score;
 
-        pv->count = childPv->count + 1;
+        // copy pv when alpha is raised
+        pv->count = childPv.count + 1;
         pv->moves[0] = move;
-        memcpy(pv->moves + 1, childPv->moves, childPv->count * sizeof(Move));
+        memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
       }
 
+      // we're failing high
       if (alpha >= beta) {
+        // update histories for this fail high if it's quiet
         if (!tactical) {
-          addKiller(data, move);
-          addCounter(data, move, data->moves[data->ply - 1]);
-          addHistoryHeuristic(data, move, depth);
+          AddKillerMove(data, move);
+          AddCounterMove(data, move, data->moves[data->ply - 1]);
+          AddHistoryHeuristic(data, move, depth);
         }
 
+        // all moves that came before this did not fail high and
+        // need to have their butterfly heuristic applied
         for (int j = 0; j < i; j++) {
-          if (moveCapture(moveList->moves[j]) || movePromo(moveList->moves[j]))
+          if (MoveCapture(moveList.moves[j]) || MovePromo(moveList.moves[j]))
             continue;
 
-          addBFHeuristic(data, moveList->moves[j], depth);
+          AddBFHeuristic(data, moveList.moves[j], depth);
         }
 
         break;
@@ -311,13 +367,17 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
     }
   }
 
-  // Checkmate detection
-  if (!moveList->count)
+  // Checkmate detection using movecount
+  if (!moveList.count)
     return data->board->checkers ? -CHECKMATE + data->ply : 0;
 
   if (!skipMove) {
-    int ttFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
-    ttPut(data->board->zobrist, depth, bestScore, ttFlag, bestMove, data->ply, data->evals[data->ply]);
+    // save to the TT
+    // TT_LOWER = we failed high
+    // TT_UPPER = we didnt raise alpha
+    // TT_EXACT = in
+    int TTFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
+    TTPut(data->board->zobrist, depth, bestScore, TTFlag, bestMove, data->ply, data->evals[data->ply]);
   }
 
   assert(bestScore >= -CHECKMATE);
@@ -326,42 +386,47 @@ int negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   return bestScore;
 }
 
-int quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv) {
-  PV childPv[1];
+int Quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv) {
+  PV childPv;
   pv->count = 0;
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
 
-  if (isMaterialDraw(data->board) || isRepetition(data->board) || (data->board->halfMove > 99))
+  // draw check
+  if (IsMaterialDraw(data->board) || IsRepetition(data->board) || (data->board->halfMove > 99))
     return 0;
 
-  if (data->ply > MAX_DEPTH - 1)
+  // prevent overflows
+  if (data->ply > MAX_SEARCH_PLY - 1)
     return Evaluate(data->board);
 
+  // check time and user input
   if ((data->nodes & 2047) == 0)
-    communicate(params);
+    Communicate(params);
 
-  TTValue ttValue = ttProbe(data->board->zobrist);
+  // check the transposition table for previous info
+  TTValue ttValue = TTProbe(data->board->zobrist);
+  // TT score pruning - no depth check required since everything in QS is depth 0
   if (ttValue) {
-    int score = ttScore(ttValue, data->ply);
-    int flag = ttFlag(ttValue);
+    int score = TTScore(ttValue, data->ply);
+    int flag = TTFlag(ttValue);
 
-    if (flag == TT_EXACT)
-      return score;
-    if (flag == TT_LOWER && score >= beta)
-      return score;
-    if (flag == TT_UPPER && score <= alpha)
+    if (flag == TT_EXACT || (flag == TT_LOWER && score >= beta) || (flag == TT_UPPER && score <= alpha))
       return score;
   }
 
-  int eval = data->evals[data->ply] = (ttValue ? ttEval(ttValue) : Evaluate(data->board));
+  // pull cached eval if it exists
+  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(data->board));
+
+  // can we use an improved evaluation from the tt?
   if (ttValue) {
-    int ttEval = ttScore(ttValue, data->ply);
-    if (ttFlag(ttValue) == (ttEval > eval ? TT_LOWER : TT_UPPER))
+    int ttEval = TTScore(ttValue, data->ply);
+    if (TTFlag(ttValue) == (ttEval > eval ? TT_LOWER : TT_UPPER))
       eval = ttEval;
   }
 
+  // stand pat
   if (eval >= beta)
     return eval;
 
@@ -370,34 +435,38 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
 
   int bestScore = eval;
 
-  MoveList moveList[1];
-  generateQuiesceMoves(moveList, data);
+  MoveList moveList = {.count = 0};
+  GenerateTacticalMoves(&moveList, data);
 
-  for (int i = 0; i < moveList->count; i++) {
-    bubbleTopMove(moveList, i);
-    Move move = moveList->moves[i];
+  for (int i = 0; i < moveList.count; i++) {
+    ChooseTopMove(&moveList, i);
+    Move move = moveList.moves[i];
 
-    if (movePromo(move)) {
-      if (movePromo(move) < QUEEN[WHITE])
+    if (MovePromo(move)) {
+      // consider all non-queen promotions as quiet
+      if (MovePromo(move) < QUEEN[WHITE])
         continue;
     } else {
-      int captured = moveEP(move) ? PAWN[data->board->xside] : data->board->squares[moveEnd(move)];
+      int captured = MoveEP(move) ? PAWN[data->board->xside] : data->board->squares[MoveEnd(move)];
 
       assert(captured != NO_PIECE);
 
+      // delta pruning
+      // if we can't catch alpha even when capturing a piece and then some, prune
       if (eval + DELTA_CUTOFF + STATIC_MATERIAL_VALUE[PIECE_TYPE[captured]] < alpha)
         continue;
     }
 
-    if (moveList->scores[i] < 0)
+    // skip bad captures (SEE scores are negative)
+    if (moveList.scores[i] < 0)
       break;
 
     data->moves[data->ply++] = move;
-    makeMove(move, data->board);
+    MakeMove(move, data->board);
 
-    int score = -quiesce(-beta, -alpha, params, data, childPv);
+    int score = -Quiesce(-beta, -alpha, params, data, &childPv);
 
-    undoMove(move, data->board);
+    UndoMove(move, data->board);
     data->ply--;
 
     if (params->stopped)
@@ -409,11 +478,13 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
       if (score > alpha) {
         alpha = score;
 
-        pv->count = childPv->count + 1;
+        // copy pv
+        pv->count = childPv.count + 1;
         pv->moves[0] = move;
-        memcpy(pv->moves + 1, childPv->moves, childPv->count * sizeof(Move));
+        memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
       }
 
+      // failed high
       if (alpha >= beta)
         break;
     }
@@ -422,26 +493,26 @@ int quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
   return bestScore;
 }
 
-inline void printInfo(PV* pv, int score, int depth, SearchParams* params, SearchData* data) {
+inline void PrintInfo(PV* pv, int score, int depth, SearchParams* params, SearchData* data) {
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
     printf("info depth %d seldepth %d nodes %d time %ld score mate %d pv ", depth, data->seldepth, data->nodes,
-           getTimeMs() - params->startTime, movesToMate);
+           GetTimeMS() - params->startTime, movesToMate);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
     printf("info depth %d seldepth %d  nodes %d time %ld score mate -%d pv ", depth, data->seldepth, data->nodes,
-           getTimeMs() - params->startTime, movesToMate);
+           GetTimeMS() - params->startTime, movesToMate);
   } else {
     printf("info depth %d seldepth %d nodes %d time %ld score cp %d pv ", depth, data->seldepth, data->nodes,
-           getTimeMs() - params->startTime, score);
+           GetTimeMS() - params->startTime, score);
   }
-  printPv(pv);
+  PrintPV(pv);
 }
 
-void printPv(PV* pv) {
+void PrintPV(PV* pv) {
   for (int i = 0; i < pv->count; i++)
-    printf("%s ", moveStr(pv->moves[i]));
+    printf("%s ", MoveToStr(pv->moves[i]));
   printf("\n");
 }

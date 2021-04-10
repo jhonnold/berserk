@@ -13,8 +13,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-#include <stdint.h>
+#include <inttypes.h>
 
 #include "random.h"
 
@@ -26,17 +25,18 @@ uint64_t keys[2];
 
 inline uint64_t rotate(uint64_t v, uint8_t s) { return (v >> s) | (v << (64 - s)); }
 
-inline uint64_t randomLong() {
+inline uint64_t RandomUInt64() {
   uint64_t tmp = keys[0];
   keys[0] += rotate(keys[1] ^ 0xc5462216u ^ ((uint64_t)0xcf14f4ebu << 32), 1);
   return keys[1] += rotate(tmp ^ 0x75ecfc58u ^ ((uint64_t)0x9576080cu << 32), 9);
 }
 
-void seedRandom(uint64_t seed) {
+void SeedRandom(uint64_t seed) {
   keys[0] = keys[1] = seed;
 
   for (int i = 0; i < 64; i++)
-    randomLong();
+    RandomUInt64();
 }
 
-uint64_t randomMagic() { return randomLong() & randomLong() & randomLong(); }
+// Magic's are combined to try and get one with few bits
+uint64_t RandomMagic() { return RandomUInt64() & RandomUInt64() & RandomUInt64(); }
