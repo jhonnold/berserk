@@ -21,6 +21,8 @@
 #include "board.h"
 #include "move.h"
 #include "search.h"
+#include "thread.h"
+#include "transposition.h"
 #include "types.h"
 #include "util.h"
 
@@ -79,7 +81,7 @@ char* benchmarks[] = {"r3k2r/2pb1ppp/2pp1q2/p7/1nP1B3/1P2P3/P2N1PPP/R2QK2R w KQk
 void Bench() {
   Board board;
   SearchParams params = {.depth = 13, .timeset = 0, .stopped = 0, .quit = 0, .endTime = 0};
-  SearchData data = {.board = &board};
+  ThreadData* threads = CreatePool(1);
 
   Move bestMoves[50];
   int scores[50];
@@ -90,14 +92,14 @@ void Bench() {
   for (int i = 0; i < 50; i++) {
     long testStart = GetTimeMS();
 
-    ParseFen(benchmarks[i], data.board);
+    ParseFen(benchmarks[i], &board);
 
-    Search(&params, &data);
+    Search(&board, &params, threads);
 
     times[i] = GetTimeMS() - testStart;
-    bestMoves[i] = data.bestMove;
-    scores[i] = data.score;
-    nodes[i] = data.nodes;
+    bestMoves[i] = threads[0].data.bestMove;
+    scores[i] = threads[0].data.score;
+    nodes[i] = threads[0].data.nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 

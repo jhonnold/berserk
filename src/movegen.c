@@ -67,12 +67,12 @@ inline void AddKillerMove(SearchData* data, Move move) {
 
 inline void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[MoveStartEnd(parent)] = move; }
 
-inline void AddHistoryHeuristic(SearchData* data, Move move, int depth) {
-  data->hh[data->board->side][MoveStartEnd(move)] += depth * depth;
+inline void AddHistoryHeuristic(SearchData* data, Move move, int sideToMove, int depth) {
+  data->hh[sideToMove][MoveStartEnd(move)] += depth * depth;
 }
 
-inline void AddBFHeuristic(SearchData* data, Move move, int depth) {
-  data->bf[data->board->side][MoveStartEnd(move)] += depth * depth;
+inline void AddBFHeuristic(SearchData* data, Move move, int sideToMove, int depth) {
+  data->bf[sideToMove][MoveStartEnd(move)] += depth * depth;
 }
 
 inline void AppendMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
@@ -415,10 +415,9 @@ void GenerateAllKingMoves(MoveList* moveList, Board* board) {
 }
 
 // captures and promotions
-void GenerateTacticalMoves(MoveList* moveList, SearchData* data) {
+void GenerateTacticalMoves(MoveList* moveList, Board* board) {
   moveList->count = 0;
 
-  Board* board = data->board;
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
   if (bits(board->checkers) > 1) {
@@ -518,10 +517,9 @@ void GenerateTacticalMoves(MoveList* moveList, SearchData* data) {
   }
 }
 
-void GenerateAllMoves(MoveList* moveList, SearchData* data) {
+void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
   moveList->count = 0;
 
-  Board* board = data->board;
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
   if (bits(board->checkers) > 1) {

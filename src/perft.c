@@ -23,12 +23,13 @@
 #include "types.h"
 #include "util.h"
 
-int Perft(int depth, SearchData* data) {
+int Perft(int depth, Board* board) {
   if (depth == 0)
     return 1;
 
-  MoveList moveList = {.count = 0};
-  GenerateAllMoves(&moveList, data);
+  MoveList moveList = {0};
+  SearchData data = {0};
+  GenerateAllMoves(&moveList, board, &data);
 
   if (depth == 1)
     return moveList.count;
@@ -38,9 +39,9 @@ int Perft(int depth, SearchData* data) {
   for (int i = 0; i < moveList.count; i++) {
     Move move = moveList.moves[i];
 
-    MakeMove(move, data->board);
-    nodes += Perft(depth - 1, data);
-    UndoMove(move, data->board);
+    MakeMove(move, board);
+    nodes += Perft(depth - 1, board);
+    UndoMove(move, board);
   }
 
   return nodes;
@@ -53,16 +54,16 @@ void PerftTest(int depth, Board* board) {
 
   long startTime = GetTimeMS();
 
-  MoveList moveList = {.count = 0};
-  SearchData data = {.board = board, .ply = 0};
+  MoveList moveList = {0};
+  SearchData data = {0};
 
-  GenerateAllMoves(&moveList, &data);
+  GenerateAllMoves(&moveList, board, &data);
 
   for (int i = 0; i < moveList.count; i++) {
     Move move = moveList.moves[i];
 
     MakeMove(move, board);
-    int nodes = Perft(depth - 1, &data);
+    int nodes = Perft(depth - 1, board);
     UndoMove(move, board);
 
     printf("%s: %d\n", MoveToStr(move), nodes);
