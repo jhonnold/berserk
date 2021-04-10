@@ -1,5 +1,7 @@
 # Berserk Chess Engine
 
+<img src="resources/berserk.jpg" alt="Berserk" width="400" />
+
 A UCI chess engine written in C.
 
 ## Elo History
@@ -10,7 +12,8 @@ A UCI chess engine written in C.
 | ----------- | ------- | ------ |
 | 1.2.2       | 2160    | 2'+1"  |
 | 2.0.0       | 2546    | 2'+1"  |
-| 3.0.0       |         |        |
+| 3.2.0       | 2896    | 2'+1"  |
+| 3.3.0       |         |        |
 
 ### Lars No SMP
 
@@ -18,7 +21,8 @@ A UCI chess engine written in C.
 | ----------- | ------- | ------ |
 | 2.0.0       | ~2600   | 15'    |
 | 3.0.0       | 2818    | 15'    |
-| 3.2.0       | 2899    | 15'    |
+| 3.2.0       | 2901    | 15'    |
+| 3.3.0       |         |        |
 
 ## Features
 
@@ -61,7 +65,7 @@ Evaluation is tapered.
 - Phased move generated
 - Candidate passed pawns
 - More positional analysis
-- Singularity extension
+- ~~Singularity extension~~
 - ~~Texel tuning~~
 - Other things...
 
