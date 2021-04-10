@@ -171,8 +171,8 @@ void UCILoop() {
 
     fflush(stdout);
 
-    if (!fgets(in, 8192, stdin))
-      continue;
+    if (fgets(in, 8192, stdin) == NULL)
+      break;
 
     if (in[0] == '\n')
       continue;
