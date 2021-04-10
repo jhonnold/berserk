@@ -3,7 +3,7 @@ SRC = *.c
 EXE = berserk
 VERSION = 3.3.0
 
-LIBS = -lm
+LIBS = -lm -lpthread
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
 CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG
 TFLAGS = -O3 $(WFLAGS) -flto -march=native -DTUNE -DNDEBUG
