@@ -104,9 +104,14 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
            params->timeset);
 
     // start the search!
-    SearchArgs args = {.board = board, .params = params, .threads = threads};
+    // this will need be freed from within the search
+    SearchArgs* args = malloc(sizeof(SearchArgs));
+    args->board = board;
+    args->params = params;
+    args->threads = threads;
 
     pthread_t searchThread;
+
     pthread_create(&searchThread, NULL, &Search, &args);
     pthread_detach(searchThread);
   }
@@ -167,7 +172,7 @@ void UCILoop() {
   printf("id name " NAME " " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 4096\n");
-  printf("option name Threads type spin default 1 min 1 max 8\n");
+  printf("option name Threads type spin default 1 min 1 max 256\n");
   printf("uciok\n");
 
   while (!searchParameters.quit) {
@@ -201,7 +206,7 @@ void UCILoop() {
       printf("id name " NAME " " VERSION "\n");
       printf("id author Jay Honnold\n");
       printf("option name Hash type spin default 32 min 4 max 4096\n");
-      printf("option name Threads type spin default 1 min 1 max 8\n");
+      printf("option name Threads type spin default 1 min 1 max 256\n");
       printf("uciok\n");
     } else if (!strncmp(in, "eval", 4)) {
       PrintEvaluation(&board);

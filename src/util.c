@@ -22,7 +22,9 @@
 long GetTimeMS() { return GetTickCount(); }
 
 #else
+#include <stddef.h>
 #include <sys/time.h>
+
 
 long GetTimeMS() {
   struct timeval time;

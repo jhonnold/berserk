@@ -21,7 +21,7 @@
 
 // initialize a pool of threads
 ThreadData* CreatePool(int count) {
-  ThreadData* threads = calloc(count, sizeof(ThreadData));
+  ThreadData* threads = malloc(count * sizeof(ThreadData));
 
   for (int i = 0; i < count; i++) {
     // allow reference to one another
