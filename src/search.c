@@ -90,7 +90,6 @@ void* Search(void* arg) {
 
   pthread_t pthreads[threads->count];
 
-  TTClear();
   InitPool(board, params, threads);
 
   params->stopped = 0;
@@ -216,7 +215,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   TTValue ttValue = skipMove ? NO_ENTRY : TTProbe(board->zobrist);
 
   // TT score cutoffs
-  if (ttValue && !isRoot) {
+  if (ttValue && !isPV) {
     // TODO: Should I be doing this on PV nodes
     if (TTDepth(ttValue) >= depth) {
       int score = TTScore(ttValue, data->ply);

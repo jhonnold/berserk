@@ -42,7 +42,25 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads) {
     threads[i].data.seldepth = 0;
     threads[i].data.ply = 0;
 
-    // empty all data
+    // empty unneeded data
+    memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
+    memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
+    memset(&threads[i].data.moves, 0, sizeof(threads[i].data.moves));
+
+    // need full copies of the board
+    memcpy(&threads[i].board, board, sizeof(Board));
+  }
+}
+
+void ResetThreadPool(Board* board, SearchParams* params, ThreadData* threads) {
+  for (int i = 0; i < threads->count; i++) {
+    threads[i].params = params;
+
+    threads[i].data.nodes = 0;
+    threads[i].data.seldepth = 0;
+    threads[i].data.ply = 0;
+
+    // empty ALL data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
     memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
     memset(&threads[i].data.moves, 0, sizeof(threads[i].data.moves));

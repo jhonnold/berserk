@@ -101,6 +101,9 @@ void Bench() {
     bestMoves[i] = threads[0].data.bestMove;
     scores[i] = threads[0].data.score;
     nodes[i] = threads[0].data.nodes;
+
+    TTClear();
+    ResetThreadPool(&board, &params, threads);
   }
   long totalTime = GetTimeMS() - startTime;
 

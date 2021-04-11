@@ -103,7 +103,6 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
            params->timeset);
 
-
     // this MUST be freed from within the search, or else massive leak
     SearchArgs* args = malloc(sizeof(SearchArgs));
     args->board = board;
@@ -197,6 +196,8 @@ void UCILoop() {
       ParsePosition(in, &board);
     } else if (!strncmp(in, "ucinewgame", 10)) {
       ParsePosition("position startpos\n", &board);
+      TTClear();
+      ResetThreadPool(&board, &searchParameters, threads);
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
     } else if (!strncmp(in, "stop", 4)) {
