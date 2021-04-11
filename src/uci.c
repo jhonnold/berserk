@@ -112,7 +112,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 
     pthread_t searchThread;
 
-    pthread_create(&searchThread, NULL, &Search, &args);
+    pthread_create(&searchThread, NULL, &Search, args);
     pthread_detach(searchThread);
   }
 }
@@ -201,7 +201,7 @@ void UCILoop() {
     } else if (!strncmp(in, "stop", 4)) {
       searchParameters.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
-      searchParameters.quit = 1;
+      exit(0);
     } else if (!strncmp(in, "uci", 3)) {
       printf("id name " NAME " " VERSION "\n");
       printf("id author Jay Honnold\n");
