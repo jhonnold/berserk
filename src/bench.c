@@ -82,7 +82,7 @@ void Bench() {
   Board board;
   SearchParams params = {.depth = 13, .timeset = 0, .stopped = 0, .quit = 0, .endTime = 0};
   ThreadData* threads = CreatePool(1);
-  SearchArgs args = {.board = &board, .params = &params, .threads = threads};
+  SearchArgs args = {.free = 0, .board = &board, .params = &params, .threads = threads};
 
   Move bestMoves[50];
   int scores[50];

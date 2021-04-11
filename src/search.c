@@ -111,6 +111,7 @@ void* Search(void* arg) {
   Move bestMove = threads[0].data.bestMove;
   printf("bestmove %s\n", MoveToStr(bestMove));
 
+  if (args->free) free(args); // this was allocated above, it needs to be free'd to prevent a leak
   return NULL;
 }
 

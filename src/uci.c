@@ -86,7 +86,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     if (time != -1) {
       // Non-infinite analysis
       // Berserk has a very simple algorithm of
-      // 1/ movestogo clocktime + inc - 30ms (buffer)
+      // 1 / movestogo clocktime + inc - 25ms (buffer)
       // TODO: Improve this, most likely in Search
       params->timeset = 1;
       time /= movesToGo;
@@ -103,15 +103,16 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
            params->timeset);
 
-    // start the search!
-    // this will need be freed from within the search
+
+    // this MUST be freed from within the search, or else massive leak
     SearchArgs* args = malloc(sizeof(SearchArgs));
     args->board = board;
     args->params = params;
     args->threads = threads;
+    args->free = 1; // mark to be free'd (bench uses a stack'd)
 
+    // start the search!
     pthread_t searchThread;
-
     pthread_create(&searchThread, NULL, &Search, args);
     pthread_detach(searchThread);
   }
