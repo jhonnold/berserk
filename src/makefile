@@ -13,10 +13,10 @@ DFLAGS = -O0 $(WFLAGS) -g
 POPCOUNT = -DPOPCOUNT -msse3 -mpopcnt
 
 all:
-	$(CC) $(CFLAGS) $(LIBS) $(SRC) -o $(EXE)
+	$(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
 popcount:
-	$(CC) $(CFLAGS) $(LIBS) $(POPCOUNT) $(SRC) -o $(EXE)-x64-popcnt
+	$(CC) $(CFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)-x64-popcnt
 
 release-win:
 	md ..\dist
@@ -29,10 +29,10 @@ release:
 	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o ../dist/$(EXE)-$(VERSION)-x64-popcnt
 
 debug:
-	$(CC) $(DFLAGS) $(LIBS) $(POPCOUNT) $(SRC) -o $(EXE)
+	$(CC) $(DFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
 
 tune:
-	$(CC) $(TFLAGS) $(LIBS) $(POPCOUNT) $(SRC) -o $(EXE)
+	$(CC) $(TFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
 
 clean:
 	rm -rf $(EXE)
