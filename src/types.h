@@ -147,6 +147,12 @@ struct ThreadData {
   PV pv;
 };
 
+typedef struct {
+  Board* board;
+  SearchParams* params;
+  ThreadData* threads;
+} SearchArgs;
+
 enum { WHITE, BLACK, BOTH };
 
 // clang-format off

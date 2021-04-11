@@ -25,7 +25,7 @@ extern const int MATE_BOUND;
 void InitPruningAndReductionTables();
 void ClearSearchData(SearchData* data);
 
-void Search(Board* board, SearchParams* params, ThreadData* threads);
+void* Search(void* arg);
 void* IterativeDeepening(void* arg);
 int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv);
 int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv);

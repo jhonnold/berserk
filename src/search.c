@@ -82,7 +82,12 @@ void ClearSearchData(SearchData* data) {
   memset(data->bf, 0, sizeof(data->bf));
 }
 
-void Search(Board* board, SearchParams* params, ThreadData* threads) {
+void* Search(void* arg) {
+  SearchArgs* args = (SearchArgs*)arg;
+  Board* board = args->board;
+  SearchParams* params = args->params;
+  ThreadData* threads = args->threads;
+
   pthread_t pthreads[threads->count];
 
   TTClear();
@@ -102,9 +107,11 @@ void Search(Board* board, SearchParams* params, ThreadData* threads) {
   for (int i = 1; i < threads->count; i++)
     pthread_join(pthreads[i], NULL);
 
-  // TODO: Fallback if no bestMove?
+  // TODO: what is the fallback if no bestMove?
   Move bestMove = threads[0].data.bestMove;
   printf("bestmove %s\n", MoveToStr(bestMove));
+
+  return NULL;
 }
 
 void* IterativeDeepening(void* arg) {
@@ -163,7 +170,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   SearchParams* params = thread->params;
   SearchData* data = &thread->data;
   Board* board = &thread->board;
-  int mainThread = !thread->idx;
 
   PV childPv;
   pv->count = 0;
@@ -183,6 +189,12 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
 
+  // Either mainthread has ended us OR we've run out of time
+  // this second check is more expensive and done only every 1024 nodes
+  // 1Mnps ~1ms
+  if (params->stopped || ((data->nodes & 1023) == 0 && params->timeset && GetTimeMS() > params->endTime))
+    longjmp(thread->exit, 1);
+
   if (!isRoot) {
     // draw
     if (IsRepetition(board) || IsMaterialDraw(board) || (board->halfMove > 99))
@@ -198,11 +210,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (alpha >= beta)
       return alpha;
   }
-
-  // Every 2048 nodes, we need to check for reaching time and user input
-  // at 1M nps this is every ~2ms
-  if (mainThread && (data->nodes & 2047) == 0)
-    Communicate(params);
 
   // check the transposition table for previous info
   TTValue ttValue = skipMove ? NO_ENTRY : TTProbe(board->zobrist);
@@ -261,9 +268,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       UndoNullMove(board);
       data->ply--;
-
-      if (params->stopped)
-        longjmp(thread->exit, 1);
 
       if (score >= beta)
         return beta;
@@ -361,9 +365,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     UndoMove(move, board);
     data->ply--;
 
-    if (params->stopped)
-      longjmp(thread->exit, 1);
-
     if (score > bestScore) {
       bestScore = score;
       bestMove = move;
@@ -423,13 +424,18 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   SearchParams* params = thread->params;
   SearchData* data = &thread->data;
   Board* board = &thread->board;
-  int mainThread = !thread->idx;
 
   PV childPv;
   pv->count = 0;
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
+
+  // Either mainthread has ended us OR we've run out of time
+  // this second check is more expensive and done only every 1024 nodes
+  // 1Mnps ~1ms
+  if (params->stopped || ((data->nodes & 1023) == 0 && params->timeset && GetTimeMS() > params->endTime))
+    longjmp(thread->exit, 1);
 
   // draw check
   if (IsMaterialDraw(board) || IsRepetition(board) || (board->halfMove > 99))
@@ -438,11 +444,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   // prevent overflows
   if (data->ply > MAX_SEARCH_PLY - 1)
     return Evaluate(board);
-
-  // Every 2048 nodes, we need to check for reaching time and user input
-  // at 1M nps this is every ~2ms
-  if (mainThread && (data->nodes & 2047) == 0)
-    Communicate(params);
 
   // check the transposition table for previous info
   TTValue ttValue = TTProbe(board->zobrist);
@@ -507,9 +508,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
     UndoMove(move, board);
     data->ply--;
-
-    if (params->stopped)
-      longjmp(thread->exit, 1);
 
     if (score > bestScore) {
       bestScore = score;

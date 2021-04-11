@@ -82,6 +82,7 @@ void Bench() {
   Board board;
   SearchParams params = {.depth = 13, .timeset = 0, .stopped = 0, .quit = 0, .endTime = 0};
   ThreadData* threads = CreatePool(1);
+  SearchArgs args = {.board = &board, .params = &params, .threads = threads};
 
   Move bestMoves[50];
   int scores[50];
@@ -94,7 +95,7 @@ void Bench() {
 
     ParseFen(benchmarks[i], &board);
 
-    Search(&board, &params, threads);
+    Search(&args);
 
     times[i] = GetTimeMS() - testStart;
     bestMoves[i] = threads[0].data.bestMove;

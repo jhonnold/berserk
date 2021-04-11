@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,6 +40,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   in += 3;
 
   params->depth = MAX_SEARCH_PLY;
+  params->startTime = GetTimeMS();
   params->timeset = 0;
   params->stopped = 0;
   params->quit = 0;
@@ -79,18 +81,17 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   if (perft)
     PerftTest(perft, board);
   else {
-    params->startTime = GetTimeMS();
     params->depth = depth;
 
     if (time != -1) {
       // Non-infinite analysis
       // Berserk has a very simple algorithm of
-      // 1/30th clocktime - 30ms (buffer) + increment
+      // 1/ movestogo clocktime + inc - 30ms (buffer)
       // TODO: Improve this, most likely in Search
       params->timeset = 1;
       time /= movesToGo;
-      time -= 30;
       time += inc;
+      time -= 25; // buffer time
       params->endTime = params->startTime + time;
     } else {
       params->endTime = 0;
@@ -103,7 +104,11 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
            params->timeset);
 
     // start the search!
-    Search(board, params, threads);
+    SearchArgs args = {.board = board, .params = params, .threads = threads};
+
+    pthread_t searchThread;
+    pthread_create(&searchThread, NULL, &Search, &args);
+    pthread_detach(searchThread);
   }
 }
 
@@ -188,6 +193,8 @@ void UCILoop() {
       ParsePosition("position startpos\n", &board);
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
+    } else if (!strncmp(in, "stop", 4)) {
+      searchParameters.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
       searchParameters.quit = 1;
     } else if (!strncmp(in, "uci", 3)) {
