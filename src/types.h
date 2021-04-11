@@ -17,6 +17,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <setjmp.h>
 #include <stdint.h>
 
 #define MAX_SEARCH_PLY 128
@@ -131,6 +132,27 @@ typedef struct {
   int attackCount;     // king safety sq attack count
   int attackers;       // king safety attackers count
 } EvalData;
+
+typedef struct ThreadData ThreadData;
+
+struct ThreadData {
+  int count, idx;
+  ThreadData* threads;
+  jmp_buf exit;
+
+  SearchParams* params;
+  SearchData data;
+
+  Board board;
+  PV pv;
+};
+
+typedef struct {
+  int free;
+  Board* board;
+  SearchParams* params;
+  ThreadData* threads;
+} SearchArgs;
 
 enum { WHITE, BLACK, BOTH };
 

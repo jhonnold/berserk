@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,7 @@
 #include "movegen.h"
 #include "perft.h"
 #include "search.h"
+#include "thread.h"
 #include "transposition.h"
 #include "uci.h"
 #include "util.h"
@@ -34,10 +36,11 @@
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 // uci "go" command
-void ParseGo(char* in, SearchParams* params, Board* board) {
+void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
   in += 3;
 
   params->depth = MAX_SEARCH_PLY;
+  params->startTime = GetTimeMS();
   params->timeset = 0;
   params->stopped = 0;
   params->quit = 0;
@@ -78,18 +81,17 @@ void ParseGo(char* in, SearchParams* params, Board* board) {
   if (perft)
     PerftTest(perft, board);
   else {
-    params->startTime = GetTimeMS();
     params->depth = depth;
 
     if (time != -1) {
       // Non-infinite analysis
       // Berserk has a very simple algorithm of
-      // 1/30th clocktime - 30ms (buffer) + increment
+      // 1 / movestogo clocktime + inc - 25ms (buffer)
       // TODO: Improve this, most likely in Search
       params->timeset = 1;
       time /= movesToGo;
-      time -= 30;
       time += inc;
+      time -= 25; // buffer time
       params->endTime = params->startTime + time;
     } else {
       params->endTime = 0;
@@ -101,11 +103,18 @@ void ParseGo(char* in, SearchParams* params, Board* board) {
     printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
            params->timeset);
 
-    // Data is constructed outside of search so other tools can
-    // collect and display search related data.
-    // TODO: Actually use this for functionality outside of "bench"
-    SearchData data = {.board = board};
-    Search(params, &data);
+
+    // this MUST be freed from within the search, or else massive leak
+    SearchArgs* args = malloc(sizeof(SearchArgs));
+    args->board = board;
+    args->params = params;
+    args->threads = threads;
+    args->free = 1; // mark to be free'd (bench uses a stack'd)
+
+    // start the search!
+    pthread_t searchThread;
+    pthread_create(&searchThread, NULL, &Search, args);
+    pthread_detach(searchThread);
   }
 }
 
@@ -155,6 +164,7 @@ void UCILoop() {
   Board board;
   ParseFen(START_FEN, &board);
 
+  ThreadData* threads = CreatePool(1);
   SearchParams searchParameters = {.quit = 0};
 
   setbuf(stdin, NULL);
@@ -163,7 +173,7 @@ void UCILoop() {
   printf("id name " NAME " " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 4096\n");
-  printf("option name Threads type spin default 1 min 1 max 1\n"); // Currently unused
+  printf("option name Threads type spin default 1 min 1 max 256\n");
   printf("uciok\n");
 
   while (!searchParameters.quit) {
@@ -188,27 +198,31 @@ void UCILoop() {
     } else if (!strncmp(in, "ucinewgame", 10)) {
       ParsePosition("position startpos\n", &board);
     } else if (!strncmp(in, "go", 2)) {
-      ParseGo(in, &searchParameters, &board);
+      ParseGo(in, &searchParameters, &board, threads);
+    } else if (!strncmp(in, "stop", 4)) {
+      searchParameters.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
-      searchParameters.quit = 1;
+      exit(0);
     } else if (!strncmp(in, "uci", 3)) {
       printf("id name " NAME " " VERSION "\n");
       printf("id author Jay Honnold\n");
       printf("option name Hash type spin default 32 min 4 max 4096\n");
-      printf("option name Threads type spin default 1 min 1 max 1\n"); // This is not actually used!
+      printf("option name Threads type spin default 1 min 1 max 256\n");
       printf("uciok\n");
     } else if (!strncmp(in, "eval", 4)) {
       PrintEvaluation(&board);
+    } else if (!strncmp(in, "board", 5)) {
+      PrintBoard(&board);
     } else if (!strncmp(in, "moves", 5)) {
       // Print possible moves. If a search has been run and stopped, it will
       // print the moves in the order in which they would be searched on the
       // next iteration. This has been very helpful to debug move ordering
       // related problems.
 
-      MoveList moveList = {.count = 0};
-      SearchData data = {.board = &board, .ply = 0};
+      MoveList moveList = {0};
+      SearchData data = {0};
 
-      GenerateAllMoves(&moveList, &data);
+      GenerateAllMoves(&moveList, &board, &data);
       PrintMoves(&moveList);
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb;
@@ -216,8 +230,12 @@ void UCILoop() {
 
       mb = max(4, min(4096, mb));
       TTInit(mb);
-    } else if (!strncmp(in, "board", 5)) {
-      PrintBoard(&board);
+    } else if (!strncmp(in, "setoption name Threads value ", 29)) {
+      int n;
+      sscanf(in, "%*s %*s %*s %*s %d", &n);
+
+      free(threads);
+      threads = CreatePool(max(1, min(256, n)));
     }
   }
 }

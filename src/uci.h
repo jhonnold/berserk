@@ -17,7 +17,7 @@
 #ifndef UCI_H
 #define UCI_H
 
-void ParseGo(char* in, SearchParams* params, Board* board);
+void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads);
 void ParsePosition(char* in, Board* board);
 void UCILoop();
 

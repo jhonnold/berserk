@@ -23,8 +23,5 @@
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
 long GetTimeMS();
-int IsInputWaiting();
-void ReadInputDuringSearch(SearchParams* params);
-void Communicate(SearchParams* params);
 
 #endif

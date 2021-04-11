@@ -16,6 +16,8 @@
 
 #include <assert.h>
 #include <math.h>
+#include <pthread.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +28,7 @@
 #include "movegen.h"
 #include "search.h"
 #include "see.h"
+#include "thread.h"
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
@@ -79,17 +82,52 @@ void ClearSearchData(SearchData* data) {
   memset(data->bf, 0, sizeof(data->bf));
 }
 
-void Search(SearchParams* params, SearchData* data) {
-  TTClear();
-  ClearSearchData(data);
+void* Search(void* arg) {
+  SearchArgs* args = (SearchArgs*)arg;
+  Board* board = args->board;
+  SearchParams* params = args->params;
+  ThreadData* threads = args->threads;
 
-  PV pv;
+  pthread_t pthreads[threads->count];
+
+  TTClear();
+  InitPool(board, params, threads);
+
+  params->stopped = 0;
+
+  // start at 1, we will resuse main-thread
+  for (int i = 1; i < threads->count; i++)
+    pthread_create(&pthreads[i], NULL, &IterativeDeepening, &threads[i]);
+
+  // reuse main thread
+  IterativeDeepening((void*)&threads[0]);
+
+  // if main thread stopped, then stop all and wait till complete
+  params->stopped = 1;
+  for (int i = 1; i < threads->count; i++)
+    pthread_join(pthreads[i], NULL);
+
+  // TODO: what is the fallback if no bestMove?
+  Move bestMove = threads[0].data.bestMove;
+  printf("bestmove %s\n", MoveToStr(bestMove));
+
+  if (args->free) free(args); // this was allocated above, it needs to be free'd to prevent a leak
+  return NULL;
+}
+
+void* IterativeDeepening(void* arg) {
+  ThreadData* thread = (ThreadData*)arg;
+  SearchParams* params = thread->params;
 
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
   int score = 0;
 
-  for (int depth = 1; depth <= params->depth && !params->stopped; depth++) {
+  for (int depth = 1; depth <= params->depth; depth++) {
+    // hot exit point
+    if (setjmp(thread->exit))
+      break;
+
     // Ignore aspiration windows till we're at a reasonable depth
     // aspiration windows start at 1/10th of a pawn and grows outward at 150%, utilizing
     // returned fail soft values
@@ -100,7 +138,7 @@ void Search(SearchParams* params, SearchData* data) {
 
     while (!params->stopped) {
       // search!
-      score = Negamax(alpha, beta, depth, params, data, &pv);
+      score = Negamax(alpha, beta, depth, thread, &thread->pv);
 
       if (score <= alpha) {
         // fail low is no bueno, so lower beta, along with alpha for our window
@@ -109,25 +147,31 @@ void Search(SearchParams* params, SearchData* data) {
       } else if (score >= beta) {
         // raise beta on fail high
         beta = min(beta + delta, CHECKMATE);
-      } else {
-        // we're in window, move onto the next depth
-        PrintInfo(&pv, score, depth, params, data);
+      } else
+        // ended in window, move on
         break;
-      }
 
       // increase delta
       delta += delta / 2;
     }
+
+    // just move forward if not main thread
+    if (thread->idx)
+      continue;
+
+    PrintInfo(&thread->pv, score, depth, thread);
+    thread->data.bestMove = thread->pv.moves[0];
+    thread->data.score = score;
   }
 
-  // we probe the TT for top move just incase of a full fail-low
-  data->bestMove = TTMove(TTProbe(data->board->zobrist));
-  data->score = score;
-
-  printf("bestmove %s\n", MoveToStr(data->bestMove));
+  return NULL;
 }
 
-int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* data, PV* pv) {
+int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
+  SearchParams* params = thread->params;
+  SearchData* data = &thread->data;
+  Board* board = &thread->board;
+
   PV childPv;
   pv->count = 0;
 
@@ -140,20 +184,26 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   Move skipMove = data->skipMove[data->ply];
 
   // drop into tactical moves only
-  if (depth == 0)
-    return Quiesce(alpha, beta, params, data, pv);
+  if (depth <= 0)
+    return Quiesce(alpha, beta, thread, pv);
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
 
+  // Either mainthread has ended us OR we've run out of time
+  // this second check is more expensive and done only every 1024 nodes
+  // 1Mnps ~1ms
+  if (params->stopped || ((data->nodes & 1023) == 0 && params->timeset && GetTimeMS() > params->endTime))
+    longjmp(thread->exit, 1);
+
   if (!isRoot) {
     // draw
-    if (IsRepetition(data->board) || IsMaterialDraw(data->board) || (data->board->halfMove > 99))
+    if (IsRepetition(board) || IsMaterialDraw(board) || (board->halfMove > 99))
       return 0; // TODO: Contempt factor?
 
     // Prevent overflows
     if (data->ply > MAX_SEARCH_PLY - 1)
-      return Evaluate(data->board);
+      return Evaluate(board);
 
     // Mate distance pruning
     alpha = max(alpha, -CHECKMATE + data->ply);
@@ -162,16 +212,11 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
       return alpha;
   }
 
-  // Every 2048 nodes, we need to check for reaching time and user input
-  // at 1M nps this is every ~2ms
-  if ((data->nodes & 2047) == 0)
-    Communicate(params);
-
   // check the transposition table for previous info
-  TTValue ttValue = skipMove ? NO_ENTRY : TTProbe(data->board->zobrist);
+  TTValue ttValue = skipMove ? NO_ENTRY : TTProbe(board->zobrist);
 
-  // TT score pruning
-  if (ttValue) {
+  // TT score cutoffs
+  if (ttValue && !isRoot) {
     // TODO: Should I be doing this on PV nodes
     if (TTDepth(ttValue) >= depth) {
       int score = TTScore(ttValue, data->ply);
@@ -183,18 +228,18 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   }
 
   // pull previous static eval from tt - this is depth independent
-  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(data->board));
+  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(board));
   // getting better if eval has gone up
   int improving = data->ply >= 2 && (data->evals[data->ply] > data->evals[data->ply - 2]);
 
-  assert(eval == Evaluate(data->board));
+  assert(eval == Evaluate(board));
 
   // reset skip and killers for ply below
   data->skipMove[data->ply + 1] = NULL_MOVE;
   data->killers[data->ply + 1][0] = NULL_MOVE;
   data->killers[data->ply + 1][1] = NULL_MOVE;
 
-  if (!isPV && !data->board->checkers) {
+  if (!isPV && !board->checkers) {
 
     // Our TT might have a more accurate evaluation score, use this
     if (ttValue && TTDepth(ttValue) >= depth) {
@@ -208,7 +253,7 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
       return eval;
 
     // Null move pruning
-    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta && hasNonPawn(data->board)) {
+    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta && hasNonPawn(board)) {
       int R = 3 + depth / 6 + min((eval - beta) / 200, 3);
 
       // don't go too low
@@ -218,15 +263,12 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
         R = depth;
 
       data->moves[data->ply++] = NULL_MOVE;
-      MakeNullMove(data->board);
+      MakeNullMove(board);
 
-      int score = -Negamax(-beta, -beta + 1, depth - R, params, data, &childPv);
+      int score = -Negamax(-beta, -beta + 1, depth - R, thread, &childPv);
 
-      UndoNullMove(data->board);
+      UndoNullMove(board);
       data->ply--;
-
-      if (params->stopped)
-        return 0;
 
       if (score >= beta)
         return beta;
@@ -234,7 +276,7 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   }
 
   MoveList moveList = {.count = 0};
-  GenerateAllMoves(&moveList, data);
+  GenerateAllMoves(&moveList, board, data);
 
   int numMoves = 0;
   for (int i = 0; i < moveList.count; i++) {
@@ -254,7 +296,7 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
 
       // Static evaluation pruning, this applies for both quiet and tactical moves
       // quiet moves use a quadratic scale upwards
-      if (SEE(data->board, move) < STATIC_PRUNE[tactical][depth])
+      if (SEE(board, move) < STATIC_PRUNE[tactical][depth])
         continue;
     }
 
@@ -269,7 +311,7 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
-      int score = Negamax(sBeta - 1, sBeta, sDepth, params, data, pv);
+      int score = Negamax(sBeta - 1, sBeta, sDepth, thread, pv);
       data->skipMove[data->ply] = NULL_MOVE;
 
       if (score < sBeta)
@@ -283,12 +325,12 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
 
     numMoves++;
     data->moves[data->ply++] = move;
-    MakeMove(move, data->board);
+    MakeMove(move, board);
 
     int score = alpha + 1;
     int newDepth = depth;
-    if (singularExtension || data->board->checkers) // extend if in check
-      newDepth++;                                   // apply the extension
+    if (singularExtension || board->checkers) // extend if in check
+      newDepth++;                             // apply the extension
 
     // start of late move reductions
     int R = 1;
@@ -311,21 +353,18 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
 
     // try a reduced null window search
     if (R != 1)
-      score = -Negamax(-alpha - 1, -alpha, newDepth - R, params, data, &childPv);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - R, thread, &childPv);
 
     // if score failed high or this is outside the pv, do null window search at normal depth
     if ((R != 1 && score > alpha) || (R == 1 && (!isPV || numMoves > 1)))
-      score = -Negamax(-alpha - 1, -alpha, newDepth - 1, params, data, &childPv);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - 1, thread, &childPv);
 
     // full window/depth search if first move of PV or we keep failing high
     if (isPV && (numMoves == 1 || (score > alpha && (isRoot || score < beta))))
-      score = -Negamax(-beta, -alpha, newDepth - 1, params, data, &childPv);
+      score = -Negamax(-beta, -alpha, newDepth - 1, thread, &childPv);
 
-    UndoMove(move, data->board);
+    UndoMove(move, board);
     data->ply--;
-
-    if (params->stopped)
-      return 0;
 
     if (score > bestScore) {
       bestScore = score;
@@ -346,7 +385,7 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
         if (!tactical) {
           AddKillerMove(data, move);
           AddCounterMove(data, move, data->moves[data->ply - 1]);
-          AddHistoryHeuristic(data, move, depth);
+          AddHistoryHeuristic(data, move, board->side, depth);
         }
 
         // all moves that came before this did not fail high and
@@ -355,7 +394,7 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
           if (MoveCapture(moveList.moves[j]) || MovePromo(moveList.moves[j]))
             continue;
 
-          AddBFHeuristic(data, moveList.moves[j], depth);
+          AddBFHeuristic(data, moveList.moves[j], board->side, depth);
         }
 
         break;
@@ -365,7 +404,7 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
 
   // Checkmate detection using movecount
   if (!moveList.count)
-    return data->board->checkers ? -CHECKMATE + data->ply : 0;
+    return board->checkers ? -CHECKMATE + data->ply : 0;
 
   if (!skipMove) {
     // save to the TT
@@ -373,7 +412,7 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
     // TT_UPPER = we didnt raise alpha
     // TT_EXACT = in
     int TTFlag = bestScore >= beta ? TT_LOWER : bestScore <= a0 ? TT_UPPER : TT_EXACT;
-    TTPut(data->board->zobrist, depth, bestScore, TTFlag, bestMove, data->ply, data->evals[data->ply]);
+    TTPut(board->zobrist, depth, bestScore, TTFlag, bestMove, data->ply, data->evals[data->ply]);
   }
 
   assert(bestScore >= -CHECKMATE);
@@ -382,27 +421,33 @@ int Negamax(int alpha, int beta, int depth, SearchParams* params, SearchData* da
   return bestScore;
 }
 
-int Quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv) {
+int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
+  SearchParams* params = thread->params;
+  SearchData* data = &thread->data;
+  Board* board = &thread->board;
+
   PV childPv;
   pv->count = 0;
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
 
+  // Either mainthread has ended us OR we've run out of time
+  // this second check is more expensive and done only every 1024 nodes
+  // 1Mnps ~1ms
+  if (params->stopped || ((data->nodes & 1023) == 0 && params->timeset && GetTimeMS() > params->endTime))
+    longjmp(thread->exit, 1);
+
   // draw check
-  if (IsMaterialDraw(data->board) || IsRepetition(data->board) || (data->board->halfMove > 99))
+  if (IsMaterialDraw(board) || IsRepetition(board) || (board->halfMove > 99))
     return 0;
 
   // prevent overflows
   if (data->ply > MAX_SEARCH_PLY - 1)
-    return Evaluate(data->board);
-
-  // check time and user input
-  if ((data->nodes & 2047) == 0)
-    Communicate(params);
+    return Evaluate(board);
 
   // check the transposition table for previous info
-  TTValue ttValue = TTProbe(data->board->zobrist);
+  TTValue ttValue = TTProbe(board->zobrist);
   // TT score pruning - no depth check required since everything in QS is depth 0
   if (ttValue) {
     int score = TTScore(ttValue, data->ply);
@@ -413,7 +458,7 @@ int Quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
   }
 
   // pull cached eval if it exists
-  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(data->board));
+  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(board));
 
   // can we use an improved evaluation from the tt?
   if (ttValue) {
@@ -432,7 +477,7 @@ int Quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
   int bestScore = eval;
 
   MoveList moveList = {.count = 0};
-  GenerateTacticalMoves(&moveList, data);
+  GenerateTacticalMoves(&moveList, board);
 
   for (int i = 0; i < moveList.count; i++) {
     ChooseTopMove(&moveList, i);
@@ -443,7 +488,7 @@ int Quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
       if (MovePromo(move) < QUEEN[WHITE])
         continue;
     } else {
-      int captured = MoveEP(move) ? PAWN[data->board->xside] : data->board->squares[MoveEnd(move)];
+      int captured = MoveEP(move) ? PAWN[board->xside] : board->squares[MoveEnd(move)];
 
       assert(captured != NO_PIECE);
 
@@ -458,15 +503,12 @@ int Quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
       break;
 
     data->moves[data->ply++] = move;
-    MakeMove(move, data->board);
+    MakeMove(move, board);
 
-    int score = -Quiesce(-beta, -alpha, params, data, &childPv);
+    int score = -Quiesce(-beta, -alpha, thread, &childPv);
 
-    UndoMove(move, data->board);
+    UndoMove(move, board);
     data->ply--;
-
-    if (params->stopped)
-      return 0;
 
     if (score > bestScore) {
       bestScore = score;
@@ -489,20 +531,22 @@ int Quiesce(int alpha, int beta, SearchParams* params, SearchData* data, PV* pv)
   return bestScore;
 }
 
-inline void PrintInfo(PV* pv, int score, int depth, SearchParams* params, SearchData* data) {
+inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
+  uint64_t nodes = NodesSearched(thread->threads);
+
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d nodes %d time %ld score mate %d pv ", depth, data->seldepth, data->nodes,
-           GetTimeMS() - params->startTime, movesToMate);
+    printf("info depth %d seldepth %d nodes %lld time %ld score mate %d pv ", depth, thread->data.seldepth, nodes,
+           GetTimeMS() - thread->params->startTime, movesToMate);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d  nodes %d time %ld score mate -%d pv ", depth, data->seldepth, data->nodes,
-           GetTimeMS() - params->startTime, movesToMate);
+    printf("info depth %d seldepth %d  nodes %lld time %ld score mate -%d pv ", depth, thread->data.seldepth, nodes,
+           GetTimeMS() - thread->params->startTime, movesToMate);
   } else {
-    printf("info depth %d seldepth %d nodes %d time %ld score cp %d pv ", depth, data->seldepth, data->nodes,
-           GetTimeMS() - params->startTime, score);
+    printf("info depth %d seldepth %d nodes %lld time %ld score cp %d pv ", depth, thread->data.seldepth, nodes,
+           GetTimeMS() - thread->params->startTime, score);
   }
   PrintPV(pv);
 }
