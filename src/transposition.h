@@ -39,6 +39,7 @@ extern int POWER;
 void TTInit(int mb);
 void TTFree();
 void TTClear();
+void TTPrefetch(uint64_t hash);
 TTValue TTProbe(uint64_t hash);
 int TTScore(TTValue value, int ply);
 TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, int ply, int eval);
