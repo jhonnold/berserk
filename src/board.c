@@ -24,6 +24,7 @@
 #include "board.h"
 #include "move.h"
 #include "movegen.h"
+#include "transposition.h"
 #include "types.h"
 #include "zobrist.h"
 
@@ -428,6 +429,9 @@ void MakeMove(Move move, Board* board) {
   // special pieces must be loaded after the side has changed
   // this is because the new side to move will be the one in check
   SetSpecialPieces(board);
+
+  // Prefetch the hash entry for this board position
+  TTPrefetch(board->zobrist);
 }
 
 void UndoMove(Move move, Board* board) {
@@ -580,6 +584,9 @@ void MakeNullMove(Board* board) {
   board->moveNo++;
   board->side = board->xside;
   board->xside ^= 1;
+
+  // Prefetch the hash entry for this board position
+  TTPrefetch(board->zobrist);
 }
 
 void UndoNullMove(Board* board) {

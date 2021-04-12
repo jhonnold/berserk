@@ -60,6 +60,8 @@ inline int TTScore(TTValue value, int ply) {
   return score > MATE_BOUND ? score - ply : score < -MATE_BOUND ? score + ply : score;
 }
 
+inline void TTPrefetch(uint64_t hash) { __builtin_prefetch(&TRANSPOSITION_ENTRIES[TTIdx(hash)]); }
+
 inline TTValue TTProbe(uint64_t hash) {
 #ifdef TUNE
   return NO_ENTRY;
