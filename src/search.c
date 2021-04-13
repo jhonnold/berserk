@@ -42,8 +42,8 @@ const int MATE_BOUND = 30000;
 // RFP has a base value (cutoff at depth 1) and a step rise value
 // These two together create a quadratic cutoff at depths that will
 // be more strict at higher depths
-int RFP_BASE = 50; // this tuned low
-int RFP_STEP_RISE = 5;
+int RFP_BASE = 62;
+int RFP_STEP_RISE = 8;
 
 int SEE_PRUNE_CAPTURE_CUTOFF = 70;
 int SEE_PRUNE_CUTOFF = 20;
