@@ -22,6 +22,9 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
+#define stringize_(x) #x
+#define stringize(x) stringize_(x)
+
 long GetTimeMS();
 
 #endif
