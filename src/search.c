@@ -38,16 +38,22 @@ const int CHECKMATE = INT16_MAX;
 const int MATE_BOUND = 30000;
 
 // cutoff factors for certain pruning mechanics
-const int FUTILITY_MARGIN = 85;
-const int SEE_PRUNE_CAPTURE_CUTOFF = -70;
-const int SEE_PRUNE_CUTOFF = -20;
-const int DELTA_CUTOFF = 200;
+
+// RFP has a base value (cutoff at depth 1) and a step rise value
+// These two together create a quadratic cutoff at depths that will
+// be more strict at higher depths
+int RFP_BASE = 50; // this tuned low
+int RFP_STEP_RISE = 5;
+
+int SEE_PRUNE_CAPTURE_CUTOFF = 70;
+int SEE_PRUNE_CUTOFF = 20;
+int DELTA_CUTOFF = 200;
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
 int STATIC_PRUNE[2][MAX_SEARCH_PLY];
-int FUTILITY[MAX_SEARCH_PLY];
+int RFP[MAX_SEARCH_PLY];
 
 void InitPruningAndReductionTables() {
   for (int depth = 0; depth < MAX_SEARCH_PLY; depth++)
@@ -61,10 +67,10 @@ void InitPruningAndReductionTables() {
     LMP[0][depth] = (3 + depth * depth) / 2;
     LMP[1][depth] = 3 + depth * depth;
 
-    STATIC_PRUNE[0][depth] = SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
+    STATIC_PRUNE[0][depth] = -SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
+    STATIC_PRUNE[1][depth] = -SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
 
-    FUTILITY[depth] = FUTILITY_MARGIN * depth;
+    RFP[depth] = RFP_STEP_RISE * depth * depth / 2 - RFP_STEP_RISE * depth / 2 + RFP_BASE * depth;
   }
 }
 
@@ -249,7 +255,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
 
     // Reverse Futility Pruning
-    if (depth <= 6 && eval - FUTILITY[depth] >= beta && eval < MATE_BOUND)
+    if (depth <= 6 && eval - RFP[depth] >= beta && eval < MATE_BOUND)
       return eval;
 
     // Null move pruning
