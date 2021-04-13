@@ -22,6 +22,13 @@
 extern const int CHECKMATE;
 extern const int MATE_BOUND;
 
+extern int RFP_BASE;
+extern int RFP_STEP_RISE;
+
+extern int SEE_PRUNE_CAPTURE_CUTOFF;
+extern int SEE_PRUNE_CUTOFF;
+extern int DELTA_CUTOFF;
+
 void InitPruningAndReductionTables();
 void ClearSearchData(SearchData* data);
 

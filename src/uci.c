@@ -157,6 +157,16 @@ void ParsePosition(char* in, Board* board) {
   PrintBoard(board);
 }
 
+void PrintUCIOptions() {
+  printf("id name " NAME " " VERSION "\n");
+  printf("id author Jay Honnold\n");
+  printf("option name Hash type spin default 32 min 4 max 4096\n");
+  printf("option name Threads type spin default 1 min 1 max 256\n");
+  printf("option name ReverseFutilityBase type spin default 85 min 0 max 500\n");
+  printf("option name ReverseFutilityStepRise type spin default 0 min -50 max 50\n");
+  printf("uciok\n");
+}
+
 void UCILoop() {
   static char in[8192];
 
@@ -169,11 +179,7 @@ void UCILoop() {
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
-  printf("id name " NAME " " VERSION "\n");
-  printf("id author Jay Honnold\n");
-  printf("option name Hash type spin default 32 min 4 max 4096\n");
-  printf("option name Threads type spin default 1 min 1 max 256\n");
-  printf("uciok\n");
+  PrintUCIOptions();
 
   while (!searchParameters.quit) {
     memset(&in[0], 0, sizeof(in));
@@ -205,11 +211,7 @@ void UCILoop() {
     } else if (!strncmp(in, "quit", 4)) {
       exit(0);
     } else if (!strncmp(in, "uci", 3)) {
-      printf("id name " NAME " " VERSION "\n");
-      printf("id author Jay Honnold\n");
-      printf("option name Hash type spin default 32 min 4 max 4096\n");
-      printf("option name Threads type spin default 1 min 1 max 256\n");
-      printf("uciok\n");
+      PrintUCIOptions();
     } else if (!strncmp(in, "eval", 4)) {
       PrintEvaluation(&board);
     } else if (!strncmp(in, "board", 5)) {
@@ -226,17 +228,30 @@ void UCILoop() {
       GenerateAllMoves(&moveList, &board, &data);
       PrintMoves(&moveList);
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
-      int mb;
-      sscanf(in, "%*s %*s %*s %*s %d", &mb);
-
+      int mb = GetOptionIntValue(in);
       mb = max(4, min(4096, mb));
       TTInit(mb);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
-      int n;
-      sscanf(in, "%*s %*s %*s %*s %d", &n);
-
+      int n = GetOptionIntValue(in);
       free(threads);
       threads = CreatePool(max(1, min(256, n)));
+    } else if (!strncmp(in, "setoption name ReverseFutilityBase value ", 41)) {
+      int n = GetOptionIntValue(in);
+
+      RFP_BASE = max(0, min(500, n));
+      InitPruningAndReductionTables();
+    } else if (!strncmp(in, "setoption name ReverseFutilityStepRise value ", 45)) {
+      int n = GetOptionIntValue(in);
+
+      RFP_STEP_RISE = max(-50, min(50, n));
+      InitPruningAndReductionTables();
     }
   }
+}
+
+int GetOptionIntValue(char* in) {
+  int n;
+  sscanf(in, "%*s %*s %*s %*s %d", &n);
+
+  return n;
 }
