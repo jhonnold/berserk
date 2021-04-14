@@ -108,11 +108,10 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     args->board = board;
     args->params = params;
     args->threads = threads;
-    args->free = 1; // mark to be free'd (bench uses a stack'd)
 
     // start the search!
     pthread_t searchThread;
-    pthread_create(&searchThread, NULL, &Search, args);
+    pthread_create(&searchThread, NULL, &UCISearch, args);
     pthread_detach(searchThread);
   }
 }
@@ -162,12 +161,6 @@ void PrintUCIOptions() {
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 4096\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
-  printf("option name ReverseFutilityBase type spin default " stringize(DEFAULT_RFP_BASE) " min " stringize(
-      RFP_BASE_MIN) " max " stringize(RFP_BASE_MAX) "\n");
-  printf("option name ReverseFutilityStepRise type spin default " stringize(DEFAULT_RFP_STEP_RISE) " min " stringize(
-      RFP_STEP_RISE_MIN) " max " stringize(RFP_STEP_RISE_MAX) "\n");
-  printf("option name DeltaCutoff type spin default " stringize(DEFAULT_DELTA_CUTOFF) " min " stringize(
-      DELTA_CUTOFF_MIN) " max " stringize(DELTA_CUTOFF_MAX) "\n");
   printf("uciok\n");
 }
 
@@ -226,10 +219,8 @@ void UCILoop() {
       // next iteration. This has been very helpful to debug move ordering
       // related problems.
 
-      MoveList moveList = {0};
-      SearchData data = {0};
-
-      GenerateAllMoves(&moveList, &board, &data);
+      MoveList moveList;
+      GenerateAllMoves(&moveList, &board, &threads->data);
       PrintMoves(&moveList);
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
@@ -239,32 +230,6 @@ void UCILoop() {
       int n = GetOptionIntValue(in);
       free(threads);
       threads = CreatePool(max(1, min(256, n)));
-    } else if (!strncmp(in, "setoption name ReverseFutilityBase value ", 41)) {
-      int n = GetOptionIntValue(in);
-
-      RFP_BASE = max(RFP_BASE_MIN, min(RFP_BASE_MAX, n));
-      InitPruningAndReductionTables();
-
-      printf("Reverse Futility Pruning has values of {");
-      for (int i = 1; i <= 6; i++)
-        printf("%4dcp,", RFP[i]);
-      printf("}\n");
-    } else if (!strncmp(in, "setoption name ReverseFutilityStepRise value ", 45)) {
-      int n = GetOptionIntValue(in);
-
-      RFP_STEP_RISE = max(RFP_STEP_RISE_MIN, min(RFP_STEP_RISE_MAX, n));
-      InitPruningAndReductionTables();
-
-      printf("Reverse Futility Pruning has values of {");
-      for (int i = 1; i <= 6; i++)
-        printf("%4dcp,", RFP[i]);
-      printf("}\n");
-    } else if (!strncmp(in, "setoption name DeltaCutoff value ", 33)) {
-      int n = GetOptionIntValue(in);
-
-      DELTA_CUTOFF = max(DELTA_CUTOFF_MIN, min(DELTA_CUTOFF_MAX, n));
-
-      printf("Delta Cutoff has value of %dcp\n", DELTA_CUTOFF);
     }
   }
 }

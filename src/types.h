@@ -148,7 +148,6 @@ struct ThreadData {
 };
 
 typedef struct {
-  int free;
   Board* board;
   SearchParams* params;
   ThreadData* threads;

@@ -22,33 +22,18 @@
 extern const int CHECKMATE;
 extern const int MATE_BOUND;
 
-// Reverse Futility Pruning Values
-#define DEFAULT_RFP_BASE 62
-#define RFP_BASE_MIN 0
-#define RFP_BASE_MAX 500
-
-#define DEFAULT_RFP_STEP_RISE 8
-#define RFP_STEP_RISE_MIN -50
-#define RFP_STEP_RISE_MAX 50
-
 extern int RFP_BASE;
 extern int RFP_STEP_RISE;
 extern int RFP[];
-
 extern int SEE_PRUNE_CAPTURE_CUTOFF;
 extern int SEE_PRUNE_CUTOFF;
-
-// Delta Pruning
-#define DEFAULT_DELTA_CUTOFF 200
-#define DELTA_CUTOFF_MIN 0
-#define DELTA_CUTOFF_MAX 500
-
 extern int DELTA_CUTOFF;
 
 void InitPruningAndReductionTables();
 
+void* UCISearch(void* arg);
+int BestMove(Board* board, SearchParams* params, ThreadData* threads);
 void* Search(void* arg);
-void* IterativeDeepening(void* arg);
 int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv);
 int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv);
 
