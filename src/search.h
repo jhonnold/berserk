@@ -39,14 +39,13 @@ extern int SEE_PRUNE_CAPTURE_CUTOFF;
 extern int SEE_PRUNE_CUTOFF;
 
 // Delta Pruning
-#define DEFAULT_DELTA_CUTOFF 266
+#define DEFAULT_DELTA_CUTOFF 200
 #define DELTA_CUTOFF_MIN 0
 #define DELTA_CUTOFF_MAX 500
 
 extern int DELTA_CUTOFF;
 
 void InitPruningAndReductionTables();
-void ClearSearchData(SearchData* data);
 
 void* Search(void* arg);
 void* IterativeDeepening(void* arg);

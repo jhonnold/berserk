@@ -74,20 +74,6 @@ void InitPruningAndReductionTables() {
   }
 }
 
-// reset all values (except BOARD) in data
-void ClearSearchData(SearchData* data) {
-  data->nodes = 0;
-  data->seldepth = 0;
-  data->ply = 0;
-  memset(data->skipMove, 0, sizeof(data->skipMove));
-  memset(data->evals, 0, sizeof(data->evals));
-  memset(data->moves, 0, sizeof(data->moves));
-  memset(data->killers, 0, sizeof(data->killers));
-  memset(data->counters, 0, sizeof(data->counters));
-  memset(data->hh, 0, sizeof(data->hh));
-  memset(data->bf, 0, sizeof(data->bf));
-}
-
 void* Search(void* arg) {
   SearchArgs* args = (SearchArgs*)arg;
   Board* board = args->board;
