@@ -37,17 +37,17 @@
 const int CHECKMATE = INT16_MAX;
 const int MATE_BOUND = 30000;
 
-// cutoff factors for certain pruning mechanics
-
 // RFP has a base value (cutoff at depth 1) and a step rise value
 // These two together create a quadratic cutoff at depths that will
 // be more strict at higher depths
-int RFP_BASE = 62;
-int RFP_STEP_RISE = 8;
+int RFP_BASE = DEFAULT_RFP_BASE;
+int RFP_STEP_RISE = DEFAULT_RFP_STEP_RISE;
 
 int SEE_PRUNE_CAPTURE_CUTOFF = 70;
 int SEE_PRUNE_CUTOFF = 20;
-int DELTA_CUTOFF = 200;
+
+// Delta pruning
+int DELTA_CUTOFF = DEFAULT_DELTA_CUTOFF;
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
@@ -72,20 +72,6 @@ void InitPruningAndReductionTables() {
 
     RFP[depth] = RFP_STEP_RISE * depth * depth / 2 - RFP_STEP_RISE * depth / 2 + RFP_BASE * depth;
   }
-}
-
-// reset all values (except BOARD) in data
-void ClearSearchData(SearchData* data) {
-  data->nodes = 0;
-  data->seldepth = 0;
-  data->ply = 0;
-  memset(data->skipMove, 0, sizeof(data->skipMove));
-  memset(data->evals, 0, sizeof(data->evals));
-  memset(data->moves, 0, sizeof(data->moves));
-  memset(data->killers, 0, sizeof(data->killers));
-  memset(data->counters, 0, sizeof(data->counters));
-  memset(data->hh, 0, sizeof(data->hh));
-  memset(data->bf, 0, sizeof(data->bf));
 }
 
 void* Search(void* arg) {
