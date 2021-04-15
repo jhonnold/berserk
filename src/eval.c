@@ -103,12 +103,11 @@ TScore KS_KING_FILE[4] = {{9, -4}, {4, 0}, {0, 0}, {-4, 2}};
 
 Score KS_ATTACKER_WEIGHTS[5] = {0, 28, 18, 15, 4};
 Score KS_SAFE_CHECKS[5][2] = {{0, 0}, {278, 447}, {221, 337}, {376, 650}, {263, 392}};
-Score KS_ATTACK = 24;
+Score KS_ATTACK = 48;
 Score KS_WEAK_SQS = 63;
 Score KS_UNSAFE_CHECK = 51;
-Score KS_ENEMY_QUEEN = -300;
-Score KS_KNIGHT_PROTECTOR = -35;
-Score KS_DISTANCE_DEFENSE = -3;
+Score KS_ENEMY_QUEEN = 300;
+Score KS_KNIGHT_PROTECTOR = 35;
 
 Score* PSQT[12][64];
 Score* KNIGHT_POSTS[64];
@@ -760,8 +759,9 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
            + (KS_WEAK_SQS * bits(weak & kingArea))          // weak squares around my king
            + (KS_ATTACK * enemyData->attackCount)           // just general pieces aimed at king
            + (KS_UNSAFE_CHECK * bits(unsafeChecks))         // unsafe checks factor (this allows Berserk to see sacks)
-           + (KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]])) // queen is the most dangerous, lower if gone
-           + (KS_KNIGHT_PROTECTOR * !!(data->attacks[KNIGHT_TYPE] & kingArea)) // knight on f8 no mate
+           + (enemyData->mobility[MG] - data->mobility[MG]) / 2 // if they can move quickly to attack
+           - (KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]))  // queen is the most dangerous, lower if gone
+           - (KS_KNIGHT_PROTECTOR * !!(data->attacks[KNIGHT_TYPE] & kingArea)) // knight on f8 no mate
            - shelterScoreMg / 2                                                // house safety
            + 18;                                                               // offset
 
