@@ -101,13 +101,13 @@ TScore BLOCKED_PAWN_STORM[8] = {
 
 TScore KS_KING_FILE[4] = {{9, -4}, {4, 0}, {0, 0}, {-4, 2}};
 
-Score KS_ATTACKER_WEIGHTS[5] = {0, 28, 18, 15, 4};
-Score KS_SAFE_CHECKS[5][2] = {{0, 0}, {278, 447}, {221, 337}, {376, 650}, {263, 392}};
-Score KS_ATTACK = 48;
-Score KS_WEAK_SQS = 63;
-Score KS_UNSAFE_CHECK = 51;
-Score KS_ENEMY_QUEEN = 300;
-Score KS_KNIGHT_PROTECTOR = 35;
+Score KS_ATTACKER_WEIGHTS[5] = {0, 64, 53, 67, 25};
+Score KS_ATTACK = 39;
+Score KS_WEAK_SQS = 74;
+Score KS_SAFE_CHECK = 90;
+Score KS_UNSAFE_CHECK = 12;
+Score KS_ENEMY_QUEEN = -247;
+Score KS_ALLIES = -17;
 
 Score* PSQT[12][64];
 Score* KNIGHT_POSTS[64];
@@ -713,57 +713,33 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   }
 
   BitBoard kingArea = GetKingAttacks(kingSq);
-
-  // weak squares are enemy attacked and we're not defending twice or is only held by a queen/king
   BitBoard weak = enemyData->allAttacks & ~data->attacks2 & (~data->allAttacks | data->attacks[4] | data->attacks[5]);
-
-  // vulnerable are those squares that are hit once, or weak and hit twice, and isn't occupied by the enemy
   BitBoard vulnerable = (~data->allAttacks | (weak & enemyData->attacks2)) & ~board->occupancies[xside];
 
-  // setup the check scoring
-  int score = 0;
-  // use a bitboard to track unsafe checks as it's a flat bonus/dont count knights checking same square
-  BitBoard unsafeChecks = 0ULL;
-
-  // the order is important for how these checks are applied, most important come first and prevent later checks from
-  // being looked at down the line
   BitBoard possibleKnightChecks =
       GetKnightAttacks(kingSq) & enemyData->attacks[KNIGHT_TYPE] & ~board->occupancies[xside];
-  BitBoard possibleRookChecks = GetRookAttacks(kingSq, board->occupancies[BOTH] ^ board->occupancies[QUEEN[side]]) &
-                                enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
+  int safeChecks = bits(possibleKnightChecks & vulnerable);
+  int unsafeChecks = bits(possibleKnightChecks & ~vulnerable);
+
+  BitBoard possibleBishopChecks =
+      GetBishopAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
+  safeChecks += bits(possibleBishopChecks & vulnerable);
+  unsafeChecks += bits(possibleBishopChecks & ~vulnerable);
+
+  BitBoard possibleRookChecks =
+      GetRookAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
+  safeChecks += bits(possibleRookChecks & vulnerable);
+  unsafeChecks += bits(possibleRookChecks & ~vulnerable);
+
   BitBoard possibleQueenChecks =
       GetQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
-  BitBoard possibleBishopChecks = GetBishopAttacks(kingSq, board->occupancies[BOTH] ^ board->occupancies[QUEEN[side]]) &
-                                  enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
+  safeChecks += bits(possibleQueenChecks & vulnerable);
 
-  if (possibleKnightChecks & vulnerable)
-    score += KS_SAFE_CHECKS[KNIGHT_TYPE][bits(vulnerable & possibleKnightChecks) > 1];
-  else
-    unsafeChecks |= possibleKnightChecks;
+  BitBoard allies = kingArea & (board->occupancies[side] & ~board->pieces[QUEEN[side]]);
 
-  if (possibleRookChecks & vulnerable)
-    score += KS_SAFE_CHECKS[ROOK_TYPE][bits(possibleRookChecks & vulnerable) > 1];
-  else
-    unsafeChecks |= possibleRookChecks;
-
-  if (possibleQueenChecks & vulnerable & ~possibleRookChecks) // rook checks over queen
-    score += KS_SAFE_CHECKS[QUEEN_TYPE][bits(possibleQueenChecks & vulnerable & ~possibleRookChecks) > 1];
-  // we intentionally don't highly value sacking our queen :)
-
-  if (possibleBishopChecks & vulnerable & ~possibleQueenChecks) // queen checks over bishop
-    score += KS_SAFE_CHECKS[BISHOP_TYPE][bits(possibleBishopChecks & vulnerable & ~possibleQueenChecks) > 1];
-  else
-    unsafeChecks |= possibleBishopChecks;
-
-  score += (enemyData->attackers * enemyData->attackWeight) // attacker weight (factor of the pieces attacking)
-           + (KS_WEAK_SQS * bits(weak & kingArea))          // weak squares around my king
-           + (KS_ATTACK * enemyData->attackCount)           // just general pieces aimed at king
-           + (KS_UNSAFE_CHECK * bits(unsafeChecks))         // unsafe checks factor (this allows Berserk to see sacks)
-           + (enemyData->mobility[MG] - data->mobility[MG]) / 2 // if they can move quickly to attack
-           - (KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]))  // queen is the most dangerous, lower if gone
-           - (KS_KNIGHT_PROTECTOR * !!(data->attacks[KNIGHT_TYPE] & kingArea)) // knight on f8 no mate
-           - shelterScoreMg / 2                                                // house safety
-           + 18;                                                               // offset
+  int score = (enemyData->attackWeight + KS_SAFE_CHECK * safeChecks + KS_UNSAFE_CHECK * unsafeChecks +
+               KS_WEAK_SQS * bits(vulnerable & kingArea) + KS_ATTACK * (enemyData->attackCount * 8 / bits(kingArea)) +
+               KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]) + KS_ALLIES * (bits(allies) - 2)); // offset
 
   // if my king is in danger apply score
   if (score > 0) {
