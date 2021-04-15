@@ -106,8 +106,8 @@ Score KS_ATTACK = 39;
 Score KS_WEAK_SQS = 74;
 Score KS_SAFE_CHECK = 90;
 Score KS_UNSAFE_CHECK = 12;
-Score KS_ENEMY_QUEEN = -247;
-Score KS_ALLIES = -17;
+Score KS_ENEMY_QUEEN = 247;
+Score KS_ALLIES = 17;
 
 Score* PSQT[12][64];
 Score* KNIGHT_POSTS[64];
@@ -737,9 +737,14 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
 
   BitBoard allies = kingArea & (board->occupancies[side] & ~board->pieces[QUEEN[side]]);
 
-  int score = (enemyData->attackWeight + KS_SAFE_CHECK * safeChecks + KS_UNSAFE_CHECK * unsafeChecks +
-               KS_WEAK_SQS * bits(vulnerable & kingArea) + KS_ATTACK * (enemyData->attackCount * 8 / bits(kingArea)) +
-               KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]]) + KS_ALLIES * (bits(allies) - 2)); // offset
+  int score = (enemyData->attackers * enemyData->attackWeight)  // weight of attacks
+              + (KS_SAFE_CHECK * safeChecks)                    // safe checks
+              + (KS_UNSAFE_CHECK * unsafeChecks)                // unsafe checks
+              + (KS_WEAK_SQS * bits(weak & kingArea))           // weak sqs
+              + (KS_ATTACK * enemyData->attackCount)            // aimed pieces
+              - (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]]) // enemy has queen?
+              - (KS_ALLIES * (bits(allies) - 2))                // allies
+              - shelterScoreMg / 2;                             // house
 
   // if my king is in danger apply score
   if (score > 0) {
