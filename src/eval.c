@@ -762,7 +762,6 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
            + (KS_UNSAFE_CHECK * bits(unsafeChecks))         // unsafe checks factor (this allows Berserk to see sacks)
            + (KS_ENEMY_QUEEN * !(board->pieces[QUEEN[xside]])) // queen is the most dangerous, lower if gone
            + (KS_KNIGHT_PROTECTOR * !!(data->attacks[KNIGHT_TYPE] & kingArea)) // knight on f8 no mate
-           + (enemyData->mobility[MG] - data->mobility[MG]) / 2                // if they can move quickly to attack
            - shelterScoreMg / 2                                                // house safety
            + 18;                                                               // offset
 
