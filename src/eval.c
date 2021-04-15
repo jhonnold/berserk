@@ -101,13 +101,13 @@ TScore BLOCKED_PAWN_STORM[8] = {
 
 TScore KS_KING_FILE[4] = {{9, -4}, {4, 0}, {0, 0}, {-4, 2}};
 
-Score KS_ATTACKER_WEIGHTS[5] = {0, 64, 53, 67, 25};
-Score KS_ATTACK = 39;
-Score KS_WEAK_SQS = 74;
-Score KS_SAFE_CHECK = 90;
-Score KS_UNSAFE_CHECK = 12;
-Score KS_ENEMY_QUEEN = 247;
-Score KS_ALLIES = 17;
+Score KS_ATTACKER_WEIGHTS[5] = {0, 28, 18, 15, 4};
+Score KS_ATTACK = 24;
+Score KS_WEAK_SQS = 63;
+Score KS_SAFE_CHECK = 200;
+Score KS_UNSAFE_CHECK = 51;
+Score KS_ENEMY_QUEEN = 300;
+Score KS_ALLIES = 0;
 
 Score* PSQT[12][64];
 Score* KNIGHT_POSTS[64];
