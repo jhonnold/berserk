@@ -20,9 +20,15 @@
 #include <setjmp.h>
 #include <stdint.h>
 
+#ifdef TUNE
+#define MAX_SEARCH_PLY 16
+#define MAX_MOVES 256
+#define MAX_GAME_PLY 32
+#else
 #define MAX_SEARCH_PLY 128
 #define MAX_MOVES 256
 #define MAX_GAME_PLY 1024
+#endif
 
 // Tune on doubles for more accuracy
 #ifndef TUNE

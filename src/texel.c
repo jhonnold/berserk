@@ -30,6 +30,7 @@
 #include "random.h"
 #include "search.h"
 #include "texel.h"
+#include "thread.h"
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
@@ -56,7 +57,7 @@
 #define TUNE_ROOK_PSQT 0
 #define TUNE_QUEEN_PSQT 0
 #define TUNE_KING_PSQT 0
-#define TUNE_MINOR_PARAMS 1
+#define TUNE_MINOR_PARAMS 0
 #define TUNE_KNIGHT_MOBILITIES 0
 #define TUNE_BISHOP_MOBILITIES 0
 #define TUNE_ROOK_MOBILITIES 0
@@ -198,12 +199,9 @@ Position* LoadPositions(int* n) {
   }
 
   if (FILTER) {
-    SearchData* data = malloc(sizeof(SearchData));
-
-    SearchParams* params = malloc(sizeof(SearchParams));
-    params->endTime = 0;
-
-    PV* pv = malloc(sizeof(PV));
+    ThreadData* threads = CreatePool(1);
+    SearchParams params = {.endTime = 0};
+    PV pv;
 
     double totalPhase = 0;
     int i = 0;
@@ -211,14 +209,12 @@ Position* LoadPositions(int* n) {
       Position* pos = &positions[i];
       ParseFen(pos->fen, board);
 
-      ClearSearchData(data);
-      data->board = board;
+      ResetThreadPool(board, &params, threads);
 
-      pv->count = 0;
-      Quiesce(-CHECKMATE, CHECKMATE, params, data, pv);
+      Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
 
-      for (int m = 0; m < pv->count; m++)
-        MakeMove(pv->moves[m], board);
+      for (int m = 0; m < pv.count; m++)
+        MakeMove(pv.moves[m], board);
 
       if (REMOVE_CHECKS && board->checkers) {
         positions[i] = positions[--p];
@@ -316,19 +312,17 @@ double error(Position* p) {
 
   Score score;
   if (QS) {
-    SearchData* data = malloc(sizeof(SearchData));
-    ClearSearchData(data);
-    data->board = board;
-
     SearchParams* params = malloc(sizeof(SearchParams));
     params->endTime = 0;
 
+    ThreadData* threads = CreatePool(1);
+    ResetThreadPool(board, params, threads);
+
     PV* pv = malloc(sizeof(PV));
-    pv->count = 0;
 
-    score = Quiesce(-CHECKMATE, CHECKMATE, params, data, pv);
+    score = Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
 
-    free(data);
+    free(threads);
     free(params);
     free(pv);
   } else {
@@ -437,10 +431,10 @@ void addParams(TexelParam* params, int* numParams) {
     addParamBounded("KING_PSQT", 32, &KING_PSQT, -200, 200, params, numParams);
 
   if (TUNE_MINOR_PARAMS) {
-    // addParamBounded("BISHOP_PAIR", 1, &BISHOP_PAIR, 0, 100, params, numParams);
-    // addParamBounded("BISHOP_TRAPPED", 1, &BISHOP_TRAPPED, -200, 0, params, numParams);
-    // addParamBounded("BISHOP_POST_PSQT", 32, &BISHOP_POST_PSQT, 0, 100, params, numParams);
-    // addParamBounded("KNIGHT_POST_PSQT", 32, &KNIGHT_POST_PSQT, 0, 100, params, numParams);
+    addParamBounded("BISHOP_PAIR", 1, &BISHOP_PAIR, 0, 100, params, numParams);
+    addParamBounded("BISHOP_TRAPPED", 1, &BISHOP_TRAPPED, -200, 0, params, numParams);
+    addParamBounded("BISHOP_POST_PSQT", 32, &BISHOP_POST_PSQT, 0, 100, params, numParams);
+    addParamBounded("KNIGHT_POST_PSQT", 32, &KNIGHT_POST_PSQT, 0, 100, params, numParams);
     addParamBounded("KNIGHT_OUTPOST_REACHABLE", 1, &KNIGHT_OUTPOST_REACHABLE, 0, 100, params, numParams);
     addParamBounded("BISHOP_OUTPOST_REACHABLE", 1, &BISHOP_OUTPOST_REACHABLE, 0, 100, params, numParams);
   }
