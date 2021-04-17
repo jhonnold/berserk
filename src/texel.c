@@ -35,7 +35,8 @@
 #include "types.h"
 #include "util.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set.epd"
+// ethereal 30M fens
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\vlarge.epd"
 
 #define THREADS 32
 #define Alpha 0.003
@@ -43,30 +44,30 @@
 #define Beta2 0.999
 #define Epsilon 1e-8
 
-#define Batch 3250000
-#define MaxPositions 3250000
+#define Batch 30000000
+#define MaxPositions 30000000
 
 #define QS 0
 #define FILTER 1
 #define REMOVE_CHECKS 0
 
-#define TUNE_MATERIAL 0
-#define TUNE_PAWN_PSQT 0
-#define TUNE_KNIGHT_PSQT 0
-#define TUNE_BISHOP_PSQT 0
-#define TUNE_ROOK_PSQT 0
-#define TUNE_QUEEN_PSQT 0
-#define TUNE_KING_PSQT 0
-#define TUNE_MINOR_PARAMS 0
-#define TUNE_KNIGHT_MOBILITIES 0
-#define TUNE_BISHOP_MOBILITIES 0
-#define TUNE_ROOK_MOBILITIES 0
-#define TUNE_QUEEN_MOBILITIES 0
-#define TUNE_PAWN_PARAMS 0
-#define TUNE_ROOK_PARAMS 0
-#define TUNE_THREATS 0
+#define TUNE_MATERIAL 1
+#define TUNE_PAWN_PSQT 1
+#define TUNE_KNIGHT_PSQT 1
+#define TUNE_BISHOP_PSQT 1
+#define TUNE_ROOK_PSQT 1
+#define TUNE_QUEEN_PSQT 1
+#define TUNE_KING_PSQT 1
+#define TUNE_MINOR_PARAMS 1
+#define TUNE_KNIGHT_MOBILITIES 1
+#define TUNE_BISHOP_MOBILITIES 1
+#define TUNE_ROOK_MOBILITIES 1
+#define TUNE_QUEEN_MOBILITIES 1
+#define TUNE_PAWN_PARAMS 1
+#define TUNE_ROOK_PARAMS 1
+#define TUNE_THREATS 1
+#define TUNE_TEMPO 1
 #define TUNE_SHELTER_STORM 0
-#define TUNE_TEMPO 0
 #define TUNE_KING_SAFETY 0
 
 #define CHOOSE_K 1
@@ -120,6 +121,10 @@ void SGD(TexelParam* params, int numParams, Position* positions, int numPosition
         for (int p = MG; p <= EG; p++) {
           Score original = (*tScore)[p];
           double gradient = param.gradients[j][p];
+
+          if (!gradient)
+            continue;
+
           int idx = param.idx + 2 * j + p;
 
           M[idx] = b1 * M[idx] + (1.0 - b1) * gradient;
@@ -157,6 +162,8 @@ void CalculateGradients(TexelParam* params, int numParams, Position* positions, 
 void CalculateSingleGradient(TexelParam param, Position* positions, int numPositions, double base) {
   const double dx = 1;
 
+  printf("Calculating gradients for %s (%d)\n", param.name, param.count);
+
   for (int i = 0; i < param.count; i++) {
     TScore* tScore = param.vals[i];
 
@@ -180,7 +187,6 @@ Position* LoadPositions(int* n) {
     return NULL;
 
   Position* positions = malloc(sizeof(Position) * MaxPositions);
-  Board* board = malloc(sizeof(Board));
 
   char buffer[128];
 
@@ -198,40 +204,34 @@ Position* LoadPositions(int* n) {
     p++;
   }
 
+  Board* boards = malloc(sizeof(Board) * p);
+
   if (FILTER) {
     ThreadData* threads = CreatePool(1);
     SearchParams params = {.endTime = 0};
     PV pv;
 
-    double totalPhase = 0;
     int i = 0;
     while (i < p) {
       Position* pos = &positions[i];
-      ParseFen(pos->fen, board);
+      pos->board = &boards[i];
 
-      ResetThreadPool(board, &params, threads);
-
+      ParseFen(pos->fen, pos->board);
+      ResetThreadPool(pos->board, &params, threads);
       Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
 
       for (int m = 0; m < pv.count; m++)
-        MakeMove(pv.moves[m], board);
+        MakeMove(pv.moves[m], pos->board);
 
-      if (REMOVE_CHECKS && board->checkers) {
+      if (REMOVE_CHECKS && pos->board->checkers) {
         positions[i] = positions[--p];
         continue;
       } else {
-        BoardToFen(pos->fen, board);
-
-        totalPhase += GetPhase(board) / MaxPhase();
-
         i++;
-
         if (!(i & 4095))
           printf("Running search... (%d of %d)\n", i, p);
       }
     }
-
-    printf("Average phase: %f\n", totalPhase / p);
   }
 
   printf("Successfully loaded %d positions!\n", p);
@@ -244,7 +244,7 @@ void determineK(Position* positions, int n) {
   double min = -10, max = 10, delta = 1, best = 1, error = 100;
 
   for (int p = 0; p < 10; p++) {
-    printf("Determining K: (%.10f, %.10f, %.10f)\n", min, max, delta);
+    printf("Determining K: (%.9, %.9, %.10f)\n", min, max, delta);
 
     while (min < max) {
       K = min;
@@ -252,7 +252,7 @@ void determineK(Position* positions, int n) {
       if (e < error) {
         error = e;
         best = K;
-        printf("New best K of %.10f, Error %.10f\n", K, error);
+        printf("New best K of %.9, Error %.9\n", K, error);
       }
       min += delta;
     }
@@ -263,12 +263,10 @@ void determineK(Position* positions, int n) {
   }
 
   K = best;
-  printf("Using K of %.6f\n", K);
+  printf("Using K of %.9f\n", K);
 }
 
 double totalError(Position* positions, int n) {
-  double* errors = calloc(n, sizeof(double));
-
   pthread_t threads[THREADS];
   BatchJob jobs[THREADS];
 
@@ -289,7 +287,6 @@ double totalError(Position* positions, int n) {
   for (int t = 0; t < THREADS; t++)
     sum += jobs[t].error;
 
-  free(errors);
   return sum / n;
 }
 
@@ -307,16 +304,13 @@ void* batchError(void* arg) {
 }
 
 double error(Position* p) {
-  Board* board = malloc(sizeof(Board));
-  ParseFen(p->fen, board);
-
   Score score;
   if (QS) {
     SearchParams* params = malloc(sizeof(SearchParams));
     params->endTime = 0;
 
     ThreadData* threads = CreatePool(1);
-    ResetThreadPool(board, params, threads);
+    ResetThreadPool(p->board, params, threads);
 
     PV* pv = malloc(sizeof(PV));
 
@@ -326,15 +320,14 @@ double error(Position* p) {
     free(params);
     free(pv);
   } else {
-    score = Evaluate(board);
+    score = Evaluate(p->board);
   }
 
-  if (board->side)
+  if (p->board->side)
     score = -score;
 
   score /= 100;
 
-  free(board);
   return pow(p->result - sigmoid(score), 2);
 }
 

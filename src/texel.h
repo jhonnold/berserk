@@ -26,6 +26,7 @@
 typedef struct {
   double result;
   char fen[128];
+  Board* board;
 } Position;
 
 typedef struct {
