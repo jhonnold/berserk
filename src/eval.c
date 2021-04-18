@@ -107,7 +107,7 @@ Score KS_WEAK_SQS = 63;
 Score KS_SAFE_CHECK = 200;
 Score KS_UNSAFE_CHECK = 51;
 Score KS_ENEMY_QUEEN = 300;
-Score KS_ALLIES = 10;
+Score KS_KNIGHT_DEFENSE = 30;
 
 Score* PSQT[12][64];
 Score* KNIGHT_POSTS[64];
@@ -735,16 +735,14 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
       GetQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
   safeChecks += bits(possibleQueenChecks & vulnerable);
 
-  BitBoard allies = kingArea & (board->occupancies[side] & ~board->pieces[QUEEN[side]]);
-
-  int score = (enemyData->attackers * enemyData->attackWeight)  // weight of attacks
-              + (KS_SAFE_CHECK * safeChecks)                    // safe checks
-              + (KS_UNSAFE_CHECK * unsafeChecks)                // unsafe checks
-              + (KS_WEAK_SQS * bits(weak & kingArea))           // weak sqs
-              + (KS_ATTACK * enemyData->attackCount)            // aimed pieces
-              - (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]]) // enemy has queen?
-              - (KS_ALLIES * (bits(allies) - 2))                // allies
-              - shelterScoreMg / 2;                             // house
+  int score = (enemyData->attackers * enemyData->attackWeight)                  // weight of attacks
+              + (KS_SAFE_CHECK * safeChecks)                                    // safe checks
+              + (KS_UNSAFE_CHECK * unsafeChecks)                                // unsafe checks
+              + (KS_WEAK_SQS * bits(weak & kingArea))                           // weak sqs
+              + (KS_ATTACK * enemyData->attackCount)                            // aimed pieces
+              - (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])                 // enemy has queen?
+              - (KS_KNIGHT_DEFENSE * !!(data->attacks[KNIGHT_TYPE] & kingArea)) // knight on f8 = no m8
+              - shelterScoreMg / 2;                                             // house
 
   // if my king is in danger apply score
   if (score > 0) {
