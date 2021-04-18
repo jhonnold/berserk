@@ -107,7 +107,7 @@ Score KS_WEAK_SQS = 63;
 Score KS_SAFE_CHECK = 200;
 Score KS_UNSAFE_CHECK = 51;
 Score KS_ENEMY_QUEEN = 300;
-Score KS_ALLIES = 0;
+Score KS_ALLIES = 10;
 
 Score* PSQT[12][64];
 Score* KNIGHT_POSTS[64];
