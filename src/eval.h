@@ -75,7 +75,6 @@ extern TScore TEMPO;
 
 void InitPSQT();
 
-Score MaxPhase();
 Score GetPhase(Board* board);
 Score Taper(Score mg, Score eg, Score phase);
 
