@@ -35,8 +35,7 @@
 #include "types.h"
 #include "util.h"
 
-// ethereal 30M fens
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\vlarge.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set.epd"
 
 #define THREADS 32
 #define Alpha 0.003
@@ -44,29 +43,29 @@
 #define Beta2 0.999
 #define Epsilon 1e-8
 
-#define Batch 30000000
-#define MaxPositions 30000000
+#define Batch 3250000
+#define MaxPositions 3250000
 
 #define QS 0
 #define FILTER 1
 #define REMOVE_CHECKS 0
 
-#define TUNE_MATERIAL 1
-#define TUNE_PAWN_PSQT 1
-#define TUNE_KNIGHT_PSQT 1
-#define TUNE_BISHOP_PSQT 1
-#define TUNE_ROOK_PSQT 1
-#define TUNE_QUEEN_PSQT 1
-#define TUNE_KING_PSQT 1
-#define TUNE_MINOR_PARAMS 1
-#define TUNE_KNIGHT_MOBILITIES 1
-#define TUNE_BISHOP_MOBILITIES 1
-#define TUNE_ROOK_MOBILITIES 1
-#define TUNE_QUEEN_MOBILITIES 1
-#define TUNE_PAWN_PARAMS 1
-#define TUNE_ROOK_PARAMS 1
-#define TUNE_THREATS 1
-#define TUNE_TEMPO 1
+#define TUNE_MATERIAL 0
+#define TUNE_PAWN_PSQT 0
+#define TUNE_KNIGHT_PSQT 0
+#define TUNE_BISHOP_PSQT 0
+#define TUNE_ROOK_PSQT 0
+#define TUNE_QUEEN_PSQT 0
+#define TUNE_KING_PSQT 0
+#define TUNE_MINOR_PARAMS 0
+#define TUNE_KNIGHT_MOBILITIES 0
+#define TUNE_BISHOP_MOBILITIES 0
+#define TUNE_ROOK_MOBILITIES 0
+#define TUNE_QUEEN_MOBILITIES 0
+#define TUNE_PAWN_PARAMS 0
+#define TUNE_ROOK_PARAMS 0
+#define TUNE_THREATS 0
+#define TUNE_TEMPO 0
 #define TUNE_SHELTER_STORM 0
 #define TUNE_KING_SAFETY 0
 
@@ -244,7 +243,7 @@ void determineK(Position* positions, int n) {
   double min = -10, max = 10, delta = 1, best = 1, error = 100;
 
   for (int p = 0; p < 10; p++) {
-    printf("Determining K: (%.9, %.9, %.10f)\n", min, max, delta);
+    printf("Determining K: (%.9f, %.9f, %.9f)\n", min, max, delta);
 
     while (min < max) {
       K = min;
@@ -252,7 +251,7 @@ void determineK(Position* positions, int n) {
       if (e < error) {
         error = e;
         best = K;
-        printf("New best K of %.9, Error %.9\n", K, error);
+        printf("New best K of %.9f, Error %.9f\n", K, error);
       }
       min += delta;
     }
@@ -335,7 +334,7 @@ double sigmoid(Score score) { return 1.0 / (1.0 + exp(-K * score)); }
 
 void PrintParams(TexelParam* params, int numParams, double best, double current, int epoch) {
   printf("\n\nCurrent Values at Epoch %d:\n", epoch);
-  printf("Base: %9.8f, Diff: %9.8f, Diff: %12.8f\n\n", best, current, (best - current) * 10e6);
+  printf("Base: %9.8f, New: %9.8f, Diff: %12.8f\n\n", best, current, (best - current) * 10e6);
 
   for (int i = 0; i < numParams; i++) {
     TexelParam param = params[i];
@@ -356,7 +355,7 @@ void PrintParams(TexelParam* params, int numParams, double best, double current,
   if (fp == NULL)
     return;
 
-  fprintf(fp, "\n// Epoch: %d, Base: %9.8f, Diff: %9.8f, Diff: %12.8f\n\n", epoch, best, current,
+  fprintf(fp, "\n// Epoch: %d, Base: %9.8f, New: %9.8f, Diff: %12.8f\n\n", epoch, best, current,
           (best - current) * 10e6);
   for (int i = 0; i < numParams; i++) {
     TexelParam param = params[i];
