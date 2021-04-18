@@ -282,6 +282,14 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         continue;
     }
 
+    // iid (internal iterative deepening)
+    // if this is a pv node with no hash entry, then we need to find a good first move
+    // Calling a shallower search will force a tt entry and we probe that once done
+    if (isPV && !ttValue && !isRoot && depth > 5 && data->moves[data->ply - 1] != NULL_MOVE) {
+      Negamax(alpha, beta, depth - 2, thread, pv);
+      ttValue = TTProbe(board->zobrist);
+    }
+
     // singular extension
     // if one move is better than all the rest, then we consider this singular
     // and look at it more (extend). Singular is determined by checking all other
