@@ -34,6 +34,7 @@
 
 // Phase generation calculation is standard from CPW
 Score PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
+Score MAX_PHASE = 24;
 
 // static piece values for see and delta pruning just match EG values
 int STATIC_MATERIAL_VALUE[7] = {93, 310, 323, 548, 970, 30000, 0};
@@ -157,29 +158,19 @@ void InitPSQT() {
   }
 }
 
-// TODO: since I don't tune this, probably should just make it 24
-inline Score MaxPhase() {
-  return 4 * PHASE_MULTIPLIERS[KNIGHT_TYPE] + 4 * PHASE_MULTIPLIERS[BISHOP_TYPE] + 4 * PHASE_MULTIPLIERS[ROOK_TYPE] +
-         2 * PHASE_MULTIPLIERS[QUEEN_TYPE];
-}
-
 // game phase is remaing piece phase score / max phase score. So opening is 1, endgame is 0
 inline Score GetPhase(Board* board) {
-  Score maxP = MaxPhase();
-
   Score phase = 0;
   for (int i = KNIGHT_WHITE; i <= QUEEN_BLACK; i++)
     phase += PHASE_MULTIPLIERS[PIECE_TYPE[i]] * bits(board->pieces[i]);
 
-  phase = min(maxP, phase);
+  phase = min(MAX_PHASE, phase);
   return phase;
 }
 
 // combine a mg and eg score to a linearly tapered value
 inline Score Taper(Score mg, Score eg, Score phase) {
-  Score maxP = MaxPhase();
-
-  return (phase * mg + (maxP - phase) * eg) / maxP;
+  return (phase * mg + (MAX_PHASE - phase) * eg) / MAX_PHASE;
 }
 
 // check for all sorts of different piece keys that represent a draw
