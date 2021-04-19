@@ -240,7 +240,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       return eval;
 
     // Null move pruning
-    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta && hasNonPawn(board)) {
+    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta && HasNonPawn(board)) {
       int R = 3 + depth / 6 + min((eval - beta) / 200, 3);
       R = min(depth, R); // don't go too low
 
