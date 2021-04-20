@@ -51,7 +51,8 @@ int IsSquareAttacked(int sq, int attacker, BitBoard occupancy, Board* board);
 int IsMoveLegal(Move move, Board* board);
 int IsRepetition(Board* board);
 
-int hasNonPawn(Board* board);
+int HasNonPawn(Board* board);
+int IsOCB(Board* board);
 
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);

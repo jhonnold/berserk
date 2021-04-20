@@ -25,6 +25,7 @@ extern const BitBoard ADJACENT_FILE_MASKS[8];
 extern const BitBoard FORWARD_RANK_MASKS[2][8];
 extern const BitBoard BOARD_SIDE[8];
 extern const BitBoard MY_SIDE[2];
+extern const BitBoard DARK_SQS;
 
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL

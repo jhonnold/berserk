@@ -228,7 +228,15 @@ void PrintBoard(Board* board) {
   printf("\n\n");
 }
 
-inline int hasNonPawn(Board* board) { return (board->piecesCounts & NON_PAWN_PIECE_MASK[board->side]) != 0; }
+inline int HasNonPawn(Board* board) { return (board->piecesCounts & NON_PAWN_PIECE_MASK[board->side]) != 0; }
+
+inline int IsOCB(Board* board) {
+  BitBoard nonBishopMaterial = board->pieces[QUEEN_WHITE] | board->pieces[QUEEN_BLACK] | board->pieces[ROOK_WHITE] |
+                               board->pieces[ROOK_BLACK] | board->pieces[KNIGHT_WHITE] | board->pieces[KNIGHT_BLACK];
+
+  return !nonBishopMaterial && bits(board->pieces[BISHOP_WHITE]) == 1 && bits(board->pieces[BISHOP_BLACK]) == 1 &&
+         bits((board->pieces[BISHOP_WHITE] | board->pieces[BISHOP_BLACK]) & DARK_SQS) == 1;
+}
 
 // Check each type of piece movement from given square and see if an enemy piece of that
 // movement type is there. If so, then it's attacked

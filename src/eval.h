@@ -84,6 +84,7 @@ void EvaluateSide(Board* board, int side, EvalData* data);
 void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData);
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData);
 Score Evaluate(Board* board);
+int Scale(Board* board, int ss);
 void PrintEvaluation(Board* board);
 
 #endif
