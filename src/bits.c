@@ -52,6 +52,7 @@ const BitBoard FORWARD_RANK_MASKS[2][8] = {{
                                                RANK_1,
                                                0ULL,
                                            }};
+const BitBoard DARK_SQS = 0x55AA55AA55AA55AAULL;
 
 #ifndef POPCOUNT
 inline int bits(BitBoard bb) {
