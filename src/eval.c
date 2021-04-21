@@ -816,6 +816,74 @@ int KPKDraw(int ss, int ssKing, int wsKing, int p, int stm) {
 }
 //---
 
+Score StaticMaterialScore(int side, Board* board) {
+  Score s = 0;
+  for (int p = PAWN[side]; p <= QUEEN[side]; p += 2)
+    s += bits(board->pieces[p]) * STATIC_MATERIAL_VALUE[PIECE_TYPE[p]];
+
+  return s;
+}
+
+Score EvaluateMaterialOnlyEndgame(Board* board) {
+  Score whiteMaterial = StaticMaterialScore(WHITE, board);
+  int whitePieceCount = bits(board->occupancies[WHITE]);
+
+  Score blackMaterial = StaticMaterialScore(BLACK, board);
+  int blackPieceCount = bits(board->occupancies[BLACK]);
+
+  int ss = whiteMaterial >= blackMaterial ? WHITE : BLACK;
+
+  if (!whiteMaterial || !blackMaterial) {
+    // TODO: Clean this up - This is a repeat of KRK and KQK
+
+    // We set eval to 10000 since we now know one side is completely winning
+    // (they have to have mating material and the other side can't defend with no pieces)
+    Score eval = 10000;
+
+    int ssKingSq = lsb(board->pieces[KING[ss]]);
+    int wsKingSq = lsb(board->pieces[KING[1 - ss]]);
+
+    eval -= distance(ssKingSq, wsKingSq) * 25;
+
+    int wsKingRank = rank(wsKingSq) > 3 ? 7 - rank(wsKingSq) : rank(wsKingSq);
+    eval -= wsKingRank * 15;
+
+    int wsKingFile = file(wsKingSq) > 3 ? 7 - file(wsKingSq) : file(wsKingSq);
+    eval -= wsKingFile * 15;
+
+    return ss == board->side ? eval : -eval;
+  } else {
+    int ssMaterial = ss == WHITE ? whiteMaterial : blackMaterial;
+    int wsMaterial = ss == WHITE ? blackMaterial : whiteMaterial;
+    int ssPieceCount = ss == WHITE ? whitePieceCount : blackPieceCount;
+    int wsPieceCount = ss == WHITE ? blackPieceCount : whitePieceCount;
+
+    int materialDiff = ssMaterial - wsMaterial;
+    Score eval = materialDiff;
+
+    int ssKingSq = lsb(board->pieces[KING[ss]]);
+    int wsKingSq = lsb(board->pieces[KING[1 - ss]]);
+
+    // I keep doing this...
+    eval -= distance(ssKingSq, wsKingSq) * 25;
+
+    int wsKingRank = rank(wsKingSq) > 3 ? 7 - rank(wsKingSq) : rank(wsKingSq);
+    eval -= wsKingRank * 15;
+
+    int wsKingFile = file(wsKingSq) > 3 ? 7 - file(wsKingSq) : file(wsKingSq);
+    eval -= wsKingFile * 15;
+
+    if (ssPieceCount <= wsPieceCount + 1 && materialDiff <= STATIC_MATERIAL_VALUE[BISHOP_TYPE]) {
+      if (ssMaterial >= STATIC_MATERIAL_VALUE[ROOK_TYPE] + STATIC_MATERIAL_VALUE[BISHOP_TYPE])
+        eval /= 4;
+      else
+        eval /= 8;
+    }
+
+    return ss == board->side ? eval : -eval;
+  }
+}
+
 // Main evalution method
 Score Evaluate(Board* board) {
   if (IsMaterialDraw(board))
@@ -824,6 +892,10 @@ Score Evaluate(Board* board) {
   Score eval;
   if (bits(board->occupancies[BOTH]) == 3) {
     eval = EvaluateKXK(board);
+    if (eval != UNKNOWN)
+      return eval;
+  } else if (!(board->pieces[PAWN_WHITE] | board->pieces[PAWN_BLACK])) {
+    eval = EvaluateMaterialOnlyEndgame(board);
     if (eval != UNKNOWN)
       return eval;
   }
