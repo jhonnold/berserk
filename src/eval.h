@@ -80,10 +80,14 @@ Score Taper(Score mg, Score eg, Score phase);
 
 Score ToScore(EvalData* data, Board* board);
 int IsMaterialDraw(Board* board);
+
+Score EvaluateKXK(Board* board);
+
 void EvaluateSide(Board* board, int side, EvalData* data);
 void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData);
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData);
 Score Evaluate(Board* board);
+
 int Scale(Board* board, int ss);
 void PrintEvaluation(Board* board);
 
