@@ -32,6 +32,8 @@
 #define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
 #define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
 
+const Score UNKNOWN = INT32_MAX;
+
 // Phase generation calculation is standard from CPW
 Score PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
 Score MAX_PHASE = 24;
@@ -745,10 +747,39 @@ void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyD
   data->kingSafety[EG] += shelterScoreEg;
 }
 
+Score EvaluateKXK(Board* board) {
+  if (board->pieces[QUEEN_WHITE] | board->pieces[QUEEN_BLACK] | board->pieces[ROOK_WHITE] | board->pieces[ROOK_BLACK]) {
+    Score eval = 10000;
+    int ss = (board->pieces[QUEEN_WHITE] | board->pieces[ROOK_WHITE]) ? WHITE : BLACK;
+
+    int ssKingSq = lsb(board->pieces[KING[ss]]);
+    int wsKingSq = lsb(board->pieces[KING[1 - ss]]);
+
+    eval -= distance(ssKingSq, wsKingSq) * 25; // move king towards
+
+    int wsKingRank = rank(wsKingSq) > 3 ? 7 - rank(wsKingSq) : rank(wsKingSq);
+    eval -= wsKingRank * 15;
+
+    int wsKingFile = file(wsKingSq) > 3 ? 7 - file(wsKingSq) : file(wsKingSq);
+    eval -= wsKingFile * 15;
+
+    return ss == board->side ? eval : -eval;
+  }
+
+  return UNKNOWN;
+}
+
 // Main evalution method
 Score Evaluate(Board* board) {
   if (IsMaterialDraw(board))
     return 0;
+
+  Score eval;
+  if (bits(board->occupancies[BOTH]) == 3) {
+    eval = EvaluateKXK(board);
+    if (eval != UNKNOWN)
+      return eval;
+  }
 
   EvalData sideData;
   EvalData xsideData;
@@ -762,7 +793,7 @@ Score Evaluate(Board* board) {
   EvaluateKingSafety(board, board->side, &sideData, &xsideData);
   EvaluateKingSafety(board, board->xside, &xsideData, &sideData);
 
-  Score eval = ToScore(&sideData, board) - ToScore(&xsideData, board);
+  eval = ToScore(&sideData, board) - ToScore(&xsideData, board);
   int ss = eval > 0 ? board->side : board->xside;
   return eval * Scale(board, ss) / 100;
 }
