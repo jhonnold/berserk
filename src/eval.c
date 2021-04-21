@@ -34,6 +34,10 @@
 
 const Score UNKNOWN = INT32_MAX;
 
+uint8_t kpkResults[2 * 64 * 64 * 24 / 8] = {
+#include "kpk.h"
+};
+
 // Phase generation calculation is standard from CPW
 Score PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
 Score MAX_PHASE = 24;
@@ -764,10 +768,53 @@ Score EvaluateKXK(Board* board) {
     eval -= wsKingFile * 15;
 
     return ss == board->side ? eval : -eval;
+  } else if (board->pieces[PAWN_WHITE] | board->pieces[PAWN_BLACK]) {
+    Score eval = 9000;
+    int ss = board->pieces[PAWN_WHITE] ? WHITE : BLACK;
+
+    int ssKingSq = lsb(board->pieces[KING[ss]]);
+    int wsKingSq = lsb(board->pieces[KING[1 - ss]]);
+    int pawnSq = lsb(board->pieces[PAWN[ss]]);
+
+    if (KPKDraw(ss, ssKingSq, wsKingSq, pawnSq, board->side)) {
+      return 0;
+    } else {
+      int queenSq = ss == WHITE ? file(pawnSq) : file(pawnSq) + A1;
+
+      eval -= 10 * distance(pawnSq, queenSq);
+      eval -= distance(ssKingSq, queenSq);
+
+      return ss == board->side ? eval : -eval;
+    }
   }
 
   return UNKNOWN;
 }
+
+// The following KPK code is modified for my use from Cheng (as is the dataset)
+uint8_t GetKPKBit(int bit) { return (uint8_t)(kpkResults[bit >> 3] & (1U << (bit & 7))); }
+
+int KPKIndex(int ssKing, int wsKing, int p, int stm) {
+  int file = file(p);
+  int x = file > 3 ? 7 : 0;
+
+  ssKing ^= x;
+  wsKing ^= x;
+  p ^= x;
+  file ^= x;
+
+  int pawn = (((p & 0x38) - 8) >> 1) | file;
+
+  return ((unsigned)pawn << 13) | ((unsigned)stm << 12) | ((unsigned)wsKing << 6) | ((unsigned)ssKing);
+}
+
+int KPKDraw(int ss, int ssKing, int wsKing, int p, int stm) {
+  int x = ss == WHITE ? 0 : 0x38;
+  int idx = KPKIndex(ssKing ^ x, wsKing ^ x, p ^ x, stm ^ x);
+
+  return GetKPKBit(idx);
+}
+//---
 
 // Main evalution method
 Score Evaluate(Board* board) {

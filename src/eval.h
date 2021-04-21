@@ -88,6 +88,10 @@ void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData
 void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData);
 Score Evaluate(Board* board);
 
+uint8_t GetKPKBit(int bit);
+int KPKIndex(int ssKing, int wsKing, int p, int stm);
+int KPKDraw(int ss, int ssKing, int wsKing, int p, int stm);
+
 int Scale(Board* board, int ss);
 void PrintEvaluation(Board* board);
 
