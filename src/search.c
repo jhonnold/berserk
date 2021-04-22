@@ -150,11 +150,20 @@ void* Search(void* arg) {
         delta += delta / 2;
       }
 
+      if (mainThread) {
+        PrintInfo(pv, score, depth, thread);
+
+        // We've set a window, but score is still varying
+        if (depth >= 5 && params->timeset && abs(data->score - score) >= 25) {
+          params->timeToSpend = params->timeToSpend * 110 / 100; // 10% bump
+
+          if (params->startTime + params->timeToSpend <= params->maxTime)
+            params->endTime = params->startTime + params->timeToSpend;
+        }
+      }
+
       data->bestMove = pv->moves[0];
       data->score = score;
-
-      if (mainThread)
-        PrintInfo(pv, score, depth, thread);
     }
   }
 
