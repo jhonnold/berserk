@@ -324,21 +324,26 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // start of late move reductions
     int R = 1, score = -CHECKMATE;
-    if (depth >= 2 && numMoves > 1 && !tactical) {
+    if (depth >= 2 && numMoves > 1) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
-      if (!isPV)
-        R++;
+      if (!tactical) {
+        if (!isPV)
+          R++;
 
-      if (!improving)
-        R++;
+        if (!improving)
+          R++;
 
-      // additional reduction on historical scores
-      // counters/killers have a high score (so they get less reduction by 2)
-      // ranging from [-2, 2]
-      // 100 was picked as a mean since that's what the mean was at depth 13 for the bench
-      // TODO: Look at this more closely?
-      R -= min(2, (moveList.scores[i] - 149) / 50);
+        // additional reduction on historical scores
+        // counters/killers have a high score (so they get less reduction by 2)
+        // ranging from [-2, 2]
+        // 100 was picked as a mean since that's what the mean was at depth 13 for the bench
+        // TODO: Look at this more closely?
+        R -= min(2, (moveList.scores[i] - 149) / 50);
+      } else {
+        // reduce for all captures
+        R--;
+      }
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = min(depth - 1, max(R, 1));
