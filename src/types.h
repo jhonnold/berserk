@@ -109,6 +109,9 @@ typedef struct {
 typedef struct {
   long startTime;
   long endTime;
+  long maxTime;
+  int timeToSpend;
+
   int depth;
   int timeset;
   int movesToGo;
