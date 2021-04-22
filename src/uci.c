@@ -48,7 +48,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   params->quit = 0;
 
   char* ptrChar = in;
-  int perft = 0, movesToGo = 50, moveTime = -1, time = -1, inc = 0, depth = -1;
+  int perft = 0, movesToGo = 40, moveTime = -1, time = -1, inc = 0, depth = -1;
 
   if ((ptrChar = strstr(in, "perft")))
     perft = atoi(ptrChar + 6);

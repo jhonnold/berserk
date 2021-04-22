@@ -160,7 +160,7 @@ void* Search(void* arg) {
         if (params->timeset && depth >= 5 && abs(data->score - score) > WINDOW) {
           // the new time gains by G / 2 maxed at 25%
           int scoreChange = abs(data->score - score);
-          int percentIncrease = min(15, scoreChange / 3);
+          int percentIncrease = min(20, scoreChange / 2);
 
           // score improving isn't as bad as worse, so we cut that in half
           if (score > data->score)
