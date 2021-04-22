@@ -341,8 +341,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         // TODO: Look at this more closely?
         R -= min(2, (moveList.scores[i] - 149) / 50);
       } else {
-        if (moveList.scores[i] >= 0) // Good capture
-          R--;
+        // reduce for all captures
+        R--;
       }
 
       // prevent dropping into QS, extending, or reducing all extensions
