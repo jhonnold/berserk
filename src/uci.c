@@ -89,11 +89,10 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
       // 1 / movestogo clocktime + inc - 50ms (buffer)
       // TODO: Improve this, most likely in Search
       params->timeset = 1;
-      int timetoSpend = time / movesToGo;
-      timetoSpend += inc;
-      timetoSpend -= 50; // buffer time
-      params->timeToSpend = timetoSpend;
-      params->endTime = params->startTime + timetoSpend;
+      int timeToSpend = (time / movesToGo + inc - 50) * 3 / 4;
+
+      params->timeToSpend = timeToSpend;
+      params->endTime = params->startTime + timeToSpend;
       params->maxTime = params->startTime + time / 2 - 50;
     } else {
       params->endTime = 0;
