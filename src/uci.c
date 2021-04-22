@@ -86,12 +86,12 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     if (time != -1) {
       // Non-infinite analysis
       // Berserk has a very simple algorithm of
-      // 1 / movestogo clocktime + inc - 25ms (buffer)
+      // 1 / movestogo clocktime + inc - 50ms (buffer)
       // TODO: Improve this, most likely in Search
       params->timeset = 1;
       time /= movesToGo;
       time += inc;
-      time -= 25; // buffer time
+      time -= 50; // buffer time
       params->endTime = params->startTime + time;
     } else {
       params->endTime = 0;
