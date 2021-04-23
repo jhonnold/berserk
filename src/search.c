@@ -48,6 +48,9 @@ int SEE_PRUNE_CUTOFF = 20;
 // Delta pruning
 int DELTA_CUTOFF = 200;
 
+// base apiration window
+int WINDOW = 10;
+
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
@@ -127,7 +130,7 @@ void* Search(void* arg) {
       // Ignore aspiration windows till we're at a reasonable depth
       // aspiration windows start at 1/10th of a pawn and grows outward at 150%, utilizing
       // returned fail soft values
-      int delta = depth >= 5 ? 10 : CHECKMATE;
+      int delta = depth >= 5 ? WINDOW : CHECKMATE;
 
       alpha = max(score - delta, -CHECKMATE);
       beta = min(score + delta, CHECKMATE);
@@ -153,12 +156,23 @@ void* Search(void* arg) {
       if (mainThread) {
         PrintInfo(pv, score, depth, thread);
 
-        // We've set a window, but score is still varying
-        if (depth >= 5 && params->timeset && abs(data->score - score) >= 25) {
-          params->timeToSpend = params->timeToSpend * 110 / 100; // 10% bump
+        // score ended up outside our window
+        if (params->timeset && depth >= 5 && abs(data->score - score) > WINDOW) {
+          // the new time gains by G / 2 maxed at 25%
+          int scoreChange = abs(data->score - score);
+          int percentIncrease = min(20, scoreChange / 2);
 
-          if (params->startTime + params->timeToSpend <= params->maxTime)
+          // score improving isn't as bad as worse, so we cut that in half
+          if (score > data->score)
+            percentIncrease /= 2;
+
+          params->timeToSpend = params->timeToSpend * (100 + percentIncrease) / 100;
+
+          if (params->startTime + params->timeToSpend <= params->maxTime) {
             params->endTime = params->startTime + params->timeToSpend;
+          } else {
+            params->endTime = params->maxTime;
+          }
         }
       }
 

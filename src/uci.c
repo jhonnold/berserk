@@ -35,6 +35,8 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
+#define MOVE_BUFFER 50
+
 // uci "go" command
 void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
   in += 3;
@@ -72,52 +74,47 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   if ((ptrChar = strstr(in, "depth")))
     depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
 
+  if (perft) {
+    PerftTest(perft, board);
+    return;
+  }
+
+  params->depth = depth;
+
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
-    time = moveTime;
-    movesToGo = 1;
-  }
-
-  if (perft)
-    PerftTest(perft, board);
-  else {
-    params->depth = depth;
-
+    params->timeset = 1;
+    params->endTime = params->startTime + moveTime - MOVE_BUFFER;
+    params->maxTime = params->startTime + moveTime - MOVE_BUFFER;
+  } else {
     if (time != -1) {
-      // Non-infinite analysis
-      // Berserk has a very simple algorithm of
-      // 1 / movestogo clocktime + inc - 50ms (buffer)
-      // TODO: Improve this, most likely in Search
       params->timeset = 1;
-      int timetoSpend = time / movesToGo;
-      timetoSpend += inc;
-      timetoSpend -= 50; // buffer time
-      params->timeToSpend = timetoSpend;
-      params->endTime = params->startTime + timetoSpend;
-      params->maxTime = params->startTime + time / 2 - 50;
+      params->maxTime = params->startTime + (time + inc) / 2 - MOVE_BUFFER;
+      int timeToSpend = time / movesToGo + inc - MOVE_BUFFER;
+
+      params->timeToSpend = timeToSpend;
+      params->endTime = min(params->maxTime, params->startTime + timeToSpend);
     } else {
-      params->endTime = 0;
-      params->maxTime = 0;
-      params->timeToSpend = 0;
+      params->timeset = 0;
     }
-
-    if (depth <= 0)
-      params->depth = MAX_SEARCH_PLY - 1;
-
-    printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
-           params->timeset);
-
-    // this MUST be freed from within the search, or else massive leak
-    SearchArgs* args = malloc(sizeof(SearchArgs));
-    args->board = board;
-    args->params = params;
-    args->threads = threads;
-
-    // start the search!
-    pthread_t searchThread;
-    pthread_create(&searchThread, NULL, &UCISearch, args);
-    pthread_detach(searchThread);
   }
+
+  if (depth <= 0)
+    params->depth = MAX_SEARCH_PLY - 1;
+
+  printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
+         params->timeset);
+
+  // this MUST be freed from within the search, or else massive leak
+  SearchArgs* args = malloc(sizeof(SearchArgs));
+  args->board = board;
+  args->params = params;
+  args->threads = threads;
+
+  // start the search!
+  pthread_t searchThread;
+  pthread_create(&searchThread, NULL, &UCISearch, args);
+  pthread_detach(searchThread);
 }
 
 // uci "position" command
