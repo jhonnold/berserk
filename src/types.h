@@ -93,8 +93,8 @@ typedef struct {
   int ply;      // ply depth of active search
 
   // TODO: Put depth here as well? Just cause
-  int nodes;    // node count
-  int seldepth; // seldepth count
+  uint64_t nodes; // node count
+  int seldepth;   // seldepth count
 
   Move skipMove[MAX_SEARCH_PLY]; // moves to skip during singular search
   int evals[MAX_SEARCH_PLY];     // static evals at ply stack

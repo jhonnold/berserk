@@ -90,13 +90,13 @@ void Bench() {
 
   long startTime = GetTimeMS();
   for (int i = 0; i < 50; i++) {
-    long testStart = GetTimeMS();
+    params.startTime = GetTimeMS();
 
     ParseFen(benchmarks[i], &board);
 
     BestMove(&board, &params, threads);
 
-    times[i] = GetTimeMS() - testStart;
+    times[i] = GetTimeMS() - params.startTime;
     bestMoves[i] = threads[0].data.bestMove;
     scores[i] = threads[0].data.score;
     nodes[i] = threads[0].data.nodes;

@@ -160,7 +160,7 @@ void ParsePosition(char* in, Board* board) {
 void PrintUCIOptions() {
   printf("id name " NAME " " VERSION "\n");
   printf("id author Jay Honnold\n");
-  printf("option name Hash type spin default 32 min 4 max 4096\n");
+  printf("option name Hash type spin default 32 min 4 max 65536\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
   printf("uciok\n");
 }
@@ -225,7 +225,7 @@ void UCILoop() {
       PrintMoves(&moveList);
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
-      mb = max(4, min(4096, mb));
+      mb = max(4, min(65536, mb));
       TTInit(mb);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);

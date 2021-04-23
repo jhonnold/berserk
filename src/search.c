@@ -139,6 +139,9 @@ void* Search(void* arg) {
         // search!
         score = Negamax(alpha, beta, depth, thread, pv);
 
+        if (mainThread && ((GetTimeMS() - 10000 >= params->startTime) || (score > alpha && score < beta)))
+          PrintInfo(pv, score, depth, thread);
+
         if (score <= alpha) {
           // fail low is no bueno, so lower beta, along with alpha for our window
           beta = (alpha + beta) / 2;
@@ -154,8 +157,6 @@ void* Search(void* arg) {
       }
 
       if (mainThread) {
-        PrintInfo(pv, score, depth, thread);
-
         // score ended up outside our window
         if (params->timeset && depth >= 5 && abs(data->score - score) > WINDOW) {
           // the new time gains by G / 2 maxed at 25%
