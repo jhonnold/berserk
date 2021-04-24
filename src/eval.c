@@ -435,7 +435,7 @@ Score KingSafety(Board* board, EvalData* data, int side) {
   BitBoard opponentPawns = board->pieces[PAWN[xside]] & ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
 
   for (int file = SHELTER_STORM_FILES[file(data->kingSq[side])][0];
-       file <= SHELTER_STORM_FILES[file(data->kingSq[side])][0]; file++) {
+       file <= SHELTER_STORM_FILES[file(data->kingSq[side])][1]; file++) {
     int adjustedFile = file > 3 ? 7 - file : file;
 
     BitBoard ourPawnFile = ourPawns & FILE_MASKS[file];
@@ -653,12 +653,6 @@ Score Evaluate(Board* board) {
   Score c = PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
   Score d = Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
   Score e = KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
-
-  printf("mat    : %4d, %4d\n", scoreMG(a), scoreEG(a));
-  printf("piece  : %4d, %4d\n", scoreMG(b), scoreEG(b));
-  printf("pawn   : %4d, %4d\n", scoreMG(c), scoreEG(c));
-  printf("threats: %4d, %4d\n", scoreMG(d), scoreEG(d));
-  printf("ks     : %4d, %4d\n", scoreMG(e), scoreEG(e));
 
   s = a + b + c + d + e;
 
