@@ -148,6 +148,11 @@ void InitEvalData(EvalData* data, Board* board) {
   BitBoard whitePawnAttacks = Shift(whitePawns, NE) | Shift(whitePawns, NW);
   BitBoard blackPawnAttacks = Shift(blackPawns, SE) | Shift(blackPawns, SW);
 
+  data->allAttacks[WHITE] = data->attacks[WHITE][PAWN_TYPE] = whitePawnAttacks;
+  data->allAttacks[BLACK] = data->attacks[BLACK][PAWN_TYPE] = blackPawnAttacks;
+  data->twoAttacks[WHITE] = Shift(whitePawns, NE) & Shift(whitePawns, NW);
+  data->twoAttacks[BLACK] = Shift(blackPawns, SE) & Shift(blackPawns, SW);
+
   data->outposts[WHITE] =
       ~Fill(blackPawnAttacks, S) & (whitePawnAttacks | Shift(whitePawns | blackPawns, S)) & (RANK_4 | RANK_5 | RANK_6);
   data->outposts[BLACK] =
@@ -395,7 +400,7 @@ Score Threats(Board* board, EvalData* data, int side) {
     BitBoard threats = weak & data->attacks[side][piece];
     while (threats) {
       int sq = lsb(threats);
-      int attacked = board->squares[sq];
+      int attacked = PIECE_TYPE[board->squares[sq]];
 
       switch (piece) {
       case KNIGHT_TYPE:
@@ -643,11 +648,20 @@ Score Evaluate(Board* board) {
 
   Score s = 0;
 
-  s += MaterialValue(board, WHITE) - MaterialValue(board, BLACK);
-  s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
-  s += PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
-  s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
-  s += KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
+  Score a = MaterialValue(board, WHITE) - MaterialValue(board, BLACK);
+  Score b = PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
+  Score c = PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
+  Score d = Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
+  Score e = KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
+
+  printf("mat    : %4d, %4d\n", scoreMG(a), scoreEG(a));
+  printf("piece  : %4d, %4d\n", scoreMG(b), scoreEG(b));
+  printf("pawn   : %4d, %4d\n", scoreMG(c), scoreEG(c));
+  printf("threats: %4d, %4d\n", scoreMG(d), scoreEG(d));
+  printf("ks     : %4d, %4d\n", scoreMG(e), scoreEG(e));
+
+  s = a + b + c + d + e;
+
   s += board->side == WHITE ? TEMPO : -TEMPO;
 
   int phase = GetPhase(board);
