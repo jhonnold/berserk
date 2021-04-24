@@ -210,10 +210,11 @@ void UCILoop() {
       exit(0);
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
-    } else if (!strncmp(in, "eval", 4)) {
-      PrintEvaluation(&board);
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
+    } else if (!strncmp(in, "eval", 4)) {
+      Score s = Evaluate(&board);
+      printf("Score: %dcp\n", s);
     } else if (!strncmp(in, "moves", 5)) {
       // Print possible moves. If a search has been run and stopped, it will
       // print the moves in the order in which they would be searched on the

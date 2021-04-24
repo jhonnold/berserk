@@ -238,6 +238,25 @@ inline int IsOCB(Board* board) {
          bits((board->pieces[BISHOP_WHITE] | board->pieces[BISHOP_BLACK]) & DARK_SQS) == 1;
 }
 
+inline int IsMaterialDraw(Board* board) {
+  switch (board->piecesCounts) {
+  case 0x0:      // Kk
+  case 0x100:    // KNk
+  case 0x200:    // KNNk
+  case 0x1000:   // Kkn
+  case 0x2000:   // Kknn
+  case 0x1100:   // KNkn
+  case 0x10000:  // KBk
+  case 0x100000: // Kkb
+  case 0x11000:  // KBkn
+  case 0x100100: // KNkb
+  case 0x110000: // KBkb
+    return 1;
+  default:
+    return 0;
+  }
+}
+
 // Check each type of piece movement from given square and see if an enemy piece of that
 // movement type is there. If so, then it's attacked
 inline int IsSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* board) {

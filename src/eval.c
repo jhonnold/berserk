@@ -31,63 +31,61 @@
 #define S(mg, eg) (makeScore((mg), (eg)))
 #define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
 #define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
+#define psqtIdx(sq) ((rank((sq)) << 2) + (file((sq)) > 3 ? file((sq)) ^ 7 : file((sq))))
 
 const Score UNKNOWN = INT32_MAX;
-
-uint8_t kpkResults[2 * 64 * 64 * 24 / 8] = {
+const int SHELTER_STORM_FILES[8][2] = {{0, 2}, {0, 2}, {1, 3}, {2, 4}, {3, 5}, {4, 6}, {5, 7}, {5, 7}};
+const uint8_t kpkResults[2 * 64 * 64 * 24 / 8] = {
 #include "kpk.h"
 };
 
 // Phase generation calculation is standard from CPW
-Score PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
-Score MAX_PHASE = 24;
+const Score PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
+const Score MAX_PHASE = 24;
 
-// static piece values for see and delta pruning just match EG values
-int STATIC_MATERIAL_VALUE[7] = {93, 310, 323, 548, 970, 30000, 0};
+const int STATIC_MATERIAL_VALUE[7] = {93, 310, 323, 548, 970, 30000, 0};
 
 // clang-format off
-TScore MATERIAL_VALUES[7] = {{60, 93}, {310, 310}, {323, 323}, {435, 548}, {910, 970}, {30000, 30000}, {0, 0}};
+Score MATERIAL_VALUES[7] = {S(60, 93), S(310, 310), S(323, 323), S(435, 548), S(910, 970), S(0, 0), S(0, 0)};
 
-TScore PAWN_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {55,130}, {21,145}, {59,127}, {82,117}, {2,13}, {-6,12}, {21,-9}, {21,-18}, {-14,0}, {-2,-5}, {-3,-9}, {13,-11}, {-17,-8}, {-13,-6}, {-1,-8}, {4,-4}, {-16,-10}, {4,-11}, {-3,-5}, {7,-1}, {-15,-10}, {-2,-11}, {-11,-1}, {2,7}, {0,0}, {0,0}, {0,0}, {0,0}};
-TScore KNIGHT_PSQT[32] = {{-75,-61}, {-26,-31}, {-25,-19}, {14,-20}, {0,-24}, {1,-5}, {36,-14}, {28,-7}, {15,-25}, {8,-5}, {17,5}, {37,-5}, {22,-8}, {12,-3}, {24,1}, {30,3}, {21,-4}, {24,-7}, {26,3}, {28,6}, {5,-5}, {17,-6}, {13,0}, {24,9}, {15,7}, {20,-6}, {14,-2}, {18,0}, {-4,2}, {8,-6}, {14,-3}, {17,2}};
-TScore BISHOP_PSQT[32] = {{-29,-5}, {-23,0}, {-67,4}, {-78,6}, {-21,-5}, {-26,0}, {-13,0}, {-8,-4}, {-12,-4}, {-19,-4}, {-8,-4}, {-1,-9}, {-28,1}, {-6,-6}, {-8,-4}, {4,-3}, {2,-11}, {-14,-7}, {-9,-1}, {0,-5}, {-6,-5}, {6,0}, {-3,1}, {-4,5}, {3,-8}, {9,-8}, {2,-9}, {-10,2}, {0,-7}, {3,-4}, {-6,2}, {-7,1}};
-TScore ROOK_PSQT[32] = {{10,18}, {5,21}, {-3,28}, {-15,30}, {13,0}, {6,10}, {22,5}, {23,0}, {3,9}, {38,4}, {35,6}, {36,1}, {-2,15}, {9,11}, {24,9}, {21,8}, {-4,13}, {6,8}, {1,15}, {8,13}, {-3,9}, {9,3}, {10,8}, {9,8}, {-3,13}, {8,6}, {14,6}, {15,8}, {10,5}, {7,6}, {9,7}, {14,3}};
-TScore QUEEN_PSQT[32] = {{-42,3}, {-33,1}, {-4,-1}, {-17,21}, {-69,38}, {-92,66}, {-72,81}, {-71,61}, {-55,24}, {-61,56}, {-62,62}, {-57,67}, {-72,65}, {-68,79}, {-68,72}, {-75,92}, {-66,59}, {-67,74}, {-72,80}, {-77,96}, {-68,53}, {-62,54}, {-71,71}, {-71,65}, {-63,29}, {-58,17}, {-60,34}, {-61,45}, {-58,13}, {-72,30}, {-73,30}, {-67,27}};
-TScore KING_PSQT[32] = {{-103,-162}, {38,-131}, {12,-104}, {-41,-102}, {0,-115}, {82,-89}, {80,-83}, {77,-91}, {6,-113}, {128,-101}, {108,-90}, {38,-84}, {-51,-106}, {62,-100}, {17,-81}, {-25,-74}, {-96,-98}, {-2,-96}, {1,-85}, {-34,-78}, {-50,-104}, {-5,-97}, {0,-92}, {-10,-87}, {-60,-112}, {-48,-97}, {-49,-87}, {-66,-83}, {-64,-140}, {-58,-117}, {-52,-103}, {-55,-106}};
-TScore BISHOP_PAIR = {22,43};
-TScore BISHOP_TRAPPED = {-116,-79};
-TScore BISHOP_POST_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {15,10}, {21,12}, {24,21}, {23,10}, {13,10}, {23,17}, {23,14}, {23,14}, {2,13}, {21,16}, {22,12}, {23,20}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}};
-TScore KNIGHT_POST_PSQT[32] = {{0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,12}, {35,4}, {34,9}, {26,27}, {22,5}, {44,15}, {37,23}, {44,24}, {22,1}, {34,12}, {24,18}, {25,26}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}};
-TScore KNIGHT_OUTPOST_REACHABLE = {4,14};
-TScore BISHOP_OUTPOST_REACHABLE = {4,4};
-TScore KNIGHT_MOBILITIES[9] = {{-95,-71}, {-76,-30}, {-64,-6}, {-56,2}, {-47,7}, {-42,11}, {-36,12}, {-30,9}, {-25,1}};
-TScore BISHOP_MOBILITIES[14] = {{-62,-43}, {-48,-30}, {-39,-18}, {-32,-3}, {-23,4}, {-18,11}, {-16,15}, {-14,18}, {-12,21}, {-11,24}, {-6,20}, {7,21}, {11,29}, {12,26}};
-TScore ROOK_MOBILITIES[15] = {{-90,-120}, {-69,-32}, {-60,-17}, {-54,-20}, {-57,-4}, {-57,3}, {-60,9}, {-57,9}, {-52,10}, {-50,14}, {-47,16}, {-48,18}, {-47,22}, {-42,22}, {-32,17}};
-TScore QUEEN_MOBILITIES[28] = {{-10,0}, {-131,-58}, {-114,-192}, {-119,-90}, {-119,23}, {-119,40}, {-121,64}, {-118,76}, {-118,92}, {-115,92}, {-114,96}, {-112,99}, {-112,101}, {-110,100}, {-109,104}, {-106,95}, {-108,94}, {-106,91}, {-108,82}, {-99,67}, {-88,42}, {-76,23}, {-50,-25}, {-37,-49}, {2,-100}, {16,-124}, {-44,-84}, {-12,-130}};
-TScore DOUBLED_PAWN = {-2,-15};
-TScore OPPOSED_ISOLATED_PAWN = {-9,-8};
-TScore OPEN_ISOLATED_PAWN = {-14,-7};
-TScore BACKWARDS_PAWN = {-10,-8};
-TScore CONNECTED_PAWN[8] = {{0,0}, {57,6}, {24,13}, {10,8}, {4,2}, {0,1}, {0,0}, {0,0}};
-TScore PASSED_PAWN[8] = {{0,0}, {33,93}, {25,153}, {13,86}, {2,46}, {3,28}, {6,25}, {0,0}};
-TScore PASSED_PAWN_ADVANCE_DEFENDED = {17,18};
-TScore PASSED_PAWN_EDGE_DISTANCE = {-5,-8};
-TScore PASSED_PAWN_KING_PROXIMITY = {-4,18};
-TScore ROOK_OPEN_FILE = {19,10};
-TScore ROOK_SEMI_OPEN = {2,6};
-TScore ROOK_SEVENTH_RANK = {0,8};
-TScore ROOK_OPPOSITE_KING = {22,-9};
-TScore ROOK_ADJACENT_KING = {6,-19};
-TScore ROOK_TRAPPED = {-42,-12};
-TScore KNIGHT_THREATS[6] = {{0,18}, {-1,8}, {34,28}, {65,6}, {43,-40}, {132,18}};
-TScore BISHOP_THREATS[6] = {{2,17}, {24,32}, {11,7}, {45,15}, {47,66}, {98,72}};
-TScore ROOK_THREATS[6] = {{2,23}, {23,29}, {26,36}, {-1,27}, {69,17}, {122,26}};
-TScore KING_THREATS[6] = {{13,52}, {22,41}, {5,30}, {32,17}, {-135,-134}, {0,0}};
-TScore TEMPO = {21,0};
+Score PAWN_PSQT[32] = {S(0,0), S(0,0), S(0,0), S(0,0), S(55,130), S(21,145), S(59,127), S(82,117), S(2,13), S(-6,12), S(21,-9), S(21,-18), S(-14,0), S(-2,-5), S(-3,-9), S(13,-11), S(-17,-8), S(-13,-6), S(-1,-8), S(4,-4), S(-16,-10), S(4,-11), S(-3,-5), S(7,-1), S(-15,-10), S(-2,-11), S(-11,-1), S(2,7), S(0,0), S(0,0), S(0,0), S(0,0)};
+Score KNIGHT_PSQT[32] = {S(-75,-61), S(-26,-31), S(-25,-19), S(14,-20), S(0,-24), S(1,-5), S(36,-14), S(28,-7), S(15,-25), S(8,-5), S(17,5), S(37,-5), S(22,-8), S(12,-3), S(24,1), S(30,3), S(21,-4), S(24,-7), S(26,3), S(28,6), S(5,-5), S(17,-6), S(13,0), S(24,9), S(15,7), S(20,-6), S(14,-2), S(18,0), S(-4,2), S(8,-6), S(14,-3), S(17,2)};
+Score BISHOP_PSQT[32] = {S(-29,-5), S(-23,0), S(-67,4), S(-78,6), S(-21,-5), S(-26,0), S(-13,0), S(-8,-4), S(-12,-4), S(-19,-4), S(-8,-4), S(-1,-9), S(-28,1), S(-6,-6), S(-8,-4), S(4,-3), S(2,-11), S(-14,-7), S(-9,-1), S(0,-5), S(-6,-5), S(6,0), S(-3,1), S(-4,5), S(3,-8), S(9,-8), S(2,-9), S(-10,2), S(0,-7), S(3,-4), S(-6,2), S(-7,1)};
+Score ROOK_PSQT[32] = {S(10,18), S(5,21), S(-3,28), S(-15,30), S(13,0), S(6,10), S(22,5), S(23,0), S(3,9), S(38,4), S(35,6), S(36,1), S(-2,15), S(9,11), S(24,9), S(21,8), S(-4,13), S(6,8), S(1,15), S(8,13), S(-3,9), S(9,3), S(10,8), S(9,8), S(-3,13), S(8,6), S(14,6), S(15,8), S(10,5), S(7,6), S(9,7), S(14,3)};
+Score QUEEN_PSQT[32] = {S(-42,3), S(-33,1), S(-4,-1), S(-17,21), S(-69,38), S(-92,66), S(-72,81), S(-71,61), S(-55,24), S(-61,56), S(-62,62), S(-57,67), S(-72,65), S(-68,79), S(-68,72), S(-75,92), S(-66,59), S(-67,74), S(-72,80), S(-77,96), S(-68,53), S(-62,54), S(-71,71), S(-71,65), S(-63,29), S(-58,17), S(-60,34), S(-61,45), S(-58,13), S(-72,30), S(-73,30), S(-67,27)};
+Score KING_PSQT[32] = {S(-103,-162), S(38,-131), S(12,-104), S(-41,-102), S(0,-115), S(82,-89), S(80,-83), S(77,-91), S(6,-113), S(128,-101), S(108,-90), S(38,-84), S(-51,-106), S(62,-100), S(17,-81), S(-25,-74), S(-96,-98), S(-2,-96), S(1,-85), S(-34,-78), S(-50,-104), S(-5,-97), S(0,-92), S(-10,-87), S(-60,-112), S(-48,-97), S(-49,-87), S(-66,-83), S(-64,-140), S(-58,-117), S(-52,-103), S(-55,-106)};
+Score BISHOP_PAIR = S(22,43);
+Score BISHOP_TRAPPED = S(-116,-79);
+Score BISHOP_POST_PSQT[32] = {S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(15,10), S(21,12), S(24,21), S(23,10), S(13,10), S(23,17), S(23,14), S(23,14), S(2,13), S(21,16), S(22,12), S(23,20), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0)};
+Score KNIGHT_POST_PSQT[32] = {S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,12), S(35,4), S(34,9), S(26,27), S(22,5), S(44,15), S(37,23), S(44,24), S(22,1), S(34,12), S(24,18), S(25,26), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0), S(0,0)};
+Score KNIGHT_OUTPOST_REACHABLE = S(4,14);
+Score BISHOP_OUTPOST_REACHABLE = S(4,4);
+Score KNIGHT_MOBILITIES[9] = {S(-95,-71), S(-76,-30), S(-64,-6), S(-56,2), S(-47,7), S(-42,11), S(-36,12), S(-30,9), S(-25,1)};
+Score BISHOP_MOBILITIES[14] = {S(-62,-43), S(-48,-30), S(-39,-18), S(-32,-3), S(-23,4), S(-18,11), S(-16,15), S(-14,18), S(-12,21), S(-11,24), S(-6,20), S(7,21), S(11,29), S(12,26)};
+Score ROOK_MOBILITIES[15] = {S(-90,-120), S(-69,-32), S(-60,-17), S(-54,-20), S(-57,-4), S(-57,3), S(-60,9), S(-57,9), S(-52,10), S(-50,14), S(-47,16), S(-48,18), S(-47,22), S(-42,22), S(-32,17)};
+Score QUEEN_MOBILITIES[28] = {S(-10,0), S(-131,-58), S(-114,-192), S(-119,-90), S(-119,23), S(-119,40), S(-121,64), S(-118,76), S(-118,92), S(-115,92), S(-114,96), S(-112,99), S(-112,101), S(-110,100), S(-109,104), S(-106,95), S(-108,94), S(-106,91), S(-108,82), S(-99,67), S(-88,42), S(-76,23), S(-50,-25), S(-37,-49), S(2,-100), S(16,-124), S(-44,-84), S(-12,-130)};
+Score DOUBLED_PAWN = S(-2,-15);
+Score OPPOSED_ISOLATED_PAWN = S(-9,-8);
+Score OPEN_ISOLATED_PAWN = S(-14,-7);
+Score BACKWARDS_PAWN = S(-10,-8);
+Score CONNECTED_PAWN[8] = {S(0,0), S(57,6), S(24,13), S(10,8), S(4,2), S(0,1), S(0,0), S(0,0)};
+Score PASSED_PAWN[8] = {S(0,0), S(33,93), S(25,153), S(13,86), S(2,46), S(3,28), S(6,25), S(0,0)};
+Score PASSED_PAWN_ADVANCE_DEFENDED = S(17,18);
+Score PASSED_PAWN_EDGE_DISTANCE = S(-5,-8);
+Score PASSED_PAWN_KING_PROXIMITY = S(-4,18);
+Score ROOK_OPEN_FILE = S(19,10);
+Score ROOK_SEMI_OPEN = S(2,6);
+Score ROOK_SEVENTH_RANK = S(0,8);
+Score ROOK_OPPOSITE_KING = S(22,-9);
+Score ROOK_ADJACENT_KING = S(6,-19);
+Score ROOK_TRAPPED = S(-42,-12);
+Score KNIGHT_THREATS[6] = {S(0,18), S(-1,8), S(34,28), S(65,6), S(43,-40), S(132,18)};
+Score BISHOP_THREATS[6] = {S(2,17), S(24,32), S(11,7), S(45,15), S(47,66), S(98,72)};
+Score ROOK_THREATS[6] = {S(2,23), S(23,29), S(26,36), S(-1,27), S(69,17), S(122,26)};
+Score KING_THREATS[6] = {S(13,52), S(22,41), S(5,30), S(32,17), S(-135,-134), S(0,0)};
+Score TEMPO = S(21,0);
 
 // clang-format on
-
-const int SHELTER_STORM_FILES[8][2] = {{0, 2}, {0, 2}, {1, 3}, {2, 4}, {3, 5}, {4, 6}, {5, 7}, {5, 7}};
 
 Score PAWN_SHELTER[4][8] = {
     {-2, 12, 12, 15, 22, 38, 34, 0},
@@ -103,11 +101,11 @@ Score PAWN_STORM[4][8] = {
     {6, 12, 6, -2, 0, -45, 5, 0},
 };
 
-TScore BLOCKED_PAWN_STORM[8] = {
-    {0}, {0}, {2, -2}, {2, -2}, {2, -4}, {-31, -32}, {0}, {0},
+Score BLOCKED_PAWN_STORM[8] = {
+    S(0, 0), S(0, 0), S(2, -2), S(2, -2), S(2, -4), S(-31, -32), S(0, 0), S(0, 0),
 };
 
-TScore KS_KING_FILE[4] = {{9, -4}, {4, 0}, {0, 0}, {-4, 2}};
+Score KS_KING_FILE[4] = {S(9, -4), S(4, 0), S(0, 0), S(-4, 2)};
 
 Score KS_ATTACKER_WEIGHTS[5] = {0, 28, 18, 15, 4};
 Score KS_ATTACK = 24;
@@ -117,55 +115,24 @@ Score KS_UNSAFE_CHECK = 51;
 Score KS_ENEMY_QUEEN = 300;
 Score KS_KNIGHT_DEFENSE = 20;
 
-Score* PSQT[12][64];
-Score* KNIGHT_POSTS[64];
-Score* BISHOP_POSTS[64];
+Score PSQT[12][64];
+Score KNIGHT_POSTS[2][64];
+Score BISHOP_POSTS[2][64];
 
-// reflect the PSQT for fast lookups
 void InitPSQT() {
-  for (int sq = 0; sq < 32; sq++) {
-    int r = sq / 4;
-    int f = sq % 4;
+  for (int sq = 0; sq < 64; sq++) {
+    PSQT[PAWN_WHITE][sq] = PSQT[PAWN_BLACK][MIRROR[sq]] = PAWN_PSQT[psqtIdx(sq)] + MATERIAL_VALUES[PAWN_TYPE];
+    PSQT[KNIGHT_WHITE][sq] = PSQT[KNIGHT_BLACK][MIRROR[sq]] = KNIGHT_PSQT[psqtIdx(sq)] + MATERIAL_VALUES[KNIGHT_TYPE];
+    PSQT[BISHOP_WHITE][sq] = PSQT[BISHOP_BLACK][MIRROR[sq]] = BISHOP_PSQT[psqtIdx(sq)] + MATERIAL_VALUES[BISHOP_TYPE];
+    PSQT[ROOK_WHITE][sq] = PSQT[ROOK_BLACK][MIRROR[sq]] = ROOK_PSQT[psqtIdx(sq)] + MATERIAL_VALUES[ROOK_TYPE];
+    PSQT[QUEEN_WHITE][sq] = PSQT[QUEEN_BLACK][MIRROR[sq]] = QUEEN_PSQT[psqtIdx(sq)] + MATERIAL_VALUES[QUEEN_TYPE];
+    PSQT[KING_WHITE][sq] = PSQT[KING_BLACK][MIRROR[sq]] = KING_PSQT[psqtIdx(sq)];
 
-    PSQT[PAWN[WHITE]][r * 8 + f] = PAWN_PSQT[sq];
-    PSQT[PAWN[WHITE]][r * 8 + (7 - f)] = PAWN_PSQT[sq];
-    PSQT[PAWN[BLACK]][MIRROR[r * 8 + f]] = PAWN_PSQT[sq];
-    PSQT[PAWN[BLACK]][MIRROR[r * 8 + (7 - f)]] = PAWN_PSQT[sq];
-
-    PSQT[KNIGHT[WHITE]][r * 8 + f] = KNIGHT_PSQT[sq];
-    PSQT[KNIGHT[WHITE]][r * 8 + (7 - f)] = KNIGHT_PSQT[sq];
-    PSQT[KNIGHT[BLACK]][MIRROR[r * 8 + f]] = KNIGHT_PSQT[sq];
-    PSQT[KNIGHT[BLACK]][MIRROR[r * 8 + (7 - f)]] = KNIGHT_PSQT[sq];
-
-    PSQT[BISHOP[WHITE]][r * 8 + f] = BISHOP_PSQT[sq];
-    PSQT[BISHOP[WHITE]][r * 8 + (7 - f)] = BISHOP_PSQT[sq];
-    PSQT[BISHOP[BLACK]][MIRROR[r * 8 + f]] = BISHOP_PSQT[sq];
-    PSQT[BISHOP[BLACK]][MIRROR[r * 8 + (7 - f)]] = BISHOP_PSQT[sq];
-
-    PSQT[ROOK[WHITE]][r * 8 + f] = ROOK_PSQT[sq];
-    PSQT[ROOK[WHITE]][r * 8 + (7 - f)] = ROOK_PSQT[sq];
-    PSQT[ROOK[BLACK]][MIRROR[r * 8 + f]] = ROOK_PSQT[sq];
-    PSQT[ROOK[BLACK]][MIRROR[r * 8 + (7 - f)]] = ROOK_PSQT[sq];
-
-    PSQT[QUEEN[WHITE]][r * 8 + f] = QUEEN_PSQT[sq];
-    PSQT[QUEEN[WHITE]][r * 8 + (7 - f)] = QUEEN_PSQT[sq];
-    PSQT[QUEEN[BLACK]][MIRROR[r * 8 + f]] = QUEEN_PSQT[sq];
-    PSQT[QUEEN[BLACK]][MIRROR[r * 8 + (7 - f)]] = QUEEN_PSQT[sq];
-
-    PSQT[KING[WHITE]][r * 8 + f] = KING_PSQT[sq];
-    PSQT[KING[WHITE]][r * 8 + (7 - f)] = KING_PSQT[sq];
-    PSQT[KING[BLACK]][MIRROR[r * 8 + f]] = KING_PSQT[sq];
-    PSQT[KING[BLACK]][MIRROR[r * 8 + (7 - f)]] = KING_PSQT[sq];
-
-    KNIGHT_POSTS[r * 8 + f] = KNIGHT_POST_PSQT[sq];
-    KNIGHT_POSTS[r * 8 + (7 - f)] = KNIGHT_POST_PSQT[sq];
-
-    BISHOP_POSTS[r * 8 + f] = BISHOP_POST_PSQT[sq];
-    BISHOP_POSTS[r * 8 + (7 - f)] = BISHOP_POST_PSQT[sq];
+    KNIGHT_POSTS[WHITE][sq] = KNIGHT_POSTS[BLACK][MIRROR[sq]] = KNIGHT_POST_PSQT[psqtIdx(sq)];
+    BISHOP_POSTS[WHITE][sq] = BISHOP_POSTS[BLACK][MIRROR[sq]] = BISHOP_POST_PSQT[psqtIdx(sq)];
   }
 }
 
-// game phase is remaing piece phase score / max phase score. So opening is 1, endgame is 0
 inline Score GetPhase(Board* board) {
   Score phase = 0;
   for (int i = KNIGHT_WHITE; i <= QUEEN_BLACK; i++)
@@ -175,580 +142,351 @@ inline Score GetPhase(Board* board) {
   return phase;
 }
 
-// combine a mg and eg score to a linearly tapered value
-inline Score Taper(Score mg, Score eg, Score phase) { return (phase * mg + (MAX_PHASE - phase) * eg) / MAX_PHASE; }
+void InitEvalData(EvalData* data, Board* board) {
+  BitBoard whitePawns = board->pieces[PAWN_WHITE];
+  BitBoard blackPawns = board->pieces[PAWN_BLACK];
+  BitBoard whitePawnAttacks = Shift(whitePawns, NE) | Shift(whitePawns, NW);
+  BitBoard blackPawnAttacks = Shift(blackPawns, SE) | Shift(blackPawns, SW);
 
-// check for all sorts of different piece keys that represent a draw
-// TODO: Why doesn't my eval do this as well?
-inline int IsMaterialDraw(Board* board) {
-  switch (board->piecesCounts) {
-  case 0x0:      // Kk
-  case 0x100:    // KNk
-  case 0x200:    // KNNk
-  case 0x1000:   // Kkn
-  case 0x2000:   // Kknn
-  case 0x1100:   // KNkn
-  case 0x10000:  // KBk
-  case 0x100000: // Kkb
-  case 0x11000:  // KBkn
-  case 0x100100: // KNkb
-  case 0x110000: // KBkb
-    return 1;
-  default:
-    return 0;
-  }
+  data->outposts[WHITE] =
+      ~Fill(blackPawnAttacks, S) & (whitePawnAttacks | Shift(whitePawns | blackPawns, S)) & (RANK_4 | RANK_5 | RANK_6);
+  data->outposts[BLACK] =
+      ~Fill(whitePawnAttacks, N) & (blackPawnAttacks | Shift(whitePawns | blackPawns, N)) & (RANK_5 | RANK_4 | RANK_3);
+
+  BitBoard inTheWayWhitePawns = (Shift(board->occupancies[BOTH], S) | RANK_2 | RANK_3) & whitePawns;
+  BitBoard inTheWayBlackPawns = (Shift(board->occupancies[BOTH], N) | RANK_7 | RANK_6) & blackPawns;
+
+  data->mobilitySquares[WHITE] = ~(inTheWayWhitePawns | blackPawnAttacks);
+  data->mobilitySquares[BLACK] = ~(inTheWayBlackPawns | whitePawnAttacks);
+
+  data->kingSq[WHITE] = lsb(board->pieces[KING_WHITE]);
+  data->kingSq[BLACK] = lsb(board->pieces[KING_BLACK]);
+
+  data->kingArea[WHITE] = GetKingAttacks(data->kingSq[WHITE]);
+  data->kingArea[BLACK] = GetKingAttacks(data->kingSq[BLACK]);
 }
 
-void EvaluateSide(Board* board, int side, EvalData* data) {
-  // This is the most basic portion of Berserk's evalution
-  // It calculates material values, piece bonuses, mobility, and special pawn bonuses
-  // It is also REQUIRED TO COME FIRST - the data it builds are used by later methods
-  // within the evaluation
+Score MaterialValue(Board* board, int side) {
+  Score s = 0;
 
-  // Just make sure everything is 0
-  data->material[MG] = 0;
-  data->material[EG] = 0;
-  data->pawns[MG] = 0;
-  data->pawns[EG] = 0;
-  data->knights[MG] = 0;
-  data->knights[EG] = 0;
-  data->bishops[MG] = 0;
-  data->bishops[EG] = 0;
-  data->rooks[MG] = 0;
-  data->rooks[EG] = 0;
-  data->queens[MG] = 0;
-  data->queens[EG] = 0;
-  data->kings[MG] = 0;
-  data->kings[EG] = 0;
-  data->mobility[MG] = 0;
-  data->mobility[EG] = 0;
-  data->tempo[MG] = 0;
-  data->tempo[EG] = 0;
+  for (int pc = PAWN[side]; pc <= KING[side]; pc += 2) {
+    BitBoard pieces = board->pieces[pc];
 
-  data->attacks2 = 0;
-  data->allAttacks = 0;
-  data->attackCount = 0;
-  data->attackWeight = 0;
-  data->attackers = 0;
-  memset(data->attacks, 0, sizeof(data->attacks));
-
-  int xside = 1 - side;
-
-  // Tempo score if it's your turn to move
-  if (side == board->side) {
-    data->tempo[MG] += TEMPO[MG];
-    data->tempo[EG] += TEMPO[EG];
+    while (pieces) {
+      s += PSQT[pc][lsb(pieces)];
+      popLsb(pieces);
+    }
   }
 
-  // Random utility stuff
+  if (bits(board->pieces[BISHOP[side]]) > 1)
+    s += BISHOP_PAIR;
+
+  return s;
+}
+
+Score PieceEval(Board* board, EvalData* data, int side) {
+  Score s = 0;
+
+  int xside = side ^ 1;
+  BitBoard enemyKingArea = data->kingArea[xside];
+  BitBoard mob = data->mobilitySquares[side];
+  BitBoard outposts = data->outposts[side];
   BitBoard myPawns = board->pieces[PAWN[side]];
   BitBoard opponentPawns = board->pieces[PAWN[xside]];
 
-  BitBoard pawnAttacks = Shift(myPawns, PAWN_DIRECTIONS[side] + E) | Shift(myPawns, PAWN_DIRECTIONS[side] + W);
-  BitBoard oppoPawnAttacks =
-      Shift(opponentPawns, PAWN_DIRECTIONS[xside] + E) | Shift(opponentPawns, PAWN_DIRECTIONS[xside] + W);
+  for (int p = KNIGHT[side]; p <= KING[side]; p += 2) {
+    BitBoard pieces = board->pieces[p];
+    int pieceType = PIECE_TYPE[p];
 
-  // used in combination with mobility
-  BitBoard myBlockedAndHomePawns =
-      (Shift(board->occupancies[BOTH], PAWN_DIRECTIONS[xside]) | HOME_RANKS[side] | THIRD_RANKS[side]) &
-      board->pieces[PAWN[side]];
+    while (pieces) {
+      BitBoard bb = pieces & -pieces;
+      int sq = lsb(pieces);
 
-  int kingSq = lsb(board->pieces[KING[side]]);
+      BitBoard movement = EMPTY;
+      switch (pieceType) {
+      case KNIGHT_TYPE:
+        movement = GetKnightAttacks(sq);
+        s += KNIGHT_MOBILITIES[bits(movement & mob)];
+        break;
+      case BISHOP_TYPE:
+        movement = GetBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
+        s += BISHOP_MOBILITIES[bits(movement & mob)];
+        break;
+      case ROOK_TYPE:
+        movement =
+            GetRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[ROOK[side]] ^ board->pieces[QUEEN[side]]);
+        s += ROOK_MOBILITIES[bits(movement & mob)];
+        break;
+      case QUEEN_TYPE:
+        movement = GetQueenAttacks(sq, board->occupancies[BOTH]);
+        s += QUEEN_MOBILITIES[bits(movement & mob)];
+        break;
+      case KING_TYPE:
+        movement = GetKingAttacks(sq) & ~enemyKingArea;
+      }
 
-  // king area required for properly building attack data
-  int enemyKingSq = lsb(board->pieces[KING[xside]]);
-  BitBoard enemyKingArea = GetKingAttacks(enemyKingSq);
+      data->twoAttacks[side] |= (movement & data->allAttacks[side]);
+      data->attacks[side][pieceType] |= movement;
+      data->allAttacks[side] |= movement;
 
-  // Initial attack stuff from pawns (pawn eval done elsewhere)
-  data->attacks[PAWN_TYPE] = pawnAttacks;
-  data->allAttacks = pawnAttacks;
-  data->attacks2 = Shift(myPawns, PAWN_DIRECTIONS[side] + E) & Shift(myPawns, PAWN_DIRECTIONS[side] + W);
+      if (movement & enemyKingArea) {
+        data->ksAttackWeight[side] += KS_ATTACKER_WEIGHTS[pieceType];
+        data->ksSqAttackCount[side] += bits(movement & enemyKingArea);
+        data->ksAttackersCount[side]++;
+      }
 
-  // Outposts are determined as squares that are on the 4/5/6 rank (side relative), can't be attacked by
-  // an enemy pawn, and is either defended by a pawn, in front of an enemy pawn, or behind ally pawn
-  BitBoard outposts = ~Fill(oppoPawnAttacks, PAWN_DIRECTIONS[xside]) &
-                      (pawnAttacks | Shift(myPawns | opponentPawns, PAWN_DIRECTIONS[xside])) &
-                      (RANK_4 | RANK_5 | THIRD_RANKS[xside]);
-  // KNIGHTS
-  for (BitBoard knights = board->pieces[KNIGHT[side]]; knights; popLsb(knights)) {
-    int sq = lsb(knights);
-    BitBoard sqBb = knights & -knights;
+      if (pieceType == KNIGHT_TYPE) {
+        if (outposts & bb) {
+          s += KNIGHT_POSTS[side][sq];
+        } else if (movement & outposts) {
+          s += KNIGHT_OUTPOST_REACHABLE;
+        }
+      } else if (pieceType == BISHOP_TYPE) {
+        if (outposts & bb) {
+          s += BISHOP_POSTS[side][sq];
+        } else if (movement & outposts) {
+          s += BISHOP_OUTPOST_REACHABLE;
+        }
 
-    data->material[MG] += MATERIAL_VALUES[KNIGHT_TYPE][MG];
-    data->material[EG] += MATERIAL_VALUES[KNIGHT_TYPE][EG];
-    data->knights[MG] += PSQT[KNIGHT[side]][sq][MG];
-    data->knights[EG] += PSQT[KNIGHT[side]][sq][EG];
+        if (side == WHITE) {
+          switch (sq) {
+          case B8:
+          case A7:
+            if (subset(0x20400ULL, board->pieces[PAWN_BLACK]))
+              s += BISHOP_TRAPPED;
+            break;
+          case G8:
+          case H7:
+            if (subset(0x402000ULL, board->pieces[PAWN_BLACK]))
+              s += BISHOP_TRAPPED;
+            break;
+          }
+        } else {
+          switch (sq) {
+          case B1:
+          case A2:
+            if (subset(0x4020000000000ULL, board->pieces[PAWN_WHITE]))
+              s += BISHOP_TRAPPED;
+            break;
+          case G1:
+          case H2:
+            if (subset(0x20400000000000ULL, board->pieces[PAWN_WHITE]))
+              s += BISHOP_TRAPPED;
+            break;
+          }
+        }
+      } else if (pieceType == ROOK_TYPE) {
+        if (!(FILE_MASKS[file(sq)] & myPawns)) {
+          if (!(FILE_MASKS[file(sq)] & opponentPawns)) {
+            s += ROOK_OPEN_FILE;
+          } else {
+            s += ROOK_SEMI_OPEN;
+          }
 
-    BitBoard movement = GetKnightAttacks(sq);
+          // king threats bonus - these tuned really negative in the EG which is both surprising but not
+          if (file(sq) == file(data->kingSq[xside])) {
+            s += ROOK_OPPOSITE_KING;
+          } else if (abs(file(sq) - file(data->kingSq[xside])) == 1) {
+            s += ROOK_ADJACENT_KING;
+          }
+        }
 
-    // build standard attack data
-    data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[KNIGHT_TYPE] |= movement;
-    data->allAttacks |= movement;
+        if (side == WHITE) {
+          if (getBit(0x301000000000000ULL, sq) && getBit(0x600000000000000ULL, data->kingSq[WHITE])) {
+            s += ROOK_TRAPPED;
+          } else if (getBit(0xC080000000000000ULL, sq) && getBit(0x6000000000000000ULL, data->kingSq[WHITE])) {
+            s += ROOK_TRAPPED;
+          }
+        } else {
+          if (getBit(0x103ULL, sq) && getBit(0x6ULL, data->kingSq[BLACK])) {
+            s += ROOK_TRAPPED;
+          } else if (getBit(0x80C0ULL, sq) && getBit(0x60ULL, data->kingSq[BLACK])) {
+            s += ROOK_TRAPPED;
+          }
+        }
+      }
 
-    // build king safety attack data
-    if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[KNIGHT_TYPE];
-      data->attackCount += bits(movement & enemyKingArea);
-      data->attackers++;
-    }
-
-    // mobility is where ever the enemy pawns aren't attacking and where allied pawns aren't in the way
-    BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[MG] += KNIGHT_MOBILITIES[bits(mobilitySquares)][MG];
-    data->mobility[EG] += KNIGHT_MOBILITIES[bits(mobilitySquares)][EG];
-
-    if (outposts & sqBb) {
-      // apply bonus if outpost on outpost, each square has a specific bonus
-      data->knights[MG] += KNIGHT_POSTS[rel(sq, side)][MG];
-      data->knights[EG] += KNIGHT_POSTS[rel(sq, side)][EG];
-    } else if (movement & outposts) {
-      // bonus if you can "see" an outpost
-      data->knights[MG] += KNIGHT_OUTPOST_REACHABLE[MG];
-      data->knights[EG] += KNIGHT_OUTPOST_REACHABLE[EG];
+      popLsb(pieces);
     }
   }
 
-  // BISHOPS
-  // bishop pair bonus
-  if (bits(board->pieces[BISHOP[side]]) > 1) {
-    data->bishops[MG] += BISHOP_PAIR[MG];
-    data->bishops[EG] += BISHOP_PAIR[EG];
-  }
+  return s;
+}
 
-  for (BitBoard bishops = board->pieces[BISHOP[side]]; bishops; popLsb(bishops)) {
-    int sq = lsb(bishops);
-    BitBoard sqBb = bishops & -bishops;
+Score PawnEval(Board* board, EvalData* data, int side) {
+  Score s = 0;
 
-    data->material[MG] += MATERIAL_VALUES[BISHOP_TYPE][MG];
-    data->material[EG] += MATERIAL_VALUES[BISHOP_TYPE][EG];
-    data->bishops[MG] += PSQT[BISHOP[side]][sq][MG];
-    data->bishops[EG] += PSQT[BISHOP[side]][sq][EG];
+  int xside = side ^ 1;
+  BitBoard pawns = board->pieces[PAWN[side]];
 
-    BitBoard movement = GetBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
-
-    // build standard attack data
-    data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[BISHOP_TYPE] |= movement;
-    data->allAttacks |= movement;
-
-    // build king safety attack data
-    if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[BISHOP_TYPE];
-      data->attackCount += bits(movement & enemyKingArea);
-      data->attackers++;
-    }
-
-    // mobility is where ever the enemy pawns aren't attacking and where allied pawns aren't in the way
-    BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[MG] += BISHOP_MOBILITIES[bits(mobilitySquares)][MG];
-    data->mobility[EG] += BISHOP_MOBILITIES[bits(mobilitySquares)][EG];
-
-    if (outposts & sqBb) {
-      // apply bonus if outpost on outpost, each square has a specific bonus
-      data->bishops[MG] += BISHOP_POSTS[rel(sq, side)][MG];
-      data->bishops[EG] += BISHOP_POSTS[rel(sq, side)][EG];
-    } else if (movement & outposts) {
-      // bonus if you can "see" an outpost
-      data->bishops[MG] += BISHOP_OUTPOST_REACHABLE[MG];
-      data->bishops[EG] += BISHOP_OUTPOST_REACHABLE[EG];
-    }
-
-    // TODO: Center square control? good/bad bishop? enemy pawn targets?
-
-    // trapped bishop scenarios is hard coded
-    if (side == WHITE) {
-      if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7)) {
-        data->bishops[MG] += BISHOP_TRAPPED[MG];
-        data->bishops[EG] += BISHOP_TRAPPED[EG];
-      } else if ((sq == H7 || sq == G8) && getBit(opponentPawns, F7) && getBit(opponentPawns, G6)) {
-        data->bishops[MG] += BISHOP_TRAPPED[MG];
-        data->bishops[EG] += BISHOP_TRAPPED[EG];
-      }
-    } else {
-      if ((sq == A2 || sq == B1) && getBit(opponentPawns, B3) && getBit(opponentPawns, C2)) {
-        data->bishops[MG] += BISHOP_TRAPPED[MG];
-        data->bishops[EG] += BISHOP_TRAPPED[EG];
-      } else if ((sq == H2 || sq == G1) && getBit(opponentPawns, G3) && getBit(opponentPawns, F2)) {
-        data->bishops[MG] += BISHOP_TRAPPED[MG];
-        data->bishops[EG] += BISHOP_TRAPPED[EG];
-      }
-    }
-  }
-
-  // ROOKS
-  for (BitBoard rooks = board->pieces[ROOK[side]]; rooks; popLsb(rooks)) {
-    int sq = lsb(rooks);
-    BitBoard sqBb = rooks & -rooks;
-    int file = file(sq);
-
-    data->material[MG] += MATERIAL_VALUES[ROOK_TYPE][MG];
-    data->material[EG] += MATERIAL_VALUES[ROOK_TYPE][EG];
-    data->rooks[MG] += PSQT[ROOK[side]][sq][MG];
-    data->rooks[EG] += PSQT[ROOK[side]][sq][EG];
-
-    BitBoard movement =
-        GetRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]] ^ board->pieces[ROOK[side]]);
-
-    // build standard attack data
-    data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[ROOK_TYPE] |= movement;
-    data->allAttacks |= movement;
-
-    // build king safety attack data
-    if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[ROOK_TYPE];
-      data->attackCount += bits(movement & enemyKingArea);
-      data->attackers++;
-    }
-
-    // mobility is where ever the enemy pawns aren't attacking and where allied pawns aren't in the way
-    BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[MG] += ROOK_MOBILITIES[bits(mobilitySquares)][MG];
-    data->mobility[EG] += ROOK_MOBILITIES[bits(mobilitySquares)][EG];
-
-    // bonus for 7th rank
-    if (sqBb & PROMOTION_RANKS[side]) {
-      data->rooks[MG] += ROOK_SEVENTH_RANK[MG];
-      data->rooks[EG] += ROOK_SEVENTH_RANK[EG];
-    }
-
-    // bonus for file openness
-    if (!(FILE_MASKS[file] & myPawns)) {
-      if (!(FILE_MASKS[file] & opponentPawns)) {
-        data->rooks[MG] += ROOK_OPEN_FILE[MG];
-        data->rooks[EG] += ROOK_OPEN_FILE[EG];
-      } else {
-        // TODO: Modify this if pawn on file is defended by a pawn?
-        data->rooks[MG] += ROOK_SEMI_OPEN[MG];
-        data->rooks[EG] += ROOK_SEMI_OPEN[EG];
-      }
-
-      // king threats bonus - these tuned really negative in the EG which is both surprising but not
-      if (FILE_MASKS[file] & board->pieces[KING[xside]]) {
-        data->rooks[MG] += ROOK_OPPOSITE_KING[MG];
-        data->rooks[EG] += ROOK_OPPOSITE_KING[EG];
-      } else if (ADJACENT_FILE_MASKS[file] & board->pieces[KING[xside]]) {
-        data->rooks[MG] += ROOK_ADJACENT_KING[MG];
-        data->rooks[EG] += ROOK_ADJACENT_KING[EG];
-      }
-    }
-
-    // if the king has slid left/right and the rook is still stuck, it's essentially trapped
-    if (side == WHITE) {
-      if ((sq == A1 || sq == A2 || sq == B1) && (kingSq == C1 || kingSq == B1)) {
-        data->rooks[MG] += ROOK_TRAPPED[MG];
-        data->rooks[EG] += ROOK_TRAPPED[EG];
-      } else if ((sq == H1 || sq == H2 || sq == G1) && (kingSq == F1 || kingSq == G1)) {
-        data->rooks[MG] += ROOK_TRAPPED[MG];
-        data->rooks[EG] += ROOK_TRAPPED[EG];
-      }
-    } else {
-      if ((sq == A8 || sq == A7 || sq == B8) && (kingSq == B8 || kingSq == C8)) {
-        data->rooks[MG] += ROOK_TRAPPED[MG];
-        data->rooks[EG] += ROOK_TRAPPED[EG];
-      } else if ((sq == H8 || sq == H7 || sq == G8) && (kingSq == F8 || kingSq == G8)) {
-        data->rooks[MG] += ROOK_TRAPPED[MG];
-        data->rooks[EG] += ROOK_TRAPPED[EG];
-      }
-    }
-  }
-
-  // QUEENS
-  for (BitBoard queens = board->pieces[QUEEN[side]]; queens; popLsb(queens)) {
-    int sq = lsb(queens);
-
-    data->material[MG] += MATERIAL_VALUES[QUEEN_TYPE][MG];
-    data->material[EG] += MATERIAL_VALUES[QUEEN_TYPE][EG];
-    data->queens[MG] += PSQT[QUEEN[side]][sq][MG];
-    data->queens[EG] += PSQT[QUEEN[side]][sq][EG];
-
-    BitBoard movement = GetQueenAttacks(sq, board->occupancies[BOTH]);
-
-    // build standard attack data
-    data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[QUEEN_TYPE] |= movement;
-    data->allAttacks |= movement;
-
-    // build king safety attack data
-    if (movement & enemyKingArea) {
-      data->attackWeight += KS_ATTACKER_WEIGHTS[QUEEN_TYPE];
-      data->attackCount += bits(movement & enemyKingArea);
-      data->attackers++;
-    }
-
-    // mobility is where ever the enemy pawns aren't attacking and where allied pawns aren't in the way
-    BitBoard mobilitySquares = movement & ~oppoPawnAttacks & ~myBlockedAndHomePawns;
-    data->mobility[MG] += QUEEN_MOBILITIES[bits(mobilitySquares)][MG];
-    data->mobility[EG] += QUEEN_MOBILITIES[bits(mobilitySquares)][EG];
-
-    // TODO: Batteries? Queen on 7th? enemy rooks?
-  }
-
-  // KINGS
-  for (BitBoard kings = board->pieces[KING[side]]; kings; popLsb(kings)) {
-    int sq = lsb(kings);
-
-    data->kings[MG] += PSQT[KING[side]][sq][MG];
-    data->kings[EG] += PSQT[KING[side]][sq][EG];
-
-    // only include legal king attacks into attack data
-    // TODO: reconsider this?
-    BitBoard movement = GetKingAttacks(sq) & ~GetKingAttacks(lsb(board->pieces[KING[xside]]));
-    data->attacks2 |= (movement & data->allAttacks);
-    data->attacks[KING_TYPE] |= movement;
-    data->allAttacks |= movement;
-  }
-
-  // TODO: Probably should separate this function
-  // PAWNS
-  for (BitBoard pawns = board->pieces[PAWN[side]]; pawns; popLsb(pawns)) {
-    BitBoard sqBitboard = pawns & -pawns;
+  while (pawns) {
+    BitBoard bb = pawns & -pawns;
     int sq = lsb(pawns);
-
-    data->material[MG] += MATERIAL_VALUES[PAWN_TYPE][MG];
-    data->material[EG] += MATERIAL_VALUES[PAWN_TYPE][EG];
-    data->pawns[MG] += PSQT[PAWN[side]][sq][MG];
-    data->pawns[EG] += PSQT[PAWN[side]][sq][EG];
 
     int file = file(sq);
     int rank = rank(sq);
     int adjustedRank = side ? 7 - rank : rank;
     int adjustedFile = file > 3 ? 7 - file : file; // 0-3
 
-    // opposed if enemy pawn on the same file
     BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
-
-    // doubled only if the pawns are touching on the same file
-    BitBoard doubled = board->pieces[PAWN[side]] & Shift(sqBitboard, PAWN_DIRECTIONS[xside]);
-
-    // neighbors = pawns on adjacent files
+    BitBoard doubled = board->pieces[PAWN[side]] & Shift(bb, PAWN_DIRECTIONS[xside]);
     BitBoard neighbors = board->pieces[PAWN[side]] & ADJACENT_FILE_MASKS[file];
-
-    // connected are neighbor pawns on the same rank
     BitBoard connected = neighbors & RANK_MASKS[rank];
-
-    // defenders are supporting this pawn
     BitBoard defenders = board->pieces[PAWN[side]] & GetPawnAttacks(sq, xside);
-
-    // enemy pawn is controlling square in front of this pawn
     BitBoard forwardLever = board->pieces[PAWN[xside]] & GetPawnAttacks(sq + PAWN_DIRECTIONS[side], side);
-
-    // backwards is if there are no neighbors on same rank or behind and square in front is controlled
     int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][rank(sq + PAWN_DIRECTIONS[side])]) && forwardLever;
-
-    // passed if no enemy pawns within it's attack span AND there's not an allied pawn in front on the same file
-    // (doubled but separated)
     int passed = !(board->pieces[PAWN[xside]] & FORWARD_RANK_MASKS[side][rank] &
                    (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file])) &&
                  !(board->pieces[PAWN[side]] & FORWARD_RANK_MASKS[side][rank] & FILE_MASKS[file]);
 
-    if (doubled) {
-      data->pawns[MG] += DOUBLED_PAWN[MG];
-      data->pawns[EG] += DOUBLED_PAWN[EG];
-    }
+    if (doubled)
+      s += DOUBLED_PAWN;
 
     if (!neighbors) {
-      // open file isolated pawns are way worse
-      data->pawns[MG] += opposed ? OPPOSED_ISOLATED_PAWN[MG] : OPEN_ISOLATED_PAWN[MG];
-      data->pawns[EG] += opposed ? OPPOSED_ISOLATED_PAWN[EG] : OPEN_ISOLATED_PAWN[EG];
+      s += opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN;
     } else if (backwards) {
-      data->pawns[MG] += BACKWARDS_PAWN[MG];
-      data->pawns[EG] += BACKWARDS_PAWN[EG];
+      s += BACKWARDS_PAWN;
     } else if (defenders | connected) {
-      int s = 2 + !!connected - !!opposed;
-
-      // scale connection rank if it's opposed/defended instead of connected
-      data->pawns[MG] += CONNECTED_PAWN[adjustedRank][MG] * s;
-      data->pawns[EG] += CONNECTED_PAWN[adjustedRank][EG] * s;
+      int scalar = 2 + !!connected - !!opposed;
+      s += CONNECTED_PAWN[adjustedRank] * scalar;
     }
 
     if (passed) {
-      // flat passer bonus for rank
-      data->pawns[MG] += PASSED_PAWN[adjustedRank][MG];
-      data->pawns[EG] += PASSED_PAWN[adjustedRank][EG];
-
-      // edge pawns get better near the end
-      data->pawns[MG] += PASSED_PAWN_EDGE_DISTANCE[MG] * adjustedFile;
-      data->pawns[EG] += PASSED_PAWN_EDGE_DISTANCE[EG] * adjustedFile;
+      s += PASSED_PAWN[adjustedRank] + PASSED_PAWN_EDGE_DISTANCE * adjustedFile;
 
       int advSq = sq + PAWN_DIRECTIONS[side];
       BitBoard advance = bit(advSq);
 
-      // we only apply these values if the passed pawn is actually on the move
-      // this encourages pushing and removes awkward value tuning
       if (adjustedRank <= 4) {
-        int myDistance = distance(advSq, kingSq);
-        int enemyDistance = distance(advSq, enemyKingSq);
+        int myDistance = distance(advSq, data->kingSq[side]);
+        int opponentDistance = distance(advSq, data->kingSq[xside]);
 
-        // king proximity is a big deal in the EG, this also balances well with king safety (use enemy pawn as shield)
-        data->pawns[MG] += PASSED_PAWN_KING_PROXIMITY[MG] * min(4, max(enemyDistance - myDistance, -4));
-        data->pawns[EG] += PASSED_PAWN_KING_PROXIMITY[EG] * min(4, max(enemyDistance - myDistance, -4));
+        s += PASSED_PAWN_KING_PROXIMITY * min(4, max(opponentDistance - myDistance, -4));
 
-        // if the enemy side isn't blocking our pawn
         if (!(board->occupancies[xside] & advance)) {
-          // rook from behind attacks wouldn't make it into our data object, so we check for that here
           BitBoard pusher = GetRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] &
                             FORWARD_RANK_MASKS[xside][rank] & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
 
-          // bonus if sq in front is defended
-          if (pusher | (data->allAttacks & advance)) {
-            data->pawns[MG] += PASSED_PAWN_ADVANCE_DEFENDED[MG];
-            data->pawns[EG] += PASSED_PAWN_ADVANCE_DEFENDED[EG];
+          if (pusher | (data->allAttacks[side] & advance)) {
+            s += PASSED_PAWN_ADVANCE_DEFENDED;
           }
         }
       }
     }
+
+    popLsb(pawns);
   }
+
+  return s;
 }
 
-void EvaluateThreats(Board* board, int side, EvalData* data, EvalData* enemyData) {
-  // Threats are pretty simple in Berserk
-  // If a piece is attacking another piece that is either undefended or "weak", then
-  // usually we apply a bonus for this
-  // we do not care for queen threats as it hits too much stuff
+Score Threats(Board* board, EvalData* data, int side) {
+  Score s = 0;
 
-  data->threats[MG] = 0;
-  data->threats[EG] = 0;
+  int xside = side ^ 1;
+  BitBoard weak = board->occupancies[xside] &
+                  ~(data->attacks[xside][PAWN_TYPE] | (data->twoAttacks[xside] & ~data->twoAttacks[side])) &
+                  data->allAttacks[side];
 
-  int xside = 1 - side;
+  for (int piece = KNIGHT_TYPE; piece <= KING_TYPE; piece++) {
+    if (piece == QUEEN_TYPE)
+      continue;
 
-  BitBoard* myAttacks = data->attacks;
-  BitBoard* enemyAttacks = enemyData->attacks;
+    BitBoard threats = weak & data->attacks[side][piece];
+    while (threats) {
+      int sq = lsb(threats);
+      int attacked = board->squares[sq];
 
-  // "weak" is an enemy piece that is not defended by by a pawn or isn't defended twice and is hit twice
-  BitBoard weak = board->occupancies[xside] & ~(enemyAttacks[PAWN_TYPE] | (enemyData->attacks2 & ~data->attacks2)) &
-                  data->allAttacks;
+      switch (piece) {
+      case KNIGHT_TYPE:
+        s += KNIGHT_THREATS[attacked];
+        break;
+      case BISHOP_TYPE:
+        s += BISHOP_THREATS[attacked];
+        break;
+      case ROOK_TYPE:
+        s += ROOK_THREATS[attacked];
+        break;
+      case KING_TYPE:
+        s += KING_THREATS[attacked];
+        break;
+      }
 
-  // apply bonus for knight threats by piece type
-  for (BitBoard knightThreats = weak & myAttacks[KNIGHT_TYPE]; knightThreats; popLsb(knightThreats)) {
-    int piece = board->squares[lsb(knightThreats)];
-
-    assert(piece != NO_PIECE);
-
-    data->threats[MG] += KNIGHT_THREATS[PIECE_TYPE[piece]][MG];
-    data->threats[EG] += KNIGHT_THREATS[PIECE_TYPE[piece]][EG];
+      popLsb(threats);
+    }
   }
 
-  // apply bonus for bishop threats by piece type
-  for (BitBoard bishopThreats = weak & myAttacks[BISHOP_TYPE]; bishopThreats; popLsb(bishopThreats)) {
-    int piece = board->squares[lsb(bishopThreats)];
-
-    assert(piece != NO_PIECE);
-
-    data->threats[MG] += BISHOP_THREATS[PIECE_TYPE[piece]][MG];
-    data->threats[EG] += BISHOP_THREATS[PIECE_TYPE[piece]][EG];
-  }
-
-  // apply bonus for rook threats by piece type
-  for (BitBoard rookThreats = weak & myAttacks[ROOK_TYPE]; rookThreats; popLsb(rookThreats)) {
-    int piece = board->squares[lsb(rookThreats)];
-
-    assert(piece != NO_PIECE);
-
-    data->threats[MG] += ROOK_THREATS[PIECE_TYPE[piece]][MG];
-    data->threats[EG] += ROOK_THREATS[PIECE_TYPE[piece]][EG];
-  }
-
-  // apply bonus for king threats by piece type
-  // TODO: King hitting QUEEN is insanely bad and why do we check that?
-  for (BitBoard kingThreats = weak & myAttacks[KING_TYPE]; kingThreats; popLsb(kingThreats)) {
-    int piece = board->squares[lsb(kingThreats)];
-
-    assert(piece != NO_PIECE);
-
-    data->threats[MG] += KING_THREATS[PIECE_TYPE[piece]][MG];
-    data->threats[EG] += KING_THREATS[PIECE_TYPE[piece]][EG];
-  }
+  return s;
 }
 
-void EvaluateKingSafety(Board* board, int side, EvalData* data, EvalData* enemyData) {
-  // King safety scales quadratically in Berserk - the values around this are not tuned atm as a result
-  // it takes into consideration pawn shelter/storm, file status, checks, unsafe checks, attack weight (piece types
-  // threatening), attack count, weak squares, mobility difference, knight defender, and queen on board
+Score KingSafety(Board* board, EvalData* data, int side) {
+  Score s = 0;
+  Score shelter = S(2, 2);
 
-  data->kingSafety[MG] = 0;
-  data->kingSafety[EG] = 0;
+  int xside = side ^ 1;
 
-  int xside = 1 - side;
-  int kingSq = lsb(board->pieces[KING[side]]);
-  int kingFile = file(kingSq);
+  BitBoard ourPawns = board->pieces[PAWN[side]] & ~data->attacks[xside][PAWN_TYPE] &
+                      ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
+  BitBoard opponentPawns = board->pieces[PAWN[xside]] & ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
 
-  int shelterScoreMg = 2, shelterScoreEg = 2;
-  BitBoard ourPawns =
-      board->pieces[PAWN[side]] & ~enemyData->attacks[PAWN_TYPE] & ~FORWARD_RANK_MASKS[xside][rank(kingSq)];
-  BitBoard enemyPawns = board->pieces[PAWN[xside]] & ~FORWARD_RANK_MASKS[xside][rank(kingSq)];
-  for (int f = SHELTER_STORM_FILES[kingFile][0]; f <= SHELTER_STORM_FILES[kingFile][1]; f++) {
-    int adjustedFile = f > 3 ? 7 - f : f;
+  for (int file = SHELTER_STORM_FILES[file(data->kingSq[side])][0];
+       file <= SHELTER_STORM_FILES[file(data->kingSq[side])][0]; file++) {
+    int adjustedFile = file > 3 ? 7 - file : file;
 
-    BitBoard ourPawnFile = ourPawns & FILE_MASKS[f];
+    BitBoard ourPawnFile = ourPawns & FILE_MASKS[file];
     int pawnRank = ourPawnFile ? (side ? 7 - rank(lsb(ourPawnFile)) : rank(msb(ourPawnFile))) : 0;
-    // apply score for this pawn shelter on file, nothing is added to EG score
-    shelterScoreMg += PAWN_SHELTER[adjustedFile][pawnRank];
+    shelter += S(PAWN_SHELTER[adjustedFile][pawnRank], 0);
 
-    BitBoard enemyPawnFile = enemyPawns & FILE_MASKS[f];
-    int theirRank = enemyPawnFile ? (side ? 7 - rank(lsb(enemyPawnFile)) : rank(msb(enemyPawnFile))) : 0;
+    BitBoard opponentPawnFile = opponentPawns & FILE_MASKS[file];
+    int theirRank = opponentPawnFile ? (side ? 7 - rank(lsb(opponentPawnFile)) : rank(msb(opponentPawnFile))) : 0;
     if (pawnRank && pawnRank == theirRank + 1) {
-      // apply score for pawn storm that is blocked, blockades in EG are actually bad for us, so that is accounted for
-      // blocked eg is dangerous because it's keeping one of our pawns from advancing
-      shelterScoreMg += BLOCKED_PAWN_STORM[theirRank][MG];
-      shelterScoreEg += BLOCKED_PAWN_STORM[theirRank][EG];
+      shelter += BLOCKED_PAWN_STORM[theirRank];
     } else {
       // storm score, no change in the EG
-      shelterScoreMg += PAWN_STORM[adjustedFile][theirRank];
+      shelter += S(PAWN_STORM[adjustedFile][theirRank], 0);
     }
 
-    if (f == file(kingSq)) {
-      // for the file of the king look to see the status of pawns on said file
-      // open/semi open (both ways)/closed
-      int idx = 2 * !(board->pieces[PAWN[side]] & FILE_MASKS[f]) + !(board->pieces[PAWN[xside]] & FILE_MASKS[f]);
-
-      shelterScoreMg += KS_KING_FILE[idx][MG];
-      shelterScoreEg += KS_KING_FILE[idx][EG];
+    if (file == file(data->kingSq[side])) {
+      int idx = 2 * !(board->pieces[PAWN[side]] & FILE_MASKS[file]) + !(board->pieces[PAWN[xside]] & FILE_MASKS[file]);
+      shelter += KS_KING_FILE[idx];
     }
   }
 
-  BitBoard kingArea = GetKingAttacks(kingSq);
-  BitBoard weak = enemyData->allAttacks & ~data->attacks2 & (~data->allAttacks | data->attacks[4] | data->attacks[5]);
-  BitBoard vulnerable = (~data->allAttacks | (weak & enemyData->attacks2)) & ~board->occupancies[xside];
+  BitBoard kingArea = data->kingArea[side];
+  BitBoard weak = data->allAttacks[xside] & ~data->twoAttacks[side] &
+                  (~data->allAttacks[side] | data->attacks[side][QUEEN_TYPE] | data->attacks[side][KING_TYPE]);
+  BitBoard vulnerable = (~data->allAttacks[side] | (weak & data->twoAttacks[xside])) & ~board->occupancies[xside];
 
   BitBoard possibleKnightChecks =
-      GetKnightAttacks(kingSq) & enemyData->attacks[KNIGHT_TYPE] & ~board->occupancies[xside];
-  int safeChecks = bits(possibleKnightChecks & vulnerable);
-  int unsafeChecks = bits(possibleKnightChecks & ~vulnerable);
+      GetKnightAttacks(data->kingSq[side]) & data->attacks[xside][KNIGHT_TYPE] & ~board->occupancies[xside];
+  BitBoard possibleBishopChecks = GetBishopAttacks(data->kingSq[side], board->occupancies[BOTH]) &
+                                  data->attacks[xside][BISHOP_TYPE] & ~board->occupancies[xside];
+  BitBoard possibleRookChecks = GetRookAttacks(data->kingSq[side], board->occupancies[BOTH]) &
+                                data->attacks[xside][ROOK_TYPE] & ~board->occupancies[xside];
+  BitBoard possibleQueenChecks = GetQueenAttacks(data->kingSq[side], board->occupancies[BOTH]) &
+                                 data->attacks[xside][QUEEN_TYPE] & ~board->occupancies[xside];
 
-  BitBoard possibleBishopChecks =
-      GetBishopAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[BISHOP_TYPE] & ~board->occupancies[xside];
-  safeChecks += bits(possibleBishopChecks & vulnerable);
-  unsafeChecks += bits(possibleBishopChecks & ~vulnerable);
+  int safeChecks = bits(possibleKnightChecks & vulnerable) + bits(possibleBishopChecks & vulnerable) +
+                   bits(possibleRookChecks & vulnerable) + bits(possibleQueenChecks & vulnerable);
+  int unsafeChecks = bits(possibleKnightChecks & ~vulnerable) + bits(possibleBishopChecks & ~vulnerable) +
+                     bits(possibleRookChecks & ~vulnerable);
 
-  BitBoard possibleRookChecks =
-      GetRookAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[ROOK_TYPE] & ~board->occupancies[xside];
-  safeChecks += bits(possibleRookChecks & vulnerable);
-  unsafeChecks += bits(possibleRookChecks & ~vulnerable);
-
-  BitBoard possibleQueenChecks =
-      GetQueenAttacks(kingSq, board->occupancies[BOTH]) & enemyData->attacks[QUEEN_TYPE] & ~board->occupancies[xside];
-  safeChecks += bits(possibleQueenChecks & vulnerable);
-
-  int score = (enemyData->attackers * enemyData->attackWeight)                  // weight of attacks
-              + (KS_SAFE_CHECK * safeChecks)                                    // safe checks
-              + (KS_UNSAFE_CHECK * unsafeChecks)                                // unsafe checks
-              + (KS_WEAK_SQS * bits(weak & kingArea))                           // weak sqs
-              + (KS_ATTACK * enemyData->attackCount)                            // aimed pieces
-              - (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])                 // enemy has queen?
-              - (KS_KNIGHT_DEFENSE * !!(data->attacks[KNIGHT_TYPE] & kingArea)) // knight on f8 = no m8
-              - shelterScoreMg / 2;                                             // house
+  Score danger = (data->ksAttackersCount[xside] * data->ksAttackWeight[xside])           // weight of attacks
+                 + (KS_SAFE_CHECK * safeChecks)                                          // safe checks
+                 + (KS_UNSAFE_CHECK * unsafeChecks)                                      // unsafe checks
+                 + (KS_WEAK_SQS * bits(weak & kingArea))                                 // weak sqs
+                 + (KS_ATTACK * data->ksSqAttackCount[xside])                            // aimed pieces
+                 - (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])                       // enemy has queen?
+                 - (KS_KNIGHT_DEFENSE * !!(data->attacks[side][KNIGHT_TYPE] & kingArea)) // knight on f8 = no m8
+                 - scoreMG(shelter) / 2;                                                 // house
 
   // if my king is in danger apply score
-  if (score > 0) {
-    data->kingSafety[MG] += -score * score / 1000; // quadratic scale in MG
-    data->kingSafety[EG] += -score / 30;           // small linear scale in EG
+  if (danger > 0) {
+    s += S(-danger * danger / 1000, -danger / 30);
   }
 
-  // add shelter score
-  data->kingSafety[MG] += shelterScoreMg;
-  data->kingSafety[EG] += shelterScoreEg;
+  s += shelter;
+  return s;
 }
 
 Score EvaluateKXK(Board* board) {
@@ -900,21 +638,22 @@ Score Evaluate(Board* board) {
       return eval;
   }
 
-  EvalData sideData;
-  EvalData xsideData;
+  EvalData data = {0};
+  InitEvalData(&data, board);
 
-  EvaluateSide(board, board->side, &sideData);
-  EvaluateSide(board, board->xside, &xsideData);
+  Score s = 0;
 
-  EvaluateThreats(board, board->side, &sideData, &xsideData);
-  EvaluateThreats(board, board->xside, &xsideData, &sideData);
+  s += MaterialValue(board, WHITE) - MaterialValue(board, BLACK);
+  s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
+  s += PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
+  s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
+  s += KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
+  s += board->side == WHITE ? TEMPO : -TEMPO;
 
-  EvaluateKingSafety(board, board->side, &sideData, &xsideData);
-  EvaluateKingSafety(board, board->xside, &xsideData, &sideData);
-
-  eval = ToScore(&sideData, board) - ToScore(&xsideData, board);
-  int ss = eval > 0 ? board->side : board->xside;
-  return eval * Scale(board, ss) / 100;
+  int phase = GetPhase(board);
+  s = (phase * scoreMG(s) + (MAX_PHASE - phase) * scoreEG(s)) / MAX_PHASE;
+  s = s * Scale(board, eval > 0 ? board->side : board->xside) / 100;
+  return board->side == WHITE ? s : -s;
 }
 
 inline int Scale(Board* board, int ss) {
@@ -930,167 +669,3 @@ inline int Scale(Board* board, int ss) {
 
   return 100;
 }
-
-inline Score ToScore(EvalData* data, Board* board) {
-  // Sum the parts and taper the score
-  Score mg = data->pawns[MG] + data->knights[MG] + data->bishops[MG] + data->rooks[MG] + data->queens[MG] +
-             data->kings[MG] + data->kingSafety[MG] + data->material[MG] + data->mobility[MG] + data->threats[MG] +
-             data->tempo[MG];
-  Score eg = data->pawns[EG] + data->knights[EG] + data->bishops[EG] + data->rooks[EG] + data->queens[EG] +
-             data->kings[EG] + data->kingSafety[EG] + data->material[EG] + data->mobility[EG] + data->threats[EG] +
-             data->tempo[MG];
-
-  return Taper(mg, eg, GetPhase(board));
-}
-
-#ifndef TUNE
-void PrintEvaluation(Board* board) {
-  EvalData whiteEval;
-  EvalData blackEval;
-
-  EvaluateSide(board, WHITE, &whiteEval);
-  EvaluateSide(board, BLACK, &blackEval);
-
-  EvaluateThreats(board, WHITE, &whiteEval, &blackEval);
-  EvaluateThreats(board, BLACK, &blackEval, &whiteEval);
-
-  EvaluateKingSafety(board, WHITE, &whiteEval, &blackEval);
-  EvaluateKingSafety(board, BLACK, &blackEval, &whiteEval);
-
-  int phase = GetPhase(board);
-
-  printf("|            | WHITE mg,eg,taper | BLACK mg,eg,taper | DIFF  mg,eg,taper |\n");
-  printf("|------------|-------------------|-------------------|-------------------|\n");
-  printf(
-      "| material   | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.material[MG], whiteEval.material[EG],
-      Taper(whiteEval.material[MG], whiteEval.material[EG], phase), blackEval.material[MG], blackEval.material[EG],
-      Taper(blackEval.material[MG], blackEval.material[EG], phase), whiteEval.material[MG] - blackEval.material[MG],
-      whiteEval.material[EG] - blackEval.material[EG],
-      Taper(whiteEval.material[MG] - blackEval.material[MG], whiteEval.material[EG] - blackEval.material[EG], phase));
-  printf("| pawns      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.pawns[MG], whiteEval.pawns[EG],
-         Taper(whiteEval.pawns[MG], whiteEval.pawns[EG], phase), blackEval.pawns[MG], blackEval.pawns[EG],
-         Taper(blackEval.pawns[MG], blackEval.pawns[EG], phase), whiteEval.pawns[MG] - blackEval.pawns[MG],
-         whiteEval.pawns[EG] - blackEval.pawns[EG],
-         Taper(whiteEval.pawns[MG] - blackEval.pawns[MG], whiteEval.pawns[EG] - blackEval.pawns[EG], phase));
-  printf("| knights    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.knights[MG], whiteEval.knights[EG],
-         Taper(whiteEval.knights[MG], whiteEval.knights[EG], phase), blackEval.knights[MG], blackEval.knights[EG],
-         Taper(blackEval.knights[MG], blackEval.knights[EG], phase), whiteEval.knights[MG] - blackEval.knights[MG],
-         whiteEval.knights[EG] - blackEval.knights[EG],
-         Taper(whiteEval.knights[MG] - blackEval.knights[MG], whiteEval.knights[EG] - blackEval.knights[EG], phase));
-  printf("| bishops    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.bishops[MG], whiteEval.bishops[EG],
-         Taper(whiteEval.bishops[MG], whiteEval.bishops[EG], phase), blackEval.bishops[MG], blackEval.bishops[EG],
-         Taper(blackEval.bishops[MG], blackEval.bishops[EG], phase), whiteEval.bishops[MG] - blackEval.bishops[MG],
-         whiteEval.bishops[EG] - blackEval.bishops[EG],
-         Taper(whiteEval.bishops[MG] - blackEval.bishops[MG], whiteEval.bishops[EG] - blackEval.bishops[EG], phase));
-  printf("| rooks      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.rooks[MG], whiteEval.rooks[EG],
-         Taper(whiteEval.rooks[MG], whiteEval.rooks[EG], phase), blackEval.rooks[MG], blackEval.rooks[EG],
-         Taper(blackEval.rooks[MG], blackEval.rooks[EG], phase), whiteEval.rooks[MG] - blackEval.rooks[MG],
-         whiteEval.rooks[EG] - blackEval.rooks[EG],
-         Taper(whiteEval.rooks[MG] - blackEval.rooks[MG], whiteEval.rooks[EG] - blackEval.rooks[EG], phase));
-  printf("| queens     | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.queens[MG], whiteEval.queens[EG],
-         Taper(whiteEval.queens[MG], whiteEval.queens[EG], phase), blackEval.queens[MG], blackEval.queens[EG],
-         Taper(blackEval.queens[MG], blackEval.queens[EG], phase), whiteEval.queens[MG] - blackEval.queens[MG],
-         whiteEval.queens[EG] - blackEval.queens[EG],
-         Taper(whiteEval.queens[MG] - blackEval.queens[MG], whiteEval.queens[EG] - blackEval.queens[EG], phase));
-  printf("| kings      | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.kings[MG], whiteEval.kings[EG],
-         Taper(whiteEval.kings[MG], whiteEval.kings[EG], phase), blackEval.kings[MG], blackEval.kings[EG],
-         Taper(blackEval.kings[MG], blackEval.kings[EG], phase), whiteEval.kings[MG] - blackEval.kings[MG],
-         whiteEval.kings[EG] - blackEval.kings[EG],
-         Taper(whiteEval.kings[MG] - blackEval.kings[MG], whiteEval.kings[EG] - blackEval.kings[EG], phase));
-  printf(
-      "| mobility   | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.mobility[MG], whiteEval.mobility[EG],
-      Taper(whiteEval.mobility[MG], whiteEval.mobility[EG], phase), blackEval.mobility[MG], blackEval.mobility[EG],
-      Taper(blackEval.mobility[MG], blackEval.mobility[EG], phase), whiteEval.mobility[MG] - blackEval.mobility[MG],
-      whiteEval.mobility[EG] - blackEval.mobility[EG],
-      Taper(whiteEval.mobility[MG] - blackEval.mobility[MG], whiteEval.mobility[EG] - blackEval.mobility[EG], phase));
-  printf("| threats    | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.threats[MG], whiteEval.threats[EG],
-         Taper(whiteEval.threats[MG], whiteEval.threats[EG], phase), blackEval.threats[MG], blackEval.threats[EG],
-         Taper(blackEval.threats[MG], blackEval.threats[EG], phase), whiteEval.threats[MG] - blackEval.threats[MG],
-         whiteEval.threats[EG] - blackEval.threats[EG],
-         Taper(whiteEval.threats[MG] - blackEval.threats[MG], whiteEval.threats[EG] - blackEval.threats[EG], phase));
-  printf("| kingSafety | %5d %5d %5d | %5d %5d %5d | %5d %5d %5d |\n", whiteEval.kingSafety[MG],
-         whiteEval.kingSafety[EG], Taper(whiteEval.kingSafety[MG], whiteEval.kingSafety[EG], phase),
-         blackEval.kingSafety[MG], blackEval.kingSafety[EG],
-         Taper(blackEval.kingSafety[MG], blackEval.kingSafety[EG], phase),
-         whiteEval.kingSafety[MG] - blackEval.kingSafety[MG], whiteEval.kingSafety[EG] - blackEval.kingSafety[EG],
-         Taper(whiteEval.kingSafety[MG] - blackEval.kingSafety[MG], whiteEval.kingSafety[EG] - blackEval.kingSafety[EG],
-               phase));
-  printf("|------------|-------------------|-------------------|-------------------|\n");
-  printf("\nResult (white): %5d\n\n", ToScore(&whiteEval, board) - ToScore(&blackEval, board));
-}
-#else
-void PrintEvaluation(Board* board) {
-  EvalData whiteEval;
-  EvalData blackEval;
-
-  EvaluateSide(board, WHITE, &whiteEval);
-  EvaluateSide(board, BLACK, &blackEval);
-
-  EvaluateThreats(board, WHITE, &whiteEval, &blackEval);
-  EvaluateThreats(board, BLACK, &blackEval, &whiteEval);
-
-  EvaluateKingSafety(board, WHITE, &whiteEval, &blackEval);
-  EvaluateKingSafety(board, BLACK, &blackEval, &whiteEval);
-
-  int phase = GetPhase(board);
-
-  printf("|            | WHITE mg,eg,taper | BLACK mg,eg,taper | DIFF  mg,eg,taper |\n");
-  printf("|------------|-------------------|-------------------|-------------------|\n");
-  printf(
-      "| material   | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.material[MG],
-      whiteEval.material[EG], Taper(whiteEval.material[MG], whiteEval.material[EG], phase), blackEval.material[MG],
-      blackEval.material[EG], Taper(blackEval.material[MG], blackEval.material[EG], phase),
-      whiteEval.material[MG] - blackEval.material[MG], whiteEval.material[EG] - blackEval.material[EG],
-      Taper(whiteEval.material[MG] - blackEval.material[MG], whiteEval.material[EG] - blackEval.material[EG], phase));
-  printf("| pawns      | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.pawns[MG],
-         whiteEval.pawns[EG], Taper(whiteEval.pawns[MG], whiteEval.pawns[EG], phase), blackEval.pawns[MG],
-         blackEval.pawns[EG], Taper(blackEval.pawns[MG], blackEval.pawns[EG], phase),
-         whiteEval.pawns[MG] - blackEval.pawns[MG], whiteEval.pawns[EG] - blackEval.pawns[EG],
-         Taper(whiteEval.pawns[MG] - blackEval.pawns[MG], whiteEval.pawns[EG] - blackEval.pawns[EG], phase));
-  printf("| knights    | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.knights[MG],
-         whiteEval.knights[EG], Taper(whiteEval.knights[MG], whiteEval.knights[EG], phase), blackEval.knights[MG],
-         blackEval.knights[EG], Taper(blackEval.knights[MG], blackEval.knights[EG], phase),
-         whiteEval.knights[MG] - blackEval.knights[MG], whiteEval.knights[EG] - blackEval.knights[EG],
-         Taper(whiteEval.knights[MG] - blackEval.knights[MG], whiteEval.knights[EG] - blackEval.knights[EG], phase));
-  printf("| bishops    | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.bishops[MG],
-         whiteEval.bishops[EG], Taper(whiteEval.bishops[MG], whiteEval.bishops[EG], phase), blackEval.bishops[MG],
-         blackEval.bishops[EG], Taper(blackEval.bishops[MG], blackEval.bishops[EG], phase),
-         whiteEval.bishops[MG] - blackEval.bishops[MG], whiteEval.bishops[EG] - blackEval.bishops[EG],
-         Taper(whiteEval.bishops[MG] - blackEval.bishops[MG], whiteEval.bishops[EG] - blackEval.bishops[EG], phase));
-  printf("| rooks      | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.rooks[MG],
-         whiteEval.rooks[EG], Taper(whiteEval.rooks[MG], whiteEval.rooks[EG], phase), blackEval.rooks[MG],
-         blackEval.rooks[EG], Taper(blackEval.rooks[MG], blackEval.rooks[EG], phase),
-         whiteEval.rooks[MG] - blackEval.rooks[MG], whiteEval.rooks[EG] - blackEval.rooks[EG],
-         Taper(whiteEval.rooks[MG] - blackEval.rooks[MG], whiteEval.rooks[EG] - blackEval.rooks[EG], phase));
-  printf("| queens     | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.queens[MG],
-         whiteEval.queens[EG], Taper(whiteEval.queens[MG], whiteEval.queens[EG], phase), blackEval.queens[MG],
-         blackEval.queens[EG], Taper(blackEval.queens[MG], blackEval.queens[EG], phase),
-         whiteEval.queens[MG] - blackEval.queens[MG], whiteEval.queens[EG] - blackEval.queens[EG],
-         Taper(whiteEval.queens[MG] - blackEval.queens[MG], whiteEval.queens[EG] - blackEval.queens[EG], phase));
-  printf("| kings      | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.kings[MG],
-         whiteEval.kings[EG], Taper(whiteEval.kings[MG], whiteEval.kings[EG], phase), blackEval.kings[MG],
-         blackEval.kings[EG], Taper(blackEval.kings[MG], blackEval.kings[EG], phase),
-         whiteEval.kings[MG] - blackEval.kings[MG], whiteEval.kings[EG] - blackEval.kings[EG],
-         Taper(whiteEval.kings[MG] - blackEval.kings[MG], whiteEval.kings[EG] - blackEval.kings[EG], phase));
-  printf(
-      "| mobility   | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.mobility[MG],
-      whiteEval.mobility[EG], Taper(whiteEval.mobility[MG], whiteEval.mobility[EG], phase), blackEval.mobility[MG],
-      blackEval.mobility[EG], Taper(blackEval.mobility[MG], blackEval.mobility[EG], phase),
-      whiteEval.mobility[MG] - blackEval.mobility[MG], whiteEval.mobility[EG] - blackEval.mobility[EG],
-      Taper(whiteEval.mobility[MG] - blackEval.mobility[MG], whiteEval.mobility[EG] - blackEval.mobility[EG], phase));
-  printf("| threats    | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.threats[MG],
-         whiteEval.threats[EG], Taper(whiteEval.threats[MG], whiteEval.threats[EG], phase), blackEval.threats[MG],
-         blackEval.threats[EG], Taper(blackEval.threats[MG], blackEval.threats[EG], phase),
-         whiteEval.threats[MG] - blackEval.threats[MG], whiteEval.threats[EG] - blackEval.threats[EG],
-         Taper(whiteEval.threats[MG] - blackEval.threats[MG], whiteEval.threats[EG] - blackEval.threats[EG], phase));
-  printf("| kingSafety | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f | %5.0f %5.0f %5.0f |\n", whiteEval.kingSafety[MG],
-         whiteEval.kingSafety[EG], Taper(whiteEval.kingSafety[MG], whiteEval.kingSafety[EG], phase),
-         blackEval.kingSafety[MG], blackEval.kingSafety[EG],
-         Taper(blackEval.kingSafety[MG], blackEval.kingSafety[EG], phase),
-         whiteEval.kingSafety[MG] - blackEval.kingSafety[MG], whiteEval.kingSafety[EG] - blackEval.kingSafety[EG],
-         Taper(whiteEval.kingSafety[MG] - blackEval.kingSafety[MG], whiteEval.kingSafety[EG] - blackEval.kingSafety[EG],
-               phase));
-  printf("|------------|-------------------|-------------------|-------------------|\n");
-  printf("\nResult (white): %5.0f\n\n", ToScore(&whiteEval, board) - ToScore(&blackEval, board));
-}
-#endif
