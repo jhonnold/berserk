@@ -5,15 +5,15 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\quiet-set.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set.epd"
 #define THREADS 32
 
 typedef struct {
-  double value;
+  int epoch;
+  float value;
   double g;
   double M;
   double V;
-  double epoch;
 } Param;
 
 typedef struct {
@@ -104,17 +104,16 @@ typedef struct {
   int bishopThreats[2][6];
   int rookThreats[2][6];
   int kingThreats[2][6];
-
   int ks[2];
 } EvalCoeffs;
 
 typedef struct {
-  double result;
-  double scale;
-  double phaseMg;
-  double phaseEg;
   int phase;
   int stm;
+  float result;
+  float scale;
+  float phaseMg;
+  float phaseEg;
   Score staticEval;
   EvalCoeffs coeffs;
 } Position;

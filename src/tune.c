@@ -15,7 +15,7 @@
 #include "tune.h"
 #include "util.h"
 
-const int MAX_POSITIONS = 3250000;
+const int MAX_POSITIONS = 10000000;
 
 const int sideScalar[2] = {1, -1};
 
@@ -836,17 +836,17 @@ Position* LoadPositions(int* n) {
       if (!strncmp(buffer + i, "c2", 2))
         break;
 
-    sscanf(buffer + i, "c2 \"%lf\"", &positions[p].result);
+    sscanf(buffer + i, "c2 \"%f\"", &positions[p].result);
 
     ParseFen(buffer, &board);
-    // ResetThreadPool(&board, &params, threads);
-    // Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
+    ResetThreadPool(&board, &params, threads);
+    Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
 
-    // for (int m = 0; m < pv.count; m++)
-    //   MakeMove(pv.moves[m], &board);
+    for (int m = 0; m < pv.count; m++)
+      MakeMove(pv.moves[m], &board);
 
     LoadPosition(&board, &positions[p]);
-    if (positions[p].staticEval < 3000)
+    if (positions[p].staticEval < 3000 && !board.checkers)
       p++;
 
     if (!(p & 4095))
