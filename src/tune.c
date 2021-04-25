@@ -15,7 +15,7 @@
 #include "tune.h"
 #include "util.h"
 
-const int MAX_POSITIONS = 10000000;
+const int MAX_POSITIONS = 5000000;
 
 const int sideScalar[2] = {1, -1};
 
