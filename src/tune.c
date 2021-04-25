@@ -967,7 +967,10 @@ Position* LoadPositions(int* n) {
     for (int m = 0; m < pv.count; m++)
       MakeMove(pv.moves[m], &board);
 
-    if (board.checkers || !(board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
+    // if (board.checkers)
+    //   continue;
+
+    if (!(board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
       continue;
 
     if (bits(board.occupancies[BOTH]) == 3 && (board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
