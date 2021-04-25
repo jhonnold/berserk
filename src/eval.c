@@ -718,8 +718,8 @@ Score KingSafety(Board* board, EvalData* data, int side) {
                  + (KS_UNSAFE_CHECK * unsafeChecks)                                      //
                  + (KS_WEAK_SQS * bits(weak & kingArea))                                 //
                  + (KS_ATTACK * data->ksSqAttackCount[xside])                            //
-                 + (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])                       //
-                 + (KS_KNIGHT_DEFENSE * !!(data->attacks[side][KNIGHT_TYPE] & kingArea)) //
+                 - (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])                       //
+                 - (KS_KNIGHT_DEFENSE * !!(data->attacks[side][KNIGHT_TYPE] & kingArea)) //
                  - scoreMG(shelter) / 2;                                                 //
 
   if (danger > 0)
