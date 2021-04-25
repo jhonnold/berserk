@@ -15,7 +15,7 @@
 #include "tune.h"
 #include "util.h"
 
-const int MAX_POSITIONS = 0;
+const int MAX_POSITIONS = 4000000;
 
 const int sideScalar[2] = {1, -1};
 
@@ -45,7 +45,7 @@ void Tune() {
   ValidateEval(n, positions, &weights);
   DetermineK(n, positions, &weights);
 
-  for (int epoch = 0; epoch < 0; epoch++) {
+  for (int epoch = 0; epoch < 10000; epoch++) {
     UpdateAndTrain(epoch, n, positions, &weights);
 
     if (epoch % 25 == 0)
