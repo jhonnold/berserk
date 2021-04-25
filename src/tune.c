@@ -44,12 +44,13 @@ void Tune() {
   // Correct alpha
   ALPHA *= sqrt(n);
 
-  DetermineK(n, positions, &weights);
+  K = 2.869116400;
+  // DetermineK(n, positions, &weights);
 
   for (int epoch = 0; epoch < 10000; epoch++) {
     UpdateAndTrain(epoch, n, positions, &weights);
 
-    if (epoch % 100 == 0)
+    if (epoch % 25 == 0)
       PrintWeights(&weights);
   }
 
@@ -403,10 +404,10 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights) 
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-    weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
-    weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
-  }
+  // for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
+  //   weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
+  //   weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
+  // }
 
   weights->bishopPair.mg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * mgBase;
   weights->bishopPair.eg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * egBase;
@@ -845,11 +846,14 @@ Position* LoadPositions(int* n) {
     for (int m = 0; m < pv.count; m++)
       MakeMove(pv.moves[m], &board);
 
-    LoadPosition(&board, &positions[p]);
-    if (positions[p].staticEval < 3000 && !board.checkers)
-      p++;
+    if (board.checkers)
+      continue;
 
-    if (!(p & 4095))
+    LoadPosition(&board, &positions[p]);
+    if (positions[p].staticEval > 3000)
+      continue;
+
+    if (!(++p & 4095))
       printf("Loaded %d positions...\n", p);
   }
 
