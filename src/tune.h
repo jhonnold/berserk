@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\quiet-set.epd"
 #define THREADS 32
 
 typedef struct {
@@ -105,18 +105,7 @@ typedef struct {
   int rookThreats[2][6];
   int kingThreats[2][6];
 
-  int ksAttacker[2][5];
-  int ksSquareAttackCount[2];
-  int ksWeakSqs[2];
-  int ksUnsafeChecks[2];
-  int ksSafeChecks[2];
-  int ksEnemyQueen[2];
-  int ksKnightDefense[2];
-
-  int ksShelter[2][4][8];
-  int ksPawnStorm[2][4][8];
-  int ksBlockedStorm[2][8];
-  int ksFile[2][4];
+  int ks[2];
 } EvalCoeffs;
 
 typedef struct {
@@ -131,11 +120,6 @@ typedef struct {
 } Position;
 
 typedef struct {
-  double wSafety[2];
-  double bSafety[2];
-} KSData;
-
-typedef struct {
   double error;
   int n;
   Position* positions;
@@ -144,7 +128,7 @@ typedef struct {
 
 void Tune();
 
-void DetermineK(int n, Position* positions);
+void DetermineK(int n, Position* positions, Weights* weights);
 
 void UpdateParam(Param* p);
 void UpdateWeights(Weights* weights);
@@ -159,9 +143,8 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights);
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights);
-void UpdateKSGradients(Position* position, double loss, Weights* weights, KSData* ksData);
 
-double EvaluateCoeffs(Position* position, Weights* weights, KSData* data);
+double EvaluateCoeffs(Position* position, Weights* weights);
 void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights* weights);
@@ -170,7 +153,6 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluateKSValues(double* wMg, double* wEg, double* bMg, double* bEg, Position* position, Weights* weights);
 
 void InitMaterialWeights(Weights* weights);
 void InitPsqtWeights(Weights* weights);
@@ -181,7 +163,6 @@ void InitThreatWeights(Weights* weights);
 void InitPieceBonusWeights(Weights* weights);
 void InitPawnBonusWeights(Weights* weights);
 void InitPasserBonusWeights(Weights* weights);
-void InitKSWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position);
 Position* LoadPositions(int* n);

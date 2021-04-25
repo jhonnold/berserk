@@ -31,7 +31,6 @@
 #endif
 
 typedef int Score;
-typedef Score TScore[2];
 
 typedef uint64_t BitBoard;
 
@@ -122,6 +121,7 @@ typedef struct {
   BitBoard twoAttacks[2];  // squares attacked twice
   Score ksAttackWeight[2]; // king safety attackers weight
   int ksSqAttackCount[2];  // king safety sq attack count
+  int ksAttackerCount[2];  // attackers
 
   BitBoard passedPawns[2];
   BitBoard mobilitySquares[2];
