@@ -52,6 +52,7 @@ extern const BitBoard DARK_SQS;
 #define popLsb(bb) (bb &= bb - 1)
 #define lsb(bb) (__builtin_ctzll(bb))
 #define msb(bb) (63 ^ __builtin_clzll(bb))
+#define subset(a, b) (((a) & (b)) == (a))
 
 #ifndef POPCOUNT
 int bits(BitBoard bb);

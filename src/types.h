@@ -30,14 +30,7 @@
 #define MAX_GAME_PLY 1024
 #endif
 
-// Tune on doubles for more accuracy
-#ifndef TUNE
 typedef int Score;
-typedef Score TScore[2];
-#else
-typedef double Score;
-typedef Score TScore[2];
-#endif
 
 typedef uint64_t BitBoard;
 
@@ -120,26 +113,20 @@ typedef struct {
 } SearchParams;
 
 typedef struct {
-  TScore material; // raw material score
-  TScore pawns;    // pawn bonuses, includes all pawn parameters (passers, doubled, etc..)
-  TScore knights;  // knight bonuses
-  TScore bishops;  // bishop bonuses
-  TScore rooks;    // rook bonuses
-  TScore queens;   // queen bonuses
-  TScore kings;    // king bonuses
-
-  TScore mobility;   // mobility of all pieces (except kings + pawns)
-  TScore kingSafety; // king safety score
-  TScore threats;    // active threats
-  TScore tempo;      // tempo just didn't fit anywhere else
-
   // these are general data objects, for buildup during eval
-  BitBoard attacks[6]; // attacks by piece type
-  BitBoard allAttacks; // all attacks
-  BitBoard attacks2;   // squares attacked twice
-  int attackWeight;    // king safety attackers weight
-  int attackCount;     // king safety sq attack count
-  int attackers;       // king safety attackers count
+  int kingSq[2];
+  BitBoard kingArea[2];
+  BitBoard attacks[2][6];  // attacks by piece type
+  BitBoard allAttacks[2];  // all attacks
+  BitBoard twoAttacks[2];  // squares attacked twice
+  Score ksAttackWeight[2]; // king safety attackers weight
+  int ksSqAttackCount[2];  // king safety sq attack count
+  int ksAttackerCount[2];  // attackers
+
+  BitBoard passedPawns[2];
+  BitBoard mobilitySquares[2];
+  BitBoard outposts[2];
+
 } EvalData;
 
 typedef struct ThreadData ThreadData;

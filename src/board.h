@@ -53,6 +53,7 @@ int IsRepetition(Board* board);
 
 int HasNonPawn(Board* board);
 int IsOCB(Board* board);
+int IsMaterialDraw(Board* board);
 
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);
