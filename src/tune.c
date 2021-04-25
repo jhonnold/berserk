@@ -403,10 +403,10 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights) 
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-    weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
-    weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
-  }
+  // for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
+  //   weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
+  //   weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
+  // }
 
   weights->bishopPair.mg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * mgBase;
   weights->bishopPair.eg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * egBase;
