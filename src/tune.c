@@ -60,7 +60,7 @@ void Tune() {
 void DetermineK(int n, Position* positions, Weights* weights) {
   double min = -10, max = 10, delta = 1, best = 1, error = 100;
 
-  for (int p = 0; p < 10; p++) {
+  for (int p = 0; p < 1; p++) {
     printf("Determining K: (%.9f, %.9f, %.9f)\n", min, max, delta);
 
     while (min < max) {
@@ -403,10 +403,10 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights) 
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  // for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-  //   weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
-  //   weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
-  // }
+  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
+    weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
+    weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
+  }
 
   weights->bishopPair.mg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * mgBase;
   weights->bishopPair.eg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * egBase;
@@ -614,7 +614,7 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
   mg += scoreMG(position->coeffs.ks[WHITE]) - scoreMG(position->coeffs.ks[BLACK]);
   eg += scoreEG(position->coeffs.ks[WHITE]) - scoreEG(position->coeffs.ks[BLACK]);
 
-  double result = (mg * position->phase + eg * (24 - position->phase)) / 24.0;
+  int result = (mg * position->phase + eg * (24 - position->phase)) / 24;
   result *= position->scale;
   return result + (position->stm == WHITE ? TEMPO : -TEMPO);
 }
@@ -796,21 +796,143 @@ void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weigh
 }
 
 void LoadPosition(Board* board, Position* position) {
-  int phase = PHASE_MULTIPLIERS[QUEEN_TYPE] * bits(board->pieces[QUEEN_WHITE] | board->pieces[QUEEN_BLACK]) +
-              PHASE_MULTIPLIERS[ROOK_TYPE] * bits(board->pieces[ROOK_WHITE] | board->pieces[ROOK_BLACK]) +
-              PHASE_MULTIPLIERS[BISHOP_TYPE] * bits(board->pieces[BISHOP_WHITE] | board->pieces[BISHOP_BLACK]) +
-              PHASE_MULTIPLIERS[KNIGHT_TYPE] * bits(board->pieces[KNIGHT_WHITE] | board->pieces[KNIGHT_BLACK]);
+  ResetCoeffs();
+  int phase = GetPhase(board);
 
   position->phaseMg = phase / 24.0;
   position->phaseEg = 1 - phase / 24.0;
   position->phase = phase;
 
   position->stm = board->side;
-  position->staticEval = sideScalar[board->side] * Evaluate(board);
-  position->scale = Scale(board, position->staticEval >= 0 ? WHITE : BLACK) / 100.0;
 
-  memcpy(&position->coeffs, &C, sizeof(EvalCoeffs));
-  memset(&C, 0, sizeof(EvalCoeffs));
+  Score eval = Evaluate(board);
+  position->staticEval = sideScalar[board->side] * eval;
+
+  position->scale = Scale(board, C.ss) / 100.0;
+
+  CopyCoeffsInto(&position->coeffs);
+}
+
+void ResetCoeffs() {
+  for (int side = WHITE; side <= BLACK; side++) {
+    for (int pc = 0; pc < 5; pc++)
+      C.pieces[side][pc] = 0;
+
+    for (int pc = 0; pc < 6; pc++)
+      for (int sq = 0; sq < 32; sq++)
+        C.psqt[side][pc][sq] = 0;
+
+    C.bishopPair[side] = 0;
+    C.bishopTrapped[side] = 0;
+
+    for (int sq = 0; sq < 32; sq++) {
+      C.knightPostPsqt[side][sq] = 0;
+      C.bishopPostPsqt[side][sq] = 0;
+    }
+
+    C.knightPostReachable[side] = 0;
+    C.bishopPostReachable[side] = 0;
+
+    for (int c = 0; c < 9; c++)
+      C.knightMobilities[side][c] = 0;
+    for (int c = 0; c < 14; c++)
+      C.bishopMobilities[side][c] = 0;
+    for (int c = 0; c < 15; c++)
+      C.rookMobilities[side][c] = 0;
+    for (int c = 0; c < 28; c++)
+      C.queenMobilities[side][c] = 0;
+
+    C.doubledPawns[side] = 0;
+    C.opposedIsolatedPawns[side] = 0;
+    C.openIsolatedPawns[side] = 0;
+    C.backwardsPawns[side] = 0;
+
+    for (int r = 0; r < 8; r++) {
+      C.connectedPawn[side][r] = 0;
+      C.passedPawn[side][r] = 0;
+    }
+
+    C.passedPawnAdvance[side] = 0;
+    C.passedPawnEdgeDistance[side] = 0;
+    C.passedPawnKingProximity[side] = 0;
+
+    C.rookOpenFile[side] = 0;
+    C.rookSemiOpen[side] = 0;
+    C.rookOppositeKing[side] = 0;
+    C.rookAdjacentKing[side] = 0;
+    C.rookTrapped[side] = 0;
+    C.rookOpenFile[side] = 0;
+
+    for (int i = 0; i < 6; i++) {
+      C.knightThreats[side][i] = 0;
+      C.bishopThreats[side][i] = 0;
+      C.rookThreats[side][i] = 0;
+      C.kingThreats[side][i] = 0;
+    }
+
+    C.ks[side] = 0;
+  }
+}
+
+void CopyCoeffsInto(EvalCoeffs* c) {
+  for (int side = WHITE; side <= BLACK; side++) {
+    for (int pc = 0; pc < 5; pc++)
+      c->pieces[side][pc] = C.pieces[side][pc];
+
+    for (int pc = 0; pc < 6; pc++)
+      for (int sq = 0; sq < 32; sq++)
+        c->psqt[side][pc][sq] = C.psqt[side][pc][sq];
+
+    c->bishopPair[side] = C.bishopPair[side];
+    c->bishopTrapped[side] = C.bishopTrapped[side];
+
+    for (int sq = 0; sq < 32; sq++) {
+      c->knightPostPsqt[side][sq] = C.knightPostPsqt[side][sq];
+      c->bishopPostPsqt[side][sq] = C.bishopPostPsqt[side][sq];
+    }
+
+    c->knightPostReachable[side] = C.knightPostReachable[side];
+    c->bishopPostReachable[side] = C.bishopPostReachable[side];
+
+    for (int d = 0; d < 9; d++)
+      c->knightMobilities[side][d] = C.knightMobilities[side][d];
+    for (int d = 0; d < 14; d++)
+      c->bishopMobilities[side][d] = C.bishopMobilities[side][d];
+    for (int d = 0; d < 15; d++)
+      c->rookMobilities[side][d] = C.rookMobilities[side][d];
+    for (int d = 0; d < 28; d++)
+      c->queenMobilities[side][d] = C.queenMobilities[side][d];
+
+    c->doubledPawns[side] = C.doubledPawns[side];
+    c->opposedIsolatedPawns[side] = C.opposedIsolatedPawns[side];
+    c->openIsolatedPawns[side] = C.openIsolatedPawns[side];
+    c->backwardsPawns[side] = C.backwardsPawns[side];
+
+    for (int r = 0; r < 8; r++) {
+      c->connectedPawn[side][r] = C.connectedPawn[side][r];
+      c->passedPawn[side][r] = C.passedPawn[side][r];
+    }
+
+    c->passedPawnAdvance[side] = C.passedPawnAdvance[side];
+    c->passedPawnEdgeDistance[side] = C.passedPawnEdgeDistance[side];
+    c->passedPawnKingProximity[side] = C.passedPawnKingProximity[side];
+
+    c->rookOpenFile[side] = C.rookOpenFile[side];
+    c->rookSemiOpen[side] = C.rookSemiOpen[side];
+    c->rookOppositeKing[side] = C.rookOppositeKing[side];
+    c->rookAdjacentKing[side] = C.rookAdjacentKing[side];
+    c->rookTrapped[side] = C.rookTrapped[side];
+    c->rookOpenFile[side] = C.rookOpenFile[side];
+
+    for (int i = 0; i < 6; i++) {
+      c->knightThreats[side][i] = C.knightThreats[side][i];
+      c->bishopThreats[side][i] = C.bishopThreats[side][i];
+      c->rookThreats[side][i] = C.rookThreats[side][i];
+      c->kingThreats[side][i] = C.kingThreats[side][i];
+    }
+
+    c->ks[side] = C.ks[side];
+  }
 }
 
 Position* LoadPositions(int* n) {
@@ -845,12 +967,17 @@ Position* LoadPositions(int* n) {
     for (int m = 0; m < pv.count; m++)
       MakeMove(pv.moves[m], &board);
 
-    // if (board.checkers)
-    //   continue;
+    if (board.checkers || !(board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
+      continue;
+
+    if (bits(board.occupancies[BOTH]) == 3 && (board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
+      continue;
 
     LoadPosition(&board, &positions[p]);
     if (positions[p].staticEval > 3000)
       continue;
+
+    BoardToFen(positions[p].fen, &board);
 
     if (!(++p & 4095))
       printf("Loaded %d positions...\n", p);

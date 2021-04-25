@@ -105,6 +105,8 @@ typedef struct {
   int rookThreats[2][6];
   int kingThreats[2][6];
   int ks[2];
+
+  int ss;
 } EvalCoeffs;
 
 typedef struct {
@@ -116,6 +118,7 @@ typedef struct {
   float phaseEg;
   Score staticEval;
   EvalCoeffs coeffs;
+  char fen[128];
 } Position;
 
 typedef struct {
@@ -164,6 +167,8 @@ void InitPawnBonusWeights(Weights* weights);
 void InitPasserBonusWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position);
+void ResetCoeffs();
+void CopyCoeffsInto(EvalCoeffs* c);
 Position* LoadPositions(int* n);
 
 double Sigmoid(double s);
