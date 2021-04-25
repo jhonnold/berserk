@@ -23,8 +23,8 @@
 #include "eval.h"
 #include "random.h"
 #include "search.h"
-#include "texel.h"
 #include "transposition.h"
+#include "tune.h"
 #include "types.h"
 #include "uci.h"
 #include "util.h"
@@ -44,13 +44,11 @@ int main(int argc, char** argv) {
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
     Bench();
-  }
+  } else if (argc > 1 && !strncmp(argv[1], "tune", 4)) {
 #ifdef TUNE
-  else if (argc > 1 && !strncmp(argv[1], "tune", 4)) {
-    Texel();
-  }
+    Tune();
 #endif
-  else {
+  } else {
     UCILoop();
   }
 

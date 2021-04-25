@@ -21,57 +21,78 @@
 
 #include "types.h"
 
+#ifdef TUNE
+#include "tune.h"
+
+extern EvalCoeffs C;
+#endif
+
 #define makeScore(mg, eg) ((int)((unsigned int)(eg) << 16) + (mg))
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
+#define psqtIdx(sq) ((rank((sq)) << 2) + (file((sq)) > 3 ? file((sq)) ^ 7 : file((sq))))
 
 extern const Score PHASE_MULTIPLIERS[5];
 
 extern const int STATIC_MATERIAL_VALUE[7];
 
-extern Score PAWN_PSQT[32];
-extern Score KNIGHT_PSQT[32];
-extern Score BISHOP_PSQT[32];
-extern Score ROOK_PSQT[32];
-extern Score QUEEN_PSQT[32];
-extern Score KING_PSQT[32];
-extern Score KNIGHT_POST_PSQT[32];
-extern Score BISHOP_POST_PSQT[32];
-extern Score MATERIAL_VALUES[7];
+extern const Score MATERIAL_VALUES[7];
+extern const Score BISHOP_PAIR;
 
-extern Score KNIGHT_OUTPOST_REACHABLE;
-extern Score BISHOP_OUTPOST_REACHABLE;
+extern const Score PAWN_PSQT[32];
+extern const Score KNIGHT_PSQT[32];
+extern const Score BISHOP_PSQT[32];
+extern const Score ROOK_PSQT[32];
+extern const Score QUEEN_PSQT[32];
+extern const Score KING_PSQT[32];
 
-extern Score KNIGHT_MOBILITIES[9];
-extern Score BISHOP_MOBILITIES[14];
-extern Score ROOK_MOBILITIES[15];
-extern Score QUEEN_MOBILITIES[28];
+extern const Score KNIGHT_POST_PSQT[32];
+extern const Score BISHOP_POST_PSQT[32];
 
-extern Score DOUBLED_PAWN;
-extern Score OPPOSED_ISOLATED_PAWN;
-extern Score OPEN_ISOLATED_PAWN;
-extern Score BACKWARDS_PAWN;
-extern Score CONNECTED_PAWN[8];
-extern Score PASSED_PAWN[8];
-extern Score PASSED_PAWN_ADVANCE_DEFENDED;
-extern Score PASSED_PAWN_EDGE_DISTANCE;
-extern Score PASSED_PAWN_KING_PROXIMITY;
+extern const Score KNIGHT_MOBILITIES[9];
+extern const Score BISHOP_MOBILITIES[14];
+extern const Score ROOK_MOBILITIES[15];
+extern const Score QUEEN_MOBILITIES[28];
 
-extern Score ROOK_OPEN_FILE;
-extern Score ROOK_SEMI_OPEN;
-extern Score ROOK_SEVENTH_RANK;
-extern Score ROOK_OPPOSITE_KING;
-extern Score ROOK_ADJACENT_KING;
-extern Score ROOK_TRAPPED;
-extern Score BISHOP_TRAPPED;
-extern Score BISHOP_PAIR;
+extern const Score KNIGHT_OUTPOST_REACHABLE;
+extern const Score BISHOP_OUTPOST_REACHABLE;
+extern const Score BISHOP_TRAPPED;
+extern const Score ROOK_TRAPPED;
+extern const Score ROOK_OPEN_FILE;
+extern const Score ROOK_SEMI_OPEN;
+extern const Score ROOK_OPPOSITE_KING;
+extern const Score ROOK_ADJACENT_KING;
 
-extern Score KNIGHT_THREATS[6];
-extern Score BISHOP_THREATS[6];
-extern Score ROOK_THREATS[6];
-extern Score KING_THREATS[6];
+extern const Score DOUBLED_PAWN;
+extern const Score OPPOSED_ISOLATED_PAWN;
+extern const Score OPEN_ISOLATED_PAWN;
+extern const Score BACKWARDS_PAWN;
 
-extern Score TEMPO;
+extern const Score CONNECTED_PAWN[8];
+extern const Score PASSED_PAWN[8];
+extern const Score PASSED_PAWN_ADVANCE_DEFENDED;
+extern const Score PASSED_PAWN_EDGE_DISTANCE;
+extern const Score PASSED_PAWN_KING_PROXIMITY;
+
+extern const Score KNIGHT_THREATS[6];
+extern const Score BISHOP_THREATS[6];
+extern const Score ROOK_THREATS[6];
+extern const Score KING_THREATS[6];
+
+extern const Score TEMPO;
+
+extern const Score PAWN_SHELTER[4][8];
+extern const Score PAWN_STORM[4][8];
+extern const Score BLOCKED_PAWN_STORM[8];
+extern const Score KS_KING_FILE[4];
+
+extern const Score KS_ATTACKER_WEIGHTS[5];
+extern const Score KS_ATTACK;
+extern const Score KS_WEAK_SQS;
+extern const Score KS_SAFE_CHECK;
+extern const Score KS_UNSAFE_CHECK;
+extern const Score KS_ENEMY_QUEEN;
+extern const Score KS_KNIGHT_DEFENSE;
 
 extern Score PSQT[12][64];
 
