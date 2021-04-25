@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set.epd"
 #define THREADS 32
 
 typedef struct {

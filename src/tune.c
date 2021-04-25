@@ -15,7 +15,7 @@
 #include "tune.h"
 #include "util.h"
 
-const int MAX_POSITIONS = 5000000;
+const int MAX_POSITIONS = 3250000;
 
 const int sideScalar[2] = {1, -1};
 
@@ -44,8 +44,7 @@ void Tune() {
   // Correct alpha
   ALPHA *= sqrt(n);
 
-  K = 2.869116400;
-  // DetermineK(n, positions, &weights);
+  DetermineK(n, positions, &weights);
 
   for (int epoch = 0; epoch < 10000; epoch++) {
     UpdateAndTrain(epoch, n, positions, &weights);
@@ -404,10 +403,10 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights) 
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-    weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
-    weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
-  }
+  // for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
+  //   weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
+  //   weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
+  // }
 
   weights->bishopPair.mg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * mgBase;
   weights->bishopPair.eg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * egBase;
@@ -846,8 +845,8 @@ Position* LoadPositions(int* n) {
     for (int m = 0; m < pv.count; m++)
       MakeMove(pv.moves[m], &board);
 
-    if (board.checkers)
-      continue;
+    // if (board.checkers)
+    //   continue;
 
     LoadPosition(&board, &positions[p]);
     if (positions[p].staticEval > 3000)
