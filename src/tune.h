@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\vlarge.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean.epd"
 #define THREADS 32
 
 typedef struct {
@@ -104,7 +104,7 @@ typedef struct {
   int8_t bishopThreats[2][6];
   int8_t rookThreats[2][6];
   int8_t kingThreats[2][6];
-  int16_t ks[2];
+  int ks[2];
 
   int8_t ss;
 } EvalCoeffs;
@@ -130,6 +130,7 @@ typedef struct {
 
 void Tune();
 
+void ValidateEval(int n, Position* positions, Weights* weights);
 void DetermineK(int n, Position* positions, Weights* weights);
 
 void UpdateParam(Param* p);

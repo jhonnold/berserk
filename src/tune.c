@@ -15,7 +15,7 @@
 #include "tune.h"
 #include "util.h"
 
-const int MAX_POSITIONS = 30000000;
+const int MAX_POSITIONS = 0;
 
 const int sideScalar[2] = {1, -1};
 
@@ -40,13 +40,12 @@ void Tune() {
 
   int n = 0;
   Position* positions = LoadPositions(&n);
-
-  // Correct alpha
   ALPHA *= sqrt(n);
 
+  ValidateEval(n, positions, &weights);
   DetermineK(n, positions, &weights);
 
-  for (int epoch = 0; epoch < 10000; epoch++) {
+  for (int epoch = 0; epoch < 0; epoch++) {
     UpdateAndTrain(epoch, n, positions, &weights);
 
     if (epoch % 25 == 0)
@@ -55,6 +54,22 @@ void Tune() {
 
   PrintWeights(&weights);
   free(positions);
+}
+
+void ValidateEval(int n, Position* positions, Weights* weights) {
+#pragma omp parallel for schedule(static) num_threads(THREADS)
+  for (int i = 0; i < n; i++) {
+    double eval = EvaluateCoeffs(&positions[i], weights);
+    if (fabs(positions[i].staticEval - eval) > 1) {
+      printf("The coefficient based evaluation does NOT match the eval!\n");
+      printf("Static: %d, Coeffs: %f\n", positions[i].staticEval, eval);
+      printf("%s\n", positions[i].fen);
+      exit(1);
+    }
+
+    if (i % 4096 == 0)
+      printf("Validated %d position evaluations...\n", i);
+  }
 }
 
 void DetermineK(int n, Position* positions, Weights* weights) {
@@ -70,6 +85,7 @@ void DetermineK(int n, Position* positions, Weights* weights) {
 
 #pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
       for (int i = 0; i < n; i++) {
+
         double sigmoid = Sigmoid(positions[i].staticEval);
         double difference = sigmoid - positions[i].result;
         e += pow(difference, 2);
@@ -967,8 +983,8 @@ Position* LoadPositions(int* n) {
     for (int m = 0; m < pv.count; m++)
       MakeMove(pv.moves[m], &board);
 
-    if (board.checkers)
-      continue;
+    // if (board.checkers)
+    //   continue;
 
     if (!(board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
       continue;
