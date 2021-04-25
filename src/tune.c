@@ -15,7 +15,7 @@
 #include "tune.h"
 #include "util.h"
 
-const int MAX_POSITIONS = 3250000;
+const int MAX_POSITIONS = 30000000;
 
 const int sideScalar[2] = {1, -1};
 
@@ -60,7 +60,7 @@ void Tune() {
 void DetermineK(int n, Position* positions, Weights* weights) {
   double min = -10, max = 10, delta = 1, best = 1, error = 100;
 
-  for (int p = 0; p < 1; p++) {
+  for (int p = 0; p < 10; p++) {
     printf("Determining K: (%.9f, %.9f, %.9f)\n", min, max, delta);
 
     while (min < max) {
@@ -403,10 +403,10 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights) 
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  // for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-  //   weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
-  //   weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
-  // }
+  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
+    weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
+    weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
+  }
 
   weights->bishopPair.mg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * mgBase;
   weights->bishopPair.eg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * egBase;
@@ -967,8 +967,8 @@ Position* LoadPositions(int* n) {
     for (int m = 0; m < pv.count; m++)
       MakeMove(pv.moves[m], &board);
 
-    // if (board.checkers)
-    //   continue;
+    if (board.checkers)
+      continue;
 
     if (!(board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
       continue;

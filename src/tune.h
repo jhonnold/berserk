@@ -5,15 +5,15 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\vlarge.epd"
 #define THREADS 32
 
 typedef struct {
   int epoch;
   float value;
-  double g;
-  double M;
-  double V;
+  float g;
+  float M;
+  float V;
 } Param;
 
 typedef struct {
@@ -74,44 +74,44 @@ typedef struct {
 } Weights;
 
 typedef struct {
-  int pieces[2][5];
-  int psqt[2][6][32];
-  int bishopPair[2];
-  int bishopTrapped[2];
-  int knightPostPsqt[2][32];
-  int bishopPostPsqt[2][32];
-  int knightPostReachable[2];
-  int bishopPostReachable[2];
-  int knightMobilities[2][9];
-  int bishopMobilities[2][14];
-  int rookMobilities[2][15];
-  int queenMobilities[2][28];
-  int doubledPawns[2];
-  int opposedIsolatedPawns[2];
-  int openIsolatedPawns[2];
-  int backwardsPawns[2];
-  int connectedPawn[2][8];
-  int passedPawn[2][8];
-  int passedPawnAdvance[2];
-  int passedPawnEdgeDistance[2];
-  int passedPawnKingProximity[2];
-  int rookOpenFile[2];
-  int rookSemiOpen[2];
-  int rookOppositeKing[2];
-  int rookAdjacentKing[2];
-  int rookTrapped[2];
-  int knightThreats[2][6];
-  int bishopThreats[2][6];
-  int rookThreats[2][6];
-  int kingThreats[2][6];
-  int ks[2];
+  int8_t pieces[2][5];
+  int8_t psqt[2][6][32];
+  int8_t bishopPair[2];
+  int8_t bishopTrapped[2];
+  int8_t knightPostPsqt[2][32];
+  int8_t bishopPostPsqt[2][32];
+  int8_t knightPostReachable[2];
+  int8_t bishopPostReachable[2];
+  int8_t knightMobilities[2][9];
+  int8_t bishopMobilities[2][14];
+  int8_t rookMobilities[2][15];
+  int8_t queenMobilities[2][28];
+  int8_t doubledPawns[2];
+  int8_t opposedIsolatedPawns[2];
+  int8_t openIsolatedPawns[2];
+  int8_t backwardsPawns[2];
+  int8_t connectedPawn[2][8];
+  int8_t passedPawn[2][8];
+  int8_t passedPawnAdvance[2];
+  int8_t passedPawnEdgeDistance[2];
+  int8_t passedPawnKingProximity[2];
+  int8_t rookOpenFile[2];
+  int8_t rookSemiOpen[2];
+  int8_t rookOppositeKing[2];
+  int8_t rookAdjacentKing[2];
+  int8_t rookTrapped[2];
+  int8_t knightThreats[2][6];
+  int8_t bishopThreats[2][6];
+  int8_t rookThreats[2][6];
+  int8_t kingThreats[2][6];
+  int16_t ks[2];
 
-  int ss;
+  int8_t ss;
 } EvalCoeffs;
 
 typedef struct {
-  int phase;
-  int stm;
+  int8_t phase;
+  int8_t stm;
   float result;
   float scale;
   float phaseMg;
@@ -122,7 +122,7 @@ typedef struct {
 } Position;
 
 typedef struct {
-  double error;
+  float error;
   int n;
   Position* positions;
   Weights* weights;
