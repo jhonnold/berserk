@@ -78,6 +78,7 @@ extern const Score KNIGHT_THREATS[6];
 extern const Score BISHOP_THREATS[6];
 extern const Score ROOK_THREATS[6];
 extern const Score KING_THREATS[6];
+extern const Score HANGING_THREAT;
 
 extern const Score TEMPO;
 

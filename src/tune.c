@@ -186,6 +186,9 @@ void UpdateWeights(Weights* weights) {
     UpdateParam(&weights->kingThreats[pc].eg);
   }
 
+  UpdateParam(&weights->hangingThreat.mg);
+  UpdateParam(&weights->hangingThreat.eg);
+
   UpdateParam(&weights->knightPostReachable.mg);
   UpdateParam(&weights->knightPostReachable.eg);
 
@@ -325,6 +328,9 @@ void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
       weights->kingThreats[pc].mg.g += w->kingThreats[pc].mg.g;
       weights->kingThreats[pc].eg.g += w->kingThreats[pc].eg.g;
     }
+
+    weights->hangingThreat.mg.g += w->hangingThreat.mg.g;
+    weights->hangingThreat.eg.g += w->hangingThreat.eg.g;
 
     weights->knightPostReachable.mg.g += w->knightPostReachable.mg.g;
     weights->knightPostReachable.eg.g += w->knightPostReachable.eg.g;
@@ -517,6 +523,11 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
     weights->kingThreats[pc].eg.g +=
         (position->coeffs.kingThreats[WHITE][pc] - position->coeffs.kingThreats[BLACK][pc]) * egBase;
   }
+
+  weights->hangingThreat.mg.g +=
+      (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * mgBase;
+  weights->hangingThreat.eg.g +=
+      (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * egBase;
 }
 
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights) {
@@ -722,6 +733,11 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
     *eg += (position->coeffs.kingThreats[WHITE][pc] - position->coeffs.kingThreats[BLACK][pc]) *
            weights->kingThreats[pc].eg.value;
   }
+
+  *mg +=
+      (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * weights->hangingThreat.mg.value;
+  *eg +=
+      (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * weights->hangingThreat.eg.value;
 }
 
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -886,6 +902,8 @@ void ResetCoeffs() {
       C.kingThreats[side][i] = 0;
     }
 
+    C.hangingThreat[side] = 0;
+
     C.ks[side] = 0;
   }
 }
@@ -946,6 +964,8 @@ void CopyCoeffsInto(EvalCoeffs* c) {
       c->rookThreats[side][i] = C.rookThreats[side][i];
       c->kingThreats[side][i] = C.kingThreats[side][i];
     }
+
+    c->hangingThreat[side] = C.hangingThreat[side];
 
     c->ks[side] = C.ks[side];
   }
@@ -1088,6 +1108,9 @@ void InitThreatWeights(Weights* weights) {
     weights->kingThreats[pc].mg.value = scoreMG(KING_THREATS[pc]);
     weights->kingThreats[pc].eg.value = scoreEG(KING_THREATS[pc]);
   }
+
+  weights->hangingThreat.mg.value = scoreMG(HANGING_THREAT);
+  weights->hangingThreat.eg.value = scoreEG(HANGING_THREAT);
 }
 
 void InitPieceBonusWeights(Weights* weights) {
@@ -1277,6 +1300,9 @@ void PrintWeights(Weights* weights) {
   printf("\nconst Score KING_THREATS[6] = {");
   PrintWeightArray(weights->kingThreats, 6, 0);
   printf("};\n");
+
+  printf("\nconst Score HANGING_THREAT = ");
+  PrintWeight(&weights->hangingThreat);
 
   printf("\n");
 }

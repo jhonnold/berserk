@@ -58,6 +58,7 @@ typedef struct {
   Weight bishopThreats[6];
   Weight rookThreats[6];
   Weight kingThreats[6];
+  Weight hangingThreat;
 
   Weight ksAttackerWeight[5];
   Weight ksSafeCheck;
@@ -104,6 +105,7 @@ typedef struct {
   int8_t bishopThreats[2][6];
   int8_t rookThreats[2][6];
   int8_t kingThreats[2][6];
+  int8_t hangingThreat[2];
   int ks[2];
 
   int8_t ss;
