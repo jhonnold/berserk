@@ -63,7 +63,6 @@ void ValidateEval(int n, Position* positions, Weights* weights) {
     if (fabs(positions[i].staticEval - eval) > 1) {
       printf("The coefficient based evaluation does NOT match the eval!\n");
       printf("Static: %d, Coeffs: %f\n", positions[i].staticEval, eval);
-      printf("%s\n", positions[i].fen);
       exit(1);
     }
 
@@ -1015,8 +1014,6 @@ Position* LoadPositions(int* n) {
     LoadPosition(&board, &positions[p]);
     if (positions[p].staticEval > 3000)
       continue;
-
-    BoardToFen(positions[p].fen, &board);
 
     if (!(++p & 4095))
       printf("Loaded %d positions...\n", p);

@@ -100,6 +100,43 @@ typedef struct {
 } SearchData;
 
 typedef struct {
+  int8_t pieces[2][5];
+  int8_t psqt[2][6][32];
+  int8_t bishopPair[2];
+  int8_t bishopTrapped[2];
+  int8_t knightPostPsqt[2][32];
+  int8_t bishopPostPsqt[2][32];
+  int8_t knightPostReachable[2];
+  int8_t bishopPostReachable[2];
+  int8_t knightMobilities[2][9];
+  int8_t bishopMobilities[2][14];
+  int8_t rookMobilities[2][15];
+  int8_t queenMobilities[2][28];
+  int8_t doubledPawns[2];
+  int8_t opposedIsolatedPawns[2];
+  int8_t openIsolatedPawns[2];
+  int8_t backwardsPawns[2];
+  int8_t connectedPawn[2][8];
+  int8_t passedPawn[2][8];
+  int8_t passedPawnAdvance[2];
+  int8_t passedPawnEdgeDistance[2];
+  int8_t passedPawnKingProximity[2];
+  int8_t rookOpenFile[2];
+  int8_t rookSemiOpen[2];
+  int8_t rookOppositeKing[2];
+  int8_t rookAdjacentKing[2];
+  int8_t rookTrapped[2];
+  int8_t knightThreats[2][6];
+  int8_t bishopThreats[2][6];
+  int8_t rookThreats[2][6];
+  int8_t kingThreats[2][6];
+  int8_t hangingThreat[2];
+  int ks[2];
+
+  int8_t ss;
+} EvalCoeffs;
+
+typedef struct {
   long startTime;
   long endTime;
   long maxTime;

@@ -17,20 +17,19 @@
 #ifndef EVAL_H
 #define EVAL_H
 
-#include <inttypes.h>
+#include <stdlib.h>
 
 #include "types.h"
-
-#ifdef TUNE
-#include "tune.h"
-
-extern EvalCoeffs C;
-#endif
 
 #define makeScore(mg, eg) ((int)((unsigned int)(eg) << 16) + (mg))
 #define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 #define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
 #define psqtIdx(sq) ((rank((sq)) << 2) + (file((sq)) > 3 ? file((sq)) ^ 7 : file((sq))))
+#define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
+#define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
+
+#define UNKNOWN INT32_MAX
+extern EvalCoeffs C;
 
 extern const Score PHASE_MULTIPLIERS[5];
 
@@ -99,17 +98,9 @@ extern Score PSQT[12][64];
 
 void InitPSQT();
 
+int Scale(Board* board, int ss);
 Score GetPhase(Board* board);
-Score Taper(Score mg, Score eg, Score phase);
-
-Score EvaluateKXK(Board* board);
 
 Score Evaluate(Board* board);
-
-uint8_t GetKPKBit(int bit);
-int KPKIndex(int ssKing, int wsKing, int p, int stm);
-int KPKDraw(int ss, int ssKing, int wsKing, int p, int stm);
-
-int Scale(Board* board, int ss);
 
 #endif
