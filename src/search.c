@@ -351,10 +351,10 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (depth >= 2 && numMoves > 1) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
-      if (!tactical) {
-        if (!isPV)
-          R++;
+      if (!isPV)
+        R++;
 
+      if (!tactical) {
         if (!improving)
           R++;
 
