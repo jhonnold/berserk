@@ -13,7 +13,7 @@ A UCI chess engine written in C.
 | 1.2.2       | 2160    | 2'+1"  |
 | 2.0.0       | 2546    | 2'+1"  |
 | 3.2.0       | 2896    | 2'+1"  |
-| 3.3.0       |         |        |
+| 4.0.0       |         |        |
 
 ### Lars No SMP
 
@@ -22,7 +22,7 @@ A UCI chess engine written in C.
 | 2.0.0       | ~2600   | 15'    |
 | 3.0.0       | 2818    | 15'    |
 | 3.2.0       | 2901    | 15'    |
-| 3.3.0       |         |        |
+| 4.0.0       | 3027    | 15'    |
 
 ## Features
 
@@ -63,10 +63,11 @@ Evaluation is tapered.
 ### Future Improvements
 
 - Phased move generated
+  - As well as other general speed improvements
 - Candidate passed pawns
-- More positional analysis
-- ~~Singularity extension~~
-- ~~Texel tuning~~
+- Space evaluation
+- Improved king and pawn endgame evaluation
+- Tune KS with Texel tuning
 - Other things...
 
 ## Building
@@ -106,3 +107,4 @@ This engine could not be written without some influence and they are...
 - [Cute Chess](https://cutechess.com/)
 - [Arena](http://www.playwitharena.de/)
 - Lars in Graham's CCRL rooms for a nice engine list
+- [Koivisto](https://github.com/Luecx/Koivisto) authors for advice and assistance on OpenBench
