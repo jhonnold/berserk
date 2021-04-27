@@ -133,9 +133,6 @@ void UpdateWeights(Weights* weights) {
     UpdateParam(&weights->material[pc].eg);
   }
 
-  UpdateParam(&weights->bishopPair.mg);
-  UpdateParam(&weights->bishopPair.eg);
-
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++) {
     for (int sq = 0; sq < 32; sq++) {
       UpdateParam(&weights->psqt[pc][sq].mg);
@@ -187,6 +184,9 @@ void UpdateWeights(Weights* weights) {
 
   UpdateParam(&weights->hangingThreat.mg);
   UpdateParam(&weights->hangingThreat.eg);
+
+  UpdateParam(&weights->bishopPair.mg);
+  UpdateParam(&weights->bishopPair.eg);
 
   UpdateParam(&weights->knightPostReachable.mg);
   UpdateParam(&weights->knightPostReachable.eg);
@@ -434,9 +434,6 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights) 
     weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
     weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
   }
-
-  weights->bishopPair.mg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * mgBase;
-  weights->bishopPair.eg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * egBase;
 }
 
 void UpdatePsqtGradients(Position* position, double loss, Weights* weights) {
@@ -538,6 +535,9 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights) {
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
+
+  weights->bishopPair.mg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * mgBase;
+  weights->bishopPair.eg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * egBase;
 
   weights->knightPostReachable.mg.g +=
       (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) * mgBase;
@@ -661,9 +661,6 @@ void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights*
     *mg += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * weights->material[pc].mg.value;
     *eg += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * weights->material[pc].eg.value;
   }
-
-  *mg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.mg.value;
-  *eg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.eg.value;
 }
 
 void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -751,6 +748,9 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
 }
 
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
+  *mg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.mg.value;
+  *eg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.eg.value;
+  
   *mg += (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) *
          weights->knightPostReachable.mg.value;
   *eg += (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) *
@@ -1050,9 +1050,6 @@ void InitMaterialWeights(Weights* weights) {
     weights->material[pc].mg.value = scoreMG(MATERIAL_VALUES[pc]);
     weights->material[pc].eg.value = scoreEG(MATERIAL_VALUES[pc]);
   }
-
-  weights->bishopPair.mg.value = scoreMG(BISHOP_PAIR);
-  weights->bishopPair.eg.value = scoreEG(BISHOP_PAIR);
 }
 
 void InitPsqtWeights(Weights* weights) {
@@ -1129,6 +1126,9 @@ void InitThreatWeights(Weights* weights) {
 }
 
 void InitPieceBonusWeights(Weights* weights) {
+  weights->bishopPair.mg.value = scoreMG(BISHOP_PAIR);
+  weights->bishopPair.eg.value = scoreEG(BISHOP_PAIR);
+
   weights->knightPostReachable.mg.value = scoreMG(KNIGHT_OUTPOST_REACHABLE);
   weights->knightPostReachable.eg.value = scoreEG(KNIGHT_OUTPOST_REACHABLE);
 
