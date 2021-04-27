@@ -66,8 +66,9 @@ extern const Score DOUBLED_PAWN;
 extern const Score OPPOSED_ISOLATED_PAWN;
 extern const Score OPEN_ISOLATED_PAWN;
 extern const Score BACKWARDS_PAWN;
-
 extern const Score CONNECTED_PAWN[8];
+extern const Score CANDIDATE_PASSER[8];
+
 extern const Score PASSED_PAWN[8];
 extern const Score PASSED_PAWN_ADVANCE_DEFENDED;
 extern const Score PASSED_PAWN_EDGE_DISTANCE;
