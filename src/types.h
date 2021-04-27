@@ -54,6 +54,8 @@ typedef struct {
   BitBoard pinned;        // pinned pieces
   uint64_t piecesCounts;   // "material key" - pieces left on the board
 
+  Score mat; // material+psqt score updated incrementally
+
   int side;     // side to move
   int xside;    // side not to move
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no active ep)

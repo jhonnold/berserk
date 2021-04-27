@@ -357,13 +357,6 @@ Score MaterialValue(Board* board, int side) {
     }
   }
 
-  if (bits(board->pieces[BISHOP[side]]) > 1) {
-    s += BISHOP_PAIR;
-
-    if (T)
-      C.bishopPair[side] = 1;
-  }
-
   return s;
 }
 
@@ -379,6 +372,14 @@ Score PieceEval(Board* board, EvalData* data, int side) {
   BitBoard outposts = data->outposts[side];
   BitBoard myPawns = board->pieces[PAWN[side]];
   BitBoard opponentPawns = board->pieces[PAWN[xside]];
+
+  // bishop pair bonus first
+  if (bits(board->pieces[BISHOP[side]]) > 1) {
+    s += BISHOP_PAIR;
+
+    if (T)
+      C.bishopPair[side] = 1;
+  }
 
   for (int p = KNIGHT[side]; p <= KING[side]; p += 2) {
     BitBoard pieces = board->pieces[p];
@@ -822,8 +823,12 @@ Score Evaluate(Board* board) {
   EvalData data = {0};
   InitEvalData(&data, board);
 
-  Score s = 0;
-  s += MaterialValue(board, WHITE) - MaterialValue(board, BLACK);
+  Score s;
+  if (!T) {
+    s = board->side == WHITE ? board->mat : -board->mat;
+  } else {
+    s = MaterialValue(board, WHITE) - MaterialValue(board, BLACK);
+  }
   s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
   s += PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
   s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
