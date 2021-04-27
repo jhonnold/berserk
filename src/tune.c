@@ -43,7 +43,7 @@ void Tune() {
   ALPHA *= sqrt(n);
 
   ValidateEval(n, positions, &weights);
-  DetermineK(n, positions, &weights);
+  DetermineK(n, positions);
 
   for (int epoch = 0; epoch < 10000; epoch++) {
     UpdateAndTrain(epoch, n, positions, &weights);
@@ -71,7 +71,7 @@ void ValidateEval(int n, Position* positions, Weights* weights) {
   }
 }
 
-void DetermineK(int n, Position* positions, Weights* weights) {
+void DetermineK(int n, Position* positions) {
   double min = -10, max = 10, delta = 1, best = 1, error = 100;
 
   for (int p = 0; p < 10; p++) {
@@ -227,6 +227,9 @@ void UpdateWeights(Weights* weights) {
   for (int r = 0; r < 8; r++) {
     UpdateParam(&weights->connectedPawn[r].mg);
     UpdateParam(&weights->connectedPawn[r].eg);
+
+    UpdateParam(&weights->candidatePasser[r].mg);
+    UpdateParam(&weights->candidatePasser[r].eg);
   }
 
   for (int r = 0; r < 8; r++) {
@@ -370,6 +373,9 @@ void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
     for (int r = 0; r < 8; r++) {
       weights->connectedPawn[r].mg.g += w->connectedPawn[r].mg.g;
       weights->connectedPawn[r].eg.g += w->connectedPawn[r].eg.g;
+
+      weights->candidatePasser[r].mg.g += w->candidatePasser[r].mg.g;
+      weights->candidatePasser[r].eg.g += w->candidatePasser[r].eg.g;
     }
 
     for (int r = 0; r < 8; r++) {
@@ -595,6 +601,11 @@ void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights)
         (position->coeffs.connectedPawn[WHITE][r] - position->coeffs.connectedPawn[BLACK][r]) * mgBase;
     weights->connectedPawn[r].eg.g +=
         (position->coeffs.connectedPawn[WHITE][r] - position->coeffs.connectedPawn[BLACK][r]) * egBase;
+
+    weights->candidatePasser[r].mg.g +=
+        (position->coeffs.candidatePasser[WHITE][r] - position->coeffs.candidatePasser[BLACK][r]) * mgBase;
+    weights->candidatePasser[r].eg.g +=
+        (position->coeffs.candidatePasser[WHITE][r] - position->coeffs.candidatePasser[BLACK][r]) * egBase;
   }
 }
 
@@ -799,6 +810,11 @@ void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights
            weights->connectedPawn[r].mg.value;
     *eg += (position->coeffs.connectedPawn[WHITE][r] - position->coeffs.connectedPawn[BLACK][r]) *
            weights->connectedPawn[r].eg.value;
+
+    *mg += (position->coeffs.candidatePasser[WHITE][r] - position->coeffs.candidatePasser[BLACK][r]) *
+           weights->candidatePasser[r].mg.value;
+    *eg += (position->coeffs.candidatePasser[WHITE][r] - position->coeffs.candidatePasser[BLACK][r]) *
+           weights->candidatePasser[r].eg.value;
   }
 }
 
@@ -880,6 +896,7 @@ void ResetCoeffs() {
 
     for (int r = 0; r < 8; r++) {
       C.connectedPawn[side][r] = 0;
+      C.candidatePasser[side][r] = 0;
       C.passedPawn[side][r] = 0;
     }
 
@@ -943,6 +960,7 @@ void CopyCoeffsInto(EvalCoeffs* c) {
 
     for (int r = 0; r < 8; r++) {
       c->connectedPawn[side][r] = C.connectedPawn[side][r];
+      c->candidatePasser[side][r] = C.candidatePasser[side][r];
       c->passedPawn[side][r] = C.passedPawn[side][r];
     }
 
@@ -1152,6 +1170,9 @@ void InitPawnBonusWeights(Weights* weights) {
   for (int r = 0; r < 8; r++) {
     weights->connectedPawn[r].mg.value = scoreMG(CONNECTED_PAWN[r]);
     weights->connectedPawn[r].eg.value = scoreEG(CONNECTED_PAWN[r]);
+
+    weights->candidatePasser[r].mg.value = scoreMG(CANDIDATE_PASSER[r]);
+    weights->candidatePasser[r].eg.value = scoreEG(CANDIDATE_PASSER[r]);
   }
 }
 
@@ -1267,6 +1288,10 @@ void PrintWeights(Weights* weights) {
 
   printf("\nconst Score CONNECTED_PAWN[8] = {\n");
   PrintWeightArray(weights->connectedPawn, 8, 4);
+  printf("};\n");
+
+  printf("\nconst Score CANDIDATE_PASSER[8] = {\n");
+  PrintWeightArray(weights->candidatePasser, 8, 4);
   printf("};\n");
 
   printf("\nconst Score PASSED_PAWN[8] = {\n");
