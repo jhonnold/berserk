@@ -1,7 +1,7 @@
 CC = gcc
 SRC = *.c
 EXE = berserk
-VERSION = 4.0.0
+VERSION = 4.1.0-dev
 
 LIBS = -lm -lpthread
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
