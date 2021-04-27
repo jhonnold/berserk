@@ -291,7 +291,7 @@ inline void SetSpecialPieces(Board* board) {
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
   // Reset pinned pieces
-  board->pinners = EMPTY;
+  board->pinned = EMPTY;
   // checked can be initialized easily with non-blockable checks
   board->checkers = (GetKnightAttacks(kingSq) & board->pieces[KNIGHT[board->xside]]) |
                     (GetPawnAttacks(kingSq, board->side) & board->pieces[PAWN[board->xside]]);
@@ -317,7 +317,7 @@ inline void SetSpecialPieces(Board* board) {
         board->checkers |= (enemyPiece & -enemyPiece);
       else if (bits(blockers) == 1)
         // just 1? then its pinned
-        board->pinners |= (blockers & board->occupancies[kingColor]);
+        board->pinned |= (blockers & board->occupancies[kingColor]);
 
       // TODO: Similar logic can be applied for discoveries, but apply for self pieces
 
@@ -345,6 +345,8 @@ void MakeMove(Move move, Board* board) {
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->captureHistory[board->moveNo] = NO_PIECE; // this might get overwritten
   board->halfMoveHistory[board->moveNo] = board->halfMove;
+  board->checkersHistory[board->moveNo] = board->checkers;
+  board->pinnedHistory[board->moveNo] = board->pinned;
 
   popBit(board->pieces[piece], start);
   setBit(board->pieces[piece], end);
@@ -479,6 +481,8 @@ void UndoMove(Move move, Board* board) {
   board->castling = board->castlingHistory[board->moveNo];
   board->zobrist = board->zobristHistory[board->moveNo];
   board->halfMove = board->halfMoveHistory[board->moveNo];
+  board->checkers = board->checkersHistory[board->moveNo];
+  board->pinned = board->pinnedHistory[board->moveNo];
 
   popBit(board->pieces[piece], end);
   setBit(board->pieces[piece], start);
@@ -537,10 +541,6 @@ void UndoMove(Move move, Board* board) {
   }
 
   SetOccupancies(board);
-
-  // TODO: Should these values be cached as well?
-  // only two more bit board arrays
-  SetSpecialPieces(board);
 }
 
 // this is NOT a legality checker for ALL moves
@@ -599,6 +599,8 @@ void MakeNullMove(Board* board) {
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->captureHistory[board->moveNo] = NO_PIECE;
   board->halfMoveHistory[board->moveNo] = board->halfMove;
+  board->checkersHistory[board->moveNo] = board->checkers;
+  board->pinnedHistory[board->moveNo] = board->pinned;
 
   board->halfMove++;
 
@@ -625,4 +627,6 @@ void UndoNullMove(Board* board) {
   board->castling = board->castlingHistory[board->moveNo];
   board->epSquare = board->epSquareHistory[board->moveNo];
   board->halfMove = board->halfMoveHistory[board->moveNo];
+  board->checkers = board->checkersHistory[board->moveNo];
+  board->pinned = board->pinnedHistory[board->moveNo];
 }
