@@ -6,7 +6,7 @@
 #include "types.h"
 
 #define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean.epd"
-#define THREADS 32
+#define THREADS 16
 
 typedef struct {
   int epoch;
@@ -48,6 +48,7 @@ typedef struct {
   Weight openIsolatedPawns;
   Weight backwardsPawns;
   Weight connectedPawn[8];
+  Weight candidatePasser[8];
 
   Weight passedPawn[8];
   Weight passedPawnEdgeDistance;
@@ -95,7 +96,7 @@ typedef struct {
 void Tune();
 
 void ValidateEval(int n, Position* positions, Weights* weights);
-void DetermineK(int n, Position* positions, Weights* weights);
+void DetermineK(int n, Position* positions);
 
 void UpdateParam(Param* p);
 void UpdateWeights(Weights* weights);
