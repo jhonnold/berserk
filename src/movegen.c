@@ -427,7 +427,7 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
     // while in check, only tactical moves to evade are captures
     // pinned pieces can NEVER be the piece to evade a check with a capture, so
     // those are filtered out
-    BitBoard nonPinned = ~board->pinners;
+    BitBoard nonPinned = ~board->pinned;
 
     GeneratePawnCaptures(moveList, board->pieces[PAWN[board->side]] & nonPinned, board->checkers, board);
     GeneratePawnPromotions(moveList, board->pieces[PAWN[board->side]] & nonPinned, board->checkers, board);
@@ -440,7 +440,7 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
     // generate moves in two stages, non pinned piece moves, then pinned piece moves
 
     // all non-pinned captures
-    BitBoard nonPinned = ~board->pinners;
+    BitBoard nonPinned = ~board->pinned;
     GeneratePawnCaptures(moveList, board->pieces[PAWN[board->side]] & nonPinned, FILLED, board);
     GeneratePawnPromotions(moveList, board->pieces[PAWN[board->side]] & nonPinned, FILLED, board);
     GenerateKnightCaptures(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, FILLED, board);
@@ -451,10 +451,10 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
 
     // get the pinned pieces and generate their moves
     // knights when pinned cannot move
-    BitBoard pinnedPawns = board->pieces[PAWN[board->side]] & board->pinners;
-    BitBoard pinnedBishops = board->pieces[BISHOP[board->side]] & board->pinners;
-    BitBoard pinnedRooks = board->pieces[ROOK[board->side]] & board->pinners;
-    BitBoard pinnedQueens = board->pieces[QUEEN[board->side]] & board->pinners;
+    BitBoard pinnedPawns = board->pieces[PAWN[board->side]] & board->pinned;
+    BitBoard pinnedBishops = board->pieces[BISHOP[board->side]] & board->pinned;
+    BitBoard pinnedRooks = board->pieces[ROOK[board->side]] & board->pinned;
+    BitBoard pinnedQueens = board->pieces[QUEEN[board->side]] & board->pinned;
 
     while (pinnedPawns) {
       int sq = lsb(pinnedPawns);
@@ -532,7 +532,7 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
 
     BitBoard betweens = GetInBetweenSquares(kingSq, lsb(board->checkers));
 
-    BitBoard nonPinned = ~board->pinners;
+    BitBoard nonPinned = ~board->pinned;
     GenerateAllPawnMoves(moveList, board->pieces[PAWN[board->side]] & nonPinned, betweens | board->checkers, board);
     GenerateAllKnightMoves(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, betweens | board->checkers, board);
     GenerateAllBishopMoves(moveList, board->pieces[BISHOP[board->side]] & nonPinned, betweens | board->checkers, board);
@@ -543,7 +543,7 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
   } else {
     // all non-pinned moves to anywhere on the board (FILLED)
 
-    BitBoard nonPinned = ~board->pinners;
+    BitBoard nonPinned = ~board->pinned;
     GenerateAllPawnMoves(moveList, board->pieces[PAWN[board->side]] & nonPinned, FILLED, board);
     GenerateAllKnightMoves(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, FILLED, board);
     GenerateAllBishopMoves(moveList, board->pieces[BISHOP[board->side]] & nonPinned, FILLED, board);
@@ -552,10 +552,10 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
     GenerateAllKingMoves(moveList, board);
 
     // generate pinned piece moves, knights cannot move while pinned
-    BitBoard pinnedPawns = board->pieces[PAWN[board->side]] & board->pinners;
-    BitBoard pinnedBishops = board->pieces[BISHOP[board->side]] & board->pinners;
-    BitBoard pinnedRooks = board->pieces[ROOK[board->side]] & board->pinners;
-    BitBoard pinnedQueens = board->pieces[QUEEN[board->side]] & board->pinners;
+    BitBoard pinnedPawns = board->pieces[PAWN[board->side]] & board->pinned;
+    BitBoard pinnedBishops = board->pieces[BISHOP[board->side]] & board->pinned;
+    BitBoard pinnedRooks = board->pieces[ROOK[board->side]] & board->pinned;
+    BitBoard pinnedQueens = board->pieces[QUEEN[board->side]] & board->pinned;
 
     while (pinnedPawns) {
       int sq = lsb(pinnedPawns);

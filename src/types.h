@@ -51,7 +51,7 @@ typedef struct {
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
   int squares[64];         // piece per square
   BitBoard checkers;       // checking piece squares
-  BitBoard pinners;        // pinned pieces
+  BitBoard pinned;        // pinned pieces
   uint64_t piecesCounts;   // "material key" - pieces left on the board
 
   int side;     // side to move
@@ -69,6 +69,8 @@ typedef struct {
   int epSquareHistory[MAX_GAME_PLY];
   int captureHistory[MAX_GAME_PLY];
   int halfMoveHistory[MAX_GAME_PLY];
+  BitBoard checkersHistory[MAX_GAME_PLY];
+  BitBoard pinnedHistory[MAX_GAME_PLY];
 } Board;
 
 // Tracking the principal variation
