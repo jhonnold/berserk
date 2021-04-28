@@ -504,22 +504,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     ChooseTopMove(&moveList, i);
     Move move = moveList.moves[i];
 
-    if (MovePromo(move)) {
-      // consider all non-queen promotions as quiet
-      if (MovePromo(move) < QUEEN[WHITE])
-        continue;
-    } else {
-      int captured = MoveEP(move) ? PAWN[board->xside] : board->squares[MoveEnd(move)];
-
-      assert(captured != NO_PIECE);
-
-      // delta pruning
-      // if we can't catch alpha even when capturing a piece and then some, prune
-      if (eval + DELTA_CUTOFF + STATIC_MATERIAL_VALUE[PIECE_TYPE[captured]] < alpha)
-        continue;
-    }
-
-    // skip bad captures (SEE scores are negative)
+    // a delta prune look-a-like by Halogen
+    // prune based on SEE scores rather than flat mat val
+    if (eval + moveList.scores[i] + DELTA_CUTOFF < alpha)
+      break;
+    
     if (moveList.scores[i] < 0)
       break;
 
