@@ -135,6 +135,7 @@ typedef struct {
   int8_t bishopThreats[2][6];
   int8_t rookThreats[2][6];
   int8_t kingThreats[2][6];
+  int8_t pawnThreat[2];
   int8_t hangingThreat[2];
   int ks[2];
 
