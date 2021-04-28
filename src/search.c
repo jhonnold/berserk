@@ -504,6 +504,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     ChooseTopMove(&moveList, i);
     Move move = moveList.moves[i];
 
+    // a delta prune look-a-like by Halogen
+    // prune based on SEE scores rather than flat mat val
     if (eval + moveList.scores[i] + DELTA_CUTOFF < alpha)
       break;
     

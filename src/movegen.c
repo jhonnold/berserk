@@ -494,7 +494,7 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
       ++curr;
   }
 
-  // for tactical moves just see is utilized for ordering
+  // for tactical moves just SEE is utilized for ordering
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
 
