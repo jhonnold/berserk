@@ -509,19 +509,14 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
       if (MovePromo(move) < QUEEN[WHITE])
         continue;
     } else {
-      int captured = MoveEP(move) ? PAWN[board->xside] : board->squares[MoveEnd(move)];
+      // skip bad captures (SEE scores are negative)
+      if (moveList.scores[i] < 0)
+        break;
 
-      assert(captured != NO_PIECE);
-
-      // delta pruning
-      // if we can't catch alpha even when capturing a piece and then some, prune
-      if (eval + DELTA_CUTOFF + STATIC_MATERIAL_VALUE[PIECE_TYPE[captured]] < alpha)
+      int see = SEE(board, move);
+      if (eval + DELTA_CUTOFF + see < alpha)
         continue;
     }
-
-    // skip bad captures (SEE scores are negative)
-    if (moveList.scores[i] < 0)
-      break;
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);
