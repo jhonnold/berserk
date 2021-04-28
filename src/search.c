@@ -504,19 +504,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     ChooseTopMove(&moveList, i);
     Move move = moveList.moves[i];
 
-    if (MovePromo(move)) {
-      // consider all non-queen promotions as quiet
-      if (MovePromo(move) < QUEEN[WHITE])
-        continue;
-    } else {
-      // skip bad captures (SEE scores are negative)
-      if (moveList.scores[i] < 0)
-        break;
-
-      int see = SEE(board, move);
-      if (eval + DELTA_CUTOFF + see < alpha)
-        continue;
-    }
+    if (eval + moveList.scores[i] + DELTA_CUTOFF < alpha)
+      break;
+    
+    if (moveList.scores[i] < 0)
+      break;
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);

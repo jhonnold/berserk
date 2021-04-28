@@ -488,32 +488,21 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
   while (curr != moveList->moves + moveList->count) {
     if ((MoveStart(*curr) == kingSq || MoveEP(*curr)) && !IsMoveLegal(*curr, board))
       *curr = moveList->moves[--moveList->count]; // overwrite this illegal move with the last move and try again
+    else if (MovePromo(*curr) && MovePromo(*curr) < QUEEN_WHITE)
+      *curr = moveList->moves[--moveList->count]; // filter out under promotions
     else
       ++curr;
   }
 
-  // for tactical moves just MVV_LVA, SEE Score, and Static material values are utilized
+  // for tactical moves just see is utilized for ordering
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
 
-    if (MovePromo(move)) {
-      moveList->scores[i] = STATIC_MATERIAL_VALUE[PIECE_TYPE[MovePromo(move)]];
-    } else if (MoveEP(move)) {
-      moveList->scores[i] = MVV_LVA[PAWN[board->side]][PAWN[board->xside]];
-    } else {
-      int mover = MovePiece(move);
-      int captured = board->squares[MoveEnd(move)];
-
-      assert(captured != NO_PIECE);
-      assert(mover != NO_PIECE);
-
-      int seeScore = 0;
-      if ((PIECE_TYPE[captured] <= PIECE_TYPE[mover]) && (seeScore = SEE(board, move)) < 0) {
-        moveList->scores[i] = seeScore; // bad capture will be negative
-      } else {
-        moveList->scores[i] = MVV_LVA[mover][captured];
-      }
-    }
+    int see = SEE(board, move);
+    if (MoveEP(move))
+      see += STATIC_MATERIAL_VALUE[PAWN_TYPE];
+    
+    moveList->scores[i] = see;
   }
 }
 
