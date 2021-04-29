@@ -27,7 +27,7 @@ extern int POWER;
 
 #define BUCKET_SIZE 2
 
-#define TTIdx(hash) ((int)((hash) >> (64 - POWER)) << 1)
+#define TTIdx(hash) ((uint64_t)((hash) >> (64 - POWER)) << 1)
 #define TTEntry(score, flag, depth, move, eval)                                                                        \
   ((TTValue)((uint16_t)(eval)) << 48) | ((TTValue)((uint16_t)(score)) << 32) | ((TTValue)(flag) << 30) |               \
       ((TTValue)(depth) << 24) | ((TTValue)(move))

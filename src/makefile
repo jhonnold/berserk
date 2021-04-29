@@ -20,13 +20,13 @@ popcount:
 
 release-win:
 	md ..\dist
-	$(CC) $(RFLAGS) $(SRC) $(LIBS) -o ../dist/$(EXE)-$(VERSION)-x64.exe
-	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o ../dist/$(EXE)-$(VERSION)-x64-popcnt.exe
+	$(CC) $(RFLAGS) $(SRC) $(LIBS) -g -o ../dist/$(EXE)-$(VERSION)-x64.exe
+	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -g -o ../dist/$(EXE)-$(VERSION)-x64-popcnt.exe
 
 release:
 	mkdir ../dist
-	$(CC) $(RFLAGS) $(SRC) $(LIBS) -o ../dist/$(EXE)-$(VERSION)-x64
-	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o ../dist/$(EXE)-$(VERSION)-x64-popcnt
+	$(CC) $(RFLAGS) $(SRC) $(LIBS) -g -o ../dist/$(EXE)-$(VERSION)-x64
+	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -g -o ../dist/$(EXE)-$(VERSION)-x64-popcnt
 
 debug:
 	$(CC) $(DFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
