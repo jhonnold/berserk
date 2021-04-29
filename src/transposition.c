@@ -44,7 +44,7 @@ void TTInit(int mb) {
   if (TRANSPOSITION_ENTRIES != NULL)
     free(TRANSPOSITION_ENTRIES);
 
-  SIZE = (1 << POWER) * sizeof(TTValue) * BUCKET_SIZE * 2;
+  SIZE = (1ULL << POWER) * sizeof(TTValue) * BUCKET_SIZE * 2;
   TRANSPOSITION_ENTRIES = malloc(SIZE);
 
   TTClear();
@@ -52,7 +52,7 @@ void TTInit(int mb) {
 
 void TTFree() { free(TRANSPOSITION_ENTRIES); }
 
-inline void TTClear() { memset(TRANSPOSITION_ENTRIES, NO_ENTRY, SIZE); }
+inline void TTClear() { memset(TRANSPOSITION_ENTRIES, 0, SIZE); }
 
 inline int TTScore(TTValue value, int ply) {
   int score = (int)((int16_t)((value & 0x0000FFFF00000000) >> 32));
@@ -66,9 +66,9 @@ inline TTValue TTProbe(uint64_t hash) {
 #ifdef TUNE
   return NO_ENTRY;
 #else
-  int idx = TTIdx(hash);
+  uint64_t idx = TTIdx(hash);
 
-  for (int i = idx; i < idx + BUCKET_SIZE * 2; i += 2)
+  for (uint64_t i = idx; i < idx + BUCKET_SIZE * 2; i += 2)
     if (TRANSPOSITION_ENTRIES[i] == hash)
       return TRANSPOSITION_ENTRIES[i + 1];
 
@@ -81,11 +81,11 @@ inline TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, i
   return NO_ENTRY;
 #else
 
-  int idx = TTIdx(hash);
+  uint64_t idx = TTIdx(hash);
   int replacementDepth = INT32_MAX;
-  int replacementIdx = idx;
+  uint64_t replacementIdx = idx;
 
-  for (int i = idx; i < idx + BUCKET_SIZE * 2; i += 2) {
+  for (uint64_t i = idx; i < idx + BUCKET_SIZE * 2; i += 2) {
     uint64_t currHash = TRANSPOSITION_ENTRIES[i];
     if (currHash == 0) {
       replacementIdx = i;
