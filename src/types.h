@@ -64,9 +64,11 @@ typedef struct {
   int halfMove; // half move count for 50 move rule
 
   uint64_t zobrist; // zobrist hash of the position
+  uint64_t pawnHash;
 
   // data that is hard to track, so it is "remembered" when search undoes moves
   uint64_t zobristHistory[MAX_GAME_PLY];
+  uint64_t pawnHashHistory[MAX_GAME_PLY];
   int castlingHistory[MAX_GAME_PLY];
   int epSquareHistory[MAX_GAME_PLY];
   int captureHistory[MAX_GAME_PLY];
@@ -166,11 +168,17 @@ typedef struct {
   int ksSqAttackCount[2];  // king safety sq attack count
   int ksAttackerCount[2];  // attackers
 
-  BitBoard passedPawns[2];
+  BitBoard passedPawns;
   BitBoard mobilitySquares[2];
   BitBoard outposts[2];
 
 } EvalData;
+
+typedef struct {
+  Score s;
+  uint64_t hash;
+  BitBoard passedPawns;
+} PawnHashEntry;
 
 typedef struct ThreadData ThreadData;
 
