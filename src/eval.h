@@ -103,6 +103,6 @@ void InitPSQT();
 int Scale(Board* board, int ss);
 Score GetPhase(Board* board);
 
-Score Evaluate(Board* board);
+Score Evaluate(Board* board, ThreadData* thread);
 
 #endif
