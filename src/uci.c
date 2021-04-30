@@ -213,7 +213,7 @@ void UCILoop() {
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
-      Score s = Evaluate(&board);
+      Score s = Evaluate(&board, &threads[0]);
       printf("Score: %dcp\n", s);
     } else if (!strncmp(in, "moves", 5)) {
       // Print possible moves. If a search has been run and stopped, it will

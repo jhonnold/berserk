@@ -87,6 +87,8 @@ void ClearBoard(Board* board) {
     board->squares[i] = NO_PIECE;
 
   board->piecesCounts = 0ULL;
+  board->zobrist = 0ULL;
+  board->pawnHash = 0ULL;
 
   board->mat = makeScore(0, 0);
 
@@ -113,6 +115,9 @@ void ParseFen(char* fen, Board* board) {
       } else {
         board->mat += PSQT[piece][i];
       }
+
+      if (PIECE_TYPE[piece] == PAWN_TYPE)
+        board->pawnHash ^= ZOBRIST_PIECES[piece][i];
 
       if (*fen != 'K' && *fen != 'k')
         board->piecesCounts += PIECE_COUNT_IDX[piece];
@@ -351,6 +356,7 @@ void MakeMove(Move move, Board* board) {
 
   // store hard to recalculate values
   board->zobristHistory[board->moveNo] = board->zobrist;
+  board->pawnHashHistory[board->moveNo] = board->pawnHash;
   board->castlingHistory[board->moveNo] = board->castling;
   board->epSquareHistory[board->moveNo] = board->epSquare;
   board->captureHistory[board->moveNo] = NO_PIECE; // this might get overwritten
@@ -369,9 +375,12 @@ void MakeMove(Move move, Board* board) {
   board->zobrist ^= ZOBRIST_PIECES[piece][start];
   board->zobrist ^= ZOBRIST_PIECES[piece][end];
 
-  if (piece == PAWN[board->side])
+  if (piece == PAWN[board->side]) {
     board->halfMove = 0; // reset on pawn move
-  else
+
+    board->pawnHash ^= ZOBRIST_PIECES[piece][start];
+    board->pawnHash ^= ZOBRIST_PIECES[piece][end];
+  } else
     board->halfMove++;
 
   if (capture && !ep) {
@@ -381,6 +390,8 @@ void MakeMove(Move move, Board* board) {
     board->mat += PSQT[captured][end];
 
     board->zobrist ^= ZOBRIST_PIECES[captured][end];
+    if (captured == PAWN[board->xside])
+      board->pawnHash ^= ZOBRIST_PIECES[captured][end];
 
     board->piecesCounts -= PIECE_COUNT_IDX[captured]; // when there's a capture, we need to update our piece counts
     board->halfMove = 0;                              // reset on capture
@@ -396,6 +407,7 @@ void MakeMove(Move move, Board* board) {
 
     board->zobrist ^= ZOBRIST_PIECES[piece][end];
     board->zobrist ^= ZOBRIST_PIECES[promoted][end];
+    board->pawnHash ^= ZOBRIST_PIECES[piece][end];
 
     board->piecesCounts -= PIECE_COUNT_IDX[piece];
     board->piecesCounts += PIECE_COUNT_IDX[promoted];
@@ -410,6 +422,7 @@ void MakeMove(Move move, Board* board) {
     board->mat += PSQT[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
 
     board->zobrist ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
+    board->pawnHash ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
 
     board->piecesCounts -= PIECE_COUNT_IDX[PAWN[board->xside]];
     board->halfMove = 0; // this is a capture
@@ -513,6 +526,7 @@ void UndoMove(Move move, Board* board) {
   board->epSquare = board->epSquareHistory[board->moveNo];
   board->castling = board->castlingHistory[board->moveNo];
   board->zobrist = board->zobristHistory[board->moveNo];
+  board->pawnHash = board->pawnHashHistory[board->moveNo];
   board->halfMove = board->halfMoveHistory[board->moveNo];
   board->checkers = board->checkersHistory[board->moveNo];
   board->pinned = board->pinnedHistory[board->moveNo];

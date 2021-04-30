@@ -133,7 +133,7 @@ void InitPieceBonusWeights(Weights* weights);
 void InitPawnBonusWeights(Weights* weights);
 void InitPasserBonusWeights(Weights* weights);
 
-void LoadPosition(Board* board, Position* position);
+void LoadPosition(Board* board, Position* position, ThreadData* thread);
 void ResetCoeffs();
 void CopyCoeffsInto(EvalCoeffs* c);
 Position* LoadPositions(int* n);
