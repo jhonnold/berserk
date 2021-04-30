@@ -30,6 +30,14 @@
 #define MAX_GAME_PLY 1024
 #endif
 
+#ifdef TUNE
+#define PAWN_TABLE_MASK (0x1)
+#define PAWN_TABLE_SIZE (1ULL << 1)
+#else
+#define PAWN_TABLE_MASK (0xFFFF)
+#define PAWN_TABLE_SIZE (1ULL << 16)
+#endif
+
 typedef int Score;
 
 typedef uint64_t BitBoard;
@@ -189,6 +197,8 @@ struct ThreadData {
 
   SearchParams* params;
   SearchData data;
+
+  PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
 
   Board board;
   PV pv;

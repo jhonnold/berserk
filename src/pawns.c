@@ -16,17 +16,14 @@
 
 extern EvalCoeffs C;
 
-const PawnHashEntry NO_PAWN_ENTRY = {.hash = 0};
-PawnHashEntry PAWN_TT[(1ULL << 16)] = {0};
-
-inline PawnHashEntry TTPawnProbe(uint64_t hash) {
-  return PAWN_TT[(hash & 0xFFFF)].hash == hash ? PAWN_TT[(hash & 0xFFFF)] : NO_PAWN_ENTRY;
+inline PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread) {
+  return thread->pawnHashTable[(hash & PAWN_TABLE_MASK)].hash == hash ? &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)] : NULL;
 }
 
-inline void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns) {
-  PAWN_TT[(hash & 0xFFFF)].hash = hash;
-  PAWN_TT[(hash & 0xFFFF)].s = s;
-  PAWN_TT[(hash & 0xFFFF)].passedPawns = passedPawns;
+inline void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns, ThreadData* thread) {
+  thread->pawnHashTable[(hash & PAWN_TABLE_MASK)].hash = hash;
+  thread->pawnHashTable[(hash & PAWN_TABLE_MASK)].s = s;
+  thread->pawnHashTable[(hash & PAWN_TABLE_MASK)].passedPawns = passedPawns;
 }
 
 // Standard pawn and passer evaluation

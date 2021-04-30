@@ -858,7 +858,7 @@ void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weigh
          weights->passedPawnAdvance.eg.value;
 }
 
-void LoadPosition(Board* board, Position* position) {
+void LoadPosition(Board* board, Position* position, ThreadData* thread) {
   ResetCoeffs();
   int phase = GetPhase(board);
 
@@ -868,7 +868,7 @@ void LoadPosition(Board* board, Position* position) {
 
   position->stm = board->side;
 
-  Score eval = Evaluate(board);
+  Score eval = Evaluate(board, thread);
   position->staticEval = sideScalar[board->side] * eval;
 
   position->scale = Scale(board, C.ss) / 100.0;
@@ -1047,7 +1047,7 @@ Position* LoadPositions(int* n) {
     if (bits(board.occupancies[BOTH]) == 3 && (board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
       continue;
 
-    LoadPosition(&board, &positions[p]);
+    LoadPosition(&board, &positions[p], threads);
     if (positions[p].staticEval > 3000)
       continue;
 

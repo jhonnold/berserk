@@ -221,7 +221,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Prevent overflows
     if (data->ply > MAX_SEARCH_PLY - 1)
-      return Evaluate(board);
+      return Evaluate(board, thread);
 
     // Mate distance pruning
     alpha = max(alpha, -CHECKMATE + data->ply);
@@ -243,7 +243,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   }
 
   // pull previous static eval from tt - this is depth independent
-  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(board));
+  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(board, thread));
   // getting better if eval has gone up
   int improving = data->ply >= 2 && (data->evals[data->ply] > data->evals[data->ply - 2]);
 
@@ -465,7 +465,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   // prevent overflows
   if (data->ply > MAX_SEARCH_PLY - 1)
-    return Evaluate(board);
+    return Evaluate(board, thread);
 
   // check the transposition table for previous info
   TTValue ttValue = TTProbe(board->zobrist);
@@ -479,7 +479,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   }
 
   // pull cached eval if it exists
-  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(board));
+  int eval = data->evals[data->ply] = (ttValue ? TTEval(ttValue) : Evaluate(board, thread));
 
   // can we use an improved evaluation from the tt?
   if (ttValue) {

@@ -699,7 +699,7 @@ Score KingSafety(Board* board, EvalData* data, int side) {
 }
 
 // Main evalution method
-Score Evaluate(Board* board) {
+Score Evaluate(Board* board, ThreadData* thread) {
   if (IsMaterialDraw(board))
     return 0;
 
@@ -726,13 +726,13 @@ Score Evaluate(Board* board) {
 
   s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
 
-  PawnHashEntry pawnEntry = TTPawnProbe(board->pawnHash);
-  if (pawnEntry.hash) {
-    s += pawnEntry.s;
-    data.passedPawns = pawnEntry.passedPawns;
+  PawnHashEntry* pawnEntry = TTPawnProbe(board->pawnHash, thread);
+  if (pawnEntry != NULL) {
+    s += pawnEntry->s;
+    data.passedPawns = pawnEntry->passedPawns;
   } else {
     Score pawnS = PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
-    TTPawnPut(board->pawnHash, pawnS, data.passedPawns);
+    TTPawnPut(board->pawnHash, pawnS, data.passedPawns, thread);
     s += pawnS;
   }
   

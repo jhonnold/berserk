@@ -68,6 +68,7 @@ void ResetThreadPool(Board* board, SearchParams* params, ThreadData* threads) {
     memset(&threads[i].data.counters, 0, sizeof(threads[i].data.counters));
     memset(&threads[i].data.hh, 0, sizeof(threads[i].data.hh));
     memset(&threads[i].data.bf, 0, sizeof(threads[i].data.bf));
+    memset(&threads[i].pawnHashTable, 0, PAWN_TABLE_SIZE * sizeof(PawnHashEntry));
 
     // need full copies of the board
     memcpy(&threads[i].board, board, sizeof(Board));
