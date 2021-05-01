@@ -68,11 +68,11 @@ inline void AddKillerMove(SearchData* data, Move move) {
 inline void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[MoveStartEnd(parent)] = move; }
 
 inline void AddHistoryHeuristic(SearchData* data, Move move, int sideToMove, int depth) {
-  data->hh[sideToMove][MoveStartEnd(move)] += min(400, depth * depth);
+  data->hh[sideToMove][MoveStartEnd(move)] += min(225, depth * depth);
 }
 
 inline void AddBFHeuristic(SearchData* data, Move move, int sideToMove, int depth) {
-  data->bf[sideToMove][MoveStartEnd(move)] += min(400, depth * depth);
+  data->bf[sideToMove][MoveStartEnd(move)] += min(225, depth * depth);
 }
 
 inline void AppendMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
