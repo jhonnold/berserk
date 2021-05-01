@@ -121,6 +121,14 @@ void* Search(void* arg) {
   PV* pv = &thread->pv;
   int mainThread = !thread->idx;
 
+  // Start by aging our history tables
+  for (int i = 0; i < 64 * 64; i++) {
+    data->hh[WHITE][i] /= 2;
+    data->hh[BLACK][i] /= 2;
+    data->bf[WHITE][i] /= 2;
+    data->bf[BLACK][i] /= 2;
+  }
+
   int alpha = -CHECKMATE, beta = CHECKMATE, score = 0;
 
   // set a hot exit point for this thread
