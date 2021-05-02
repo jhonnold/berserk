@@ -32,10 +32,13 @@
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
+#include "tb.h"
+#include "pyrrhic/tbprobe.h"
 
 // We have a 16 bit range for scores
 const int CHECKMATE = INT16_MAX;
 const int MATE_BOUND = 30000;
+const int TB_WIN_BOUND = 20000;
 
 // Reverse futility pruning
 int RFP_BASE = 62;
@@ -90,6 +93,12 @@ void* UCISearch(void* arg) {
 }
 
 int BestMove(Board* board, SearchParams* params, ThreadData* threads) {
+  Move bestMove;
+  if ((bestMove = TBRootProbe(board))) {
+    printf("bestmove %s\n", MoveToStr(bestMove));
+    return 0;
+  }
+
   pthread_t pthreads[threads->count];
   InitPool(board, params, threads);
 
@@ -106,7 +115,7 @@ int BestMove(Board* board, SearchParams* params, ThreadData* threads) {
     pthread_join(pthreads[i], NULL);
 
   // TODO: what is the fallback if no bestMove?
-  Move bestMove = threads[0].data.bestMove;
+  bestMove = threads[0].data.bestMove;
   int bestScore = threads[0].data.score;
 
   printf("bestmove %s\n", MoveToStr(bestMove));
@@ -203,7 +212,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   int isPV = beta - alpha != 1;
   int isRoot = !data->ply;
+  int score = -CHECKMATE;
   int bestScore = -CHECKMATE;
+  int maxScore = CHECKMATE;
   int origAlpha = alpha;
 
   Move bestMove = NULL_MOVE;
@@ -243,11 +254,46 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   // TT score cutoffs
   if (!isPV && ttValue && TTDepth(ttValue) >= depth) {
-    int score = TTScore(ttValue, data->ply);
+    int ttScore = TTScore(ttValue, data->ply);
     int flag = TTFlag(ttValue);
 
-    if (flag == TT_EXACT || (flag == TT_LOWER && score >= beta) || (flag == TT_UPPER && score <= alpha))
-      return score;
+    if (flag == TT_EXACT || (flag == TT_LOWER && ttScore >= beta) || (flag == TT_UPPER && ttScore <= alpha))
+      return ttScore;
+  }
+
+  if (!isRoot) {
+    unsigned tbResult = TBProbe(board);
+
+    if (tbResult != TB_RESULT_FAILED) {
+      int flag;
+      switch(tbResult) {
+        case TB_WIN:
+          score = TB_WIN_BOUND - data->ply;
+          flag = TT_LOWER;
+          break;
+        case TB_LOSS:
+          score = -TB_WIN_BOUND + data->ply;
+          flag = TT_UPPER;
+          break;
+        default:
+          score = 0;
+          flag = TT_EXACT;
+          break;
+      }
+
+      if (flag == TT_EXACT || (flag == TT_LOWER && score >= beta) || (flag == TT_UPPER && score <= alpha)) {
+        TTPut(board->zobrist, depth, score, flag, 0, data->ply, 0);
+        return score;
+      }
+
+      if (isPV) {
+        if (flag == TT_LOWER) {
+          bestScore = score;
+          alpha = max(alpha, score);
+        } else 
+          maxScore = score;
+      }
+    }
   }
 
   // pull previous static eval from tt - this is depth independent
@@ -279,7 +325,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       data->moves[data->ply++] = NULL_MOVE;
       MakeNullMove(board);
 
-      int score = -Negamax(-beta, -beta + 1, depth - R, thread, &childPv);
+      score = -Negamax(-beta, -beta + 1, depth - R, thread, &childPv);
 
       UndoNullMove(board);
       data->ply--;
@@ -334,7 +380,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
-      int score = Negamax(sBeta - 1, sBeta, sDepth, thread, pv);
+      score = Negamax(sBeta - 1, sBeta, sDepth, thread, pv);
       data->skipMove[data->ply] = NULL_MOVE;
 
       // no score failed above sBeta, so this is singular
@@ -355,7 +401,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       newDepth++;                             // apply the extension
 
     // start of late move reductions
-    int R = 1, score = -CHECKMATE;
+    int R = 1;
     if (depth >= 2 && numMoves > 1) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
@@ -437,6 +483,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   // Checkmate detection using movecount
   if (!moveList.count)
     return board->checkers ? -CHECKMATE + data->ply : 0;
+
+  bestScore = min(bestScore, maxScore);
 
   if (!skipMove) {
     // save to the TT
