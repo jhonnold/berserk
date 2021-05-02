@@ -610,6 +610,93 @@ void UndoMove(Move move, Board* board) {
   SetOccupancies(board);
 }
 
+int DoesMoveCheck(Move move, Board* board) {
+  int start = MoveStart(move);
+  int end = MoveEnd(move);
+  int piece = MovePiece(move);
+
+  int enemyKing = board->pieces[KING[board->xside]];
+  int enemyKingSq = lsb(enemyKing);
+
+  switch (PIECE_TYPE[piece]) {
+  case PAWN_TYPE:
+    if (GetPawnAttacks(end, board->side) & enemyKing)
+      return 1;
+    break;
+  case KNIGHT_TYPE:
+    if (GetKnightAttacks(end) & enemyKing)
+      return 1;
+    break;
+  case BISHOP_TYPE:
+    if (GetBishopAttacks(end, board->occupancies[BOTH]) & enemyKing)
+      return 1;
+    break;
+  case ROOK_TYPE:
+    if (GetRookAttacks(end, board->occupancies[BOTH]) & enemyKing)
+      return 1;
+    break;
+  case QUEEN_TYPE:
+    if (GetQueenAttacks(end, board->occupancies[BOTH]) & enemyKing)
+      return 1;
+    break;
+  }
+
+  BitBoard newOccupancy = board->occupancies[BOTH] ^ bit(start) ^ bit(end);
+  if ((GetRookAttacks(enemyKingSq, newOccupancy) &
+       (board->pieces[ROOK[board->side]] | board->pieces[QUEEN[board->side]])) ||
+      (GetBishopAttacks(enemyKingSq, newOccupancy) &
+       (board->pieces[BISHOP[board->side]] | board->pieces[QUEEN[board->side]])))
+    return 1;
+
+  if (MovePromo(move)) {
+    switch (PIECE_TYPE[MovePromo(move)]) {
+    case KNIGHT_TYPE:
+      if (GetKnightAttacks(end) & enemyKing)
+        return 1;
+      break;
+    case BISHOP_TYPE:
+      if (GetBishopAttacks(end, board->occupancies[BOTH] ^ bit(start)) & enemyKing)
+        return 1;
+      break;
+    case ROOK_TYPE:
+      if (GetRookAttacks(end, board->occupancies[BOTH] ^ bit(start)) & enemyKing)
+        return 1;
+      break;
+    case QUEEN_TYPE:
+      if (GetQueenAttacks(end, board->occupancies[BOTH] ^ bit(start)) & enemyKing)
+        return 1;
+      break;
+    }
+
+    return 0;
+  } else if (MoveEP(move)) {
+    newOccupancy = board->occupancies[BOTH] ^ bit(end - PAWN_DIRECTIONS[board->side]);
+
+    return (GetBishopAttacks(enemyKingSq, newOccupancy) & (board->pieces[BISHOP[board->side]] | board->pieces[QUEEN[board->side]]))
+      || (GetRookAttacks(enemyKingSq, newOccupancy) & (board->pieces[ROOK[board->side]] | board->pieces[QUEEN[board->side]]));
+  } else if (MoveCastle(move)) {
+    int rookEnd = 0;
+    switch (end) {
+      case G1:
+        rookEnd = F1;
+        break;
+      case C1:
+        rookEnd = D1;
+        break;
+      case G8:
+        rookEnd = F8;
+        break;
+      case C8:
+        rookEnd = D8;
+        break;
+    }
+
+    return !!(GetRookAttacks(enemyKingSq, board->occupancies[BOTH]) & bit(rookEnd));
+  }
+
+  return 0;
+}
+
 // this is NOT a legality checker for ALL moves
 // it is only used by move generation for king moves, castles, and ep captures
 int IsMoveLegal(Move move, Board* board) {

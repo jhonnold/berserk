@@ -48,6 +48,7 @@ void SetSpecialPieces(Board* board);
 void SetOccupancies(Board* board);
 
 int IsSquareAttacked(int sq, int attacker, BitBoard occupancy, Board* board);
+int DoesMoveCheck(Move move, Board* board);
 int IsMoveLegal(Move move, Board* board);
 int IsRepetition(Board* board);
 

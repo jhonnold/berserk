@@ -358,11 +358,12 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (skipMove == move)
       continue;
 
+    int doesCheck = DoesMoveCheck(move, board);
     int tactical = MovePromo(move) || MoveCapture(move);
 
     if (!isPV && bestScore > -MATE_BOUND) {
       // late move pruning at low depth if it's quiet and we've looked at ALOT
-      if (depth <= 8 && !tactical && numMoves >= LMP[improving][depth])
+      if (depth <= 8 && !tactical && !doesCheck && numMoves >= LMP[improving][depth])
         continue;
 
       // Static evaluation pruning, this applies for both quiet and tactical moves
@@ -398,6 +399,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     numMoves++;
     data->moves[data->ply++] = move;
     MakeMove(move, board);
+
+    if (!!doesCheck != !!board->checkers) {
+      printf("%s\n", MoveToStr(move));
+      PrintBoard(board);
+    }
 
     int newDepth = depth;
     if (singularExtension || board->checkers) // extend if in check
