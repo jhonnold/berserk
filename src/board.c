@@ -615,7 +615,7 @@ int DoesMoveCheck(Move move, Board* board) {
   int end = MoveEnd(move);
   int piece = MovePiece(move);
 
-  int enemyKing = board->pieces[KING[board->xside]];
+  BitBoard enemyKing = board->pieces[KING[board->xside]];
   int enemyKingSq = lsb(enemyKing);
 
   switch (PIECE_TYPE[piece]) {
@@ -641,7 +641,7 @@ int DoesMoveCheck(Move move, Board* board) {
     break;
   }
 
-  BitBoard newOccupancy = board->occupancies[BOTH] ^ bit(start) ^ bit(end);
+  BitBoard newOccupancy = (board->occupancies[BOTH] ^ bit(start)) | bit(end);
   if ((GetRookAttacks(enemyKingSq, newOccupancy) &
        (board->pieces[ROOK[board->side]] | board->pieces[QUEEN[board->side]])) ||
       (GetBishopAttacks(enemyKingSq, newOccupancy) &
@@ -670,7 +670,7 @@ int DoesMoveCheck(Move move, Board* board) {
 
     return 0;
   } else if (MoveEP(move)) {
-    newOccupancy = board->occupancies[BOTH] ^ bit(end - PAWN_DIRECTIONS[board->side]);
+    newOccupancy = newOccupancy ^ bit(end - PAWN_DIRECTIONS[board->side]);
 
     return (GetBishopAttacks(enemyKingSq, newOccupancy) & (board->pieces[BISHOP[board->side]] | board->pieces[QUEEN[board->side]]))
       || (GetRookAttacks(enemyKingSq, newOccupancy) & (board->pieces[ROOK[board->side]] | board->pieces[QUEEN[board->side]]));

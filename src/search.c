@@ -400,13 +400,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     data->moves[data->ply++] = move;
     MakeMove(move, board);
 
-    if (!!doesCheck != !!board->checkers) {
-      printf("%s\n", MoveToStr(move));
-      PrintBoard(board);
-    }
-
     int newDepth = depth;
-    if (singularExtension || board->checkers) // extend if in check
+    if (singularExtension || doesCheck)       // extend checks
       newDepth++;                             // apply the extension
 
     // start of late move reductions
