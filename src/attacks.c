@@ -17,6 +17,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef PEXT
+  #include <immintrin.h>
+#endif
 
 #include "attacks.h"
 #include "bits.h"
@@ -411,9 +414,13 @@ void InitBishopAttacks() {
 
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
-      int idx = (occupancy * BISHOP_MAGICS[sq]) >> (64 - bits);
 
+      #ifndef PEXT
+      int idx = (occupancy * BISHOP_MAGICS[sq]) >> (64 - bits);
       BISHOP_ATTACKS[sq][idx] = GetBishopAttacksOTF(sq, occupancy);
+      #else
+      BISHOP_ATTACKS[sq][_pext_u64(occupancy, mask)] = GetBishopAttacksOTF(sq, occupancy);
+      #endif
     }
   }
 }
@@ -426,9 +433,13 @@ void InitRookAttacks() {
 
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
-      int idx = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
 
+      #ifndef PEXT
+      int idx = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
       ROOK_ATTACKS[sq][idx] = GetRookAttacksOTF(sq, occupancy);
+      #else
+      ROOK_ATTACKS[sq][_pext_u64(occupancy, mask)] = GetRookAttacksOTF(sq, occupancy);
+      #endif
     }
   }
 }
@@ -444,8 +455,10 @@ void InitAttacks() {
   InitBishopMasks();
   InitRookMasks();
 
+#ifndef PEXT
   InitBishopMagics();
   InitRookMagics();
+#endif
 
   InitBishopAttacks();
   InitRookAttacks();
@@ -456,19 +469,27 @@ inline BitBoard GetPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][s
 inline BitBoard GetKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
 
 inline BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
+  #ifndef PEXT
   occupancy &= BISHOP_MASKS[sq];
   occupancy *= BISHOP_MAGICS[sq];
   occupancy >>= 64 - BISHOP_RELEVANT_BITS[sq];
 
   return BISHOP_ATTACKS[sq][occupancy];
+  #else
+  return BISHOP_ATTACKS[sq][_pext_u64(occupancy, BISHOP_MASKS[sq])];
+  #endif
 }
 
 inline BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
+  #ifndef PEXT
   occupancy &= ROOK_MASKS[sq];
   occupancy *= ROOK_MAGICS[sq];
   occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];
 
   return ROOK_ATTACKS[sq][occupancy];
+  #else
+  return ROOK_ATTACKS[sq][_pext_u64(occupancy, ROOK_MASKS[sq])];
+  #endif
 }
 
 inline BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
