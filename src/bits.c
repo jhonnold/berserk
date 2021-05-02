@@ -91,6 +91,12 @@ inline BitBoard Shift(BitBoard bb, int dir) {
   }
 }
 
+inline int popAndGetLsb(BitBoard* bb) {
+  int sq = lsb(*bb);
+  popLsb(*bb);
+  return sq;
+}
+
 // standard fill algorithm - https://www.chessprogramming.org/Fill_Algorithms
 inline BitBoard Fill(BitBoard initial, int direction) {
   switch (direction) {
