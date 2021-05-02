@@ -41,6 +41,7 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads) {
     threads[i].data.nodes = 0;
     threads[i].data.seldepth = 0;
     threads[i].data.ply = 0;
+    threads[i].data.tbhits = 0;
 
     // empty unneeded data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
@@ -59,6 +60,7 @@ void ResetThreadPool(Board* board, SearchParams* params, ThreadData* threads) {
     threads[i].data.nodes = 0;
     threads[i].data.seldepth = 0;
     threads[i].data.ply = 0;
+    threads[i].data.tbhits = 0;
 
     // empty ALL data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
@@ -82,4 +84,12 @@ uint64_t NodesSearched(ThreadData* threads) {
     nodes += threads[i].data.nodes;
 
   return nodes;
+}
+
+uint64_t TBHits(ThreadData* threads) {
+  uint64_t tbhits = 0;
+  for (int i = 0; i < threads->count; i++)
+    tbhits += threads[i].data.tbhits;
+
+  return tbhits;
 }

@@ -60,6 +60,7 @@ int bits(BitBoard bb);
 #define bits(bb) (__builtin_popcountll(bb))
 #endif
 
+int popAndGetLsb(BitBoard* bb);
 BitBoard Shift(BitBoard bb, int dir);
 BitBoard Fill(BitBoard initial, int direction);
 void PrintBB(BitBoard bb);

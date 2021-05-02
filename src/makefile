@@ -1,5 +1,5 @@
 CC = gcc
-SRC = *.c
+SRC = *.c pyrrhic/tbprobe.c
 EXE = berserk
 VERSION = 4.1.0-dev
 
