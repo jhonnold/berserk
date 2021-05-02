@@ -101,6 +101,7 @@ typedef struct {
 
   // TODO: Put depth here as well? Just cause
   uint64_t nodes; // node count
+  uint64_t tbhits;
   int seldepth;   // seldepth count
 
   Move skipMove[MAX_SEARCH_PLY]; // moves to skip during singular search

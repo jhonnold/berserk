@@ -26,14 +26,15 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
+#include "pyrrhic/tbprobe.h"
 #include "search.h"
 #include "see.h"
+#include "tb.h"
 #include "thread.h"
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
-#include "tb.h"
-#include "pyrrhic/tbprobe.h"
+
 
 // We have a 16 bit range for scores
 const int CHECKMATE = INT16_MAX;
@@ -265,20 +266,22 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
+      data->tbhits++;
+
       int flag;
-      switch(tbResult) {
-        case TB_WIN:
-          score = TB_WIN_BOUND - data->ply;
-          flag = TT_LOWER;
-          break;
-        case TB_LOSS:
-          score = -TB_WIN_BOUND + data->ply;
-          flag = TT_UPPER;
-          break;
-        default:
-          score = 0;
-          flag = TT_EXACT;
-          break;
+      switch (tbResult) {
+      case TB_WIN:
+        score = TB_WIN_BOUND - data->ply;
+        flag = TT_LOWER;
+        break;
+      case TB_LOSS:
+        score = -TB_WIN_BOUND + data->ply;
+        flag = TT_UPPER;
+        break;
+      default:
+        score = 0;
+        flag = TT_EXACT;
+        break;
       }
 
       if (flag == TT_EXACT || (flag == TT_LOWER && score >= beta) || (flag == TT_UPPER && score <= alpha)) {
@@ -290,7 +293,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (flag == TT_LOWER) {
           bestScore = score;
           alpha = max(alpha, score);
-        } else 
+        } else
           maxScore = score;
       }
     }
@@ -564,7 +567,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     // prune based on SEE scores rather than flat mat val
     if (eval + moveList.scores[i] + DELTA_CUTOFF < alpha)
       break;
-    
+
     if (moveList.scores[i] < 0)
       break;
 
@@ -599,20 +602,21 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
 inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
   uint64_t nodes = NodesSearched(thread->threads);
+  uint64_t tbhits = TBHits(thread->threads);
 
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d nodes %lld time %ld score mate %d pv ", depth, thread->data.seldepth, nodes,
-           GetTimeMS() - thread->params->startTime, movesToMate);
+    printf("info depth %d seldepth %d nodes %lld tbhits %lld time %ld score mate %d pv ", depth, thread->data.seldepth,
+           nodes, tbhits, GetTimeMS() - thread->params->startTime, movesToMate);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d  nodes %lld time %ld score mate -%d pv ", depth, thread->data.seldepth, nodes,
-           GetTimeMS() - thread->params->startTime, movesToMate);
+    printf("info depth %d seldepth %d  nodes %lld tbhits %lld time %ld score mate -%d pv ", depth,
+           thread->data.seldepth, nodes, tbhits, GetTimeMS() - thread->params->startTime, movesToMate);
   } else {
-    printf("info depth %d seldepth %d nodes %lld time %ld score cp %d pv ", depth, thread->data.seldepth, nodes,
-           GetTimeMS() - thread->params->startTime, score);
+    printf("info depth %d seldepth %d nodes %lld tbhits %lld time %ld score cp %d pv ", depth, thread->data.seldepth,
+           nodes, tbhits, GetTimeMS() - thread->params->startTime, score);
   }
   PrintPV(pv);
 }
