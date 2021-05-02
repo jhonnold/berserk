@@ -1,7 +1,7 @@
 CC = gcc
 SRC = *.c pyrrhic/tbprobe.c
 EXE = berserk
-VERSION = 4.1.0-dev
+VERSION = 4.1.0
 
 LIBS = -lm -lpthread
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
@@ -32,6 +32,7 @@ release-win:
 	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o ../dist/$(EXE)-$(VERSION)-x64-popcnt.exe
 	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(PEXT) -o ../dist/$(EXE)-$(VERSION)-x64-pext.exe
 	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(AVX2) -o ../dist/$(EXE)-$(VERSION)-x64-avx2.exe
+	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(AVX2) $(PEXT) -o ../dist/$(EXE)-$(VERSION)-x64-avx2-pext.exe
 
 release:
 	mkdir ../dist
@@ -39,6 +40,7 @@ release:
 	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o ../dist/$(EXE)-$(VERSION)-x64-popcnt
 	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(PEXT) -o ../dist/$(EXE)-$(VERSION)-x64-pext
 	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(AVX2) -o ../dist/$(EXE)-$(VERSION)-x64-avx2
+	$(CC) $(RFLAGS) $(SRC) $(LIBS) $(AVX2) $(PEXT) -o ../dist/$(EXE)-$(VERSION)-x64-avx2-pext
 
 debug:
 	$(CC) $(DFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
