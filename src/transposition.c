@@ -29,7 +29,6 @@
 // Berserk's transposition table is just a giant array of longs
 // Even indicies store the key, odd indicies story the entry
 // For collisions, conflicting hashes have buckets of size 2
-// TODO: Check to see what happens with bucket size 1 or 4?
 
 // Global TT
 TTValue* TRANSPOSITION_ENTRIES = NULL;
@@ -38,16 +37,18 @@ int POWER = 0;
 
 const TTValue NO_ENTRY = 0ULL;
 
-void TTInit(int mb) {
-  POWER = (int)log2(0x100000 / sizeof(TTValue)) + (int)log2(mb) - (int)log2(BUCKET_SIZE) - 1;
+size_t TTInit(int mb) {
+  POWER = (int)log2(MEGABYTE / sizeof(TTValue)) + (int)log2(mb) - (int)log2(BUCKET_SIZE);
 
   if (TRANSPOSITION_ENTRIES != NULL)
     free(TRANSPOSITION_ENTRIES);
 
-  SIZE = (1ULL << POWER) * sizeof(TTValue) * BUCKET_SIZE * 2;
-  TRANSPOSITION_ENTRIES = malloc(SIZE);
+  SIZE = (1ULL << POWER) * sizeof(TTValue) * BUCKET_SIZE;
+  TRANSPOSITION_ENTRIES = (TTValue*) malloc(SIZE);
 
   TTClear();
+
+  return SIZE;
 }
 
 void TTFree() { free(TRANSPOSITION_ENTRIES); }

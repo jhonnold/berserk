@@ -25,7 +25,8 @@ extern const TTValue NO_ENTRY;
 extern TTValue* TRANSPOSITION_ENTRIES;
 extern int POWER;
 
-#define BUCKET_SIZE 2
+#define MEGABYTE 0x100000ULL
+#define BUCKET_SIZE 2ULL
 
 #define TTIdx(hash) ((uint64_t)((hash) >> (64 - POWER)) << 1)
 #define TTEntry(score, flag, depth, move, eval)                                                                        \
@@ -36,7 +37,7 @@ extern int POWER;
 #define TTDepth(value) ((int)((value)&0x3F000000) >> 24)
 #define TTEval(value) ((int)((int16_t)((value) >> 48)))
 
-void TTInit(int mb);
+size_t TTInit(int mb);
 void TTFree();
 void TTClear();
 void TTPrefetch(uint64_t hash);

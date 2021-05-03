@@ -231,8 +231,8 @@ void UCILoop() {
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
       mb = max(4, min(65536, mb));
-      TTInit(mb);
-      printf("info string set Hash to value %d\n", mb);
+      size_t bytesAllocated = TTInit(mb);
+      printf("info string set Hash to value %d (%lld bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
       free(threads);
