@@ -148,7 +148,7 @@ void* Search(void* arg) {
       // Ignore aspiration windows till we're at a reasonable depth
       // aspiration windows start at 1/10th of a pawn and grows outward at 150%, utilizing
       // returned fail soft values
-      int delta = depth >= 5 ? WINDOW : CHECKMATE;
+      int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW : CHECKMATE;
 
       alpha = max(score - delta, -CHECKMATE);
       beta = min(score + delta, CHECKMATE);
