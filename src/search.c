@@ -621,7 +621,11 @@ inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
     printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score cp %d pv ", depth, thread->data.seldepth,
            nodes, nps, tbhits, time, score);
   }
-  PrintPV(pv);
+
+  if (pv->count)
+    PrintPV(pv);
+  else
+    printf("%s\n", MoveToStr(pv->moves[0]));
 }
 
 void PrintPV(PV* pv) {
