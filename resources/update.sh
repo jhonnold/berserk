@@ -1,10 +1,10 @@
 #!/bin/bash
 
 REPO_URL=https://github.com/jhonnold/berserk.git
-VERSION=4.1.0
+VERSION=4.2.0-dev
 
 echo "Downloading Berserk version $VERSION"
-git clone --depth 1 --branch $VERSION $REPO_URL
+git clone --depth 1 --branch dev $REPO_URL
 cd berserk
 read -p "Download complete, please enter to continue..."
 
