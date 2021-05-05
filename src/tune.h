@@ -80,7 +80,7 @@ typedef struct {
   int8_t phase;
   int8_t stm;
   float result;
-  float scale;
+  int scale;
   float phaseMg;
   float phaseEg;
   Score staticEval;

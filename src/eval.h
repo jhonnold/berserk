@@ -31,6 +31,8 @@
 #define UNKNOWN INT32_MAX
 extern EvalCoeffs C;
 
+extern const int MAX_SCALE;
+extern const int MAX_PHASE;
 extern const Score PHASE_MULTIPLIERS[5];
 
 extern const int STATIC_MATERIAL_VALUE[7];
