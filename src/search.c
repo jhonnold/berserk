@@ -236,7 +236,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   if (!isRoot) {
     // draw
-    if (IsRepetition(board) || IsMaterialDraw(board) || (board->halfMove > 99))
+    if (IsRepetition(board, data->ply) || IsMaterialDraw(board) || (board->halfMove > 99))
       return 0; // TODO: Contempt factor? or randomness?
 
     // Prevent overflows
@@ -520,7 +520,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     longjmp(thread->exit, 1);
 
   // draw check
-  if (IsMaterialDraw(board) || IsRepetition(board) || (board->halfMove > 99))
+  if (IsMaterialDraw(board) || IsRepetition(board, data->ply) || (board->halfMove > 99))
     return 0;
 
   // prevent overflows
