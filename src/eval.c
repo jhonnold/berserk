@@ -45,86 +45,88 @@ EvalCoeffs C;
 
 const int MAX_PHASE = 24;
 const int PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
+const int MAX_SCALE = 128;
+
 const int STATIC_MATERIAL_VALUE[7] = {93, 310, 323, 548, 970, 30000, 0};
 const int SHELTER_STORM_FILES[8][2] = {{0, 2}, {0, 2}, {1, 3}, {2, 4}, {3, 5}, {4, 6}, {5, 7}, {5, 7}};
 
 // clang-format off
-const Score MATERIAL_VALUES[7] = { S(86, 122), S(373, 371), S(395, 397), S(558, 732), S(1207, 1250), S(   0,   0), S(   0,   0) };
+const Score MATERIAL_VALUES[7] = { S(88, 126), S(381, 381), S(405, 409), S(574, 761), S(1244, 1306), S(   0,   0), S(   0,   0) };
 
-const Score BISHOP_PAIR = S(25, 62);
+const Score BISHOP_PAIR = S(27, 65);
 
 const Score PAWN_PSQT[32] = {
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(  47, 186), S(  -3, 202), S(  56, 171), S(  83, 153),
- S(   8,  33), S(  -2,  29), S(  28,  -2), S(  28, -20),
- S( -15,  14), S(  -4,   4), S(  -8,  -5), S(   8,  -8),
- S( -17,   0), S( -13,   1), S(  -2,  -6), S(   4,   0),
- S( -16,  -4), S(   8,  -5), S(  -4,   0), S(   7,   5),
- S( -13,  -1), S(   6,  -1), S(  -5,   7), S(   7,  16),
+ S(  49, 194), S(  -4, 210), S(  57, 180), S(  81, 162),
+ S(  10,  36), S(  -2,  32), S(  29,   1), S(  29, -18),
+ S( -15,  16), S(  -4,   5), S(  -8,  -4), S(   9,  -7),
+ S( -17,   2), S( -14,   2), S(  -2,  -4), S(   5,   1),
+ S( -15,  -2), S(   8,  -4), S(  -3,   2), S(   8,   7),
+ S( -13,   0), S(   7,   0), S(  -4,   9), S(   8,  18),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
 };
 
 const Score KNIGHT_PSQT[32] = {
- S(-116, -47), S( -67,  -3), S( -49,  11), S(  11,  13),
- S(   1,  -2), S(   5,  25), S(  54,  16), S(  45,  25),
- S(  49, -11), S(  47,  13), S(  35,  38), S(  60,  27),
- S(  49,  17), S(  38,  29), S(  50,  34), S(  56,  38),
- S(  42,  28), S(  49,  22), S(  49,  39), S(  52,  45),
- S(  20,  24), S(  33,  25), S(  31,  32), S(  43,  46),
- S(  31,  40), S(  35,  23), S(  29,  29), S(  36,  34),
- S(   2,  38), S(  25,  22), S(  30,  28), S(  34,  37),
+ S(-120, -45), S( -70,   1), S( -45,  14), S(  13,  17),
+ S(   2,   1), S(   5,  29), S(  58,  20), S(  47,  30),
+ S(  52,  -9), S(  49,  17), S(  36,  44), S(  63,  32),
+ S(  52,  21), S(  41,  33), S(  53,  39), S(  60,  44),
+ S(  44,  33), S(  53,  27), S(  52,  44), S(  54,  51),
+ S(  22,  29), S(  35,  30), S(  33,  37), S(  45,  52),
+ S(  33,  45), S(  37,  27), S(  31,  33), S(  38,  39),
+ S(   3,  43), S(  27,  26), S(  32,  33), S(  36,  42),
 };
 
 const Score BISHOP_PSQT[32] = {
- S( -41,  23), S( -23,  29), S( -72,  32), S( -90,  36),
- S( -23,  22), S( -27,  28), S( -12,  29), S(  -8,  26),
- S(  17,  17), S(  -6,  23), S(   0,  24), S(   5,  22),
- S( -20,  31), S(  10,  21), S(   2,  26), S(  14,  30),
- S(  19,  13), S(  -4,  21), S(   4,  28), S(  15,  24),
- S(   6,  21), S(  21,  29), S(  12,  30), S(  10,  37),
- S(  18,  18), S(  26,  17), S(  18,  17), S(   2,  32),
- S(  14,  20), S(  20,  24), S(   5,  32), S(   4,  32),
+ S( -41,  27), S( -26,  33), S( -75,  37), S( -83,  39),
+ S( -24,  26), S( -29,  32), S( -12,  33), S(  -8,  29),
+ S(  20,  20), S(  -4,  26), S(  -1,  29), S(   5,  26),
+ S( -19,  34), S(  11,  25), S(   3,  29), S(  15,  35),
+ S(  21,  16), S(  -3,  24), S(   5,  32), S(  17,  28),
+ S(   7,  25), S(  22,  33), S(  12,  34), S(  11,  41),
+ S(  19,  22), S(  28,  20), S(  19,  21), S(   3,  36),
+ S(  15,  24), S(  22,  28), S(   6,  37), S(   4,  36),
 };
 
 const Score ROOK_PSQT[32] = {
- S(  21,  49), S(   7,  55), S(  -6,  65), S( -14,  67),
- S(  19,  37), S(   7,  50), S(  25,  46), S(  28,  38),
- S(   9,  34), S(  49,  30), S(  41,  34), S(  44,  26),
- S(   2,  42), S(  15,  37), S(  29,  39), S(  28,  34),
- S(  -4,  41), S(  12,  35), S(   1,  45), S(  10,  42),
- S(   1,  34), S(  19,  29), S(  16,  34), S(  15,  36),
- S(  -3,  42), S(  12,  34), S(  19,  32), S(  23,  35),
- S(  14,  34), S(  13,  33), S(  15,  36), S(  21,  29),
+ S(  22,  54), S(   7,  61), S(  -7,  71), S( -15,  73),
+ S(  20,  42), S(   8,  56), S(  27,  51), S(  29,  43),
+ S(  10,  39), S(  52,  34), S(  43,  39), S(  46,  30),
+ S(   3,  47), S(  16,  42), S(  29,  44), S(  28,  39),
+ S(  -4,  45), S(  13,  40), S(   1,  50), S(  11,  47),
+ S(   1,  38), S(  20,  33), S(  17,  39), S(  15,  40),
+ S(  -3,  46), S(  12,  38), S(  20,  37), S(  24,  39),
+ S(  14,  38), S(  14,  38), S(  16,  40), S(  22,  33),
 };
 
 const Score QUEEN_PSQT[32] = {
- S( -37,  82), S( -34,  90), S(   0,  88), S( -10, 109),
- S( -58,  97), S( -93, 135), S( -67, 163), S( -67, 147),
- S( -23,  74), S( -28, 110), S( -47, 139), S( -39, 145),
- S( -44, 125), S( -48, 151), S( -50, 145), S( -61, 171),
- S( -45, 122), S( -46, 145), S( -53, 151), S( -62, 173),
- S( -47, 112), S( -38, 116), S( -52, 140), S( -52, 134),
- S( -43,  86), S( -37,  71), S( -36,  88), S( -40, 104),
- S( -35,  66), S( -52,  86), S( -55,  87), S( -46,  79),
+ S( -33,  86), S( -34,  96), S(   3,  93), S(  -8, 115),
+ S( -58, 103), S( -94, 143), S( -68, 171), S( -68, 156),
+ S( -20,  78), S( -25, 115), S( -46, 147), S( -39, 153),
+ S( -42, 131), S( -48, 159), S( -50, 153), S( -62, 181),
+ S( -45, 128), S( -45, 152), S( -53, 157), S( -62, 180),
+ S( -46, 117), S( -37, 121), S( -52, 147), S( -52, 141),
+ S( -43,  92), S( -36,  76), S( -36,  92), S( -40, 110),
+ S( -35,  70), S( -51,  90), S( -55,  91), S( -46,  83),
 };
 
 const Score KING_PSQT[32] = {
- S(-168,-204), S(  56,-149), S( -25, -96), S( -84, -99),
- S( -46,-114), S(  39, -75), S(  60, -67), S(  19, -71),
- S( -58,-106), S(  69, -85), S(  55, -70), S( -52, -59),
- S(-103,-101), S(  29, -89), S( -59, -60), S(-104, -51),
- S(-153, -91), S( -45, -84), S( -33, -71), S( -82, -61),
- S( -72,-100), S( -17, -91), S( -21, -82), S( -37, -74),
- S( -60,-113), S( -50, -95), S( -60, -81), S( -82, -74),
- S( -61,-154), S( -52,-125), S( -52,-104), S( -60,-109),
+ S(-169,-209), S(  49,-149), S( -38, -94), S( -86, -98),
+ S( -48,-114), S(  37, -73), S(  55, -63), S(  11, -67),
+ S( -65,-105), S(  71, -84), S(  54, -68), S( -57, -57),
+ S(-109,-101), S(  26, -88), S( -64, -58), S(-108, -49),
+ S(-160, -90), S( -49, -83), S( -37, -69), S( -88, -59),
+ S( -75, -99), S( -18, -90), S( -24, -81), S( -40, -72),
+ S( -60,-114), S( -50, -95), S( -61, -80), S( -85, -73),
+ S( -61,-156), S( -51,-126), S( -52,-104), S( -62,-110),
 };
 
 const Score KNIGHT_POST_PSQT[32] = {
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S( -20,  34), S(  16,  33), S(  48,  21), S(  37,  41),
- S(  19,  18), S(  47,  21), S(  37,  36), S(  54,  33),
- S(  23,   4), S(  31,  23), S(  25,  24), S(  26,  35),
+ S( -21,  35), S(  17,  34), S(  52,  21), S(  39,  43),
+ S(  21,  18), S(  48,  22), S(  37,  39), S(  56,  35),
+ S(  24,   3), S(  31,  24), S(  26,  25), S(  26,  37),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
@@ -133,97 +135,97 @@ const Score KNIGHT_POST_PSQT[32] = {
 const Score BISHOP_POST_PSQT[32] = {
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   7,  21), S(  34,  16), S(  53,  21), S(  54,   0),
- S(  19,  12), S(  32,  19), S(  42,   9), S(  48,   5),
- S(  -7,  24), S(  40,  14), S(  34,  11), S(  43,  19),
+ S(   5,  22), S(  33,  19), S(  57,  21), S(  57,   0),
+ S(  19,  14), S(  33,  20), S(  42,  10), S(  49,   5),
+ S(  -8,  25), S(  41,  14), S(  36,  11), S(  45,  20),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
 };
 
 const Score KNIGHT_MOBILITIES[9] = {
- S( -89, -55), S( -63,   0), S( -46,  33), S( -36,  44),
- S( -25,  52), S( -17,  57), S(  -9,  58), S(  -1,  55),
- S(   6,  46),};
+ S( -89, -53), S( -61,   4), S( -44,  39), S( -34,  50),
+ S( -22,  58), S( -14,  64), S(  -5,  65), S(   4,  62),
+ S(  11,  53),};
 
 const Score BISHOP_MOBILITIES[14] = {
- S( -50, -31), S( -31,  -8), S( -18,   9), S( -11,  30),
- S(   1,  40), S(   8,  49), S(  11,  56), S(  13,  61),
- S(  16,  65), S(  16,  69), S(  22,  65), S(  42,  66),
- S(  50,  75), S(  48,  74),};
+ S( -50, -28), S( -31,  -4), S( -16,  13), S(  -9,  35),
+ S(   3,  46), S(  11,  55), S(  14,  62), S(  16,  67),
+ S(  18,  72), S(  18,  76), S(  25,  72), S(  46,  73),
+ S(  53,  83), S(  51,  82),};
 
 const Score ROOK_MOBILITIES[15] = {
- S(-107,-151), S( -69, -15), S( -57,   4), S( -49,   1),
- S( -51,  21), S( -52,  32), S( -55,  40), S( -52,  41),
- S( -45,  41), S( -42,  46), S( -39,  48), S( -39,  51),
- S( -35,  55), S( -28,  56), S( -18,  50),};
+ S( -90,-162), S( -70, -14), S( -57,   6), S( -48,   3),
+ S( -51,  24), S( -51,  35), S( -55,  44), S( -52,  46),
+ S( -45,  45), S( -41,  51), S( -37,  53), S( -38,  56),
+ S( -33,  60), S( -26,  62), S( -16,  55),};
 
 const Score QUEEN_MOBILITIES[28] = {
- S(-623,-531), S(-262,  26), S( -91,-139), S( -99,  36),
- S( -94, 116), S( -92, 124), S( -93, 152), S( -89, 166),
- S( -88, 182), S( -84, 181), S( -81, 186), S( -80, 190),
- S( -79, 194), S( -77, 193), S( -77, 199), S( -73, 189),
- S( -76, 188), S( -75, 187), S( -79, 179), S( -70, 165),
- S( -58, 135), S( -38, 111), S( -32,  78), S( -38,  62),
- S( -30,  32), S( 138, -87), S( 253,-256), S(-452, 139),
+ S(-730,-638), S(-268,  23), S( -90,-142), S( -99,  43),
+ S( -94, 124), S( -92, 130), S( -93, 161), S( -89, 176),
+ S( -87, 192), S( -83, 191), S( -80, 195), S( -79, 201),
+ S( -78, 204), S( -75, 204), S( -75, 209), S( -72, 200),
+ S( -74, 199), S( -74, 198), S( -79, 191), S( -68, 175),
+ S( -57, 146), S( -37, 122), S( -26,  85), S( -34,  71),
+ S( -26,  40), S( 150, -86), S( 258,-252), S(-461, 140),
 };
 
-const Score KNIGHT_OUTPOST_REACHABLE = S(6, 19);
+const Score KNIGHT_OUTPOST_REACHABLE = S(7, 20);
 
 const Score BISHOP_OUTPOST_REACHABLE = S(6, 5);
 
-const Score BISHOP_TRAPPED = S(-161, -104);
+const Score BISHOP_TRAPPED = S(-166, -109);
 
-const Score ROOK_TRAPPED = S(-52, -24);
+const Score ROOK_TRAPPED = S(-54, -25);
 
-const Score ROOK_OPEN_FILE = S(22, 19);
+const Score ROOK_OPEN_FILE = S(23, 20);
 
-const Score ROOK_SEMI_OPEN = S(2, 15);
+const Score ROOK_SEMI_OPEN = S(1, 15);
 
-const Score ROOK_OPPOSITE_KING = S(40, -18);
+const Score ROOK_OPPOSITE_KING = S(42, -20);
 
-const Score ROOK_ADJACENT_KING = S(15, -27);
+const Score ROOK_ADJACENT_KING = S(15, -28);
 
-const Score DOUBLED_PAWN = S(-9, -26);
+const Score DOUBLED_PAWN = S(-10, -27);
 
-const Score OPPOSED_ISOLATED_PAWN = S(-6, -12);
+const Score OPPOSED_ISOLATED_PAWN = S(-7, -12);
 
-const Score OPEN_ISOLATED_PAWN = S(-16, -14);
+const Score OPEN_ISOLATED_PAWN = S(-17, -15);
 
-const Score BACKWARDS_PAWN = S(-9, -14);
+const Score BACKWARDS_PAWN = S(-10, -14);
 
 const Score CONNECTED_PAWN[8] = {
- S(   0,   0), S(  98,   7), S(  37,  18), S(  16,   9),
+ S(   0,   0), S( 109,   5), S(  38,  19), S(  17,   9),
  S(   8,   2), S(   3,   1), S(   0,  -2), S(   0,   0),
 };
 
 const Score CANDIDATE_PASSER[8] = {
- S(   0,   0), S(   0,   0), S( -27, 159), S(  -3,  37),
- S( -15,  29), S( -22,   8), S( -31,   8), S(   0,   0),
+ S(   0,   0), S(   0,   0), S( -29, 163), S(  -4,  39),
+ S( -17,  30), S( -24,   8), S( -33,   8), S(   0,   0),
 };
 
 const Score PASSED_PAWN[8] = {
- S(   0,   0), S(  26, 142), S(   0, 211), S(  -5, 117),
- S( -19,  61), S( -10,  34), S(  -5,  29), S(   0,   0),
+ S(   0,   0), S(  26, 151), S(  -1, 220), S(  -5, 122),
+ S( -20,  63), S( -10,  36), S(  -4,  31), S(   0,   0),
 };
 
 const Score PASSED_PAWN_EDGE_DISTANCE = S(-6, -8);
 
-const Score PASSED_PAWN_KING_PROXIMITY = S(-10, 28);
+const Score PASSED_PAWN_KING_PROXIMITY = S(-11, 29);
 
-const Score PASSED_PAWN_ADVANCE_DEFENDED = S(25, 22);
+const Score PASSED_PAWN_ADVANCE_DEFENDED = S(25, 23);
 
-const Score KNIGHT_THREATS[6] = { S(-2, 20), S(1, 10), S(40, 27), S(74, -4), S(44, -62), S(199, -3),};
+const Score KNIGHT_THREATS[6] = { S(-2, 21), S(1, 9), S(41, 29), S(76, -4), S(45, -65), S(208, -3),};
 
-const Score BISHOP_THREATS[6] = { S(5, 19), S(30, 39), S(13, 9), S(46, 8), S(48, 81), S(109, 94),};
+const Score BISHOP_THREATS[6] = { S(6, 20), S(32, 40), S(13, 9), S(47, 9), S(50, 82), S(113, 96),};
 
-const Score ROOK_THREATS[6] = { S(6, 24), S(32, 35), S(36, 42), S(-3, 32), S(79, 7), S(188, 6),};
+const Score ROOK_THREATS[6] = { S(6, 25), S(33, 37), S(38, 43), S(-2, 32), S(80, 10), S(203, 5),};
 
-const Score KING_THREATS[6] = { S(30, 61), S(16, 44), S(-8, 35), S(13, 15), S(-106, -504), S(0, 0),};
+const Score KING_THREATS[6] = { S(30, 64), S(17, 45), S(-10, 37), S(11, 16), S(-98, -570), S(0, 0),};
 
-const Score PAWN_THREAT = S(57, 12);
+const Score PAWN_THREAT = S(62, 14);
 
-const Score HANGING_THREAT = S(5, 9);
+const Score HANGING_THREAT = S(4, 9);
 
 const Score PAWN_SHELTER[4][8] = {
     {S(-2,0), S(12,0), S(12,0), S(15,0), S(22,0), S(38,0), S(34,0), S(0,0)},
@@ -298,13 +300,13 @@ inline int Scale(Board* board, int ss) {
     return 0;
 
   if (IsOCB(board))
-    return 50;
+    return 64;
 
   int ssPawns = bits(board->pieces[PAWN[ss]]);
   if (ssPawns < 4)
-    return 100 - 3 * (4 - ssPawns) * (4 - ssPawns);
+    return MAX_SCALE - 4 * (4 - ssPawns) * (4 - ssPawns);
 
-  return 100;
+  return MAX_SCALE;
 }
 
 // preload a bunch of important evalution data
@@ -726,16 +728,20 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
 
-  PawnHashEntry* pawnEntry = TTPawnProbe(board->pawnHash, thread);
-  if (pawnEntry != NULL) {
-    s += pawnEntry->s;
-    data.passedPawns = pawnEntry->passedPawns;
+  if (!T) {
+    PawnHashEntry* pawnEntry = TTPawnProbe(board->pawnHash, thread);
+    if (pawnEntry != NULL) {
+      s += pawnEntry->s;
+      data.passedPawns = pawnEntry->passedPawns;
+    } else {
+      Score pawnS = PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
+      TTPawnPut(board->pawnHash, pawnS, data.passedPawns, thread);
+      s += pawnS;
+    }
   } else {
-    Score pawnS = PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
-    TTPawnPut(board->pawnHash, pawnS, data.passedPawns, thread);
-    s += pawnS;
+    s += PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
   }
-  
+
   s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
   s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
   s += KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
@@ -748,6 +754,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
     C.ss = s >= 0 ? WHITE : BLACK;
 
   // scale the score
-  s = s * Scale(board, s >= 0 ? WHITE : BLACK) / 100;
+  s = s * Scale(board, s >= 0 ? WHITE : BLACK) / MAX_SCALE;
   return TEMPO + (board->side == WHITE ? s : -s);
 }
