@@ -737,11 +737,19 @@ int IsMoveLegal(Move move, Board* board) {
   return 1;
 }
 
-inline int IsRepetition(Board* board) {
+inline int IsRepetition(Board* board, int ply) {
+  int reps = 0;
+
   // Check as far back as the last non-reversible move
   for (int i = board->moveNo - 2; i >= 0 && i >= board->moveNo - board->halfMove; i -= 2) {
-    if (board->zobristHistory[i] == board->zobrist)
-      return 1;
+    if (board->zobristHistory[i] == board->zobrist) {
+      if (i > board->moveNo - ply) // within our search tree
+        return 1;
+
+      reps++;
+      if (reps == 2) // 3-fold before+including root
+        return 1;
+    }    
   }
 
   return 0;
