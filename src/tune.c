@@ -37,6 +37,7 @@ void Tune() {
   InitPieceBonusWeights(&weights);
   InitPawnBonusWeights(&weights);
   InitPasserBonusWeights(&weights);
+  InitPawnShelterWeights(&weights);
 
   int n = 0;
   Position* positions = LoadPositions(&n);
@@ -48,7 +49,7 @@ void Tune() {
   for (int epoch = 0; epoch < 10000; epoch++) {
     UpdateAndTrain(epoch, n, positions, &weights);
 
-    if (epoch % 25 == 0)
+    if (epoch % 5 == 0)
       PrintWeights(&weights);
   }
 
@@ -248,6 +249,26 @@ void UpdateWeights(Weights* weights) {
 
   UpdateParam(&weights->passedPawnAdvance.mg);
   UpdateParam(&weights->passedPawnAdvance.eg);
+
+  for (int f = 0; f < 4; f++) {
+    for (int r = 0; r < 8; r++) {
+      UpdateParam(&weights->ksPawnShelter[f][r].mg);
+      UpdateParam(&weights->ksPawnShelter[f][r].eg);
+
+      UpdateParam(&weights->ksPawnStorm[f][r].mg);
+      UpdateParam(&weights->ksPawnStorm[f][r].eg);
+    }
+  }
+
+  for (int r = 0; r < 8; r++) {
+    UpdateParam(&weights->ksBlocked[r].mg);
+    UpdateParam(&weights->ksBlocked[r].eg);
+  }
+
+  for (int f = 0; f < 4; f++) {
+    UpdateParam(&weights->ksFile[f].mg);
+    UpdateParam(&weights->ksFile[f].eg);
+  }
 }
 
 void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
@@ -397,6 +418,26 @@ void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->passedPawnAdvance.mg.g += w->passedPawnAdvance.mg.g;
     weights->passedPawnAdvance.eg.g += w->passedPawnAdvance.eg.g;
+
+    for (int f = 0; f < 4; f++) {
+      for (int r = 0; r < 8; r++) {
+        weights->ksPawnShelter[f][r].mg.g += w->ksPawnShelter[f][r].mg.g;
+        weights->ksPawnShelter[f][r].eg.g += w->ksPawnShelter[f][r].eg.g;
+
+        weights->ksPawnStorm[f][r].mg.g += w->ksPawnStorm[f][r].mg.g;
+        weights->ksPawnStorm[f][r].eg.g += w->ksPawnStorm[f][r].eg.g;
+      }
+    }
+
+    for (int r = 0; r < 8; r++) {
+      weights->ksBlocked[r].mg.g += w->ksBlocked[r].mg.g;
+      weights->ksBlocked[r].eg.g += w->ksBlocked[r].eg.g;
+    }
+
+    for (int r = 0; r < 4; r++) {
+      weights->ksFile[r].mg.g += w->ksFile[r].mg.g;
+      weights->ksFile[r].eg.g += w->ksFile[r].eg.g;
+    }
   }
 
   printf("Epoch: %5d, Error: %9.8f\n", epoch, error / n);
@@ -425,6 +466,7 @@ void* UpdateGradients(void* arg) {
     UpdatePieceBonusGradients(&positions[i], loss, weights);
     UpdatePawnBonusGradients(&positions[i], loss, weights);
     UpdatePasserBonusGradients(&positions[i], loss, weights);
+    UpdatePawnShelterGradients(&positions[i], loss, weights);
 
     job->error += pow(positions[i].result - sigmoid, 2);
   }
@@ -532,10 +574,8 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
         (position->coeffs.kingThreats[WHITE][pc] - position->coeffs.kingThreats[BLACK][pc]) * egBase;
   }
 
-  weights->pawnThreat.mg.g +=
-      (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * mgBase;
-  weights->pawnThreat.eg.g +=
-      (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * egBase;
+  weights->pawnThreat.mg.g += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * mgBase;
+  weights->pawnThreat.eg.g += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * egBase;
 
   weights->hangingThreat.mg.g +=
       (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * mgBase;
@@ -647,6 +687,37 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
       (position->coeffs.passedPawnAdvance[WHITE] - position->coeffs.passedPawnAdvance[BLACK]) * egBase;
 }
 
+void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights) {
+  double mgBase = position->phaseMg * position->scale * loss;
+  double egBase = position->phaseEg * position->scale * loss;
+
+  for (int f = 0; f < 4; f++) {
+    for (int r = 0; r < 8; r++) {
+      weights->ksPawnShelter[f][r].mg.g +=
+          (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) * mgBase;
+      weights->ksPawnShelter[f][r].eg.g +=
+          (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) * egBase;
+
+      weights->ksPawnStorm[f][r].mg.g +=
+          (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) * mgBase;
+      weights->ksPawnStorm[f][r].eg.g +=
+          (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) * egBase;
+    }
+  }
+
+  for (int f = 0; f < 8; f++) {
+    weights->ksBlocked[f].mg.g +=
+        (position->coeffs.blockedPawnStorm[WHITE][f] - position->coeffs.blockedPawnStorm[BLACK][f]) * mgBase;
+    weights->ksBlocked[f].eg.g +=
+        (position->coeffs.blockedPawnStorm[WHITE][f] - position->coeffs.blockedPawnStorm[BLACK][f]) * egBase;
+  }
+
+  for (int f = 0; f < 4; f++) {
+    weights->ksFile[f].mg.g += (position->coeffs.kingFile[WHITE][f] - position->coeffs.kingFile[BLACK][f]) * mgBase;
+    weights->ksFile[f].eg.g += (position->coeffs.kingFile[WHITE][f] - position->coeffs.kingFile[BLACK][f]) * egBase;
+  }
+}
+
 double EvaluateCoeffs(Position* position, Weights* weights) {
   double mg = 0, eg = 0;
 
@@ -658,6 +729,7 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
   EvaluatePieceBonusValues(&mg, &eg, position, weights);
   EvaluatePawnBonusValues(&mg, &eg, position, weights);
   EvaluatePasserBonusValues(&mg, &eg, position, weights);
+  EvaluatePawnShelterValues(&mg, &eg, position, weights);
 
   mg += scoreMG(position->coeffs.ks[WHITE]) - scoreMG(position->coeffs.ks[BLACK]);
   eg += scoreEG(position->coeffs.ks[WHITE]) - scoreEG(position->coeffs.ks[BLACK]);
@@ -752,10 +824,8 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
            weights->kingThreats[pc].eg.value;
   }
 
-  *mg +=
-      (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.mg.value;
-  *eg +=
-      (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.eg.value;
+  *mg += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.mg.value;
+  *eg += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.eg.value;
 
   *mg +=
       (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * weights->hangingThreat.mg.value;
@@ -766,7 +836,7 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
   *mg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.mg.value;
   *eg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.eg.value;
-  
+
   *mg += (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) *
          weights->knightPostReachable.mg.value;
   *eg += (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) *
@@ -858,6 +928,34 @@ void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weigh
          weights->passedPawnAdvance.eg.value;
 }
 
+void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights) {
+  for (int f = 0; f < 4; f++) {
+    for (int r = 0; r < 8; r++) {
+      *mg += (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) *
+             weights->ksPawnShelter[f][r].mg.value;
+      *eg += (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) *
+             weights->ksPawnShelter[f][r].eg.value;
+
+      *mg += (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) *
+             weights->ksPawnStorm[f][r].mg.value;
+      *eg += (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) *
+             weights->ksPawnStorm[f][r].eg.value;
+    }
+  }
+
+  for (int r = 0; r < 8; r++) {
+    *mg += (position->coeffs.blockedPawnStorm[WHITE][r] - position->coeffs.blockedPawnStorm[BLACK][r]) *
+           weights->ksBlocked[r].mg.value;
+    *eg += (position->coeffs.blockedPawnStorm[WHITE][r] - position->coeffs.blockedPawnStorm[BLACK][r]) *
+           weights->ksBlocked[r].eg.value;
+  }
+
+  for (int r = 0; r < 4; r++) {
+    *mg += (position->coeffs.kingFile[WHITE][r] - position->coeffs.kingFile[BLACK][r]) * weights->ksFile[r].mg.value;
+    *eg += (position->coeffs.kingFile[WHITE][r] - position->coeffs.kingFile[BLACK][r]) * weights->ksFile[r].eg.value;
+  }
+}
+
 void LoadPosition(Board* board, Position* position, ThreadData* thread) {
   ResetCoeffs();
   int phase = GetPhase(board);
@@ -937,6 +1035,19 @@ void ResetCoeffs() {
     C.pawnThreat[side] = 0;
     C.hangingThreat[side] = 0;
 
+    for (int f = 0; f < 4; f++) {
+      for (int r = 0; r < 8; r++) {
+        C.pawnShelter[side][f][r] = 0;
+        C.pawnStorm[side][f][r] = 0;
+      }
+    }
+
+    for (int r = 0; r < 8; r++)
+      C.blockedPawnStorm[side][r] = 0;
+
+    for (int r = 0; r < 4; r++)
+      C.kingFile[side][r] = 0;
+
     C.ks[side] = 0;
   }
 }
@@ -1001,6 +1112,19 @@ void CopyCoeffsInto(EvalCoeffs* c) {
 
     c->pawnThreat[side] = C.pawnThreat[side];
     c->hangingThreat[side] = C.hangingThreat[side];
+
+    for (int f = 0; f < 4; f++) {
+      for (int r = 0; r < 8; r++) {
+        c->pawnShelter[side][f][r] = C.pawnShelter[side][f][r];
+        c->pawnStorm[side][f][r] = C.pawnStorm[side][f][r];
+      }
+    }
+
+    for (int r = 0; r < 8; r++)
+      c->blockedPawnStorm[side][r] = C.blockedPawnStorm[side][r];
+
+    for (int r = 0; r < 4; r++)
+      c->kingFile[side][r] = C.kingFile[side][r];
 
     c->ks[side] = C.ks[side];
   }
@@ -1213,6 +1337,28 @@ void InitPasserBonusWeights(Weights* weights) {
   weights->passedPawnAdvance.eg.value = scoreEG(PASSED_PAWN_ADVANCE_DEFENDED);
 }
 
+void InitPawnShelterWeights(Weights* weights) {
+  for (int f = 0; f < 4; f++) {
+    for (int r = 0; r < 8; r++) {
+      weights->ksPawnShelter[f][r].mg.value = scoreMG(PAWN_SHELTER[f][r]);
+      weights->ksPawnShelter[f][r].eg.value = scoreEG(PAWN_SHELTER[f][r]);
+
+      weights->ksPawnStorm[f][r].mg.value = scoreMG(PAWN_STORM[f][r]);
+      weights->ksPawnStorm[f][r].eg.value = scoreEG(PAWN_STORM[f][r]);
+    }
+  }
+
+  for (int r = 0; r < 8; r++) {
+    weights->ksBlocked[r].mg.value = scoreMG(BLOCKED_PAWN_STORM[r]);
+    weights->ksBlocked[r].eg.value = scoreEG(BLOCKED_PAWN_STORM[r]);
+  }
+
+  for (int f = 0; f < 4; f++) {
+    weights->ksFile[f].mg.value = scoreMG(KS_KING_FILE[f]);
+    weights->ksFile[f].eg.value = scoreEG(KS_KING_FILE[f]);
+  }
+}
+
 double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 400.0)); }
 
 void PrintWeights(Weights* weights) {
@@ -1343,12 +1489,44 @@ void PrintWeights(Weights* weights) {
   printf("\nconst Score KING_THREATS[6] = {");
   PrintWeightArray(weights->kingThreats, 6, 0);
   printf("};\n");
-  
+
   printf("\nconst Score PAWN_THREAT = ");
   PrintWeight(&weights->pawnThreat);
 
   printf("\nconst Score HANGING_THREAT = ");
   PrintWeight(&weights->hangingThreat);
+
+  printf("\nconst Score PAWN_SHELTER[4][8] = {\n");
+  printf(" {");
+  PrintWeightArray(weights->ksPawnShelter[0], 8, 0);
+  printf("},\n {");
+  PrintWeightArray(weights->ksPawnShelter[1], 8, 0);
+  printf("},\n {");
+  PrintWeightArray(weights->ksPawnShelter[2], 8, 0);
+  printf("},\n {");
+  PrintWeightArray(weights->ksPawnShelter[3], 8, 0);
+  printf("},\n");
+  printf("};\n");
+
+  printf("\nconst Score PAWN_STORM[4][8] = {\n");
+  printf(" {");
+  PrintWeightArray(weights->ksPawnStorm[0], 8, 0);
+  printf("},\n {");
+  PrintWeightArray(weights->ksPawnStorm[1], 8, 0);
+  printf("},\n {");
+  PrintWeightArray(weights->ksPawnStorm[2], 8, 0);
+  printf("},\n {");
+  PrintWeightArray(weights->ksPawnStorm[3], 8, 0);
+  printf("},\n");
+  printf("};\n");
+
+  printf("\nconst Score BLOCKED_PAWN_STORM[8] = {\n");
+  PrintWeightArray(weights->ksBlocked, 8, 0);
+  printf("\n};\n");
+
+  printf("\nconst Score KS_KING_FILE[4] = {");
+  PrintWeightArray(weights->ksFile, 4, 0);
+  printf("};\n");
 
   printf("\n");
 }
