@@ -112,6 +112,7 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights);
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights);
+void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights);
 
 double EvaluateCoeffs(Position* position, Weights* weights);
 void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights);
@@ -122,6 +123,7 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights);
+void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights);
 
 void InitMaterialWeights(Weights* weights);
 void InitPsqtWeights(Weights* weights);
@@ -132,6 +134,7 @@ void InitThreatWeights(Weights* weights);
 void InitPieceBonusWeights(Weights* weights);
 void InitPawnBonusWeights(Weights* weights);
 void InitPasserBonusWeights(Weights* weights);
+void InitPawnShelterWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
 void ResetCoeffs();
