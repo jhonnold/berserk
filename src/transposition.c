@@ -21,6 +21,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__linux__)
+#include <sys/mman.h>
+#endif
+
 #include "bits.h"
 #include "search.h"
 #include "transposition.h"
@@ -30,12 +34,21 @@
 TTTable TT = {0};
 
 size_t TTInit(int mb) {
-  if (TT.mask) TTFree();
+  if (TT.mask)
+    TTFree();
 
   uint64_t key = 16ULL;
-  while ((1ULL << key) * sizeof(TTBucket) * 2 <= mb * MEGABYTE) key++;
+  while ((1ULL << key) * sizeof(TTBucket) * 2 <= mb * MEGABYTE)
+    key++;
 
+#if defined(__linux__) && !defined(__ANDROID__)
+  // On Linux systems we align on 2MB boundaries and request Huge Pages 
+  TT.buckets = aligned_alloc(2 * MEGABYTE, (1ULL << key) * sizeof(TTBucket));
+  madvise(TT.buckets, (1ULL << key) * sizeof(TTBucket), MADV_HUGEPAGE);
+#else
   TT.buckets = calloc((1ULL << key), sizeof(TTBucket));
+#endif
+
   TT.mask = (1ULL << key) - 1ULL;
 
   TTClear();
