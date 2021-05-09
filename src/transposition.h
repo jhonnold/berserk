@@ -19,16 +19,35 @@
 
 #include "types.h"
 
+
+
+#define NO_ENTRY 0ULL
+#define MEGABYTE 0x100000ULL
+#define BUCKET_SIZE 3
+
+typedef uint64_t TTValue;
+
+typedef struct {
+  uint64_t hash;
+  TTValue value;
+} TTEntry;
+
+typedef struct {
+  uint16_t paddingLow;
+  TTEntry entries[BUCKET_SIZE];
+  uint16_t paddingHigh;
+} TTBucket;
+
+typedef struct {
+  TTBucket* buckets;
+  uint64_t mask;
+  uint64_t size;
+} TTTable;
+
 enum { TT_LOWER, TT_UPPER, TT_EXACT };
 
-extern const TTValue NO_ENTRY;
-extern TTValue* TRANSPOSITION_ENTRIES;
-extern int POWER;
+extern TTTable TT;
 
-#define MEGABYTE 0x100000ULL
-#define BUCKET_SIZE 2ULL
-
-#define TTIdx(hash) ((uint64_t)((hash) >> (64 - POWER)) << 1)
 #define TTEntry(score, flag, depth, move, eval)                                                                        \
   ((TTValue)((uint16_t)(eval)) << 48) | ((TTValue)((uint16_t)(score)) << 32) | ((TTValue)(flag) << 30) |               \
       ((TTValue)(depth) << 24) | ((TTValue)(move))
