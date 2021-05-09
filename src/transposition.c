@@ -37,19 +37,17 @@ size_t TTInit(int mb) {
   if (TT.mask)
     TTFree();
 
-  uint64_t key = 16ULL;
-  while ((1ULL << key) * sizeof(TTBucket) * 2 <= mb * MEGABYTE)
-    key++;
+  uint64_t keySize = (uint64_t)log2(mb) + (uint64_t)log2(MEGABYTE / sizeof(TTBucket));
 
 #if defined(__linux__) && !defined(__ANDROID__)
   // On Linux systems we align on 2MB boundaries and request Huge Pages 
-  TT.buckets = aligned_alloc(2 * MEGABYTE, (1ULL << key) * sizeof(TTBucket));
-  madvise(TT.buckets, (1ULL << key) * sizeof(TTBucket), MADV_HUGEPAGE);
+  TT.buckets = aligned_alloc(2 * MEGABYTE, (1ULL << keySize) * sizeof(TTBucket));
+  madvise(TT.buckets, (1ULL << keySize) * sizeof(TTBucket), MADV_HUGEPAGE);
 #else
-  TT.buckets = calloc((1ULL << key), sizeof(TTBucket));
+  TT.buckets = calloc((1ULL << keySize), sizeof(TTBucket));
 #endif
 
-  TT.mask = (1ULL << key) - 1ULL;
+  TT.mask = (1ULL << keySize) - 1ULL;
 
   TTClear();
   return (TT.mask + 1ULL) * sizeof(TTBucket);
