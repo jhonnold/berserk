@@ -735,7 +735,7 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
   eg += scoreEG(position->coeffs.ks[WHITE]) - scoreEG(position->coeffs.ks[BLACK]);
 
   int result = (mg * position->phase + eg * (MAX_PHASE - position->phase)) / MAX_PHASE;
-  result = result * position->scale / MAX_SCALE;
+  result = (result * position->scale + MAX_SCALE / 2)/ MAX_SCALE;
   return result + (position->stm == WHITE ? TEMPO : -TEMPO);
 }
 

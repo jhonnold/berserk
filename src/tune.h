@@ -5,8 +5,8 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean.epd"
-#define THREADS 16
+#define EPD_FILE_PATH "/Users/jhonnold/Downloads/texel-set-clean.epd"
+#define THREADS 1
 
 typedef struct {
   int epoch;
