@@ -406,7 +406,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // start of late move reductions
     int R = 1;
-    if (depth >= 2 && numMoves > 1) {
+    if (depth > 2 && numMoves > 1) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
       if (!isPV)
