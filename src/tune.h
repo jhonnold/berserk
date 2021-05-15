@@ -139,8 +139,6 @@ void InitPasserBonusWeights(Weights* weights);
 void InitPawnShelterWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
-void ResetCoeffs();
-void CopyCoeffsInto(EvalCoeffs* c);
 Position* LoadPositions(int* n);
 
 double Sigmoid(double s);
