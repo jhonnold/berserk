@@ -338,13 +338,10 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
   }
 
-  // iid (internal iterative deepening)
-  // if this is a pv node with no hash entry, then we need to find a good first move
-  // Calling a shallower search will force a tt entry and we probe that once done
-  if (isPV && !ttValue && !isRoot && depth > 5) {
-    Negamax(alpha, beta, depth - 2, thread, pv);
-    ttValue = TTProbe(board->zobrist);
-  }
+  // IIR by Ed Schroder
+  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
+  if (depth >= 4 && !ttValue)
+    depth--;
 
   MoveList moveList;
   GenerateAllMoves(&moveList, board, data);
