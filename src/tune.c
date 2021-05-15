@@ -46,14 +46,12 @@ void Tune() {
   ValidateEval(n, positions, &weights);
   DetermineK(n, positions);
 
-  for (int epoch = 0; epoch < 10000; epoch++) {
-    UpdateAndTrain(epoch, n, positions, &weights);
+  for (int epoch = 1; epoch < 10000; epoch++) {
+    double error = UpdateAndTrain(epoch, n, positions, &weights);
 
-    if (epoch % 5 == 0)
-      PrintWeights(&weights);
+    PrintWeights(&weights, epoch, error);
   }
 
-  PrintWeights(&weights);
   free(positions);
 }
 
@@ -271,7 +269,7 @@ void UpdateWeights(Weights* weights) {
   }
 }
 
-void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
+double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
   pthread_t threads[THREADS];
   GradientUpdate jobs[THREADS];
   Weights local[THREADS];
@@ -443,6 +441,8 @@ void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
   printf("Epoch: %5d, Error: %9.8f\n", epoch, error / n);
 
   UpdateWeights(weights);
+
+  return error;
 }
 
 void* UpdateGradients(void* arg) {
@@ -735,7 +735,7 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
   eg += scoreEG(position->coeffs.ks[WHITE]) - scoreEG(position->coeffs.ks[BLACK]);
 
   int result = (mg * position->phase + eg * (MAX_PHASE - position->phase)) / MAX_PHASE;
-  result = (result * position->scale + MAX_SCALE / 2)/ MAX_SCALE;
+  result = (result * position->scale + MAX_SCALE / 2) / MAX_SCALE;
   return result + (position->stm == WHITE ? TEMPO : -TEMPO);
 }
 
@@ -1361,188 +1361,200 @@ void InitPawnShelterWeights(Weights* weights) {
 
 double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 400.0)); }
 
-void PrintWeights(Weights* weights) {
-  printf("\n\nconst Score MATERIAL_VALUES[7] = {");
-  PrintWeightArray(weights->material, 5, 0);
-  printf(" S(   0,   0), S(   0,   0) };\n");
+void PrintWeights(Weights* weights, int epoch, double error) {
+  FILE* fp;
+  fp = fopen("weights.out", "a");
 
-  printf("\nconst Score BISHOP_PAIR = ");
-  PrintWeight(&weights->bishopPair);
+  if (fp == NULL)
+    return;
 
-  printf("\nconst Score PAWN_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[PAWN_TYPE], 32, 4);
-  printf("};\n");
+  fprintf(fp, "Epoch: %d, Error: %f\n", epoch, error);
 
-  printf("\nconst Score KNIGHT_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[KNIGHT_TYPE], 32, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score MATERIAL_VALUES[7] = {");
+  PrintWeightArray(fp, weights->material, 5, 0);
+  fprintf(fp, " S(   0,   0), S(   0,   0) };\n");
 
-  printf("\nconst Score BISHOP_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[BISHOP_TYPE], 32, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score BISHOP_PAIR = ");
+  PrintWeight(fp, &weights->bishopPair);
 
-  printf("\nconst Score ROOK_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[ROOK_TYPE], 32, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score PAWN_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[PAWN_TYPE], 32, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score QUEEN_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[QUEEN_TYPE], 32, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score KNIGHT_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[KNIGHT_TYPE], 32, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score KING_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[KING_TYPE], 32, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score BISHOP_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[BISHOP_TYPE], 32, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score KNIGHT_POST_PSQT[32] = {\n");
-  PrintWeightArray(weights->knightPostPsqt, 32, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score ROOK_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[ROOK_TYPE], 32, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score BISHOP_POST_PSQT[32] = {\n");
-  PrintWeightArray(weights->bishopPostPsqt, 32, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score QUEEN_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[QUEEN_TYPE], 32, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score KNIGHT_MOBILITIES[9] = {\n");
-  PrintWeightArray(weights->knightMobilities, 9, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score KING_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[KING_TYPE], 32, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score BISHOP_MOBILITIES[14] = {\n");
-  PrintWeightArray(weights->bishopMobilities, 14, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score KNIGHT_POST_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->knightPostPsqt, 32, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score ROOK_MOBILITIES[15] = {\n");
-  PrintWeightArray(weights->rookMobilities, 15, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score BISHOP_POST_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->bishopPostPsqt, 32, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score QUEEN_MOBILITIES[28] = {\n");
-  PrintWeightArray(weights->queenMobilities, 28, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score KNIGHT_MOBILITIES[9] = {\n");
+  PrintWeightArray(fp, weights->knightMobilities, 9, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score KNIGHT_OUTPOST_REACHABLE = ");
-  PrintWeight(&weights->knightPostReachable);
+  fprintf(fp, "\nconst Score BISHOP_MOBILITIES[14] = {\n");
+  PrintWeightArray(fp, weights->bishopMobilities, 14, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score BISHOP_OUTPOST_REACHABLE = ");
-  PrintWeight(&weights->bishopPostReachable);
+  fprintf(fp, "\nconst Score ROOK_MOBILITIES[15] = {\n");
+  PrintWeightArray(fp, weights->rookMobilities, 15, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score BISHOP_TRAPPED = ");
-  PrintWeight(&weights->bishopTrapped);
+  fprintf(fp, "\nconst Score QUEEN_MOBILITIES[28] = {\n");
+  PrintWeightArray(fp, weights->queenMobilities, 28, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score ROOK_TRAPPED = ");
-  PrintWeight(&weights->rookTrapped);
+  fprintf(fp, "\nconst Score KNIGHT_OUTPOST_REACHABLE = ");
+  PrintWeight(fp, &weights->knightPostReachable);
 
-  printf("\nconst Score ROOK_OPEN_FILE = ");
-  PrintWeight(&weights->rookOpenFile);
+  fprintf(fp, "\nconst Score BISHOP_OUTPOST_REACHABLE = ");
+  PrintWeight(fp, &weights->bishopPostReachable);
 
-  printf("\nconst Score ROOK_SEMI_OPEN = ");
-  PrintWeight(&weights->rookSemiOpen);
+  fprintf(fp, "\nconst Score BISHOP_TRAPPED = ");
+  PrintWeight(fp, &weights->bishopTrapped);
 
-  printf("\nconst Score ROOK_OPPOSITE_KING = ");
-  PrintWeight(&weights->rookOppositeKing);
+  fprintf(fp, "\nconst Score ROOK_TRAPPED = ");
+  PrintWeight(fp, &weights->rookTrapped);
 
-  printf("\nconst Score ROOK_ADJACENT_KING = ");
-  PrintWeight(&weights->rookAdjacentKing);
+  fprintf(fp, "\nconst Score ROOK_OPEN_FILE = ");
+  PrintWeight(fp, &weights->rookOpenFile);
 
-  printf("\nconst Score DOUBLED_PAWN = ");
-  PrintWeight(&weights->doubledPawns);
+  fprintf(fp, "\nconst Score ROOK_SEMI_OPEN = ");
+  PrintWeight(fp, &weights->rookSemiOpen);
 
-  printf("\nconst Score OPPOSED_ISOLATED_PAWN = ");
-  PrintWeight(&weights->opposedIsolatedPawns);
+  fprintf(fp, "\nconst Score ROOK_OPPOSITE_KING = ");
+  PrintWeight(fp, &weights->rookOppositeKing);
 
-  printf("\nconst Score OPEN_ISOLATED_PAWN = ");
-  PrintWeight(&weights->openIsolatedPawns);
+  fprintf(fp, "\nconst Score ROOK_ADJACENT_KING = ");
+  PrintWeight(fp, &weights->rookAdjacentKing);
 
-  printf("\nconst Score BACKWARDS_PAWN = ");
-  PrintWeight(&weights->backwardsPawns);
+  fprintf(fp, "\nconst Score DOUBLED_PAWN = ");
+  PrintWeight(fp, &weights->doubledPawns);
 
-  printf("\nconst Score CONNECTED_PAWN[8] = {\n");
-  PrintWeightArray(weights->connectedPawn, 8, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score OPPOSED_ISOLATED_PAWN = ");
+  PrintWeight(fp, &weights->opposedIsolatedPawns);
 
-  printf("\nconst Score CANDIDATE_PASSER[8] = {\n");
-  PrintWeightArray(weights->candidatePasser, 8, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score OPEN_ISOLATED_PAWN = ");
+  PrintWeight(fp, &weights->openIsolatedPawns);
 
-  printf("\nconst Score PASSED_PAWN[8] = {\n");
-  PrintWeightArray(weights->passedPawn, 8, 4);
-  printf("};\n");
+  fprintf(fp, "\nconst Score BACKWARDS_PAWN = ");
+  PrintWeight(fp, &weights->backwardsPawns);
 
-  printf("\nconst Score PASSED_PAWN_EDGE_DISTANCE = ");
-  PrintWeight(&weights->passedPawnEdgeDistance);
+  fprintf(fp, "\nconst Score CONNECTED_PAWN[8] = {\n");
+  PrintWeightArray(fp, weights->connectedPawn, 8, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score PASSED_PAWN_KING_PROXIMITY = ");
-  PrintWeight(&weights->passedPawnKingProximity);
+  fprintf(fp, "\nconst Score CANDIDATE_PASSER[8] = {\n");
+  PrintWeightArray(fp, weights->candidatePasser, 8, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score PASSED_PAWN_ADVANCE_DEFENDED = ");
-  PrintWeight(&weights->passedPawnAdvance);
+  fprintf(fp, "\nconst Score PASSED_PAWN[8] = {\n");
+  PrintWeightArray(fp, weights->passedPawn, 8, 4);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score KNIGHT_THREATS[6] = {");
-  PrintWeightArray(weights->knightThreats, 6, 0);
-  printf("};\n");
+  fprintf(fp, "\nconst Score PASSED_PAWN_EDGE_DISTANCE = ");
+  PrintWeight(fp, &weights->passedPawnEdgeDistance);
 
-  printf("\nconst Score BISHOP_THREATS[6] = {");
-  PrintWeightArray(weights->bishopThreats, 6, 0);
-  printf("};\n");
+  fprintf(fp, "\nconst Score PASSED_PAWN_KING_PROXIMITY = ");
+  PrintWeight(fp, &weights->passedPawnKingProximity);
 
-  printf("\nconst Score ROOK_THREATS[6] = {");
-  PrintWeightArray(weights->rookThreats, 6, 0);
-  printf("};\n");
+  fprintf(fp, "\nconst Score PASSED_PAWN_ADVANCE_DEFENDED = ");
+  PrintWeight(fp, &weights->passedPawnAdvance);
 
-  printf("\nconst Score KING_THREATS[6] = {");
-  PrintWeightArray(weights->kingThreats, 6, 0);
-  printf("};\n");
+  fprintf(fp, "\nconst Score KNIGHT_THREATS[6] = {");
+  PrintWeightArray(fp, weights->knightThreats, 6, 0);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score PAWN_THREAT = ");
-  PrintWeight(&weights->pawnThreat);
+  fprintf(fp, "\nconst Score BISHOP_THREATS[6] = {");
+  PrintWeightArray(fp, weights->bishopThreats, 6, 0);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score HANGING_THREAT = ");
-  PrintWeight(&weights->hangingThreat);
+  fprintf(fp, "\nconst Score ROOK_THREATS[6] = {");
+  PrintWeightArray(fp, weights->rookThreats, 6, 0);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score PAWN_SHELTER[4][8] = {\n");
-  printf(" {");
-  PrintWeightArray(weights->ksPawnShelter[0], 8, 0);
-  printf("},\n {");
-  PrintWeightArray(weights->ksPawnShelter[1], 8, 0);
-  printf("},\n {");
-  PrintWeightArray(weights->ksPawnShelter[2], 8, 0);
-  printf("},\n {");
-  PrintWeightArray(weights->ksPawnShelter[3], 8, 0);
-  printf("},\n");
-  printf("};\n");
+  fprintf(fp, "\nconst Score KING_THREATS[6] = {");
+  PrintWeightArray(fp, weights->kingThreats, 6, 0);
+  fprintf(fp, "};\n");
 
-  printf("\nconst Score PAWN_STORM[4][8] = {\n");
-  printf(" {");
-  PrintWeightArray(weights->ksPawnStorm[0], 8, 0);
-  printf("},\n {");
-  PrintWeightArray(weights->ksPawnStorm[1], 8, 0);
-  printf("},\n {");
-  PrintWeightArray(weights->ksPawnStorm[2], 8, 0);
-  printf("},\n {");
-  PrintWeightArray(weights->ksPawnStorm[3], 8, 0);
-  printf("},\n");
-  printf("};\n");
+  fprintf(fp, "\nconst Score PAWN_THREAT = ");
+  PrintWeight(fp, &weights->pawnThreat);
 
-  printf("\nconst Score BLOCKED_PAWN_STORM[8] = {\n");
-  PrintWeightArray(weights->ksBlocked, 8, 0);
-  printf("\n};\n");
+  fprintf(fp, "\nconst Score HANGING_THREAT = ");
+  PrintWeight(fp, &weights->hangingThreat);
 
-  printf("\nconst Score KS_KING_FILE[4] = {");
-  PrintWeightArray(weights->ksFile, 4, 0);
-  printf("};\n");
+  fprintf(fp, "\nconst Score PAWN_SHELTER[4][8] = {\n");
+  fprintf(fp, " {");
+  PrintWeightArray(fp, weights->ksPawnShelter[0], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnShelter[1], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnShelter[2], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnShelter[3], 8, 0);
+  fprintf(fp, "},\n");
+  fprintf(fp, "};\n");
 
-  printf("\n");
+  fprintf(fp, "\nconst Score PAWN_STORM[4][8] = {\n");
+  fprintf(fp, " {");
+  PrintWeightArray(fp, weights->ksPawnStorm[0], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnStorm[1], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnStorm[2], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnStorm[3], 8, 0);
+  fprintf(fp, "},\n");
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score BLOCKED_PAWN_STORM[8] = {\n");
+  PrintWeightArray(fp, weights->ksBlocked, 8, 0);
+  fprintf(fp, "\n};\n");
+
+  fprintf(fp, "\nconst Score KS_KING_FILE[4] = {");
+  PrintWeightArray(fp, weights->ksFile, 4, 0);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\n");
+
+  fclose(fp);
 }
 
-void PrintWeightArray(Weight* weights, int n, int wrap) {
+void PrintWeightArray(FILE* fp, Weight* weights, int n, int wrap) {
   for (int i = 0; i < n; i++) {
     if (wrap)
-      printf(" S(%4d,%4d),", (int)round(weights[i].mg.value), (int)round(weights[i].eg.value));
+      fprintf(fp, " S(%4d,%4d),", (int)round(weights[i].mg.value), (int)round(weights[i].eg.value));
     else
-      printf(" S(%d, %d),", (int)round(weights[i].mg.value), (int)round(weights[i].eg.value));
+      fprintf(fp, " S(%d, %d),", (int)round(weights[i].mg.value), (int)round(weights[i].eg.value));
 
     if (wrap && i % wrap == wrap - 1)
-      printf("\n");
+      fprintf(fp, "\n");
   }
 }
 
-void PrintWeight(Weight* weight) { printf("S(%d, %d);\n", (int)round(weight->mg.value), (int)round(weight->eg.value)); }
+void PrintWeight(FILE* fp, Weight* weight) {
+  fprintf(fp, "S(%d, %d);\n", (int)round(weight->mg.value), (int)round(weight->eg.value));
+}
 
 #endif

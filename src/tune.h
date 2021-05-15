@@ -3,6 +3,8 @@
 #ifndef TUNE_H
 #define TUNE_H
 
+#include <stdio.h>
+
 #include "types.h"
 
 #define EPD_FILE_PATH "/Users/jhonnold/Downloads/texel-set-clean.epd"
@@ -101,7 +103,7 @@ void DetermineK(int n, Position* positions);
 
 void UpdateParam(Param* p);
 void UpdateWeights(Weights* weights);
-void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights);
+double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights);
 
 void* UpdateGradients(void* arg);
 void UpdateMaterialGradients(Position* position, double loss, Weights* weights);
@@ -143,9 +145,9 @@ Position* LoadPositions(int* n);
 
 double Sigmoid(double s);
 
-void PrintWeights(Weights* weights);
-void PrintWeightArray(Weight* weights, int n, int wrap);
-void PrintWeight(Weight* weight);
+void PrintWeights(Weights* weights, int epoch, double error);
+void PrintWeightArray(FILE* fp, Weight* weights, int n, int wrap);
+void PrintWeight(FILE* fp, Weight* weight);
 
 #endif
 #endif
