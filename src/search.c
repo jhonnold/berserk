@@ -203,6 +203,8 @@ void* Search(void* arg) {
   return NULL;
 }
 
+char fenBuffer[128];
+
 int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   SearchParams* params = thread->params;
   SearchData* data = &thread->data;
@@ -227,6 +229,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
+  BoardToFen(fenBuffer, board);
+  printf("%d: %s\n", data->nodes, fenBuffer);
 
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
@@ -509,6 +513,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
+  
+  BoardToFen(fenBuffer, board);
+  printf("%d: %s\n", data->nodes, fenBuffer);
 
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
