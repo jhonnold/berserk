@@ -289,7 +289,7 @@ inline int GetPhase(Board* board) {
     phase += PHASE_MULTIPLIERS[PIECE_TYPE[i]] * bits(board->pieces[i]);
 
   phase = min(MAX_PHASE, phase);
-  return phase;
+  return (phase * 256 + MAX_PHASE / 2) / MAX_PHASE;
 }
 
 // Get a scalar for the given board for the stronger side (out of 100)
@@ -759,12 +759,12 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   // taper
   int phase = GetPhase(board);
-  s = (phase * scoreMG(s) + (MAX_PHASE - phase) * scoreEG(s)) / MAX_PHASE;
+  Score res = (phase * scoreMG(s) + (256 - phase) * scoreEG(s)) / 256;
 
   if (T)
-    C.ss = s >= 0 ? WHITE : BLACK;
+    C.ss = res >= 0 ? WHITE : BLACK;
 
   // scale the score
-  s = (s * Scale(board, s >= 0 ? WHITE : BLACK) + MAX_SCALE / 2)/ MAX_SCALE;
-  return TEMPO + (board->side == WHITE ? s : -s);
+  res = (res * Scale(board, res >= 0 ? WHITE : BLACK) + MAX_SCALE / 2) / MAX_SCALE;
+  return TEMPO + (board->side == WHITE ? res : -res);
 }
