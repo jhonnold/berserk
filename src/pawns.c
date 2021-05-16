@@ -1,12 +1,11 @@
-#include "attacks.h"
 #include "pawns.h"
+#include "attacks.h"
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
 #include "movegen.h"
 #include "types.h"
 #include "util.h"
-
 
 #ifdef TUNE
 #define T 1
@@ -17,13 +16,13 @@
 extern EvalCoeffs C;
 
 inline PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread) {
-  return thread->pawnHashTable[(hash & PAWN_TABLE_MASK)].hash == hash ? &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)] : NULL;
+  PawnHashEntry* entry = &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)];
+  return entry->hash == hash ? entry : NULL;
 }
 
 inline void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns, ThreadData* thread) {
-  thread->pawnHashTable[(hash & PAWN_TABLE_MASK)].hash = hash;
-  thread->pawnHashTable[(hash & PAWN_TABLE_MASK)].s = s;
-  thread->pawnHashTable[(hash & PAWN_TABLE_MASK)].passedPawns = passedPawns;
+  PawnHashEntry* entry = &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)];
+  *entry = (PawnHashEntry){.hash = hash, .s = s, .passedPawns = passedPawns};
 }
 
 // Standard pawn and passer evaluation
