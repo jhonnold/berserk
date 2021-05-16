@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <assert.h>
 #include <stdlib.h>
 
 #include "bits.h"
@@ -114,9 +115,9 @@ int EvaluateMaterialOnlyEndgame(Board* board) {
 }
 
 // The following KPK code is modified for my use from Cheng (as is the dataset)
-uint8_t GetKPKBit(int bit) { return kpkResults[bit >> 3] & (1U << (bit & 7)); }
+uint8_t GetKPKBit(uint32_t bit) { return (uint8_t)(kpkResults[bit >> 3] & (1U << (bit & 7))); }
 
-int KPKIndex(int ssKing, int wsKing, int p, int stm) {
+uint32_t KPKIndex(int ssKing, int wsKing, int p, int stm) {
   int file = file(p);
   int x = file > 3 ? 7 : 0;
 
@@ -125,14 +126,14 @@ int KPKIndex(int ssKing, int wsKing, int p, int stm) {
   p ^= x;
   file ^= x;
 
-  int pawn = (((p & 0x38) - 8) >> 1) | file;
+  uint32_t pawn = (((p & 0x38) - 8) >> 1) | file;
 
-  return ((unsigned)pawn << 13) | ((unsigned)stm << 12) | ((unsigned)wsKing << 6) | ((unsigned)ssKing);
+  return (uint32_t)ssKing | ((uint32_t)wsKing << 6) | ((uint32_t)stm << 12) | ((uint32_t)pawn << 13);
 }
 
-int KPKDraw(int ss, int ssKing, int wsKing, int p, int stm) {
-  int x = ss == WHITE ? 0 : 0x38;
-  int idx = KPKIndex(ssKing ^ x, wsKing ^ x, p ^ x, stm ^ x);
+uint8_t KPKDraw(int ss, int ssKing, int wsKing, int p, int stm) {
+  uint32_t x = (ss == WHITE) ? 0u : 0x38u;
+  uint32_t idx = KPKIndex(ssKing ^ x, wsKing ^ x, p ^ x, ss ^ stm);
 
   return GetKPKBit(idx);
 }
