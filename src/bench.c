@@ -89,7 +89,7 @@ void Bench() {
   long times[50];
 
   long startTime = GetTimeMS();
-  for (int i = 41; i < 42; i++) {
+  for (int i = 0; i < 50; i++) {
     TTClear();
     ResetThreadPool(&board, &params, threads);
 

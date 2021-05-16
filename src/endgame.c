@@ -133,7 +133,7 @@ uint32_t KPKIndex(int ssKing, int wsKing, int p, int stm) {
 
 uint8_t KPKDraw(int ss, int ssKing, int wsKing, int p, int stm) {
   uint32_t x = (ss == WHITE) ? 0u : 0x38u;
-  uint32_t idx = KPKIndex(ssKing ^ x, wsKing ^ x, p ^ x, stm ^ x);
+  uint32_t idx = KPKIndex(ssKing ^ x, wsKing ^ x, p ^ x, ss ^ stm);
 
   return GetKPKBit(idx);
 }
