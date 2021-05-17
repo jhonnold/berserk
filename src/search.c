@@ -35,7 +35,6 @@
 #include "types.h"
 #include "util.h"
 
-
 // We have a 16 bit range for scores
 const int CHECKMATE = INT16_MAX;
 const int MATE_BOUND = 30000;
@@ -149,6 +148,7 @@ void* Search(void* arg) {
       // aspiration windows start at 1/10th of a pawn and grows outward at 150%, utilizing
       // returned fail soft values
       int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW : CHECKMATE;
+      int windowExpands = 0;
 
       alpha = max(score - delta, -CHECKMATE);
       beta = min(score + delta, CHECKMATE);
@@ -172,6 +172,7 @@ void* Search(void* arg) {
 
         // increase delta
         delta += delta / 2;
+        windowExpands++;
       }
 
       if (mainThread) {
@@ -179,7 +180,7 @@ void* Search(void* arg) {
         if (params->timeset && depth >= 5 && abs(data->score - score) > WINDOW) {
           // the new time gains by G / 2 maxed at 25%
           int scoreChange = abs(data->score - score);
-          int percentIncrease = min(20, scoreChange / 2);
+          int percentIncrease = (2 << min(4, windowExpands));
 
           // score improving isn't as bad as worse, so we cut that in half
           if (score > data->score)
@@ -400,8 +401,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     MakeMove(move, board);
 
     int newDepth = depth;
-    if (singularExtension || doesCheck)       // extend checks
-      newDepth++;                             // apply the extension
+    if (singularExtension || doesCheck) // extend checks
+      newDepth++;                       // apply the extension
 
     // start of late move reductions
     int R = 1;
@@ -609,16 +610,16 @@ inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score mate %d pv ", depth, thread->data.seldepth,
-           nodes, nps, tbhits, time, movesToMate);
+    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score mate %d pv ", depth,
+           thread->data.seldepth, nodes, nps, tbhits, time, movesToMate);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
     printf("info depth %d seldepth %d  nodes %lld nps %lld tbhits %lld time %lld score mate -%d pv ", depth,
            thread->data.seldepth, nodes, nps, tbhits, time, movesToMate);
   } else {
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score cp %d pv ", depth, thread->data.seldepth,
-           nodes, nps, tbhits, time, score);
+    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score cp %d pv ", depth,
+           thread->data.seldepth, nodes, nps, tbhits, time, score);
   }
 
   if (pv->count)
