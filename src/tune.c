@@ -208,12 +208,6 @@ void UpdateWeights(Weights* weights) {
   UpdateParam(&weights->rookSemiOpen.mg);
   UpdateParam(&weights->rookSemiOpen.eg);
 
-  UpdateParam(&weights->rookOppositeKing.mg);
-  UpdateParam(&weights->rookOppositeKing.eg);
-
-  UpdateParam(&weights->rookAdjacentKing.mg);
-  UpdateParam(&weights->rookAdjacentKing.eg);
-
   UpdateParam(&weights->doubledPawns.mg);
   UpdateParam(&weights->doubledPawns.eg);
 
@@ -376,12 +370,6 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->rookSemiOpen.mg.g += w->rookSemiOpen.mg.g;
     weights->rookSemiOpen.eg.g += w->rookSemiOpen.eg.g;
-
-    weights->rookOppositeKing.mg.g += w->rookOppositeKing.mg.g;
-    weights->rookOppositeKing.eg.g += w->rookOppositeKing.eg.g;
-
-    weights->rookAdjacentKing.mg.g += w->rookAdjacentKing.mg.g;
-    weights->rookAdjacentKing.eg.g += w->rookAdjacentKing.eg.g;
 
     weights->doubledPawns.mg.g += w->doubledPawns.mg.g;
     weights->doubledPawns.eg.g += w->doubledPawns.eg.g;
@@ -613,16 +601,6 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 
   weights->rookSemiOpen.mg.g += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * mgBase;
   weights->rookSemiOpen.eg.g += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * egBase;
-
-  weights->rookOppositeKing.mg.g +=
-      (position->coeffs.rookOppositeKing[WHITE] - position->coeffs.rookOppositeKing[BLACK]) * mgBase;
-  weights->rookOppositeKing.eg.g +=
-      (position->coeffs.rookOppositeKing[WHITE] - position->coeffs.rookOppositeKing[BLACK]) * egBase;
-
-  weights->rookAdjacentKing.mg.g +=
-      (position->coeffs.rookAdjacentKing[WHITE] - position->coeffs.rookAdjacentKing[BLACK]) * mgBase;
-  weights->rookAdjacentKing.eg.g +=
-      (position->coeffs.rookAdjacentKing[WHITE] - position->coeffs.rookAdjacentKing[BLACK]) * egBase;
 }
 
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights) {
@@ -860,16 +838,6 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
 
   *mg += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * weights->rookSemiOpen.mg.value;
   *eg += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * weights->rookSemiOpen.eg.value;
-
-  *mg += (position->coeffs.rookOppositeKing[WHITE] - position->coeffs.rookOppositeKing[BLACK]) *
-         weights->rookOppositeKing.mg.value;
-  *eg += (position->coeffs.rookOppositeKing[WHITE] - position->coeffs.rookOppositeKing[BLACK]) *
-         weights->rookOppositeKing.eg.value;
-
-  *mg += (position->coeffs.rookAdjacentKing[WHITE] - position->coeffs.rookAdjacentKing[BLACK]) *
-         weights->rookAdjacentKing.mg.value;
-  *eg += (position->coeffs.rookAdjacentKing[WHITE] - position->coeffs.rookAdjacentKing[BLACK]) *
-         weights->rookAdjacentKing.eg.value;
 }
 
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -1136,12 +1104,6 @@ void InitPieceBonusWeights(Weights* weights) {
 
   weights->rookSemiOpen.mg.value = scoreMG(ROOK_SEMI_OPEN);
   weights->rookSemiOpen.eg.value = scoreEG(ROOK_SEMI_OPEN);
-
-  weights->rookOppositeKing.mg.value = scoreMG(ROOK_OPPOSITE_KING);
-  weights->rookOppositeKing.eg.value = scoreEG(ROOK_OPPOSITE_KING);
-
-  weights->rookAdjacentKing.mg.value = scoreMG(ROOK_ADJACENT_KING);
-  weights->rookAdjacentKing.eg.value = scoreEG(ROOK_ADJACENT_KING);
 }
 
 void InitPawnBonusWeights(Weights* weights) {
@@ -1287,12 +1249,6 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score ROOK_SEMI_OPEN = ");
   PrintWeight(fp, &weights->rookSemiOpen);
-
-  fprintf(fp, "\nconst Score ROOK_OPPOSITE_KING = ");
-  PrintWeight(fp, &weights->rookOppositeKing);
-
-  fprintf(fp, "\nconst Score ROOK_ADJACENT_KING = ");
-  PrintWeight(fp, &weights->rookAdjacentKing);
 
   fprintf(fp, "\nconst Score DOUBLED_PAWN = ");
   PrintWeight(fp, &weights->doubledPawns);
