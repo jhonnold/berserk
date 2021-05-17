@@ -50,7 +50,7 @@ int SEE_PRUNE_CAPTURE_CUTOFF = 70;
 int SEE_PRUNE_CUTOFF = 20;
 
 // Delta pruning
-int DELTA_CUTOFF = 200;
+int DELTA_CUTOFF = 150;
 
 // base apiration window
 int WINDOW = 10;
