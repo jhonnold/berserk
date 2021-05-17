@@ -42,8 +42,8 @@ const int MATE_BOUND = 30000;
 const int TB_WIN_BOUND = 20000;
 
 // Reverse futility pruning
-int RFP_BASE = 62;
-int RFP_STEP_RISE = 8;
+int RFP_BASE = 65;
+int RFP_STEP_RISE = 5;
 
 // static evaluation pruning (capture/quiet)
 int SEE_PRUNE_CAPTURE_CUTOFF = 70;
