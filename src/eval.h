@@ -60,6 +60,7 @@ extern const Score BISHOP_OUTPOST_REACHABLE;
 extern const Score BISHOP_TRAPPED;
 extern const Score ROOK_TRAPPED;
 extern const Score BAD_BISHOP_PAWNS;
+extern const Score DRAGON_BISHOP;
 extern const Score ROOK_OPEN_FILE;
 extern const Score ROOK_SEMI_OPEN;
 
