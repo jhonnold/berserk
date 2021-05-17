@@ -734,7 +734,7 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
   mg += scoreMG(position->coeffs.ks[WHITE]) - scoreMG(position->coeffs.ks[BLACK]);
   eg += scoreEG(position->coeffs.ks[WHITE]) - scoreEG(position->coeffs.ks[BLACK]);
 
-  int result = (mg * position->phase + eg * (MAX_PHASE - position->phase)) / MAX_PHASE;
+  int result = (mg * position->phase + eg * (128 - position->phase)) / 128;
   result = (result * position->scale + MAX_SCALE / 2) / MAX_SCALE;
   return result + (position->stm == WHITE ? TEMPO : -TEMPO);
 }
@@ -961,8 +961,8 @@ void LoadPosition(Board* board, Position* position, ThreadData* thread) {
 
   int phase = GetPhase(board);
 
-  position->phaseMg = (double)phase / MAX_PHASE;
-  position->phaseEg = 1 - (double)phase / MAX_PHASE;
+  position->phaseMg = (double)phase / 128;
+  position->phaseEg = 1 - (double)phase / 128;
   position->phase = phase;
 
   position->stm = board->side;

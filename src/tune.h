@@ -79,7 +79,7 @@ typedef struct {
 } Weights;
 
 typedef struct {
-  int8_t phase;
+  uint8_t phase;
   int8_t stm;
   float result;
   int scale;
