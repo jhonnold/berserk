@@ -144,6 +144,7 @@ typedef struct {
   int8_t kingThreats[2][6];
   int8_t pawnThreat[2];
   int8_t hangingThreat[2];
+  int8_t pawnPushThreat[2];
 
   int pawnShelter[2][4][8];
   int blockedPawnStorm[2][8];
