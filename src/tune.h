@@ -60,6 +60,7 @@ typedef struct {
   Weight rookThreats[6];
   Weight kingThreats[6];
   Weight pawnThreat;
+  Weight pawnPushThreat;
   Weight hangingThreat;
 
   Weight ksAttackerWeight[5];
