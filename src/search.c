@@ -239,7 +239,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   if (!isRoot) {
     // draw
     if (IsRepetition(board, data->ply) || IsMaterialDraw(board) || (board->halfMove > 99))
-      return 0; // TODO: Contempt factor? or randomness?
+      return 2 - (data->nodes & 0x3); // TODO: Contempt factor? or randomness?
 
     // Prevent overflows
     if (data->ply > MAX_SEARCH_PLY - 1)
