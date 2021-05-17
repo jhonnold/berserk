@@ -44,7 +44,7 @@ void Tune() {
   ALPHA *= sqrt(n);
 
   ValidateEval(n, positions, &weights);
-  DetermineK(n, positions);
+  // DetermineK(n, positions);
 
   for (int epoch = 1; epoch < 10000; epoch++) {
     double error = UpdateAndTrain(epoch, n, positions, &weights);
@@ -204,6 +204,9 @@ void UpdateWeights(Weights* weights) {
 
   UpdateParam(&weights->rookTrapped.mg);
   UpdateParam(&weights->rookTrapped.eg);
+
+  UpdateParam(&weights->badBishopPawns.mg);
+  UpdateParam(&weights->badBishopPawns.eg);
 
   UpdateParam(&weights->rookOpenFile.mg);
   UpdateParam(&weights->rookOpenFile.eg);
@@ -370,6 +373,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->rookTrapped.mg.g += w->rookTrapped.mg.g;
     weights->rookTrapped.eg.g += w->rookTrapped.eg.g;
+
+    weights->badBishopPawns.mg.g += w->badBishopPawns.mg.g;
+    weights->badBishopPawns.eg.g += w->badBishopPawns.eg.g;
 
     weights->rookOpenFile.mg.g += w->rookOpenFile.mg.g;
     weights->rookOpenFile.eg.g += w->rookOpenFile.eg.g;
@@ -606,6 +612,11 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 
   weights->rookTrapped.mg.g += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * mgBase;
   weights->rookTrapped.eg.g += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * egBase;
+
+  weights->badBishopPawns.mg.g +=
+      (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) * mgBase;
+  weights->badBishopPawns.eg.g +=
+      (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) * egBase;
 
   weights->rookOpenFile.mg.g += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * mgBase;
   weights->rookOpenFile.eg.g += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * egBase;
@@ -848,6 +859,11 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
 
   *mg += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * weights->rookTrapped.mg.value;
   *eg += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * weights->rookTrapped.eg.value;
+
+  *mg += (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) *
+         weights->badBishopPawns.mg.value;
+  *eg += (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) *
+         weights->badBishopPawns.eg.value;
 
   *mg += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * weights->rookOpenFile.mg.value;
   *eg += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * weights->rookOpenFile.eg.value;
@@ -1118,6 +1134,9 @@ void InitPieceBonusWeights(Weights* weights) {
   weights->rookTrapped.mg.value = scoreMG(ROOK_TRAPPED);
   weights->rookTrapped.eg.value = scoreEG(ROOK_TRAPPED);
 
+  weights->badBishopPawns.mg.value = scoreMG(BAD_BISHOP_PAWNS);
+  weights->badBishopPawns.eg.value = scoreEG(BAD_BISHOP_PAWNS);
+
   weights->rookOpenFile.mg.value = scoreMG(ROOK_OPEN_FILE);
   weights->rookOpenFile.eg.value = scoreEG(ROOK_OPEN_FILE);
 
@@ -1262,6 +1281,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score ROOK_TRAPPED = ");
   PrintWeight(fp, &weights->rookTrapped);
+
+  fprintf(fp, "\nconst Score BAD_BISHOP_PAWNS = ");
+  PrintWeight(fp, &weights->badBishopPawns);
 
   fprintf(fp, "\nconst Score ROOK_OPEN_FILE = ");
   PrintWeight(fp, &weights->rookOpenFile);
