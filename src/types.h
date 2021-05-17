@@ -135,6 +135,7 @@ typedef struct {
   int8_t passedPawnAdvance[2];
   int8_t passedPawnEdgeDistance[2];
   int8_t passedPawnKingProximity[2];
+  int8_t badBishopPawns[2];
   int8_t rookOpenFile[2];
   int8_t rookSemiOpen[2];
   int8_t rookTrapped[2];

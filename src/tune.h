@@ -40,6 +40,7 @@ typedef struct {
   Weight bishopPostReachable;
   Weight bishopTrapped;
   Weight rookTrapped;
+  Weight badBishopPawns;
   Weight rookOpenFile;
   Weight rookSemiOpen;
 
