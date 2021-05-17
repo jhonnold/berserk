@@ -61,8 +61,6 @@ extern const Score BISHOP_TRAPPED;
 extern const Score ROOK_TRAPPED;
 extern const Score ROOK_OPEN_FILE;
 extern const Score ROOK_SEMI_OPEN;
-extern const Score ROOK_OPPOSITE_KING;
-extern const Score ROOK_ADJACENT_KING;
 
 extern const Score DOUBLED_PAWN;
 extern const Score OPPOSED_ISOLATED_PAWN;

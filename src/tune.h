@@ -42,8 +42,6 @@ typedef struct {
   Weight rookTrapped;
   Weight rookOpenFile;
   Weight rookSemiOpen;
-  Weight rookOppositeKing;
-  Weight rookAdjacentKing;
 
   Weight doubledPawns;
   Weight opposedIsolatedPawns;
