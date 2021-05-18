@@ -339,6 +339,31 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       if (score >= beta)
         return beta;
     }
+
+    // Prob cut
+    int probBeta = beta + RFP_BASE + RFP_STEP_RISE;
+    if (depth > 4 && abs(beta) < MATE_BOUND &&
+        !(ttValue && TTDepth(ttValue) >= depth - 3 && TTScore(ttValue, data->ply) < probBeta)) {
+      MoveList moveList;
+      GenerateTacticalMoves(&moveList, board);
+
+      for (int i = 0; i < moveList.count; i++) {
+        Move move = moveList.moves[i];
+
+        data->moves[data->ply++] = move;
+        MakeMove(move, board);
+
+        score = -Quiesce(-probBeta, -probBeta + 1, thread, pv);
+        if (score >= probBeta)
+          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, thread, pv);
+
+        UndoMove(move, board);
+        data->ply--;
+
+        if (score >= probBeta)
+          return score;
+      }
+    }
   }
 
   // IIR by Ed Schroder
