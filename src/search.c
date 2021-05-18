@@ -389,7 +389,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // no score failed above sBeta, so this is singular
       if (score < sBeta)
-        singularExtension = 1;
+        singularExtension = 1 + (!isPV && score < sBeta - 100);
       else if (sBeta >= beta)
         // multi-cut - since a move failed above sBeta which is already above beta,
         // we can prune (its also assumed tt would fail high)
@@ -400,9 +400,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     data->moves[data->ply++] = move;
     MakeMove(move, board);
 
-    int newDepth = depth;
-    if (singularExtension || doesCheck) // extend checks
-      newDepth++;                       // apply the extension
+    // apply extensions
+    int newDepth = depth + max(singularExtension, doesCheck);
 
     // start of late move reductions
     int R = 1;
