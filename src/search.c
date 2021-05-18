@@ -35,7 +35,6 @@
 #include "types.h"
 #include "util.h"
 
-
 // We have a 16 bit range for scores
 const int CHECKMATE = INT16_MAX;
 const int MATE_BOUND = 30000;
@@ -400,8 +399,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     MakeMove(move, board);
 
     int newDepth = depth;
-    if (singularExtension || doesCheck)       // extend checks
-      newDepth++;                             // apply the extension
+    if (singularExtension || doesCheck) // extend checks
+      newDepth++;                       // apply the extension
 
     // start of late move reductions
     int R = 1;
@@ -555,6 +554,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     alpha = eval;
 
   int bestScore = eval;
+  Move bestMove = NULL_MOVE;
+  int origAlpha = alpha;
 
   MoveList moveList;
   GenerateTacticalMoves(&moveList, board);
@@ -581,6 +582,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
     if (score > bestScore) {
       bestScore = score;
+      bestMove = move;
 
       if (score > alpha) {
         alpha = score;
@@ -597,6 +599,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     }
   }
 
+  int TTFlag = bestScore >= beta ? TT_LOWER : bestScore <= origAlpha ? TT_UPPER : TT_EXACT;
+  TTPut(board->zobrist, 0, bestScore, TTFlag, bestMove, data->ply, data->evals[data->ply]);
+
   return bestScore;
 }
 
@@ -609,16 +614,16 @@ inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score mate %d pv ", depth, thread->data.seldepth,
-           nodes, nps, tbhits, time, movesToMate);
+    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score mate %d pv ", depth,
+           thread->data.seldepth, nodes, nps, tbhits, time, movesToMate);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
     printf("info depth %d seldepth %d  nodes %lld nps %lld tbhits %lld time %lld score mate -%d pv ", depth,
            thread->data.seldepth, nodes, nps, tbhits, time, movesToMate);
   } else {
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score cp %d pv ", depth, thread->data.seldepth,
-           nodes, nps, tbhits, time, score);
+    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score cp %d pv ", depth,
+           thread->data.seldepth, nodes, nps, tbhits, time, score);
   }
 
   if (pv->count)
