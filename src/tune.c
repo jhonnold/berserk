@@ -208,6 +208,9 @@ void UpdateWeights(Weights* weights) {
   UpdateParam(&weights->badBishopPawns.mg);
   UpdateParam(&weights->badBishopPawns.eg);
 
+  UpdateParam(&weights->dragonBishop.mg);
+  UpdateParam(&weights->dragonBishop.eg);
+
   UpdateParam(&weights->rookOpenFile.mg);
   UpdateParam(&weights->rookOpenFile.eg);
 
@@ -376,6 +379,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->badBishopPawns.mg.g += w->badBishopPawns.mg.g;
     weights->badBishopPawns.eg.g += w->badBishopPawns.eg.g;
+
+    weights->dragonBishop.mg.g += w->dragonBishop.mg.g;
+    weights->dragonBishop.eg.g += w->dragonBishop.eg.g;
 
     weights->rookOpenFile.mg.g += w->rookOpenFile.mg.g;
     weights->rookOpenFile.eg.g += w->rookOpenFile.eg.g;
@@ -617,6 +623,9 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
       (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) * mgBase;
   weights->badBishopPawns.eg.g +=
       (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) * egBase;
+
+  weights->dragonBishop.mg.g += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * mgBase;
+  weights->dragonBishop.eg.g += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * egBase;
 
   weights->rookOpenFile.mg.g += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * mgBase;
   weights->rookOpenFile.eg.g += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * egBase;
@@ -864,6 +873,9 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
          weights->badBishopPawns.mg.value;
   *eg += (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) *
          weights->badBishopPawns.eg.value;
+
+  *mg += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * weights->dragonBishop.mg.value;
+  *eg += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * weights->dragonBishop.eg.value;
 
   *mg += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * weights->rookOpenFile.mg.value;
   *eg += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * weights->rookOpenFile.eg.value;
@@ -1137,6 +1149,9 @@ void InitPieceBonusWeights(Weights* weights) {
   weights->badBishopPawns.mg.value = scoreMG(BAD_BISHOP_PAWNS);
   weights->badBishopPawns.eg.value = scoreEG(BAD_BISHOP_PAWNS);
 
+  weights->dragonBishop.mg.value = scoreMG(DRAGON_BISHOP);
+  weights->dragonBishop.eg.value = scoreEG(DRAGON_BISHOP);
+
   weights->rookOpenFile.mg.value = scoreMG(ROOK_OPEN_FILE);
   weights->rookOpenFile.eg.value = scoreEG(ROOK_OPEN_FILE);
 
@@ -1284,6 +1299,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score BAD_BISHOP_PAWNS = ");
   PrintWeight(fp, &weights->badBishopPawns);
+
+  fprintf(fp, "\nconst Score DRAGON_BISHOP = ");
+  PrintWeight(fp, &weights->dragonBishop);
 
   fprintf(fp, "\nconst Score ROOK_OPEN_FILE = ");
   PrintWeight(fp, &weights->rookOpenFile);
