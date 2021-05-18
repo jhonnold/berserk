@@ -341,7 +341,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
 
     // Prob cut
-    int probBeta = beta + RFP_BASE + RFP_STEP_RISE;
+    int probBeta = beta + 100;
     if (depth > 4 && abs(beta) < MATE_BOUND &&
         !(ttValue && TTDepth(ttValue) >= depth - 3 && TTScore(ttValue, data->ply) < probBeta)) {
       MoveList moveList;
