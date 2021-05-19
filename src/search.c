@@ -130,14 +130,6 @@ void* Search(void* arg) {
   PV* pv = &thread->pv;
   int mainThread = !thread->idx;
 
-  // Start by aging our history tables
-  for (int i = 0; i < 64 * 64; i++) {
-    data->hh[WHITE][i] /= 2;
-    data->hh[BLACK][i] /= 2;
-    data->bf[WHITE][i] /= 2;
-    data->bf[BLACK][i] /= 2;
-  }
-
   int alpha = -CHECKMATE, beta = CHECKMATE, score = 0;
 
   // set a hot exit point for this thread
@@ -442,12 +434,10 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (!improving)
           R++;
 
-        // additional reduction on historical scores
-        // counters/killers have a high score (so they get less reduction by 2)
-        // ranging from [-2, 2]
-        // 100 was picked as a mean since that's what the mean was at depth 13 for the bench
-        // TODO: Look at this more closely?
-        R -= min(2, (moveList.scores[i] - 149) / 50);
+        if (moveList.scores[i] >= COUNTER_SCORE)
+          R--;
+        else
+          R -= min(2, max(-2, moveList.scores[i] / 1024));
       } else {
         // reduce for all captures
         R--;
