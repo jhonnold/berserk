@@ -67,18 +67,11 @@ inline void AddKillerMove(SearchData* data, Move move) {
 
 inline void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[MoveStartEnd(parent)] = move; }
 
-inline void AddHistoryHeuristic(SearchData* data, Move move, int sideToMove, int depth) {
-  int inc = min(depth * depth, 256);
+inline void AddHistoryHeuristic(SearchData* data, Move move, int sideToMove, int depth, int high) {
+  int inc = (high ? 1 : -1) * min(depth * depth, 576);
   int* e = &data->hh[sideToMove][MoveStartEnd(move)];
 
-  *e += 16 * inc - *e * inc / 256;
-}
-
-inline void AddBFHeuristic(SearchData* data, Move move, int sideToMove, int depth) {
-  int inc = min(depth * depth, 256);
-  int* e = &data->bf[sideToMove][MoveStartEnd(move)];
-
-  *e += 16 * inc - *e * inc / 256;
+  *e += 64 * inc - *e * abs(inc) / 1024;
 }
 
 inline void AppendMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
@@ -629,7 +622,7 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
       // hh is how many times this move caused a beta cutoff (depth scaled)
       // bf is how many times this move was searched and DIDNT cause a beta cutoff (depth scaled)
       // we scale hh by 100 for granularity sake
-      moveList->scores[i] = data->hh[board->side][MoveStartEnd(move)] - data->bf[board->side][MoveStartEnd(move)];
+      moveList->scores[i] = data->hh[board->side][MoveStartEnd(move)];
     }
   }
 }

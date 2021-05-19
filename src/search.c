@@ -435,9 +435,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
           R++;
 
         if (moveList.scores[i] >= COUNTER_SCORE)
-          R--;
+          R -= 2;
         else
-          R -= min(2, max(-2, moveList.scores[i] / 1024));
+          R -= min(2, max(-2, moveList.scores[i] / 16384));
       } else {
         // reduce for all captures
         R--;
@@ -483,7 +483,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (!tactical) {
           AddKillerMove(data, move);
           AddCounterMove(data, move, data->moves[data->ply - 1]);
-          AddHistoryHeuristic(data, move, board->side, depth);
+          AddHistoryHeuristic(data, move, board->side, depth, 1);
         }
 
         // all moves that came before this did not fail high and
@@ -492,7 +492,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
           if (MoveCapture(moveList.moves[j]) || MovePromo(moveList.moves[j]))
             continue;
 
-          AddBFHeuristic(data, moveList.moves[j], board->side, depth);
+          AddHistoryHeuristic(data, moveList.moves[j], board->side, depth, 0);
         }
 
         break;
