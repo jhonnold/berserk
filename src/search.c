@@ -64,7 +64,7 @@ void InitPruningAndReductionTables() {
   for (int depth = 0; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 0; moves < 64; moves++)
       // Credit to Ethereal for this LMR
-      LMR[depth][moves] = (int)(0.6f + log(depth) * log(1.2f * moves) / 2.5f);
+      LMR[depth][moves] = (int)(0.8f + log(depth) * log(1.2f * moves) / 2.5f);
 
   for (int depth = 0; depth < MAX_SEARCH_PLY; depth++) {
     // LMP has both a improving (more strict) and non-improving evalution parameter
@@ -427,19 +427,16 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (depth > 2 && numMoves > 1) {
       R = LMR[min(depth, 63)][min(numMoves, 63)];
 
-      if (!isPV)
-        R++;
-
       if (!tactical) {
+        if (!isPV)
+          R++;
         if (!improving)
           R++;
-
         if (moveList.scores[i] >= COUNTER_SCORE)
-          R -= 2;
-        else
-          R -= min(2, max(-2, moveList.scores[i] / 16384));
+          R--;
+
+        R -= min(2, max(-2, moveList.scores[i] / 20480));
       } else {
-        // reduce for all captures
         R--;
       }
 
