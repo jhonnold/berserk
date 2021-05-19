@@ -143,12 +143,14 @@ void* Search(void* arg) {
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
     // Iterative deepening
+    int windowExpands = 0;
+
     for (int depth = 1; depth <= params->depth; depth++) {
       // Ignore aspiration windows till we're at a reasonable depth
       // aspiration windows start at 1/10th of a pawn and grows outward at 150%, utilizing
       // returned fail soft values
-      int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW : CHECKMATE;
-      int windowExpands = 0;
+      int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW - (2 - windowExpands) : CHECKMATE;
+      windowExpands = 0;
 
       alpha = max(score - delta, -CHECKMATE);
       beta = min(score + delta, CHECKMATE);
