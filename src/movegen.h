@@ -33,7 +33,7 @@ extern const int COUNTER_SCORE;
 
 void AddKillerMove(SearchData* data, Move move);
 void AddCounterMove(SearchData* data, Move move, Move parent);
-void AddHistoryHeuristic(SearchData* data, Move move, int sideToMove, int depth);
+void AddHistoryHeuristic(SearchData* data, Move move, int sideToMove, int depth, int high);
 void AddBFHeuristic(SearchData* data, Move move, int sideToMove, int depth);
 
 void AppendMove(MoveList* moveList, Move move);
