@@ -57,23 +57,6 @@ const BitBoard HOME_RANKS[] = {RANK_2, RANK_7};
 const BitBoard THIRD_RANKS[] = {RANK_3, RANK_6};
 const BitBoard FILLED = -1ULL;
 
-inline void AddKillerMove(SearchData* data, Move move) {
-  // Prevent duplicate
-  if (data->killers[data->ply][0] == move)
-    data->killers[data->ply][1] = data->killers[data->ply][0];
-
-  data->killers[data->ply][0] = move;
-}
-
-inline void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[MoveStartEnd(parent)] = move; }
-
-inline void AddHistoryHeuristic(SearchData* data, Move move, int sideToMove, int depth, int high) {
-  int inc = (high ? 1 : -1) * min(depth * depth, 576);
-  int* e = &data->hh[sideToMove][MoveStartEnd(move)];
-
-  *e += 64 * inc - *e * abs(inc) / 1024;
-}
-
 inline void AppendMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
 
 // Move generation is pretty similar across all piece types with captures and quiets.
