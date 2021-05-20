@@ -415,12 +415,17 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         return sBeta;
     }
 
+    int captureExtension = 0;
+    Move parent = data->moves[data->ply - 1];
+    if (MoveCapture(parent) && MoveCapture(move) && MoveEnd(parent) == MoveEnd(move))
+      captureExtension = 1;
+
     numMoves++;
     data->moves[data->ply++] = move;
     MakeMove(move, board);
 
     // apply extensions
-    int newDepth = depth + max(singularExtension, doesCheck);
+    int newDepth = depth + max(singularExtension, max(doesCheck, captureExtension));
 
     // start of late move reductions
     int R = 1;
