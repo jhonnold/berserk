@@ -431,7 +431,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
           R--;
 
         // adjust reduction based on historical score in a [-2,2] bound
-        R -= min(2, max(-2, moveList.scores[i] / 20480));
+        R -= min(2, max(-2, moveList.scores[i] / 16384));
       } else {
         R--;
       }
