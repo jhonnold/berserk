@@ -396,7 +396,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // and look at it more (extend). Singular is determined by checking all other
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
-    int singularExtension = 0;
+    int extension = doesCheck;
     if (depth >= 8 && !skipMove && !isRoot && move == TTMove(ttValue) && TTDepth(ttValue) >= depth - 3 &&
         abs(TTScore(ttValue, data->ply)) < MATE_BOUND && TTFlag(ttValue) == TT_LOWER) {
       int sBeta = max(TTScore(ttValue, data->ply) - depth * 2, -CHECKMATE);
@@ -408,11 +408,17 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // no score failed above sBeta, so this is singular
       if (score < sBeta)
-        singularExtension = 1 + (!isPV && score < sBeta - 100);
+        extension = 1 + (!isPV && score < sBeta - 100);
       else if (sBeta >= beta)
         // multi-cut - since a move failed above sBeta which is already above beta,
         // we can prune (its also assumed tt would fail high)
         return sBeta;
+    }
+
+    if (isPV && !isRoot && !extension) {
+      Move parentMove = data->moves[data->ply - 1];
+      if (MoveCapture(parentMove) && MoveCapture(move) && MoveEnd(parentMove) == MoveEnd(move))
+        extension = 1;
     }
 
     numMoves++;
@@ -420,7 +426,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     MakeMove(move, board);
 
     // apply extensions
-    int newDepth = depth + max(singularExtension, doesCheck);
+    int newDepth = depth + extension;
 
     // start of late move reductions
     int R = 1;
