@@ -28,8 +28,8 @@ typedef struct {
   Weight bishopPair;
 
   Weight psqt[6][32];
-  Weight knightPostPsqt[32];
-  Weight bishopPostPsqt[32];
+  Weight knightPostPsqt[12];
+  Weight bishopPostPsqt[12];
 
   Weight knightMobilities[9];
   Weight bishopMobilities[14];

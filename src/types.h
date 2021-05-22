@@ -133,8 +133,8 @@ typedef struct {
   int8_t passedPawnEdgeDistance;
   int8_t passedPawnKingProximity;
 
-  int8_t knightPostPsqt[32];
-  int8_t bishopPostPsqt[32];
+  int8_t knightPostPsqt[12];
+  int8_t bishopPostPsqt[12];
   int8_t knightPostReachable;
   int8_t bishopPostReachable;
   int8_t bishopTrapped;

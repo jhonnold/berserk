@@ -139,7 +139,7 @@ void UpdateWeights(Weights* weights) {
     }
   }
 
-  for (int sq = 0; sq < 32; sq++) {
+  for (int sq = 0; sq < 12; sq++) {
     UpdateParam(&weights->knightPostPsqt[sq].mg);
     UpdateParam(&weights->knightPostPsqt[sq].eg);
 
@@ -314,7 +314,7 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
       }
     }
 
-    for (int sq = 0; sq < 32; sq++) {
+    for (int sq = 0; sq < 12; sq++) {
       weights->knightPostPsqt[sq].mg.g += w->knightPostPsqt[sq].mg.g;
       weights->knightPostPsqt[sq].eg.g += w->knightPostPsqt[sq].eg.g;
 
@@ -506,7 +506,7 @@ void UpdatePostPsqtGradients(Position* position, double loss, Weights* weights) 
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  for (int sq = 0; sq < 32; sq++) {
+  for (int sq = 0; sq < 12; sq++) {
     weights->knightPostPsqt[sq].mg.g += position->coeffs.knightPostPsqt[sq] * mgBase;
     weights->knightPostPsqt[sq].eg.g += position->coeffs.knightPostPsqt[sq] * egBase;
 
@@ -707,7 +707,7 @@ void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* wei
 }
 
 void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights* weights) {
-  for (int sq = 0; sq < 32; sq++) {
+  for (int sq = 0; sq < 12; sq++) {
     *mg += position->coeffs.knightPostPsqt[sq] * weights->knightPostPsqt[sq].mg.value;
     *eg += position->coeffs.knightPostPsqt[sq] * weights->knightPostPsqt[sq].eg.value;
 
@@ -958,7 +958,7 @@ void InitPsqtWeights(Weights* weights) {
 }
 
 void InitPostPsqtWeights(Weights* weights) {
-  for (int sq = 0; sq < 32; sq++) {
+  for (int sq = 0; sq < 12; sq++) {
     weights->knightPostPsqt[sq].mg.value = scoreMG(KNIGHT_POST_PSQT[sq]);
     weights->knightPostPsqt[sq].eg.value = scoreEG(KNIGHT_POST_PSQT[sq]);
 
@@ -1145,12 +1145,12 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   PrintWeightArray(fp, weights->psqt[KING_TYPE], 32, 4);
   fprintf(fp, "};\n");
 
-  fprintf(fp, "\nconst Score KNIGHT_POST_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->knightPostPsqt, 32, 4);
+  fprintf(fp, "\nconst Score KNIGHT_POST_PSQT[12] = {\n");
+  PrintWeightArray(fp, weights->knightPostPsqt, 12, 4);
   fprintf(fp, "};\n");
 
-  fprintf(fp, "\nconst Score BISHOP_POST_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->bishopPostPsqt, 32, 4);
+  fprintf(fp, "\nconst Score BISHOP_POST_PSQT[12] = {\n");
+  PrintWeightArray(fp, weights->bishopPostPsqt, 12, 4);
   fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score KNIGHT_MOBILITIES[9] = {\n");

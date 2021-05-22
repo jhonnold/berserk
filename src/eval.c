@@ -122,26 +122,16 @@ const Score KING_PSQT[32] = {
  S(   2, -48), S(   8, -11), S(  -4, -17), S( -17, -37),
 };
 
-const Score KNIGHT_POST_PSQT[32] = {
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
+const Score KNIGHT_POST_PSQT[12] = {
  S( -25,  33), S(  17,  27), S(  44,  14), S(  34,  37),
  S(  17,  15), S(  39,  20), S(  31,  29), S(  48,  27),
  S(  14,   2), S(  22,  20), S(  11,  22), S(  13,  30),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
 };
 
-const Score BISHOP_POST_PSQT[32] = {
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
+const Score BISHOP_POST_PSQT[12] = {
  S(   5,  19), S(  31,  16), S(  60,  20), S(  52,   1),
  S(  12,  14), S(  17,  21), S(  28,   9), S(  36,   6),
  S( -19,  25), S(  24,  15), S(  18,   7), S(  29,  18),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
 };
 
 const Score KNIGHT_MOBILITIES[9] = {
@@ -282,8 +272,10 @@ void InitPSQT() {
     PSQT[QUEEN_WHITE][sq] = PSQT[QUEEN_BLACK][MIRROR[sq]] = QUEEN_PSQT[psqtIdx(sq)] + MATERIAL_VALUES[QUEEN_TYPE];
     PSQT[KING_WHITE][sq] = PSQT[KING_BLACK][MIRROR[sq]] = KING_PSQT[psqtIdx(sq)];
 
-    KNIGHT_POSTS[WHITE][sq] = KNIGHT_POSTS[BLACK][MIRROR[sq]] = KNIGHT_POST_PSQT[psqtIdx(sq)];
-    BISHOP_POSTS[WHITE][sq] = BISHOP_POSTS[BLACK][MIRROR[sq]] = BISHOP_POST_PSQT[psqtIdx(sq)];
+    if (sq >= A6 && sq <= H4) {
+      KNIGHT_POSTS[WHITE][sq] = KNIGHT_POSTS[BLACK][MIRROR[sq]] = KNIGHT_POST_PSQT[psqtIdx(sq) - 8];
+      BISHOP_POSTS[WHITE][sq] = BISHOP_POSTS[BLACK][MIRROR[sq]] = BISHOP_POST_PSQT[psqtIdx(sq) - 8];
+    }
   }
 }
 
@@ -456,7 +448,7 @@ Score PieceEval(Board* board, EvalData* data, int side) {
           s += KNIGHT_POSTS[side][sq];
 
           if (T)
-            C.knightPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq])] += cs[side];
+            C.knightPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq]) - 8] += cs[side];
         } else if (movement & outposts) {
           s += KNIGHT_OUTPOST_REACHABLE;
 
@@ -486,7 +478,7 @@ Score PieceEval(Board* board, EvalData* data, int side) {
           s += BISHOP_POSTS[side][sq];
 
           if (T)
-            C.bishopPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq])] += cs[side];
+            C.bishopPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq]) - 8] += cs[side];
         } else if (movement & outposts) {
           s += BISHOP_OUTPOST_REACHABLE;
 
