@@ -14,6 +14,7 @@
 #endif
 
 extern EvalCoeffs C;
+extern int cs[2];
 
 inline PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread) {
   PawnHashEntry* entry = &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)];
@@ -59,7 +60,7 @@ Score PawnEval(Board* board, EvalData* data, int side) {
       s += DOUBLED_PAWN;
 
       if (T)
-        C.doubledPawns[side]++;
+        C.doubledPawns += cs[side];
     }
 
     if (!neighbors) {
@@ -67,21 +68,21 @@ Score PawnEval(Board* board, EvalData* data, int side) {
 
       if (T) {
         if (opposed)
-          C.opposedIsolatedPawns[side]++;
+          C.opposedIsolatedPawns += cs[side];
         else
-          C.openIsolatedPawns[side]++;
+          C.openIsolatedPawns += cs[side];
       }
     } else if (backwards) {
       s += BACKWARDS_PAWN;
 
       if (T)
-        C.backwardsPawns[side]++;
+        C.backwardsPawns += cs[side];
     } else if (defenders | connected) {
       int scalar = 2 + !!connected - !!opposed;
       s += CONNECTED_PAWN[adjustedRank] * scalar;
 
       if (T)
-        C.connectedPawn[side][adjustedRank] += scalar;
+        C.connectedPawn[adjustedRank] += cs[side] * scalar;
 
       // candidate passers are either in tension right now (and a push is all they need)
       // or a pawn 2 ranks down is stopping them, but our pawns can support it through
@@ -93,7 +94,7 @@ Score PawnEval(Board* board, EvalData* data, int side) {
           s += CANDIDATE_PASSER[adjustedRank];
 
           if (T)
-            C.candidatePasser[side][adjustedRank]++;
+            C.candidatePasser[adjustedRank] += cs[side];
         }
       }
     }
@@ -123,8 +124,8 @@ Score PasserEval(Board* board, EvalData* data, int side) {
     s += PASSED_PAWN[adjustedRank] + PASSED_PAWN_EDGE_DISTANCE * adjustedFile;
 
     if (T) {
-      C.passedPawn[side][adjustedRank]++;
-      C.passedPawnEdgeDistance[side] += adjustedFile;
+      C.passedPawn[adjustedRank] += cs[side];
+      C.passedPawnEdgeDistance += cs[side] * adjustedFile;
     }
 
     int advSq = sq + PAWN_DIRECTIONS[side];
@@ -137,7 +138,7 @@ Score PasserEval(Board* board, EvalData* data, int side) {
       s += PASSED_PAWN_KING_PROXIMITY * min(4, max(opponentDistance - myDistance, -4));
 
       if (T)
-        C.passedPawnKingProximity[side] += min(4, max(opponentDistance - myDistance, -4));
+        C.passedPawnKingProximity += cs[side] * min(4, max(opponentDistance - myDistance, -4));
 
       if (!(board->occupancies[xside] & advance)) {
         BitBoard pusher = GetRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] &
@@ -147,7 +148,7 @@ Score PasserEval(Board* board, EvalData* data, int side) {
           s += PASSED_PAWN_ADVANCE_DEFENDED;
 
           if (T)
-            C.passedPawnAdvance[side]++;
+            C.passedPawnAdvance += cs[side];
         }
       }
     }
