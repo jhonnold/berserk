@@ -345,6 +345,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   MoveList moveList;
   GenerateAllMoves(&moveList, board, data);
 
+  MoveList quiets;
+  quiets.count = 0;
+
   int numMoves = 0;
   for (int i = 0; i < moveList.count; i++) {
     ChooseTopMove(&moveList, i);
@@ -368,6 +371,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     if (isRoot && !thread->idx && GetTimeMS() - 2500 >= params->startTime)
       printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), numMoves);
+
+    if (!tactical)
+      quiets.moves[quiets.count++] = move;
 
     // singular extension
     // if one move is better than all the rest, then we consider this singular
@@ -469,7 +475,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(data, move, depth, board->side, &moveList, i);
+        UpdateHistories(data, move, depth, board->side, &quiets);
         break;
       }
     }
