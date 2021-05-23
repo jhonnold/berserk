@@ -606,20 +606,21 @@ inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
   uint64_t tbhits = TBHits(thread->threads);
   uint64_t time = GetTimeMS() - thread->params->startTime;
   uint64_t nps = 1000 * nodes / max(time, 1);
+  int hashfull = TTFull();
 
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score mate %d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, time, movesToMate);
+    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld hashfull %d time %lld score mate %d pv ", depth,
+           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, movesToMate);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d  nodes %lld nps %lld tbhits %lld time %lld score mate -%d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, time, movesToMate);
+    printf("info depth %d seldepth %d  nodes %lld nps %lld tbhits %lld hashfull %d time %lld score mate -%d pv ", depth,
+           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, movesToMate);
   } else {
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld time %lld score cp %d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, time, score);
+    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld hashfull %d time %lld score cp %d pv ", depth,
+           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, score);
   }
 
   if (pv->count)

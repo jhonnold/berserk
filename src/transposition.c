@@ -122,3 +122,18 @@ inline TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, i
   return tt;
 #endif
 }
+
+inline int TTFull() {
+  int c = 1000 / BUCKET_SIZE;
+  int t = 0;
+
+  for (int i = 0; i < c; i++) {
+    TTBucket b = TT.buckets[i];
+    for (int j = 0; j < BUCKET_SIZE; j++) {
+      if (b.entries[j].hash)
+        t++;
+    }
+  }
+
+  return t * 1000 / (c * BUCKET_SIZE);
+}
