@@ -348,7 +348,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   MoveList quiets;
   quiets.count = 0;
 
-  int numMoves = 0;
+  int numMoves = 0, searchedMoves = 0;
   for (int i = 0; i < moveList.count; i++) {
     ChooseTopMove(&moveList, i);
     Move move = moveList.moves[i];
@@ -368,6 +368,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // quiet moves use a quadratic scale upwards
     if (!isRoot && bestScore > -MATE_BOUND && SEE(board, move) < STATIC_PRUNE[tactical][depth])
       continue;
+
+    searchedMoves++;
 
     if (isRoot && !thread->idx && GetTimeMS() - 2500 >= params->startTime)
       printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), numMoves);
@@ -417,7 +419,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // Late move reductions
     int R = 1;
     if (depth > 2 && numMoves > 1) {
-      R = LMR[min(depth, 63)][min(numMoves, 63)];
+      R = LMR[min(depth, 63)][min(searchedMoves, 63)];
 
       if (!tactical) {
         // increase reduction on non-pv
