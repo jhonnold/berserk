@@ -354,21 +354,18 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (skipMove == move)
       continue;
 
-    int doesCheck = DoesMoveCheck(move, board);
     int tactical = MovePromo(move) || MoveCapture(move);
 
-    if (!isPV && bestScore > -MATE_BOUND) {
-      // late move pruning at low depth if it's quiet and we've looked at ALOT
-      if (depth <= 8 && !tactical && !doesCheck && numMoves >= LMP[improving][depth])
-        continue;
-
-      // Static evaluation pruning, this applies for both quiet and tactical moves
-      // quiet moves use a quadratic scale upwards
-      if (SEE(board, move) < STATIC_PRUNE[tactical][depth])
-        continue;
-    }
+    if (!isRoot && bestScore > -MATE_BOUND && depth <= 8 && !tactical && numMoves > LMP[improving][depth])
+      continue;
 
     numMoves++;
+
+    // Static evaluation pruning, this applies for both quiet and tactical moves
+    // quiet moves use a quadratic scale upwards
+    if (!isRoot && bestScore > -MATE_BOUND && SEE(board, move) < STATIC_PRUNE[tactical][depth])
+      continue;
+
     if (isRoot && !thread->idx && GetTimeMS() - 2500 >= params->startTime)
       printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), numMoves);
 
@@ -377,7 +374,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // and look at it more (extend). Singular is determined by checking all other
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
-    int extension = doesCheck;
+    int extension = 0;
     if (depth >= 8 && !skipMove && !isRoot && move == TTMove(ttValue) && TTDepth(ttValue) >= depth - 3 &&
         abs(TTScore(ttValue, data->ply)) < MATE_BOUND && TTFlag(ttValue) == TT_LOWER) {
       int sBeta = max(TTScore(ttValue, data->ply) - depth * 2, -CHECKMATE);
@@ -405,11 +402,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         extension = 1;
     }
 
-    // apply extensions
-    int newDepth = depth + extension;
-
     data->moves[data->ply++] = move;
     MakeMove(move, board);
+
+    // apply extensions
+    int newDepth = depth + max(extension, !!board->checkers);
 
     // Late move reductions
     int R = 1;
