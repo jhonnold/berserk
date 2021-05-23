@@ -22,6 +22,6 @@
 void AddKillerMove(SearchData* data, Move move);
 void AddCounterMove(SearchData* data, Move move, Move parent);
 void AddHistoryHeuristic(SearchData* data, Move move, int stm, int inc);
-void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, MoveList* moves, int c);
+void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, MoveList* quiets);
 
 #endif

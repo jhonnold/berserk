@@ -345,7 +345,12 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   MoveList moveList;
   GenerateAllMoves(&moveList, board, data);
 
-  int numMoves = 0;
+  MoveList quiets;
+  quiets.count = 0;
+
+  // TODO: totalMoves will just become standard moves with a proper phased generation
+  // nonPrunedMoves are moves that aren't skipped by LMP but get pruned by SEE
+  int totalMoves = 0, nonPrunedMoves = 0;
   for (int i = 0; i < moveList.count; i++) {
     ChooseTopMove(&moveList, i);
     Move move = moveList.moves[i];
@@ -354,30 +359,32 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (skipMove == move)
       continue;
 
-    int doesCheck = DoesMoveCheck(move, board);
     int tactical = MovePromo(move) || MoveCapture(move);
 
-    if (!isPV && bestScore > -MATE_BOUND) {
-      // late move pruning at low depth if it's quiet and we've looked at ALOT
-      if (depth <= 8 && !tactical && !doesCheck && numMoves >= LMP[improving][depth])
-        continue;
+    if (bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
+      continue;
 
-      // Static evaluation pruning, this applies for both quiet and tactical moves
-      // quiet moves use a quadratic scale upwards
-      if (SEE(board, move) < STATIC_PRUNE[tactical][depth])
-        continue;
-    }
+    totalMoves++;
 
-    numMoves++;
+    // Static evaluation pruning, this applies for both quiet and tactical moves
+    // quiet moves use a quadratic scale upwards
+    if (bestScore > -MATE_BOUND && SEE(board, move) < STATIC_PRUNE[tactical][depth])
+      continue;
+
+    nonPrunedMoves++;
+
     if (isRoot && !thread->idx && GetTimeMS() - 2500 >= params->startTime)
-      printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), numMoves);
+      printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), nonPrunedMoves);
+
+    if (!tactical)
+      quiets.moves[quiets.count++] = move;
 
     // singular extension
     // if one move is better than all the rest, then we consider this singular
     // and look at it more (extend). Singular is determined by checking all other
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
-    int extension = doesCheck;
+    int extension = 0;
     if (depth >= 8 && !skipMove && !isRoot && move == TTMove(ttValue) && TTDepth(ttValue) >= depth - 3 &&
         abs(TTScore(ttValue, data->ply)) < MATE_BOUND && TTFlag(ttValue) == TT_LOWER) {
       int sBeta = max(TTScore(ttValue, data->ply) - depth * 2, -CHECKMATE);
@@ -405,16 +412,16 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         extension = 1;
     }
 
-    // apply extensions
-    int newDepth = depth + extension;
-
     data->moves[data->ply++] = move;
     MakeMove(move, board);
 
+    // apply extensions
+    int newDepth = depth + max(extension, !!board->checkers);
+
     // Late move reductions
     int R = 1;
-    if (depth > 2 && numMoves > 1) {
-      R = LMR[min(depth, 63)][min(numMoves, 63)];
+    if (depth > 2 && nonPrunedMoves > 1) {
+      R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
 
       if (!tactical) {
         // increase reduction on non-pv
@@ -441,7 +448,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
 
     // First move of a PV node
-    if (isPV && numMoves == 1) {
+    if (isPV && nonPrunedMoves == 1) {
       score = -Negamax(-beta, -alpha, newDepth - 1, thread, &childPv);
     } else {
       // potentially reduced search
@@ -472,7 +479,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(data, move, depth, board->side, &moveList, i);
+        UpdateHistories(data, move, depth, board->side, &quiets);
         break;
       }
     }
