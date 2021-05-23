@@ -348,7 +348,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   MoveList quiets;
   quiets.count = 0;
 
-  int numMoves = 0, searchedMoves = 0;
+  // TODO: totalMoves will just become standard moves with a proper phased generation
+  // nonPrunedMoves are moves that aren't skipped by LMP but get pruned by SEE
+  int totalMoves = 0, nonPrunedMoves = 0;
   for (int i = 0; i < moveList.count; i++) {
     ChooseTopMove(&moveList, i);
     Move move = moveList.moves[i];
@@ -359,20 +361,20 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     int tactical = MovePromo(move) || MoveCapture(move);
 
-    if (!isRoot && bestScore > -MATE_BOUND && depth <= 8 && !tactical && numMoves > LMP[improving][depth])
+    if (!isRoot && bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
       continue;
 
-    numMoves++;
+    totalMoves++;
 
     // Static evaluation pruning, this applies for both quiet and tactical moves
     // quiet moves use a quadratic scale upwards
     if (!isRoot && bestScore > -MATE_BOUND && SEE(board, move) < STATIC_PRUNE[tactical][depth])
       continue;
 
-    searchedMoves++;
+    nonPrunedMoves++;
 
     if (isRoot && !thread->idx && GetTimeMS() - 2500 >= params->startTime)
-      printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), numMoves);
+      printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), nonPrunedMoves);
 
     if (!tactical)
       quiets.moves[quiets.count++] = move;
@@ -418,8 +420,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Late move reductions
     int R = 1;
-    if (depth > 2 && numMoves > 1) {
-      R = LMR[min(depth, 63)][min(searchedMoves, 63)];
+    if (depth > 2 && nonPrunedMoves > 1) {
+      R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
 
       if (!tactical) {
         // increase reduction on non-pv
@@ -446,7 +448,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
 
     // First move of a PV node
-    if (isPV && numMoves == 1) {
+    if (isPV && nonPrunedMoves == 1) {
       score = -Negamax(-beta, -alpha, newDepth - 1, thread, &childPv);
     } else {
       // potentially reduced search
