@@ -40,7 +40,7 @@ size_t TTInit(int mb) {
   uint64_t keySize = (uint64_t)log2(mb) + (uint64_t)log2(MEGABYTE / sizeof(TTBucket));
 
 #if defined(__linux__) && !defined(__ANDROID__)
-  // On Linux systems we align on 2MB boundaries and request Huge Pages 
+  // On Linux systems we align on 2MB boundaries and request Huge Pages
   TT.buckets = aligned_alloc(2 * MEGABYTE, (1ULL << keySize) * sizeof(TTBucket));
   madvise(TT.buckets, (1ULL << keySize) * sizeof(TTBucket), MADV_HUGEPAGE);
 #else
@@ -57,56 +57,56 @@ void TTFree() { free(TT.buckets); }
 
 inline void TTClear() { memset(TT.buckets, 0, (TT.mask + 1ULL) * sizeof(TTBucket)); }
 
-inline int TTScore(TTValue value, int ply) {
-  int score = (int)((int16_t)((value & 0x0000FFFF00000000) >> 32));
-
-  return score > MATE_BOUND ? score - ply : score < -MATE_BOUND ? score + ply : score;
+inline int TTScore(TTEntry* e, int ply) {
+  return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
 }
 
 inline void TTPrefetch(uint64_t hash) { __builtin_prefetch(&TT.buckets[TT.mask & hash]); }
 
-inline TTValue TTProbe(uint64_t hash) {
-#ifdef TUNE
-  return NO_ENTRY;
-#else
-  TTBucket bucket = TT.buckets[TT.mask & hash];
+inline TTEntry* TTProbe(int* hit, uint64_t hash) {
+#ifndef TUNE
+  TTBucket* bucket = &TT.buckets[TT.mask & hash];
+  uint32_t shortHash = hash >> 32;
 
   for (int i = 0; i < BUCKET_SIZE; i++)
-    if (bucket.entries[i].hash == hash)
-      return bucket.entries[i].value;
-
-  return NO_ENTRY;
+    if (bucket->entries[i].hash == shortHash) {
+      *hit = 1;
+      return &bucket->entries[i];
+    }
 #endif
+
+  return 0;
 }
 
-inline TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, int ply, int eval) {
+inline void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval) {
 #ifdef TUNE
-  return NO_ENTRY;
+  return;
 #else
 
-  TTBucket* bucket = &TT.buckets[TT.mask & hash];
+  TTBucket bucket = TT.buckets[TT.mask & hash];
+  uint32_t shortHash = hash >> 32;
+
   int replacementDepth = INT32_MAX;
   int replacementIdx = 0;
 
   for (int i = 0; i < BUCKET_SIZE; i++) {
-    TTEntry entry = bucket->entries[i];
+    TTEntry entry = bucket.entries[i];
     if (!entry.hash) {
       replacementIdx = i;
       break;
     }
 
-    int currDepth = TTDepth(entry.value);
-    if (entry.hash == hash) {
-      if (currDepth > depth && flag != TT_EXACT)
-        return entry.value;
+    if (entry.hash == shortHash) {
+      if (entry.depth > depth && !(flag & TT_EXACT))
+        return;
 
       replacementIdx = i;
       break;
     }
 
-    if (currDepth < replacementDepth) {
+    if (entry.depth < replacementDepth) {
       replacementIdx = i;
-      replacementDepth = currDepth;
+      replacementDepth = entry.depth;
     }
   }
 
@@ -116,10 +116,8 @@ inline TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, i
   else if (score < -MATE_BOUND)
     adjustedScore -= ply;
 
-  bucket->entries[replacementIdx].hash = hash;
-  TTValue tt = bucket->entries[replacementIdx].value = TTEntry(adjustedScore, flag, depth, move, eval);
-
-  return tt;
+  TTEntry* entry = &bucket.entries[replacementIdx];
+  *entry = (TTEntry){.flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move};
 #endif
 }
 
