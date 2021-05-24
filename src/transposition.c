@@ -83,30 +83,30 @@ inline void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Mov
   return;
 #else
 
-  TTBucket bucket = TT.buckets[TT.mask & hash];
+  TTBucket* bucket = &TT.buckets[TT.mask & hash];
   uint32_t shortHash = hash >> 32;
 
   int replacementDepth = INT32_MAX;
   int replacementIdx = 0;
 
   for (int i = 0; i < BUCKET_SIZE; i++) {
-    TTEntry entry = bucket.entries[i];
-    if (!entry.hash) {
+    TTEntry* entry = &bucket->entries[i];
+    if (!entry->hash) {
       replacementIdx = i;
       break;
     }
 
-    if (entry.hash == shortHash) {
-      if (entry.depth > depth && !(flag & TT_EXACT))
+    if (entry->hash == shortHash) {
+      if (entry->depth > depth && !(flag & TT_EXACT))
         return;
 
       replacementIdx = i;
       break;
     }
 
-    if (entry.depth < replacementDepth) {
+    if (entry->depth < replacementDepth) {
       replacementIdx = i;
-      replacementDepth = entry.depth;
+      replacementDepth = entry->depth;
     }
   }
 
@@ -116,7 +116,7 @@ inline void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Mov
   else if (score < -MATE_BOUND)
     adjustedScore -= ply;
 
-  TTEntry* entry = &bucket.entries[replacementIdx];
+  TTEntry* entry = &bucket->entries[replacementIdx];
   *entry = (TTEntry){.flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move};
 #endif
 }
