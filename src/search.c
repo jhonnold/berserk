@@ -44,10 +44,12 @@ int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 int RFP[MAX_SEARCH_PLY];
 
 void InitPruningAndReductionTables() {
-  for (int depth = 0; depth < MAX_SEARCH_PLY; depth++)
-    for (int moves = 0; moves < 64; moves++)
+  for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
+    for (int moves = 1; moves < 64; moves++)
       // Credit to Ethereal for this LMR
       LMR[depth][moves] = (int)(0.8f + log(depth) * log(1.2f * moves) / 2.5f);
+
+  LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
   for (int depth = 0; depth < MAX_SEARCH_PLY; depth++) {
     // LMP has both a improving (more strict) and non-improving evalution parameter
