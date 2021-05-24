@@ -19,17 +19,17 @@
 
 #include "types.h"
 
-
-
 #define NO_ENTRY 0ULL
 #define MEGABYTE 0x100000ULL
 #define BUCKET_SIZE 3
 
-typedef uint64_t TTValue;
-
 typedef struct {
-  uint64_t hash;
-  TTValue value;
+  uint8_t flags;
+  uint8_t depth;
+  int16_t eval;
+  int16_t score;
+  uint32_t hash;
+  Move move;
 } TTEntry;
 
 typedef struct {
@@ -44,25 +44,17 @@ typedef struct {
   uint64_t size;
 } TTTable;
 
-enum { TT_LOWER, TT_UPPER, TT_EXACT };
+enum { TT_LOWER = 1, TT_UPPER = 2, TT_EXACT = 4 };
 
 extern TTTable TT;
-
-#define TTEntry(score, flag, depth, move, eval)                                                                        \
-  ((TTValue)((uint16_t)(eval)) << 48) | ((TTValue)((uint16_t)(score)) << 32) | ((TTValue)(flag) << 30) |               \
-      ((TTValue)(depth) << 24) | ((TTValue)(move))
-#define TTFlag(value) ((int)((unsigned)((value)&0xC0000000) >> 30))
-#define TTMove(value) ((Move)((value)&0xFFFFFF))
-#define TTDepth(value) ((int)((value)&0x3F000000) >> 24)
-#define TTEval(value) ((int)((int16_t)((value) >> 48)))
 
 size_t TTInit(int mb);
 void TTFree();
 void TTClear();
 void TTPrefetch(uint64_t hash);
-TTValue TTProbe(uint64_t hash);
-int TTScore(TTValue value, int ply);
-TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, int ply, int eval);
+TTEntry* TTProbe(int* hit, uint64_t hash);
+int TTScore(TTEntry* e, int ply);
+void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval);
 int TTFull();
 
 #endif
