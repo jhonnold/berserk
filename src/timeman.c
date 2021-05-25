@@ -14,27 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef MOVEGEN_H
-#define MOVEGEN_H
+#include <stdlib.h>
 
+#include "search.h"
 #include "types.h"
+#include "util.h"
 
-extern const BitBoard PROMOTION_RANKS[];
-extern const BitBoard HOME_RANKS[];
-extern const BitBoard THIRD_RANKS[];
-extern const int PAWN_DIRECTIONS[];
+void UpdateTimeParams(SearchParams* params, Score old, Score n, int expands, int depth) {
+  // score ended up outside our window
+  if (params->timeset && depth >= 5 && abs(old - n) > WINDOW) {
+    // adjust score exponentially based on window expansions
+    int percentIncrease = (2 << min(4, expands));
 
-extern const int HASH_MOVE_SCORE;
-extern const int GOOD_CAPTURE_SCORE;
-extern const int BAD_CAPTURE_SCORE;
-extern const int KILLER1_SCORE;
-extern const int KILLER2_SCORE;
-extern const int COUNTER_SCORE;
+    // score improving isn't as bad as worse, so we cut that in half
+    if (n > old)
+      percentIncrease /= 2;
 
-void AppendMove(MoveList* moveList, Move move);
-void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data);
-void GenerateTacticalMoves(MoveList* moveList, Board* board);
-void ChooseTopMove(MoveList* moveList, int from);
-void PrintMoves(MoveList* moveList);
+    params->timeToSpend = params->timeToSpend * (100 + percentIncrease) / 100;
 
-#endif
+    if (params->startTime + params->timeToSpend <= params->maxTime)
+      params->endTime = params->startTime + params->timeToSpend;
+    else
+      params->endTime = params->maxTime;
+  }
+}

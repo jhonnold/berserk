@@ -42,8 +42,6 @@ typedef int Score;
 
 typedef uint64_t BitBoard;
 
-typedef uint64_t TTValue;
-
 typedef int Move;
 
 // Move generation storage
@@ -59,7 +57,7 @@ typedef struct {
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
   int squares[64];         // piece per square
   BitBoard checkers;       // checking piece squares
-  BitBoard pinned;        // pinned pieces
+  BitBoard pinned;         // pinned pieces
   uint64_t piecesCounts;   // "material key" - pieces left on the board
 
   Score mat; // material+psqt score updated incrementally
@@ -102,7 +100,7 @@ typedef struct {
   // TODO: Put depth here as well? Just cause
   uint64_t nodes; // node count
   uint64_t tbhits;
-  int seldepth;   // seldepth count
+  int seldepth; // seldepth count
 
   Move skipMove[MAX_SEARCH_PLY]; // moves to skip during singular search
   int evals[MAX_SEARCH_PLY];     // static evals at ply stack
@@ -111,7 +109,6 @@ typedef struct {
   Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply
   Move counters[64 * 64];          // counter move butterfly table
   int hh[2][64 * 64];              // history heuristic butterfly table (side)
-  int bf[2][64 * 64];              // butterfly heuristic butterfly table (side)
 } SearchData;
 
 typedef struct {
@@ -137,10 +134,10 @@ typedef struct {
   int8_t passedPawnAdvance[2];
   int8_t passedPawnEdgeDistance[2];
   int8_t passedPawnKingProximity[2];
+  int8_t badBishopPawns[2];
+  int8_t dragonBishop[2];
   int8_t rookOpenFile[2];
   int8_t rookSemiOpen[2];
-  int8_t rookOppositeKing[2];
-  int8_t rookAdjacentKing[2];
   int8_t rookTrapped[2];
   int8_t knightThreats[2][6];
   int8_t bishopThreats[2][6];
@@ -148,6 +145,13 @@ typedef struct {
   int8_t kingThreats[2][6];
   int8_t pawnThreat[2];
   int8_t hangingThreat[2];
+  int8_t pawnPushThreat[2];
+
+  int pawnShelter[2][4][8];
+  int blockedPawnStorm[2][8];
+  int pawnStorm[2][4][8];
+  int kingFile[2][4];
+
   int ks[2];
 
   int8_t ss;

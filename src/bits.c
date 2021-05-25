@@ -53,6 +53,7 @@ const BitBoard FORWARD_RANK_MASKS[2][8] = {{
                                                0ULL,
                                            }};
 const BitBoard DARK_SQS = 0x55AA55AA55AA55AAULL;
+const BitBoard CENTER_SQS = (D_FILE | E_FILE) & (RANK_4 | RANK_5);
 
 #ifndef POPCOUNT
 inline int bits(BitBoard bb) {

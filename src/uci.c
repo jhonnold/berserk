@@ -32,7 +32,7 @@
 #include "pyrrhic/tbprobe.h"
 
 #define NAME "Berserk"
-#define VERSION "4.1.0"
+#define VERSION "4.2.0"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -167,6 +167,17 @@ void PrintUCIOptions() {
   printf("uciok\n");
 }
 
+int ReadLine(char* in) {
+  if (fgets(in, 8192, stdin) == NULL)
+    return 0;
+
+  size_t c = strcspn(in, "\r\n");
+  if (c < strlen(in))
+    in[c] = '\0';
+
+  return 1;
+}
+
 void UCILoop() {
   static char in[8192];
 
@@ -179,24 +190,9 @@ void UCILoop() {
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
-  PrintUCIOptions();
-
-  while (!searchParameters.quit) {
-    memset(&in[0], 0, sizeof(in));
-
-    fflush(stdout);
-
-    if (fgets(in, 8192, stdin) == NULL) {
-      if (ferror(stdin) || feof(stdin))
-        return;
-      else
-        continue;
-    }
-
+  while (ReadLine(in)) {
     if (in[0] == '\n')
       continue;
-
-    in[strcspn(in, "\r\n")] = '\0';
 
     if (!strncmp(in, "isready", 7)) {
       printf("readyok\n");
@@ -211,7 +207,8 @@ void UCILoop() {
     } else if (!strncmp(in, "stop", 4)) {
       searchParameters.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
-      exit(0);
+      searchParameters.quit = 1;
+      break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
     } else if (!strncmp(in, "board", 5)) {
@@ -231,8 +228,8 @@ void UCILoop() {
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
       mb = max(4, min(65536, mb));
-      TTInit(mb);
-      printf("info string set Hash to value %d\n", mb);
+      size_t bytesAllocated = TTInit(mb);
+      printf("info string set Hash to value %d (%zu bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
       free(threads);
@@ -246,6 +243,8 @@ void UCILoop() {
         printf("info string FAILED!\n");
     }
   }
+
+  free(threads);
 }
 
 int GetOptionIntValue(char* in) {

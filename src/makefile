@@ -1,14 +1,14 @@
 CC = gcc
 SRC = *.c pyrrhic/tbprobe.c
 EXE = berserk
-VERSION = 4.1.0
+VERSION = 4.2.0
 
 LIBS = -lm -lpthread
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
 CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG
 TFLAGS = -O3 $(WFLAGS) -flto -fopenmp -march=native -DTUNE -DNDEBUG 
 RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG
-DFLAGS = -O0 $(WFLAGS) -g -DNDEBUG
+DFLAGS = -O0 $(WFLAGS) -g
 
 POPCOUNT = -DPOPCOUNT -msse -msse3 -mpopcnt
 AVX2 = $(POPCOUNT) -mavx2 -msse4.1 -mssse3 -msse2

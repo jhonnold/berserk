@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "bench.h"
 #include "board.h"
@@ -90,6 +91,9 @@ void Bench() {
 
   long startTime = GetTimeMS();
   for (int i = 0; i < 50; i++) {
+    TTClear();
+    ResetThreadPool(&board, &params, threads);
+
     params.startTime = GetTimeMS();
 
     ParseFen(benchmarks[i], &board);
@@ -100,9 +104,6 @@ void Bench() {
     bestMoves[i] = threads[0].data.bestMove;
     scores[i] = threads[0].data.score;
     nodes[i] = threads[0].data.nodes;
-
-    TTClear();
-    ResetThreadPool(&board, &params, threads);
   }
   long totalTime = GetTimeMS() - startTime;
 
@@ -117,4 +118,6 @@ void Bench() {
     totalNodes += nodes[i];
 
   printf("\nResults: %41d nodes %8d nps\n\n", totalNodes, (int)(1000.0 * totalNodes / (totalTime + 1)));
+
+  free(threads);
 }

@@ -31,6 +31,8 @@
 #define UNKNOWN INT32_MAX
 extern EvalCoeffs C;
 
+extern const int MAX_SCALE;
+extern const int MAX_PHASE;
 extern const Score PHASE_MULTIPLIERS[5];
 
 extern const int STATIC_MATERIAL_VALUE[7];
@@ -57,10 +59,10 @@ extern const Score KNIGHT_OUTPOST_REACHABLE;
 extern const Score BISHOP_OUTPOST_REACHABLE;
 extern const Score BISHOP_TRAPPED;
 extern const Score ROOK_TRAPPED;
+extern const Score BAD_BISHOP_PAWNS;
+extern const Score DRAGON_BISHOP;
 extern const Score ROOK_OPEN_FILE;
 extern const Score ROOK_SEMI_OPEN;
-extern const Score ROOK_OPPOSITE_KING;
-extern const Score ROOK_ADJACENT_KING;
 
 extern const Score DOUBLED_PAWN;
 extern const Score OPPOSED_ISOLATED_PAWN;
@@ -79,6 +81,7 @@ extern const Score BISHOP_THREATS[6];
 extern const Score ROOK_THREATS[6];
 extern const Score KING_THREATS[6];
 extern const Score PAWN_THREAT;
+extern const Score PAWN_PUSH_THREAT;
 extern const Score HANGING_THREAT;
 
 extern const Score TEMPO;

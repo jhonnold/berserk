@@ -24,7 +24,7 @@ const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
 
-double K = 1;
+double K = 3.575325000;
 
 void Tune() {
   Weights weights = {0};
@@ -37,22 +37,21 @@ void Tune() {
   InitPieceBonusWeights(&weights);
   InitPawnBonusWeights(&weights);
   InitPasserBonusWeights(&weights);
+  InitPawnShelterWeights(&weights);
 
   int n = 0;
   Position* positions = LoadPositions(&n);
   ALPHA *= sqrt(n);
 
   ValidateEval(n, positions, &weights);
-  DetermineK(n, positions);
+  // DetermineK(n, positions);
 
-  for (int epoch = 0; epoch < 10000; epoch++) {
-    UpdateAndTrain(epoch, n, positions, &weights);
+  for (int epoch = 1; epoch < 10000; epoch++) {
+    double error = UpdateAndTrain(epoch, n, positions, &weights);
 
-    if (epoch % 25 == 0)
-      PrintWeights(&weights);
+    PrintWeights(&weights, epoch, error);
   }
 
-  PrintWeights(&weights);
   free(positions);
 }
 
@@ -185,6 +184,9 @@ void UpdateWeights(Weights* weights) {
   UpdateParam(&weights->pawnThreat.mg);
   UpdateParam(&weights->pawnThreat.eg);
 
+  UpdateParam(&weights->pawnPushThreat.mg);
+  UpdateParam(&weights->pawnPushThreat.eg);
+
   UpdateParam(&weights->hangingThreat.mg);
   UpdateParam(&weights->hangingThreat.eg);
 
@@ -203,17 +205,17 @@ void UpdateWeights(Weights* weights) {
   UpdateParam(&weights->rookTrapped.mg);
   UpdateParam(&weights->rookTrapped.eg);
 
+  UpdateParam(&weights->badBishopPawns.mg);
+  UpdateParam(&weights->badBishopPawns.eg);
+
+  UpdateParam(&weights->dragonBishop.mg);
+  UpdateParam(&weights->dragonBishop.eg);
+
   UpdateParam(&weights->rookOpenFile.mg);
   UpdateParam(&weights->rookOpenFile.eg);
 
   UpdateParam(&weights->rookSemiOpen.mg);
   UpdateParam(&weights->rookSemiOpen.eg);
-
-  UpdateParam(&weights->rookOppositeKing.mg);
-  UpdateParam(&weights->rookOppositeKing.eg);
-
-  UpdateParam(&weights->rookAdjacentKing.mg);
-  UpdateParam(&weights->rookAdjacentKing.eg);
 
   UpdateParam(&weights->doubledPawns.mg);
   UpdateParam(&weights->doubledPawns.eg);
@@ -248,9 +250,29 @@ void UpdateWeights(Weights* weights) {
 
   UpdateParam(&weights->passedPawnAdvance.mg);
   UpdateParam(&weights->passedPawnAdvance.eg);
+
+  for (int f = 0; f < 4; f++) {
+    for (int r = 0; r < 8; r++) {
+      UpdateParam(&weights->ksPawnShelter[f][r].mg);
+      UpdateParam(&weights->ksPawnShelter[f][r].eg);
+
+      UpdateParam(&weights->ksPawnStorm[f][r].mg);
+      UpdateParam(&weights->ksPawnStorm[f][r].eg);
+    }
+  }
+
+  for (int r = 0; r < 8; r++) {
+    UpdateParam(&weights->ksBlocked[r].mg);
+    UpdateParam(&weights->ksBlocked[r].eg);
+  }
+
+  for (int f = 0; f < 4; f++) {
+    UpdateParam(&weights->ksFile[f].mg);
+    UpdateParam(&weights->ksFile[f].eg);
+  }
 }
 
-void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
+double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
   pthread_t threads[THREADS];
   GradientUpdate jobs[THREADS];
   Weights local[THREADS];
@@ -337,6 +359,9 @@ void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
     weights->pawnThreat.mg.g += w->pawnThreat.mg.g;
     weights->pawnThreat.eg.g += w->pawnThreat.eg.g;
 
+    weights->pawnPushThreat.mg.g += w->pawnPushThreat.mg.g;
+    weights->pawnPushThreat.eg.g += w->pawnPushThreat.eg.g;
+
     weights->hangingThreat.mg.g += w->hangingThreat.mg.g;
     weights->hangingThreat.eg.g += w->hangingThreat.eg.g;
 
@@ -352,17 +377,17 @@ void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
     weights->rookTrapped.mg.g += w->rookTrapped.mg.g;
     weights->rookTrapped.eg.g += w->rookTrapped.eg.g;
 
+    weights->badBishopPawns.mg.g += w->badBishopPawns.mg.g;
+    weights->badBishopPawns.eg.g += w->badBishopPawns.eg.g;
+
+    weights->dragonBishop.mg.g += w->dragonBishop.mg.g;
+    weights->dragonBishop.eg.g += w->dragonBishop.eg.g;
+
     weights->rookOpenFile.mg.g += w->rookOpenFile.mg.g;
     weights->rookOpenFile.eg.g += w->rookOpenFile.eg.g;
 
     weights->rookSemiOpen.mg.g += w->rookSemiOpen.mg.g;
     weights->rookSemiOpen.eg.g += w->rookSemiOpen.eg.g;
-
-    weights->rookOppositeKing.mg.g += w->rookOppositeKing.mg.g;
-    weights->rookOppositeKing.eg.g += w->rookOppositeKing.eg.g;
-
-    weights->rookAdjacentKing.mg.g += w->rookAdjacentKing.mg.g;
-    weights->rookAdjacentKing.eg.g += w->rookAdjacentKing.eg.g;
 
     weights->doubledPawns.mg.g += w->doubledPawns.mg.g;
     weights->doubledPawns.eg.g += w->doubledPawns.eg.g;
@@ -397,11 +422,33 @@ void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->passedPawnAdvance.mg.g += w->passedPawnAdvance.mg.g;
     weights->passedPawnAdvance.eg.g += w->passedPawnAdvance.eg.g;
+
+    for (int f = 0; f < 4; f++) {
+      for (int r = 0; r < 8; r++) {
+        weights->ksPawnShelter[f][r].mg.g += w->ksPawnShelter[f][r].mg.g;
+        weights->ksPawnShelter[f][r].eg.g += w->ksPawnShelter[f][r].eg.g;
+
+        weights->ksPawnStorm[f][r].mg.g += w->ksPawnStorm[f][r].mg.g;
+        weights->ksPawnStorm[f][r].eg.g += w->ksPawnStorm[f][r].eg.g;
+      }
+    }
+
+    for (int r = 0; r < 8; r++) {
+      weights->ksBlocked[r].mg.g += w->ksBlocked[r].mg.g;
+      weights->ksBlocked[r].eg.g += w->ksBlocked[r].eg.g;
+    }
+
+    for (int r = 0; r < 4; r++) {
+      weights->ksFile[r].mg.g += w->ksFile[r].mg.g;
+      weights->ksFile[r].eg.g += w->ksFile[r].eg.g;
+    }
   }
 
   printf("Epoch: %5d, Error: %9.8f\n", epoch, error / n);
 
   UpdateWeights(weights);
+
+  return error;
 }
 
 void* UpdateGradients(void* arg) {
@@ -425,6 +472,7 @@ void* UpdateGradients(void* arg) {
     UpdatePieceBonusGradients(&positions[i], loss, weights);
     UpdatePawnBonusGradients(&positions[i], loss, weights);
     UpdatePasserBonusGradients(&positions[i], loss, weights);
+    UpdatePawnShelterGradients(&positions[i], loss, weights);
 
     job->error += pow(positions[i].result - sigmoid, 2);
   }
@@ -532,10 +580,13 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
         (position->coeffs.kingThreats[WHITE][pc] - position->coeffs.kingThreats[BLACK][pc]) * egBase;
   }
 
-  weights->pawnThreat.mg.g +=
-      (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * mgBase;
-  weights->pawnThreat.eg.g +=
-      (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * egBase;
+  weights->pawnThreat.mg.g += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * mgBase;
+  weights->pawnThreat.eg.g += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * egBase;
+
+  weights->pawnPushThreat.mg.g +=
+      (position->coeffs.pawnPushThreat[WHITE] - position->coeffs.pawnPushThreat[BLACK]) * mgBase;
+  weights->pawnPushThreat.eg.g +=
+      (position->coeffs.pawnPushThreat[WHITE] - position->coeffs.pawnPushThreat[BLACK]) * egBase;
 
   weights->hangingThreat.mg.g +=
       (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * mgBase;
@@ -568,21 +619,19 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
   weights->rookTrapped.mg.g += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * mgBase;
   weights->rookTrapped.eg.g += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * egBase;
 
+  weights->badBishopPawns.mg.g +=
+      (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) * mgBase;
+  weights->badBishopPawns.eg.g +=
+      (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) * egBase;
+
+  weights->dragonBishop.mg.g += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * mgBase;
+  weights->dragonBishop.eg.g += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * egBase;
+
   weights->rookOpenFile.mg.g += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * mgBase;
   weights->rookOpenFile.eg.g += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * egBase;
 
   weights->rookSemiOpen.mg.g += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * mgBase;
   weights->rookSemiOpen.eg.g += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * egBase;
-
-  weights->rookOppositeKing.mg.g +=
-      (position->coeffs.rookOppositeKing[WHITE] - position->coeffs.rookOppositeKing[BLACK]) * mgBase;
-  weights->rookOppositeKing.eg.g +=
-      (position->coeffs.rookOppositeKing[WHITE] - position->coeffs.rookOppositeKing[BLACK]) * egBase;
-
-  weights->rookAdjacentKing.mg.g +=
-      (position->coeffs.rookAdjacentKing[WHITE] - position->coeffs.rookAdjacentKing[BLACK]) * mgBase;
-  weights->rookAdjacentKing.eg.g +=
-      (position->coeffs.rookAdjacentKing[WHITE] - position->coeffs.rookAdjacentKing[BLACK]) * egBase;
 }
 
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights) {
@@ -647,6 +696,37 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
       (position->coeffs.passedPawnAdvance[WHITE] - position->coeffs.passedPawnAdvance[BLACK]) * egBase;
 }
 
+void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights) {
+  double mgBase = position->phaseMg * position->scale * loss;
+  double egBase = position->phaseEg * position->scale * loss;
+
+  for (int f = 0; f < 4; f++) {
+    for (int r = 0; r < 8; r++) {
+      weights->ksPawnShelter[f][r].mg.g +=
+          (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) * mgBase;
+      weights->ksPawnShelter[f][r].eg.g +=
+          (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) * egBase;
+
+      weights->ksPawnStorm[f][r].mg.g +=
+          (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) * mgBase;
+      weights->ksPawnStorm[f][r].eg.g +=
+          (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) * egBase;
+    }
+  }
+
+  for (int f = 0; f < 8; f++) {
+    weights->ksBlocked[f].mg.g +=
+        (position->coeffs.blockedPawnStorm[WHITE][f] - position->coeffs.blockedPawnStorm[BLACK][f]) * mgBase;
+    weights->ksBlocked[f].eg.g +=
+        (position->coeffs.blockedPawnStorm[WHITE][f] - position->coeffs.blockedPawnStorm[BLACK][f]) * egBase;
+  }
+
+  for (int f = 0; f < 4; f++) {
+    weights->ksFile[f].mg.g += (position->coeffs.kingFile[WHITE][f] - position->coeffs.kingFile[BLACK][f]) * mgBase;
+    weights->ksFile[f].eg.g += (position->coeffs.kingFile[WHITE][f] - position->coeffs.kingFile[BLACK][f]) * egBase;
+  }
+}
+
 double EvaluateCoeffs(Position* position, Weights* weights) {
   double mg = 0, eg = 0;
 
@@ -658,12 +738,13 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
   EvaluatePieceBonusValues(&mg, &eg, position, weights);
   EvaluatePawnBonusValues(&mg, &eg, position, weights);
   EvaluatePasserBonusValues(&mg, &eg, position, weights);
+  EvaluatePawnShelterValues(&mg, &eg, position, weights);
 
   mg += scoreMG(position->coeffs.ks[WHITE]) - scoreMG(position->coeffs.ks[BLACK]);
   eg += scoreEG(position->coeffs.ks[WHITE]) - scoreEG(position->coeffs.ks[BLACK]);
 
-  int result = (mg * position->phase + eg * (24 - position->phase)) / 24;
-  result *= position->scale;
+  int result = (mg * position->phase + eg * (128 - position->phase)) / 128;
+  result = (result * position->scale + MAX_SCALE / 2) / MAX_SCALE;
   return result + (position->stm == WHITE ? TEMPO : -TEMPO);
 }
 
@@ -752,10 +833,13 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
            weights->kingThreats[pc].eg.value;
   }
 
-  *mg +=
-      (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.mg.value;
-  *eg +=
-      (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.eg.value;
+  *mg += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.mg.value;
+  *eg += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.eg.value;
+
+  *mg += (position->coeffs.pawnPushThreat[WHITE] - position->coeffs.pawnPushThreat[BLACK]) *
+         weights->pawnPushThreat.mg.value;
+  *eg += (position->coeffs.pawnPushThreat[WHITE] - position->coeffs.pawnPushThreat[BLACK]) *
+         weights->pawnPushThreat.eg.value;
 
   *mg +=
       (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * weights->hangingThreat.mg.value;
@@ -766,7 +850,7 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
   *mg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.mg.value;
   *eg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.eg.value;
-  
+
   *mg += (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) *
          weights->knightPostReachable.mg.value;
   *eg += (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) *
@@ -785,21 +869,19 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
   *mg += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * weights->rookTrapped.mg.value;
   *eg += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * weights->rookTrapped.eg.value;
 
+  *mg += (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) *
+         weights->badBishopPawns.mg.value;
+  *eg += (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) *
+         weights->badBishopPawns.eg.value;
+
+  *mg += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * weights->dragonBishop.mg.value;
+  *eg += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * weights->dragonBishop.eg.value;
+
   *mg += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * weights->rookOpenFile.mg.value;
   *eg += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * weights->rookOpenFile.eg.value;
 
   *mg += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * weights->rookSemiOpen.mg.value;
   *eg += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * weights->rookSemiOpen.eg.value;
-
-  *mg += (position->coeffs.rookOppositeKing[WHITE] - position->coeffs.rookOppositeKing[BLACK]) *
-         weights->rookOppositeKing.mg.value;
-  *eg += (position->coeffs.rookOppositeKing[WHITE] - position->coeffs.rookOppositeKing[BLACK]) *
-         weights->rookOppositeKing.eg.value;
-
-  *mg += (position->coeffs.rookAdjacentKing[WHITE] - position->coeffs.rookAdjacentKing[BLACK]) *
-         weights->rookAdjacentKing.mg.value;
-  *eg += (position->coeffs.rookAdjacentKing[WHITE] - position->coeffs.rookAdjacentKing[BLACK]) *
-         weights->rookAdjacentKing.eg.value;
 }
 
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -858,12 +940,41 @@ void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weigh
          weights->passedPawnAdvance.eg.value;
 }
 
+void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights) {
+  for (int f = 0; f < 4; f++) {
+    for (int r = 0; r < 8; r++) {
+      *mg += (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) *
+             weights->ksPawnShelter[f][r].mg.value;
+      *eg += (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) *
+             weights->ksPawnShelter[f][r].eg.value;
+
+      *mg += (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) *
+             weights->ksPawnStorm[f][r].mg.value;
+      *eg += (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) *
+             weights->ksPawnStorm[f][r].eg.value;
+    }
+  }
+
+  for (int r = 0; r < 8; r++) {
+    *mg += (position->coeffs.blockedPawnStorm[WHITE][r] - position->coeffs.blockedPawnStorm[BLACK][r]) *
+           weights->ksBlocked[r].mg.value;
+    *eg += (position->coeffs.blockedPawnStorm[WHITE][r] - position->coeffs.blockedPawnStorm[BLACK][r]) *
+           weights->ksBlocked[r].eg.value;
+  }
+
+  for (int r = 0; r < 4; r++) {
+    *mg += (position->coeffs.kingFile[WHITE][r] - position->coeffs.kingFile[BLACK][r]) * weights->ksFile[r].mg.value;
+    *eg += (position->coeffs.kingFile[WHITE][r] - position->coeffs.kingFile[BLACK][r]) * weights->ksFile[r].eg.value;
+  }
+}
+
 void LoadPosition(Board* board, Position* position, ThreadData* thread) {
-  ResetCoeffs();
+  memset(&C, 0, sizeof(EvalCoeffs));
+
   int phase = GetPhase(board);
 
-  position->phaseMg = phase / 24.0;
-  position->phaseEg = 1 - phase / 24.0;
+  position->phaseMg = (double)phase / 128;
+  position->phaseEg = 1 - (double)phase / 128;
   position->phase = phase;
 
   position->stm = board->side;
@@ -871,139 +982,9 @@ void LoadPosition(Board* board, Position* position, ThreadData* thread) {
   Score eval = Evaluate(board, thread);
   position->staticEval = sideScalar[board->side] * eval;
 
-  position->scale = Scale(board, C.ss) / 100.0;
+  position->scale = Scale(board, C.ss);
 
-  CopyCoeffsInto(&position->coeffs);
-}
-
-void ResetCoeffs() {
-  for (int side = WHITE; side <= BLACK; side++) {
-    for (int pc = 0; pc < 5; pc++)
-      C.pieces[side][pc] = 0;
-
-    for (int pc = 0; pc < 6; pc++)
-      for (int sq = 0; sq < 32; sq++)
-        C.psqt[side][pc][sq] = 0;
-
-    C.bishopPair[side] = 0;
-    C.bishopTrapped[side] = 0;
-
-    for (int sq = 0; sq < 32; sq++) {
-      C.knightPostPsqt[side][sq] = 0;
-      C.bishopPostPsqt[side][sq] = 0;
-    }
-
-    C.knightPostReachable[side] = 0;
-    C.bishopPostReachable[side] = 0;
-
-    for (int c = 0; c < 9; c++)
-      C.knightMobilities[side][c] = 0;
-    for (int c = 0; c < 14; c++)
-      C.bishopMobilities[side][c] = 0;
-    for (int c = 0; c < 15; c++)
-      C.rookMobilities[side][c] = 0;
-    for (int c = 0; c < 28; c++)
-      C.queenMobilities[side][c] = 0;
-
-    C.doubledPawns[side] = 0;
-    C.opposedIsolatedPawns[side] = 0;
-    C.openIsolatedPawns[side] = 0;
-    C.backwardsPawns[side] = 0;
-
-    for (int r = 0; r < 8; r++) {
-      C.connectedPawn[side][r] = 0;
-      C.candidatePasser[side][r] = 0;
-      C.passedPawn[side][r] = 0;
-    }
-
-    C.passedPawnAdvance[side] = 0;
-    C.passedPawnEdgeDistance[side] = 0;
-    C.passedPawnKingProximity[side] = 0;
-
-    C.rookOpenFile[side] = 0;
-    C.rookSemiOpen[side] = 0;
-    C.rookOppositeKing[side] = 0;
-    C.rookAdjacentKing[side] = 0;
-    C.rookTrapped[side] = 0;
-    C.rookOpenFile[side] = 0;
-
-    for (int i = 0; i < 6; i++) {
-      C.knightThreats[side][i] = 0;
-      C.bishopThreats[side][i] = 0;
-      C.rookThreats[side][i] = 0;
-      C.kingThreats[side][i] = 0;
-    }
-
-    C.pawnThreat[side] = 0;
-    C.hangingThreat[side] = 0;
-
-    C.ks[side] = 0;
-  }
-}
-
-void CopyCoeffsInto(EvalCoeffs* c) {
-  for (int side = WHITE; side <= BLACK; side++) {
-    for (int pc = 0; pc < 5; pc++)
-      c->pieces[side][pc] = C.pieces[side][pc];
-
-    for (int pc = 0; pc < 6; pc++)
-      for (int sq = 0; sq < 32; sq++)
-        c->psqt[side][pc][sq] = C.psqt[side][pc][sq];
-
-    c->bishopPair[side] = C.bishopPair[side];
-    c->bishopTrapped[side] = C.bishopTrapped[side];
-
-    for (int sq = 0; sq < 32; sq++) {
-      c->knightPostPsqt[side][sq] = C.knightPostPsqt[side][sq];
-      c->bishopPostPsqt[side][sq] = C.bishopPostPsqt[side][sq];
-    }
-
-    c->knightPostReachable[side] = C.knightPostReachable[side];
-    c->bishopPostReachable[side] = C.bishopPostReachable[side];
-
-    for (int d = 0; d < 9; d++)
-      c->knightMobilities[side][d] = C.knightMobilities[side][d];
-    for (int d = 0; d < 14; d++)
-      c->bishopMobilities[side][d] = C.bishopMobilities[side][d];
-    for (int d = 0; d < 15; d++)
-      c->rookMobilities[side][d] = C.rookMobilities[side][d];
-    for (int d = 0; d < 28; d++)
-      c->queenMobilities[side][d] = C.queenMobilities[side][d];
-
-    c->doubledPawns[side] = C.doubledPawns[side];
-    c->opposedIsolatedPawns[side] = C.opposedIsolatedPawns[side];
-    c->openIsolatedPawns[side] = C.openIsolatedPawns[side];
-    c->backwardsPawns[side] = C.backwardsPawns[side];
-
-    for (int r = 0; r < 8; r++) {
-      c->connectedPawn[side][r] = C.connectedPawn[side][r];
-      c->candidatePasser[side][r] = C.candidatePasser[side][r];
-      c->passedPawn[side][r] = C.passedPawn[side][r];
-    }
-
-    c->passedPawnAdvance[side] = C.passedPawnAdvance[side];
-    c->passedPawnEdgeDistance[side] = C.passedPawnEdgeDistance[side];
-    c->passedPawnKingProximity[side] = C.passedPawnKingProximity[side];
-
-    c->rookOpenFile[side] = C.rookOpenFile[side];
-    c->rookSemiOpen[side] = C.rookSemiOpen[side];
-    c->rookOppositeKing[side] = C.rookOppositeKing[side];
-    c->rookAdjacentKing[side] = C.rookAdjacentKing[side];
-    c->rookTrapped[side] = C.rookTrapped[side];
-    c->rookOpenFile[side] = C.rookOpenFile[side];
-
-    for (int i = 0; i < 6; i++) {
-      c->knightThreats[side][i] = C.knightThreats[side][i];
-      c->bishopThreats[side][i] = C.bishopThreats[side][i];
-      c->rookThreats[side][i] = C.rookThreats[side][i];
-      c->kingThreats[side][i] = C.kingThreats[side][i];
-    }
-
-    c->pawnThreat[side] = C.pawnThreat[side];
-    c->hangingThreat[side] = C.hangingThreat[side];
-
-    c->ks[side] = C.ks[side];
-  }
+  memcpy(&position->coeffs, &C, sizeof(EvalCoeffs));
 }
 
 Position* LoadPositions(int* n) {
@@ -1142,6 +1123,9 @@ void InitThreatWeights(Weights* weights) {
   weights->pawnThreat.mg.value = scoreMG(PAWN_THREAT);
   weights->pawnThreat.eg.value = scoreEG(PAWN_THREAT);
 
+  weights->pawnPushThreat.mg.value = scoreMG(PAWN_PUSH_THREAT);
+  weights->pawnPushThreat.eg.value = scoreEG(PAWN_PUSH_THREAT);
+
   weights->hangingThreat.mg.value = scoreMG(HANGING_THREAT);
   weights->hangingThreat.eg.value = scoreEG(HANGING_THREAT);
 }
@@ -1162,17 +1146,17 @@ void InitPieceBonusWeights(Weights* weights) {
   weights->rookTrapped.mg.value = scoreMG(ROOK_TRAPPED);
   weights->rookTrapped.eg.value = scoreEG(ROOK_TRAPPED);
 
+  weights->badBishopPawns.mg.value = scoreMG(BAD_BISHOP_PAWNS);
+  weights->badBishopPawns.eg.value = scoreEG(BAD_BISHOP_PAWNS);
+
+  weights->dragonBishop.mg.value = scoreMG(DRAGON_BISHOP);
+  weights->dragonBishop.eg.value = scoreEG(DRAGON_BISHOP);
+
   weights->rookOpenFile.mg.value = scoreMG(ROOK_OPEN_FILE);
   weights->rookOpenFile.eg.value = scoreEG(ROOK_OPEN_FILE);
 
   weights->rookSemiOpen.mg.value = scoreMG(ROOK_SEMI_OPEN);
   weights->rookSemiOpen.eg.value = scoreEG(ROOK_SEMI_OPEN);
-
-  weights->rookOppositeKing.mg.value = scoreMG(ROOK_OPPOSITE_KING);
-  weights->rookOppositeKing.eg.value = scoreEG(ROOK_OPPOSITE_KING);
-
-  weights->rookAdjacentKing.mg.value = scoreMG(ROOK_ADJACENT_KING);
-  weights->rookAdjacentKing.eg.value = scoreEG(ROOK_ADJACENT_KING);
 }
 
 void InitPawnBonusWeights(Weights* weights) {
@@ -1213,158 +1197,227 @@ void InitPasserBonusWeights(Weights* weights) {
   weights->passedPawnAdvance.eg.value = scoreEG(PASSED_PAWN_ADVANCE_DEFENDED);
 }
 
-double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 400.0)); }
+void InitPawnShelterWeights(Weights* weights) {
+  for (int f = 0; f < 4; f++) {
+    for (int r = 0; r < 8; r++) {
+      weights->ksPawnShelter[f][r].mg.value = scoreMG(PAWN_SHELTER[f][r]);
+      weights->ksPawnShelter[f][r].eg.value = scoreEG(PAWN_SHELTER[f][r]);
 
-void PrintWeights(Weights* weights) {
-  printf("\n\nconst Score MATERIAL_VALUES[7] = {");
-  PrintWeightArray(weights->material, 5, 0);
-  printf(" S(   0,   0), S(   0,   0) };\n");
+      weights->ksPawnStorm[f][r].mg.value = scoreMG(PAWN_STORM[f][r]);
+      weights->ksPawnStorm[f][r].eg.value = scoreEG(PAWN_STORM[f][r]);
+    }
+  }
 
-  printf("\nconst Score BISHOP_PAIR = ");
-  PrintWeight(&weights->bishopPair);
+  for (int r = 0; r < 8; r++) {
+    weights->ksBlocked[r].mg.value = scoreMG(BLOCKED_PAWN_STORM[r]);
+    weights->ksBlocked[r].eg.value = scoreEG(BLOCKED_PAWN_STORM[r]);
+  }
 
-  printf("\nconst Score PAWN_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[PAWN_TYPE], 32, 4);
-  printf("};\n");
-
-  printf("\nconst Score KNIGHT_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[KNIGHT_TYPE], 32, 4);
-  printf("};\n");
-
-  printf("\nconst Score BISHOP_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[BISHOP_TYPE], 32, 4);
-  printf("};\n");
-
-  printf("\nconst Score ROOK_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[ROOK_TYPE], 32, 4);
-  printf("};\n");
-
-  printf("\nconst Score QUEEN_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[QUEEN_TYPE], 32, 4);
-  printf("};\n");
-
-  printf("\nconst Score KING_PSQT[32] = {\n");
-  PrintWeightArray(weights->psqt[KING_TYPE], 32, 4);
-  printf("};\n");
-
-  printf("\nconst Score KNIGHT_POST_PSQT[32] = {\n");
-  PrintWeightArray(weights->knightPostPsqt, 32, 4);
-  printf("};\n");
-
-  printf("\nconst Score BISHOP_POST_PSQT[32] = {\n");
-  PrintWeightArray(weights->bishopPostPsqt, 32, 4);
-  printf("};\n");
-
-  printf("\nconst Score KNIGHT_MOBILITIES[9] = {\n");
-  PrintWeightArray(weights->knightMobilities, 9, 4);
-  printf("};\n");
-
-  printf("\nconst Score BISHOP_MOBILITIES[14] = {\n");
-  PrintWeightArray(weights->bishopMobilities, 14, 4);
-  printf("};\n");
-
-  printf("\nconst Score ROOK_MOBILITIES[15] = {\n");
-  PrintWeightArray(weights->rookMobilities, 15, 4);
-  printf("};\n");
-
-  printf("\nconst Score QUEEN_MOBILITIES[28] = {\n");
-  PrintWeightArray(weights->queenMobilities, 28, 4);
-  printf("};\n");
-
-  printf("\nconst Score KNIGHT_OUTPOST_REACHABLE = ");
-  PrintWeight(&weights->knightPostReachable);
-
-  printf("\nconst Score BISHOP_OUTPOST_REACHABLE = ");
-  PrintWeight(&weights->bishopPostReachable);
-
-  printf("\nconst Score BISHOP_TRAPPED = ");
-  PrintWeight(&weights->bishopTrapped);
-
-  printf("\nconst Score ROOK_TRAPPED = ");
-  PrintWeight(&weights->rookTrapped);
-
-  printf("\nconst Score ROOK_OPEN_FILE = ");
-  PrintWeight(&weights->rookOpenFile);
-
-  printf("\nconst Score ROOK_SEMI_OPEN = ");
-  PrintWeight(&weights->rookSemiOpen);
-
-  printf("\nconst Score ROOK_OPPOSITE_KING = ");
-  PrintWeight(&weights->rookOppositeKing);
-
-  printf("\nconst Score ROOK_ADJACENT_KING = ");
-  PrintWeight(&weights->rookAdjacentKing);
-
-  printf("\nconst Score DOUBLED_PAWN = ");
-  PrintWeight(&weights->doubledPawns);
-
-  printf("\nconst Score OPPOSED_ISOLATED_PAWN = ");
-  PrintWeight(&weights->opposedIsolatedPawns);
-
-  printf("\nconst Score OPEN_ISOLATED_PAWN = ");
-  PrintWeight(&weights->openIsolatedPawns);
-
-  printf("\nconst Score BACKWARDS_PAWN = ");
-  PrintWeight(&weights->backwardsPawns);
-
-  printf("\nconst Score CONNECTED_PAWN[8] = {\n");
-  PrintWeightArray(weights->connectedPawn, 8, 4);
-  printf("};\n");
-
-  printf("\nconst Score CANDIDATE_PASSER[8] = {\n");
-  PrintWeightArray(weights->candidatePasser, 8, 4);
-  printf("};\n");
-
-  printf("\nconst Score PASSED_PAWN[8] = {\n");
-  PrintWeightArray(weights->passedPawn, 8, 4);
-  printf("};\n");
-
-  printf("\nconst Score PASSED_PAWN_EDGE_DISTANCE = ");
-  PrintWeight(&weights->passedPawnEdgeDistance);
-
-  printf("\nconst Score PASSED_PAWN_KING_PROXIMITY = ");
-  PrintWeight(&weights->passedPawnKingProximity);
-
-  printf("\nconst Score PASSED_PAWN_ADVANCE_DEFENDED = ");
-  PrintWeight(&weights->passedPawnAdvance);
-
-  printf("\nconst Score KNIGHT_THREATS[6] = {");
-  PrintWeightArray(weights->knightThreats, 6, 0);
-  printf("};\n");
-
-  printf("\nconst Score BISHOP_THREATS[6] = {");
-  PrintWeightArray(weights->bishopThreats, 6, 0);
-  printf("};\n");
-
-  printf("\nconst Score ROOK_THREATS[6] = {");
-  PrintWeightArray(weights->rookThreats, 6, 0);
-  printf("};\n");
-
-  printf("\nconst Score KING_THREATS[6] = {");
-  PrintWeightArray(weights->kingThreats, 6, 0);
-  printf("};\n");
-  
-  printf("\nconst Score PAWN_THREAT = ");
-  PrintWeight(&weights->pawnThreat);
-
-  printf("\nconst Score HANGING_THREAT = ");
-  PrintWeight(&weights->hangingThreat);
-
-  printf("\n");
-}
-
-void PrintWeightArray(Weight* weights, int n, int wrap) {
-  for (int i = 0; i < n; i++) {
-    if (wrap)
-      printf(" S(%4d,%4d),", (int)round(weights[i].mg.value), (int)round(weights[i].eg.value));
-    else
-      printf(" S(%d, %d),", (int)round(weights[i].mg.value), (int)round(weights[i].eg.value));
-
-    if (wrap && i % wrap == wrap - 1)
-      printf("\n");
+  for (int f = 0; f < 4; f++) {
+    weights->ksFile[f].mg.value = scoreMG(KS_KING_FILE[f]);
+    weights->ksFile[f].eg.value = scoreEG(KS_KING_FILE[f]);
   }
 }
 
-void PrintWeight(Weight* weight) { printf("S(%d, %d);\n", (int)round(weight->mg.value), (int)round(weight->eg.value)); }
+double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 400.0)); }
+
+void PrintWeights(Weights* weights, int epoch, double error) {
+  FILE* fp;
+  fp = fopen("weights.out", "a");
+
+  if (fp == NULL)
+    return;
+
+  fprintf(fp, "Epoch: %d, Error: %f\n", epoch, error);
+
+  fprintf(fp, "\nconst Score MATERIAL_VALUES[7] = {");
+  PrintWeightArray(fp, weights->material, 5, 0);
+  fprintf(fp, " S(   0,   0), S(   0,   0) };\n");
+
+  fprintf(fp, "\nconst Score BISHOP_PAIR = ");
+  PrintWeight(fp, &weights->bishopPair);
+
+  fprintf(fp, "\nconst Score PAWN_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[PAWN_TYPE], 32, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score KNIGHT_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[KNIGHT_TYPE], 32, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score BISHOP_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[BISHOP_TYPE], 32, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score ROOK_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[ROOK_TYPE], 32, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score QUEEN_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[QUEEN_TYPE], 32, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score KING_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->psqt[KING_TYPE], 32, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score KNIGHT_POST_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->knightPostPsqt, 32, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score BISHOP_POST_PSQT[32] = {\n");
+  PrintWeightArray(fp, weights->bishopPostPsqt, 32, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score KNIGHT_MOBILITIES[9] = {\n");
+  PrintWeightArray(fp, weights->knightMobilities, 9, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score BISHOP_MOBILITIES[14] = {\n");
+  PrintWeightArray(fp, weights->bishopMobilities, 14, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score ROOK_MOBILITIES[15] = {\n");
+  PrintWeightArray(fp, weights->rookMobilities, 15, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score QUEEN_MOBILITIES[28] = {\n");
+  PrintWeightArray(fp, weights->queenMobilities, 28, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score KNIGHT_OUTPOST_REACHABLE = ");
+  PrintWeight(fp, &weights->knightPostReachable);
+
+  fprintf(fp, "\nconst Score BISHOP_OUTPOST_REACHABLE = ");
+  PrintWeight(fp, &weights->bishopPostReachable);
+
+  fprintf(fp, "\nconst Score BISHOP_TRAPPED = ");
+  PrintWeight(fp, &weights->bishopTrapped);
+
+  fprintf(fp, "\nconst Score ROOK_TRAPPED = ");
+  PrintWeight(fp, &weights->rookTrapped);
+
+  fprintf(fp, "\nconst Score BAD_BISHOP_PAWNS = ");
+  PrintWeight(fp, &weights->badBishopPawns);
+
+  fprintf(fp, "\nconst Score DRAGON_BISHOP = ");
+  PrintWeight(fp, &weights->dragonBishop);
+
+  fprintf(fp, "\nconst Score ROOK_OPEN_FILE = ");
+  PrintWeight(fp, &weights->rookOpenFile);
+
+  fprintf(fp, "\nconst Score ROOK_SEMI_OPEN = ");
+  PrintWeight(fp, &weights->rookSemiOpen);
+
+  fprintf(fp, "\nconst Score DOUBLED_PAWN = ");
+  PrintWeight(fp, &weights->doubledPawns);
+
+  fprintf(fp, "\nconst Score OPPOSED_ISOLATED_PAWN = ");
+  PrintWeight(fp, &weights->opposedIsolatedPawns);
+
+  fprintf(fp, "\nconst Score OPEN_ISOLATED_PAWN = ");
+  PrintWeight(fp, &weights->openIsolatedPawns);
+
+  fprintf(fp, "\nconst Score BACKWARDS_PAWN = ");
+  PrintWeight(fp, &weights->backwardsPawns);
+
+  fprintf(fp, "\nconst Score CONNECTED_PAWN[8] = {\n");
+  PrintWeightArray(fp, weights->connectedPawn, 8, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score CANDIDATE_PASSER[8] = {\n");
+  PrintWeightArray(fp, weights->candidatePasser, 8, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score PASSED_PAWN[8] = {\n");
+  PrintWeightArray(fp, weights->passedPawn, 8, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score PASSED_PAWN_EDGE_DISTANCE = ");
+  PrintWeight(fp, &weights->passedPawnEdgeDistance);
+
+  fprintf(fp, "\nconst Score PASSED_PAWN_KING_PROXIMITY = ");
+  PrintWeight(fp, &weights->passedPawnKingProximity);
+
+  fprintf(fp, "\nconst Score PASSED_PAWN_ADVANCE_DEFENDED = ");
+  PrintWeight(fp, &weights->passedPawnAdvance);
+
+  fprintf(fp, "\nconst Score KNIGHT_THREATS[6] = {");
+  PrintWeightArray(fp, weights->knightThreats, 6, 0);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score BISHOP_THREATS[6] = {");
+  PrintWeightArray(fp, weights->bishopThreats, 6, 0);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score ROOK_THREATS[6] = {");
+  PrintWeightArray(fp, weights->rookThreats, 6, 0);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score KING_THREATS[6] = {");
+  PrintWeightArray(fp, weights->kingThreats, 6, 0);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score PAWN_THREAT = ");
+  PrintWeight(fp, &weights->pawnThreat);
+
+  fprintf(fp, "\nconst Score PAWN_PUSH_THREAT = ");
+  PrintWeight(fp, &weights->pawnPushThreat);
+
+  fprintf(fp, "\nconst Score HANGING_THREAT = ");
+  PrintWeight(fp, &weights->hangingThreat);
+
+  fprintf(fp, "\nconst Score PAWN_SHELTER[4][8] = {\n");
+  fprintf(fp, " {");
+  PrintWeightArray(fp, weights->ksPawnShelter[0], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnShelter[1], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnShelter[2], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnShelter[3], 8, 0);
+  fprintf(fp, "},\n");
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score PAWN_STORM[4][8] = {\n");
+  fprintf(fp, " {");
+  PrintWeightArray(fp, weights->ksPawnStorm[0], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnStorm[1], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnStorm[2], 8, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->ksPawnStorm[3], 8, 0);
+  fprintf(fp, "},\n");
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score BLOCKED_PAWN_STORM[8] = {\n");
+  PrintWeightArray(fp, weights->ksBlocked, 8, 0);
+  fprintf(fp, "\n};\n");
+
+  fprintf(fp, "\nconst Score KS_KING_FILE[4] = {");
+  PrintWeightArray(fp, weights->ksFile, 4, 0);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\n");
+
+  fclose(fp);
+}
+
+void PrintWeightArray(FILE* fp, Weight* weights, int n, int wrap) {
+  for (int i = 0; i < n; i++) {
+    if (wrap)
+      fprintf(fp, " S(%4d,%4d),", (int)round(weights[i].mg.value), (int)round(weights[i].eg.value));
+    else
+      fprintf(fp, " S(%d, %d),", (int)round(weights[i].mg.value), (int)round(weights[i].eg.value));
+
+    if (wrap && i % wrap == wrap - 1)
+      fprintf(fp, "\n");
+  }
+}
+
+void PrintWeight(FILE* fp, Weight* weight) {
+  fprintf(fp, "S(%d, %d);\n", (int)round(weight->mg.value), (int)round(weight->eg.value));
+}
 
 #endif

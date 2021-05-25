@@ -57,24 +57,6 @@ const BitBoard HOME_RANKS[] = {RANK_2, RANK_7};
 const BitBoard THIRD_RANKS[] = {RANK_3, RANK_6};
 const BitBoard FILLED = -1ULL;
 
-inline void AddKillerMove(SearchData* data, Move move) {
-  // Prevent duplicate
-  if (data->killers[data->ply][0] == move)
-    data->killers[data->ply][1] = data->killers[data->ply][0];
-
-  data->killers[data->ply][0] = move;
-}
-
-inline void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[MoveStartEnd(parent)] = move; }
-
-inline void AddHistoryHeuristic(SearchData* data, Move move, int sideToMove, int depth) {
-  data->hh[sideToMove][MoveStartEnd(move)] += min(225, depth * depth);
-}
-
-inline void AddBFHeuristic(SearchData* data, Move move, int sideToMove, int depth) {
-  data->bf[sideToMove][MoveStartEnd(move)] += min(225, depth * depth);
-}
-
 inline void AppendMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
 
 // Move generation is pretty similar across all piece types with captures and quiets.
@@ -501,7 +483,7 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
     int see = SEE(board, move);
     if (MoveEP(move))
       see += STATIC_MATERIAL_VALUE[PAWN_TYPE];
-    
+
     moveList->scores[i] = see;
   }
 }
@@ -582,8 +564,9 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
   }
 
   // Get the hash move for sorting
-  TTValue ttValue = TTProbe(board->zobrist); // TODO: Don't I know this already from the search?
-  Move hashMove = TTMove(ttValue);
+  int ttHit = 0;
+  TTEntry* tt = TTProbe(&ttHit, board->zobrist); // TODO: Don't I know this already from the search?
+  Move hashMove = ttHit ? tt->move : NULL_MOVE;
 
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
@@ -623,8 +606,7 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
       // hh is how many times this move caused a beta cutoff (depth scaled)
       // bf is how many times this move was searched and DIDNT cause a beta cutoff (depth scaled)
       // we scale hh by 100 for granularity sake
-      moveList->scores[i] =
-          100 * data->hh[board->side][MoveStartEnd(move)] / max(1, data->bf[board->side][MoveStartEnd(move)]);
+      moveList->scores[i] = data->hh[board->side][MoveStartEnd(move)];
     }
   }
 }

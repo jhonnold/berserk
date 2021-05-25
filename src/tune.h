@@ -3,10 +3,12 @@
 #ifndef TUNE_H
 #define TUNE_H
 
+#include <stdio.h>
+
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean.epd"
-#define THREADS 16
+#define EPD_FILE_PATH "/Users/jhonnold/Downloads/texel-set-clean.epd"
+#define THREADS 1
 
 typedef struct {
   int epoch;
@@ -38,10 +40,10 @@ typedef struct {
   Weight bishopPostReachable;
   Weight bishopTrapped;
   Weight rookTrapped;
+  Weight badBishopPawns;
+  Weight dragonBishop;
   Weight rookOpenFile;
   Weight rookSemiOpen;
-  Weight rookOppositeKing;
-  Weight rookAdjacentKing;
 
   Weight doubledPawns;
   Weight opposedIsolatedPawns;
@@ -60,6 +62,7 @@ typedef struct {
   Weight rookThreats[6];
   Weight kingThreats[6];
   Weight pawnThreat;
+  Weight pawnPushThreat;
   Weight hangingThreat;
 
   Weight ksAttackerWeight[5];
@@ -77,10 +80,10 @@ typedef struct {
 } Weights;
 
 typedef struct {
-  int8_t phase;
+  uint8_t phase;
   int8_t stm;
   float result;
-  float scale;
+  int scale;
   float phaseMg;
   float phaseEg;
   Score staticEval;
@@ -101,7 +104,7 @@ void DetermineK(int n, Position* positions);
 
 void UpdateParam(Param* p);
 void UpdateWeights(Weights* weights);
-void UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights);
+double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights);
 
 void* UpdateGradients(void* arg);
 void UpdateMaterialGradients(Position* position, double loss, Weights* weights);
@@ -112,6 +115,7 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights);
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights);
+void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights);
 
 double EvaluateCoeffs(Position* position, Weights* weights);
 void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights);
@@ -122,6 +126,7 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights);
+void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights);
 
 void InitMaterialWeights(Weights* weights);
 void InitPsqtWeights(Weights* weights);
@@ -132,17 +137,16 @@ void InitThreatWeights(Weights* weights);
 void InitPieceBonusWeights(Weights* weights);
 void InitPawnBonusWeights(Weights* weights);
 void InitPasserBonusWeights(Weights* weights);
+void InitPawnShelterWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
-void ResetCoeffs();
-void CopyCoeffsInto(EvalCoeffs* c);
 Position* LoadPositions(int* n);
 
 double Sigmoid(double s);
 
-void PrintWeights(Weights* weights);
-void PrintWeightArray(Weight* weights, int n, int wrap);
-void PrintWeight(Weight* weight);
+void PrintWeights(Weights* weights, int epoch, double error);
+void PrintWeightArray(FILE* fp, Weight* weights, int n, int wrap);
+void PrintWeight(FILE* fp, Weight* weight);
 
 #endif
 #endif

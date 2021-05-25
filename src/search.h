@@ -19,15 +19,27 @@
 
 #include "types.h"
 
-extern const int CHECKMATE;
-extern const int MATE_BOUND;
+// search specific score evals
+#define CHECKMATE INT16_MAX
+#define MATE_BOUND 30000
+#define TB_WIN_BOUND 20000
 
-extern int RFP_BASE;
-extern int RFP_STEP_RISE;
-extern int RFP[];
-extern int SEE_PRUNE_CAPTURE_CUTOFF;
-extern int SEE_PRUNE_CUTOFF;
-extern int DELTA_CUTOFF;
+// reverse futility pruning values
+// these 2 values go 65 -> 135 -> 210 -> 290 -> ...
+#define RFP_BASE 65
+#define RFP_STEP_RISE 5
+
+// static evaluation pruning
+// capture cutoff is linear 70x
+// quiet cutoff is quadratic 20x^2
+#define SEE_PRUNE_CAPTURE_CUTOFF 70
+#define SEE_PRUNE_CUTOFF 20
+
+// delta pruning in QS
+#define DELTA_CUTOFF 150
+
+// base window value
+#define WINDOW 8
 
 void InitPruningAndReductionTables();
 

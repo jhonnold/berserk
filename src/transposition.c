@@ -21,89 +21,92 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__linux__)
+#include <sys/mman.h>
+#endif
+
 #include "bits.h"
 #include "search.h"
 #include "transposition.h"
 #include "types.h"
 
-// Berserk's transposition table is just a giant array of longs
-// Even indicies store the key, odd indicies story the entry
-// For collisions, conflicting hashes have buckets of size 2
-// TODO: Check to see what happens with bucket size 1 or 4?
-
 // Global TT
-TTValue* TRANSPOSITION_ENTRIES = NULL;
-size_t SIZE = 0;
-int POWER = 0;
+TTTable TT = {0};
 
-const TTValue NO_ENTRY = 0ULL;
+size_t TTInit(int mb) {
+  if (TT.mask)
+    TTFree();
 
-void TTInit(int mb) {
-  POWER = (int)log2(0x100000 / sizeof(TTValue)) + (int)log2(mb) - (int)log2(BUCKET_SIZE) - 1;
+  uint64_t keySize = (uint64_t)log2(mb) + (uint64_t)log2(MEGABYTE / sizeof(TTBucket));
 
-  if (TRANSPOSITION_ENTRIES != NULL)
-    free(TRANSPOSITION_ENTRIES);
+#if defined(__linux__) && !defined(__ANDROID__)
+  // On Linux systems we align on 2MB boundaries and request Huge Pages
+  TT.buckets = aligned_alloc(2 * MEGABYTE, (1ULL << keySize) * sizeof(TTBucket));
+  madvise(TT.buckets, (1ULL << keySize) * sizeof(TTBucket), MADV_HUGEPAGE);
+#else
+  TT.buckets = calloc((1ULL << keySize), sizeof(TTBucket));
+#endif
 
-  SIZE = (1ULL << POWER) * sizeof(TTValue) * BUCKET_SIZE * 2;
-  TRANSPOSITION_ENTRIES = malloc(SIZE);
+  TT.mask = (1ULL << keySize) - 1ULL;
 
   TTClear();
+  return (TT.mask + 1ULL) * sizeof(TTBucket);
 }
 
-void TTFree() { free(TRANSPOSITION_ENTRIES); }
+void TTFree() { free(TT.buckets); }
 
-inline void TTClear() { memset(TRANSPOSITION_ENTRIES, 0, SIZE); }
+inline void TTClear() { memset(TT.buckets, 0, (TT.mask + 1ULL) * sizeof(TTBucket)); }
 
-inline int TTScore(TTValue value, int ply) {
-  int score = (int)((int16_t)((value & 0x0000FFFF00000000) >> 32));
-
-  return score > MATE_BOUND ? score - ply : score < -MATE_BOUND ? score + ply : score;
+inline int TTScore(TTEntry* e, int ply) {
+  return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
 }
 
-inline void TTPrefetch(uint64_t hash) { __builtin_prefetch(&TRANSPOSITION_ENTRIES[TTIdx(hash)]); }
+inline void TTPrefetch(uint64_t hash) { __builtin_prefetch(&TT.buckets[TT.mask & hash]); }
 
-inline TTValue TTProbe(uint64_t hash) {
-#ifdef TUNE
-  return NO_ENTRY;
-#else
-  uint64_t idx = TTIdx(hash);
+inline TTEntry* TTProbe(int* hit, uint64_t hash) {
+#ifndef TUNE
+  TTBucket* bucket = &TT.buckets[TT.mask & hash];
+  uint32_t shortHash = hash >> 32;
 
-  for (uint64_t i = idx; i < idx + BUCKET_SIZE * 2; i += 2)
-    if (TRANSPOSITION_ENTRIES[i] == hash)
-      return TRANSPOSITION_ENTRIES[i + 1];
-
-  return NO_ENTRY;
+  for (int i = 0; i < BUCKET_SIZE; i++)
+    if (bucket->entries[i].hash == shortHash) {
+      *hit = 1;
+      return &bucket->entries[i];
+    }
 #endif
+
+  return 0;
 }
 
-inline TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, int ply, int eval) {
+inline void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval) {
 #ifdef TUNE
-  return NO_ENTRY;
+  return;
 #else
 
-  uint64_t idx = TTIdx(hash);
+  TTBucket* bucket = &TT.buckets[TT.mask & hash];
+  uint32_t shortHash = hash >> 32;
+
   int replacementDepth = INT32_MAX;
-  uint64_t replacementIdx = idx;
+  int replacementIdx = 0;
 
-  for (uint64_t i = idx; i < idx + BUCKET_SIZE * 2; i += 2) {
-    uint64_t currHash = TRANSPOSITION_ENTRIES[i];
-    if (currHash == 0) {
+  for (int i = 0; i < BUCKET_SIZE; i++) {
+    TTEntry* entry = &bucket->entries[i];
+    if (!entry->hash) {
       replacementIdx = i;
       break;
     }
 
-    int currDepth = TTDepth(TRANSPOSITION_ENTRIES[i + 1]);
-    if (TRANSPOSITION_ENTRIES[i] == hash) {
-      if (currDepth > depth && flag != TT_EXACT)
-        return TRANSPOSITION_ENTRIES[i + 1];
+    if (entry->hash == shortHash) {
+      if (entry->depth > depth && !(flag & TT_EXACT))
+        return;
 
       replacementIdx = i;
       break;
     }
 
-    if (currDepth < replacementDepth) {
+    if (entry->depth < replacementDepth) {
       replacementIdx = i;
-      replacementDepth = currDepth;
+      replacementDepth = entry->depth;
     }
   }
 
@@ -113,20 +116,22 @@ inline TTValue TTPut(uint64_t hash, int depth, int score, int flag, Move move, i
   else if (score < -MATE_BOUND)
     adjustedScore -= ply;
 
-  assert(adjustedScore <= INT16_MAX);
-  assert(adjustedScore >= INT16_MIN);
-  assert(eval <= INT16_MAX);
-  assert(eval >= INT16_MIN);
-
-  TRANSPOSITION_ENTRIES[replacementIdx] = hash;
-  TTValue tt = TRANSPOSITION_ENTRIES[replacementIdx + 1] = TTEntry(adjustedScore, flag, depth, move, eval);
-
-  assert(depth == TTDepth(tt));
-  assert(score == TTScore(tt, ply));
-  assert(flag == TTFlag(tt));
-  assert(move == TTMove(tt));
-  assert(eval == TTEval(tt));
-
-  return tt;
+  TTEntry* entry = &bucket->entries[replacementIdx];
+  *entry = (TTEntry){.flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move};
 #endif
+}
+
+inline int TTFull() {
+  int c = 1000 / BUCKET_SIZE;
+  int t = 0;
+
+  for (int i = 0; i < c; i++) {
+    TTBucket b = TT.buckets[i];
+    for (int j = 0; j < BUCKET_SIZE; j++) {
+      if (b.entries[j].hash)
+        t++;
+    }
+  }
+
+  return t * 1000 / (c * BUCKET_SIZE);
 }
