@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "bench.h"
 #include "board.h"
@@ -117,4 +118,6 @@ void Bench() {
     totalNodes += nodes[i];
 
   printf("\nResults: %41d nodes %8d nps\n\n", totalNodes, (int)(1000.0 * totalNodes / (totalTime + 1)));
+
+  free(threads);
 }

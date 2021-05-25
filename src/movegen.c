@@ -564,8 +564,9 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
   }
 
   // Get the hash move for sorting
-  TTValue ttValue = TTProbe(board->zobrist); // TODO: Don't I know this already from the search?
-  Move hashMove = TTMove(ttValue);
+  int ttHit = 0;
+  TTEntry* tt = TTProbe(&ttHit, board->zobrist); // TODO: Don't I know this already from the search?
+  Move hashMove = ttHit ? tt->move : NULL_MOVE;
 
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
