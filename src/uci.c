@@ -32,7 +32,7 @@
 #include "pyrrhic/tbprobe.h"
 
 #define NAME "Berserk"
-#define VERSION "4.2.0"
+#define VERSION "4.3.0-dev"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
