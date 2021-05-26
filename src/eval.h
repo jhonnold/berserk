@@ -64,6 +64,7 @@ extern const Score DRAGON_BISHOP;
 extern const Score ROOK_OPEN_FILE;
 extern const Score ROOK_SEMI_OPEN;
 
+extern const Score DEFENDED_PAWN;
 extern const Score DOUBLED_PAWN;
 extern const Score OPPOSED_ISOLATED_PAWN;
 extern const Score OPEN_ISOLATED_PAWN;

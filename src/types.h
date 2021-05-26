@@ -133,6 +133,7 @@ typedef struct {
   int8_t rookOpenFile;
   int8_t rookSemiOpen;
 
+  int8_t defendedPawns;
   int8_t doubledPawns;
   int8_t opposedIsolatedPawns;
   int8_t openIsolatedPawns;

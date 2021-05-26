@@ -49,7 +49,8 @@ void Tune() {
   for (int epoch = 1; epoch < 10000; epoch++) {
     double error = UpdateAndTrain(epoch, n, positions, &weights);
 
-    PrintWeights(&weights, epoch, error);
+    if (epoch % 10 == 0)
+      PrintWeights(&weights, epoch, error);
   }
 
   free(positions);
@@ -186,6 +187,8 @@ void UpdateWeights(Weights* weights) {
   UpdateWeight(&weights->rookOpenFile);
 
   UpdateWeight(&weights->rookSemiOpen);
+
+  UpdateWeight(&weights->defendedPawns);
 
   UpdateWeight(&weights->doubledPawns);
 
@@ -344,6 +347,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->rookSemiOpen.mg.g += w->rookSemiOpen.mg.g;
     weights->rookSemiOpen.eg.g += w->rookSemiOpen.eg.g;
+
+    weights->defendedPawns.mg.g += w->defendedPawns.mg.g;
+    weights->defendedPawns.eg.g += w->defendedPawns.eg.g;
 
     weights->doubledPawns.mg.g += w->doubledPawns.mg.g;
     weights->doubledPawns.eg.g += w->doubledPawns.eg.g;
@@ -560,6 +566,9 @@ void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights)
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
+  weights->defendedPawns.mg.g += position->coeffs.defendedPawns * mgBase;
+  weights->defendedPawns.eg.g += position->coeffs.defendedPawns * egBase;
+
   weights->doubledPawns.mg.g += position->coeffs.doubledPawns * mgBase;
   weights->doubledPawns.eg.g += position->coeffs.doubledPawns * egBase;
 
@@ -710,6 +719,7 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
 }
 
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
+  ApplyCoeff(mg, eg, position->coeffs.defendedPawns, &weights->defendedPawns);
   ApplyCoeff(mg, eg, position->coeffs.doubledPawns, &weights->doubledPawns);
   ApplyCoeff(mg, eg, position->coeffs.opposedIsolatedPawns, &weights->opposedIsolatedPawns);
   ApplyCoeff(mg, eg, position->coeffs.openIsolatedPawns, &weights->openIsolatedPawns);
@@ -937,6 +947,9 @@ void InitPieceBonusWeights(Weights* weights) {
 }
 
 void InitPawnBonusWeights(Weights* weights) {
+  weights->defendedPawns.mg.value = scoreMG(DEFENDED_PAWN);
+  weights->defendedPawns.eg.value = scoreEG(DEFENDED_PAWN);
+
   weights->doubledPawns.mg.value = scoreMG(DOUBLED_PAWN);
   weights->doubledPawns.eg.value = scoreEG(DOUBLED_PAWN);
 
@@ -1085,6 +1098,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score ROOK_SEMI_OPEN = ");
   PrintWeight(fp, &weights->rookSemiOpen);
+
+  fprintf(fp, "\nconst Score DEFENDED_PAWN = ");
+  PrintWeight(fp, &weights->defendedPawns);
 
   fprintf(fp, "\nconst Score DOUBLED_PAWN = ");
   PrintWeight(fp, &weights->doubledPawns);

@@ -56,6 +56,11 @@ Score PawnEval(Board* board, EvalData* data, int side) {
                  // make sure we don't double count passers
                  !(board->pieces[PAWN[side]] & FORWARD_RANK_MASKS[side][rank] & FILE_MASKS[file]);
 
+    s += DEFENDED_PAWN * bits(defenders);
+
+    if (T)
+      C.defendedPawns += cs[side] * bits(defenders);
+
     if (doubled) {
       s += DOUBLED_PAWN;
 

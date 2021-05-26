@@ -7,8 +7,8 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "/Users/jhonnold/Downloads/texel-set-clean.epd"
-#define THREADS 1
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean.epd"
+#define THREADS 8
 
 typedef struct {
   int epoch;
@@ -45,6 +45,7 @@ typedef struct {
   Weight rookOpenFile;
   Weight rookSemiOpen;
 
+  Weight defendedPawns;
   Weight doubledPawns;
   Weight opposedIsolatedPawns;
   Weight openIsolatedPawns;
