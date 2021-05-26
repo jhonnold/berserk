@@ -108,6 +108,11 @@ void DetermineK(int n, Position* positions) {
   printf("Using K of %.9f\n", K);
 }
 
+void UpdateWeight(Weight* w) {
+  UpdateParam(&w->mg);
+  UpdateParam(&w->eg);
+}
+
 void UpdateParam(Param* p) {
   p->epoch++;
 
@@ -127,149 +132,101 @@ void UpdateParam(Param* p) {
 }
 
 void UpdateWeights(Weights* weights) {
-  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-    UpdateParam(&weights->material[pc].mg);
-    UpdateParam(&weights->material[pc].eg);
+  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++)
+    UpdateWeight(&weights->pieces[pc]);
+
+  for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++)
+    for (int sq = 0; sq < 32; sq++)
+      UpdateWeight(&weights->psqt[pc][sq]);
+
+  for (int sq = 0; sq < 12; sq++) {
+    UpdateWeight(&weights->knightPostPsqt[sq]);
+    UpdateWeight(&weights->bishopPostPsqt[sq]);
   }
 
-  for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++) {
-    for (int sq = 0; sq < 32; sq++) {
-      UpdateParam(&weights->psqt[pc][sq].mg);
-      UpdateParam(&weights->psqt[pc][sq].eg);
-    }
-  }
+  for (int c = 0; c < 9; c++)
+    UpdateWeight(&weights->knightMobilities[c]);
 
-  for (int sq = 0; sq < 32; sq++) {
-    UpdateParam(&weights->knightPostPsqt[sq].mg);
-    UpdateParam(&weights->knightPostPsqt[sq].eg);
+  for (int c = 0; c < 14; c++)
+    UpdateWeight(&weights->bishopMobilities[c]);
 
-    UpdateParam(&weights->bishopPostPsqt[sq].mg);
-    UpdateParam(&weights->bishopPostPsqt[sq].eg);
-  }
+  for (int c = 0; c < 15; c++)
+    UpdateWeight(&weights->rookMobilities[c]);
 
-  for (int c = 0; c < 9; c++) {
-    UpdateParam(&weights->knightMobilities[c].mg);
-    UpdateParam(&weights->knightMobilities[c].eg);
-  }
-
-  for (int c = 0; c < 14; c++) {
-    UpdateParam(&weights->bishopMobilities[c].mg);
-    UpdateParam(&weights->bishopMobilities[c].eg);
-  }
-
-  for (int c = 0; c < 15; c++) {
-    UpdateParam(&weights->rookMobilities[c].mg);
-    UpdateParam(&weights->rookMobilities[c].eg);
-  }
-
-  for (int c = 0; c < 28; c++) {
-    UpdateParam(&weights->queenMobilities[c].mg);
-    UpdateParam(&weights->queenMobilities[c].eg);
-  }
+  for (int c = 0; c < 28; c++)
+    UpdateWeight(&weights->queenMobilities[c]);
 
   for (int pc = 0; pc < 6; pc++) {
-    UpdateParam(&weights->knightThreats[pc].mg);
-    UpdateParam(&weights->knightThreats[pc].eg);
-
-    UpdateParam(&weights->bishopThreats[pc].mg);
-    UpdateParam(&weights->bishopThreats[pc].eg);
-
-    UpdateParam(&weights->rookThreats[pc].mg);
-    UpdateParam(&weights->rookThreats[pc].eg);
-
-    UpdateParam(&weights->kingThreats[pc].mg);
-    UpdateParam(&weights->kingThreats[pc].eg);
+    UpdateWeight(&weights->knightThreats[pc]);
+    UpdateWeight(&weights->bishopThreats[pc]);
+    UpdateWeight(&weights->rookThreats[pc]);
+    UpdateWeight(&weights->kingThreats[pc]);
   }
 
-  UpdateParam(&weights->pawnThreat.mg);
-  UpdateParam(&weights->pawnThreat.eg);
+  UpdateWeight(&weights->pawnThreat);
 
-  UpdateParam(&weights->pawnPushThreat.mg);
-  UpdateParam(&weights->pawnPushThreat.eg);
+  UpdateWeight(&weights->pawnPushThreat);
 
-  UpdateParam(&weights->hangingThreat.mg);
-  UpdateParam(&weights->hangingThreat.eg);
+  UpdateWeight(&weights->hangingThreat);
 
-  UpdateParam(&weights->bishopPair.mg);
-  UpdateParam(&weights->bishopPair.eg);
+  UpdateWeight(&weights->bishopPair);
 
-  UpdateParam(&weights->knightPostReachable.mg);
-  UpdateParam(&weights->knightPostReachable.eg);
+  UpdateWeight(&weights->knightPostReachable);
 
-  UpdateParam(&weights->bishopPostReachable.mg);
-  UpdateParam(&weights->bishopPostReachable.eg);
+  UpdateWeight(&weights->bishopPostReachable);
 
-  UpdateParam(&weights->bishopTrapped.mg);
-  UpdateParam(&weights->bishopTrapped.eg);
+  UpdateWeight(&weights->bishopTrapped);
 
-  UpdateParam(&weights->rookTrapped.mg);
-  UpdateParam(&weights->rookTrapped.eg);
+  UpdateWeight(&weights->rookTrapped);
 
-  UpdateParam(&weights->badBishopPawns.mg);
-  UpdateParam(&weights->badBishopPawns.eg);
+  UpdateWeight(&weights->badBishopPawns);
 
-  UpdateParam(&weights->dragonBishop.mg);
-  UpdateParam(&weights->dragonBishop.eg);
+  UpdateWeight(&weights->dragonBishop);
 
-  UpdateParam(&weights->rookOpenFile.mg);
-  UpdateParam(&weights->rookOpenFile.eg);
+  UpdateWeight(&weights->rookOpenFile);
 
-  UpdateParam(&weights->rookSemiOpen.mg);
-  UpdateParam(&weights->rookSemiOpen.eg);
+  UpdateWeight(&weights->rookSemiOpen);
 
-  UpdateParam(&weights->doubledPawns.mg);
-  UpdateParam(&weights->doubledPawns.eg);
+  UpdateWeight(&weights->doubledPawns);
 
-  UpdateParam(&weights->opposedIsolatedPawns.mg);
-  UpdateParam(&weights->opposedIsolatedPawns.eg);
+  UpdateWeight(&weights->opposedIsolatedPawns);
 
-  UpdateParam(&weights->openIsolatedPawns.mg);
-  UpdateParam(&weights->openIsolatedPawns.eg);
+  UpdateWeight(&weights->openIsolatedPawns);
 
-  UpdateParam(&weights->backwardsPawns.mg);
-  UpdateParam(&weights->backwardsPawns.eg);
+  UpdateWeight(&weights->backwardsPawns);
 
   for (int r = 0; r < 8; r++) {
-    UpdateParam(&weights->connectedPawn[r].mg);
-    UpdateParam(&weights->connectedPawn[r].eg);
-
-    UpdateParam(&weights->candidatePasser[r].mg);
-    UpdateParam(&weights->candidatePasser[r].eg);
+    UpdateWeight(&weights->connectedPawn[r]);
+    UpdateWeight(&weights->candidatePasser[r]);
   }
 
-  for (int r = 0; r < 8; r++) {
-    UpdateParam(&weights->passedPawn[r].mg);
-    UpdateParam(&weights->passedPawn[r].eg);
-  }
+  for (int r = 0; r < 8; r++)
+    UpdateWeight(&weights->passedPawn[r]);
 
-  UpdateParam(&weights->passedPawnEdgeDistance.mg);
-  UpdateParam(&weights->passedPawnEdgeDistance.eg);
+  UpdateWeight(&weights->passedPawnEdgeDistance);
 
-  UpdateParam(&weights->passedPawnKingProximity.mg);
-  UpdateParam(&weights->passedPawnKingProximity.eg);
+  UpdateWeight(&weights->passedPawnKingProximity);
 
-  UpdateParam(&weights->passedPawnAdvance.mg);
-  UpdateParam(&weights->passedPawnAdvance.eg);
+  UpdateWeight(&weights->passedPawnAdvance);
 
   for (int f = 0; f < 4; f++) {
     for (int r = 0; r < 8; r++) {
-      UpdateParam(&weights->ksPawnShelter[f][r].mg);
-      UpdateParam(&weights->ksPawnShelter[f][r].eg);
+      UpdateWeight(&weights->pawnShelter[f][r]);
 
-      UpdateParam(&weights->ksPawnStorm[f][r].mg);
-      UpdateParam(&weights->ksPawnStorm[f][r].eg);
+      UpdateWeight(&weights->pawnStorm[f][r]);
     }
   }
 
-  for (int r = 0; r < 8; r++) {
-    UpdateParam(&weights->ksBlocked[r].mg);
-    UpdateParam(&weights->ksBlocked[r].eg);
-  }
+  for (int r = 0; r < 8; r++)
+    UpdateWeight(&weights->blockedPawnStorm[r]);
 
-  for (int f = 0; f < 4; f++) {
-    UpdateParam(&weights->ksFile[f].mg);
-    UpdateParam(&weights->ksFile[f].eg);
-  }
+  for (int f = 0; f < 4; f++)
+    UpdateWeight(&weights->kingFile[f]);
+}
+
+void MergeWeightGradients(Weight* dest, Weight* src) {
+  dest->mg.g += src->mg.g;
+  dest->eg.g += src->eg.g;
 }
 
 double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
@@ -296,12 +253,11 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
   double error = 0;
   for (int t = 0; t < THREADS; t++) {
     error += jobs[t].error;
-
     Weights* w = jobs[t].weights;
 
     for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-      weights->material[pc].mg.g += w->material[pc].mg.g;
-      weights->material[pc].eg.g += w->material[pc].eg.g;
+      weights->pieces[pc].mg.g += w->pieces[pc].mg.g;
+      weights->pieces[pc].eg.g += w->pieces[pc].eg.g;
     }
 
     weights->bishopPair.mg.g += w->bishopPair.mg.g;
@@ -314,7 +270,7 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
       }
     }
 
-    for (int sq = 0; sq < 32; sq++) {
+    for (int sq = 0; sq < 12; sq++) {
       weights->knightPostPsqt[sq].mg.g += w->knightPostPsqt[sq].mg.g;
       weights->knightPostPsqt[sq].eg.g += w->knightPostPsqt[sq].eg.g;
 
@@ -425,22 +381,22 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     for (int f = 0; f < 4; f++) {
       for (int r = 0; r < 8; r++) {
-        weights->ksPawnShelter[f][r].mg.g += w->ksPawnShelter[f][r].mg.g;
-        weights->ksPawnShelter[f][r].eg.g += w->ksPawnShelter[f][r].eg.g;
+        weights->pawnShelter[f][r].mg.g += w->pawnShelter[f][r].mg.g;
+        weights->pawnShelter[f][r].eg.g += w->pawnShelter[f][r].eg.g;
 
-        weights->ksPawnStorm[f][r].mg.g += w->ksPawnStorm[f][r].mg.g;
-        weights->ksPawnStorm[f][r].eg.g += w->ksPawnStorm[f][r].eg.g;
+        weights->pawnStorm[f][r].mg.g += w->pawnStorm[f][r].mg.g;
+        weights->pawnStorm[f][r].eg.g += w->pawnStorm[f][r].eg.g;
       }
     }
 
     for (int r = 0; r < 8; r++) {
-      weights->ksBlocked[r].mg.g += w->ksBlocked[r].mg.g;
-      weights->ksBlocked[r].eg.g += w->ksBlocked[r].eg.g;
+      weights->blockedPawnStorm[r].mg.g += w->blockedPawnStorm[r].mg.g;
+      weights->blockedPawnStorm[r].eg.g += w->blockedPawnStorm[r].eg.g;
     }
 
     for (int r = 0; r < 4; r++) {
-      weights->ksFile[r].mg.g += w->ksFile[r].mg.g;
-      weights->ksFile[r].eg.g += w->ksFile[r].eg.g;
+      weights->kingFile[r].mg.g += w->kingFile[r].mg.g;
+      weights->kingFile[r].eg.g += w->kingFile[r].eg.g;
     }
   }
 
@@ -485,8 +441,8 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights) 
   double egBase = position->phaseEg * position->scale * loss;
 
   for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-    weights->material[pc].mg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * mgBase;
-    weights->material[pc].eg.g += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * egBase;
+    weights->pieces[pc].mg.g += position->coeffs.pieces[pc] * mgBase;
+    weights->pieces[pc].eg.g += position->coeffs.pieces[pc] * egBase;
   }
 }
 
@@ -496,10 +452,8 @@ void UpdatePsqtGradients(Position* position, double loss, Weights* weights) {
 
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++) {
     for (int sq = 0; sq < 32; sq++) {
-      weights->psqt[pc][sq].mg.g +=
-          (position->coeffs.psqt[WHITE][pc][sq] - position->coeffs.psqt[BLACK][pc][sq]) * mgBase;
-      weights->psqt[pc][sq].eg.g +=
-          (position->coeffs.psqt[WHITE][pc][sq] - position->coeffs.psqt[BLACK][pc][sq]) * egBase;
+      weights->psqt[pc][sq].mg.g += position->coeffs.psqt[pc][sq] * mgBase;
+      weights->psqt[pc][sq].eg.g += position->coeffs.psqt[pc][sq] * egBase;
     }
   }
 }
@@ -508,16 +462,12 @@ void UpdatePostPsqtGradients(Position* position, double loss, Weights* weights) 
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  for (int sq = 0; sq < 32; sq++) {
-    weights->knightPostPsqt[sq].mg.g +=
-        (position->coeffs.knightPostPsqt[WHITE][sq] - position->coeffs.knightPostPsqt[BLACK][sq]) * mgBase;
-    weights->knightPostPsqt[sq].eg.g +=
-        (position->coeffs.knightPostPsqt[WHITE][sq] - position->coeffs.knightPostPsqt[BLACK][sq]) * egBase;
+  for (int sq = 0; sq < 12; sq++) {
+    weights->knightPostPsqt[sq].mg.g += position->coeffs.knightPostPsqt[sq] * mgBase;
+    weights->knightPostPsqt[sq].eg.g += position->coeffs.knightPostPsqt[sq] * egBase;
 
-    weights->bishopPostPsqt[sq].mg.g +=
-        (position->coeffs.bishopPostPsqt[WHITE][sq] - position->coeffs.bishopPostPsqt[BLACK][sq]) * mgBase;
-    weights->bishopPostPsqt[sq].eg.g +=
-        (position->coeffs.bishopPostPsqt[WHITE][sq] - position->coeffs.bishopPostPsqt[BLACK][sq]) * egBase;
+    weights->bishopPostPsqt[sq].mg.g += position->coeffs.bishopPostPsqt[sq] * mgBase;
+    weights->bishopPostPsqt[sq].eg.g += position->coeffs.bishopPostPsqt[sq] * egBase;
   }
 }
 
@@ -526,31 +476,23 @@ void UpdateMobilityGradients(Position* position, double loss, Weights* weights) 
   double egBase = position->phaseEg * position->scale * loss;
 
   for (int c = 0; c < 9; c++) {
-    weights->knightMobilities[c].mg.g +=
-        (position->coeffs.knightMobilities[WHITE][c] - position->coeffs.knightMobilities[BLACK][c]) * mgBase;
-    weights->knightMobilities[c].eg.g +=
-        (position->coeffs.knightMobilities[WHITE][c] - position->coeffs.knightMobilities[BLACK][c]) * egBase;
+    weights->knightMobilities[c].mg.g += position->coeffs.knightMobilities[c] * mgBase;
+    weights->knightMobilities[c].eg.g += position->coeffs.knightMobilities[c] * egBase;
   }
 
   for (int c = 0; c < 14; c++) {
-    weights->bishopMobilities[c].mg.g +=
-        (position->coeffs.bishopMobilities[WHITE][c] - position->coeffs.bishopMobilities[BLACK][c]) * mgBase;
-    weights->bishopMobilities[c].eg.g +=
-        (position->coeffs.bishopMobilities[WHITE][c] - position->coeffs.bishopMobilities[BLACK][c]) * egBase;
+    weights->bishopMobilities[c].mg.g += position->coeffs.bishopMobilities[c] * mgBase;
+    weights->bishopMobilities[c].eg.g += position->coeffs.bishopMobilities[c] * egBase;
   }
 
   for (int c = 0; c < 15; c++) {
-    weights->rookMobilities[c].mg.g +=
-        (position->coeffs.rookMobilities[WHITE][c] - position->coeffs.rookMobilities[BLACK][c]) * mgBase;
-    weights->rookMobilities[c].eg.g +=
-        (position->coeffs.rookMobilities[WHITE][c] - position->coeffs.rookMobilities[BLACK][c]) * egBase;
+    weights->rookMobilities[c].mg.g += position->coeffs.rookMobilities[c] * mgBase;
+    weights->rookMobilities[c].eg.g += position->coeffs.rookMobilities[c] * egBase;
   }
 
   for (int c = 0; c < 28; c++) {
-    weights->queenMobilities[c].mg.g +=
-        (position->coeffs.queenMobilities[WHITE][c] - position->coeffs.queenMobilities[BLACK][c]) * mgBase;
-    weights->queenMobilities[c].eg.g +=
-        (position->coeffs.queenMobilities[WHITE][c] - position->coeffs.queenMobilities[BLACK][c]) * egBase;
+    weights->queenMobilities[c].mg.g += position->coeffs.queenMobilities[c] * mgBase;
+    weights->queenMobilities[c].eg.g += position->coeffs.queenMobilities[c] * egBase;
   }
 }
 
@@ -559,113 +501,83 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
   double egBase = position->phaseEg * position->scale * loss;
 
   for (int pc = 0; pc < 6; pc++) {
-    weights->knightThreats[pc].mg.g +=
-        (position->coeffs.knightThreats[WHITE][pc] - position->coeffs.knightThreats[BLACK][pc]) * mgBase;
-    weights->knightThreats[pc].eg.g +=
-        (position->coeffs.knightThreats[WHITE][pc] - position->coeffs.knightThreats[BLACK][pc]) * egBase;
+    weights->knightThreats[pc].mg.g += position->coeffs.knightThreats[pc] * mgBase;
+    weights->knightThreats[pc].eg.g += position->coeffs.knightThreats[pc] * egBase;
 
-    weights->bishopThreats[pc].mg.g +=
-        (position->coeffs.bishopThreats[WHITE][pc] - position->coeffs.bishopThreats[BLACK][pc]) * mgBase;
-    weights->bishopThreats[pc].eg.g +=
-        (position->coeffs.bishopThreats[WHITE][pc] - position->coeffs.bishopThreats[BLACK][pc]) * egBase;
+    weights->bishopThreats[pc].mg.g += position->coeffs.bishopThreats[pc] * mgBase;
+    weights->bishopThreats[pc].eg.g += position->coeffs.bishopThreats[pc] * egBase;
 
-    weights->rookThreats[pc].mg.g +=
-        (position->coeffs.rookThreats[WHITE][pc] - position->coeffs.rookThreats[BLACK][pc]) * mgBase;
-    weights->rookThreats[pc].eg.g +=
-        (position->coeffs.rookThreats[WHITE][pc] - position->coeffs.rookThreats[BLACK][pc]) * egBase;
+    weights->rookThreats[pc].mg.g += position->coeffs.rookThreats[pc] * mgBase;
+    weights->rookThreats[pc].eg.g += position->coeffs.rookThreats[pc] * egBase;
 
-    weights->kingThreats[pc].mg.g +=
-        (position->coeffs.kingThreats[WHITE][pc] - position->coeffs.kingThreats[BLACK][pc]) * mgBase;
-    weights->kingThreats[pc].eg.g +=
-        (position->coeffs.kingThreats[WHITE][pc] - position->coeffs.kingThreats[BLACK][pc]) * egBase;
+    weights->kingThreats[pc].mg.g += position->coeffs.kingThreats[pc] * mgBase;
+    weights->kingThreats[pc].eg.g += position->coeffs.kingThreats[pc] * egBase;
   }
 
-  weights->pawnThreat.mg.g += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * mgBase;
-  weights->pawnThreat.eg.g += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * egBase;
+  weights->pawnThreat.mg.g += position->coeffs.pawnThreat * mgBase;
+  weights->pawnThreat.eg.g += position->coeffs.pawnThreat * egBase;
 
-  weights->pawnPushThreat.mg.g +=
-      (position->coeffs.pawnPushThreat[WHITE] - position->coeffs.pawnPushThreat[BLACK]) * mgBase;
-  weights->pawnPushThreat.eg.g +=
-      (position->coeffs.pawnPushThreat[WHITE] - position->coeffs.pawnPushThreat[BLACK]) * egBase;
+  weights->pawnPushThreat.mg.g += position->coeffs.pawnPushThreat * mgBase;
+  weights->pawnPushThreat.eg.g += position->coeffs.pawnPushThreat * egBase;
 
-  weights->hangingThreat.mg.g +=
-      (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * mgBase;
-  weights->hangingThreat.eg.g +=
-      (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * egBase;
+  weights->hangingThreat.mg.g += position->coeffs.hangingThreat * mgBase;
+  weights->hangingThreat.eg.g += position->coeffs.hangingThreat * egBase;
 }
 
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights) {
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  weights->bishopPair.mg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * mgBase;
-  weights->bishopPair.eg.g += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * egBase;
+  weights->bishopPair.mg.g += position->coeffs.bishopPair * mgBase;
+  weights->bishopPair.eg.g += position->coeffs.bishopPair * egBase;
 
-  weights->knightPostReachable.mg.g +=
-      (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) * mgBase;
-  weights->knightPostReachable.eg.g +=
-      (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) * egBase;
+  weights->knightPostReachable.mg.g += position->coeffs.knightPostReachable * mgBase;
+  weights->knightPostReachable.eg.g += position->coeffs.knightPostReachable * egBase;
 
-  weights->bishopPostReachable.mg.g +=
-      (position->coeffs.bishopPostReachable[WHITE] - position->coeffs.bishopPostReachable[BLACK]) * mgBase;
-  weights->bishopPostReachable.eg.g +=
-      (position->coeffs.bishopPostReachable[WHITE] - position->coeffs.bishopPostReachable[BLACK]) * egBase;
+  weights->bishopPostReachable.mg.g += position->coeffs.bishopPostReachable * mgBase;
+  weights->bishopPostReachable.eg.g += position->coeffs.bishopPostReachable * egBase;
 
-  weights->bishopTrapped.mg.g +=
-      (position->coeffs.bishopTrapped[WHITE] - position->coeffs.bishopTrapped[BLACK]) * mgBase;
-  weights->bishopTrapped.eg.g +=
-      (position->coeffs.bishopTrapped[WHITE] - position->coeffs.bishopTrapped[BLACK]) * egBase;
+  weights->bishopTrapped.mg.g += position->coeffs.bishopTrapped * mgBase;
+  weights->bishopTrapped.eg.g += position->coeffs.bishopTrapped * egBase;
 
-  weights->rookTrapped.mg.g += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * mgBase;
-  weights->rookTrapped.eg.g += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * egBase;
+  weights->rookTrapped.mg.g += position->coeffs.rookTrapped * mgBase;
+  weights->rookTrapped.eg.g += position->coeffs.rookTrapped * egBase;
 
-  weights->badBishopPawns.mg.g +=
-      (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) * mgBase;
-  weights->badBishopPawns.eg.g +=
-      (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) * egBase;
+  weights->badBishopPawns.mg.g += position->coeffs.badBishopPawns * mgBase;
+  weights->badBishopPawns.eg.g += position->coeffs.badBishopPawns * egBase;
 
-  weights->dragonBishop.mg.g += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * mgBase;
-  weights->dragonBishop.eg.g += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * egBase;
+  weights->dragonBishop.mg.g += position->coeffs.dragonBishop * mgBase;
+  weights->dragonBishop.eg.g += position->coeffs.dragonBishop * egBase;
 
-  weights->rookOpenFile.mg.g += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * mgBase;
-  weights->rookOpenFile.eg.g += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * egBase;
+  weights->rookOpenFile.mg.g += position->coeffs.rookOpenFile * mgBase;
+  weights->rookOpenFile.eg.g += position->coeffs.rookOpenFile * egBase;
 
-  weights->rookSemiOpen.mg.g += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * mgBase;
-  weights->rookSemiOpen.eg.g += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * egBase;
+  weights->rookSemiOpen.mg.g += position->coeffs.rookSemiOpen * mgBase;
+  weights->rookSemiOpen.eg.g += position->coeffs.rookSemiOpen * egBase;
 }
 
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights) {
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  weights->doubledPawns.mg.g += (position->coeffs.doubledPawns[WHITE] - position->coeffs.doubledPawns[BLACK]) * mgBase;
-  weights->doubledPawns.eg.g += (position->coeffs.doubledPawns[WHITE] - position->coeffs.doubledPawns[BLACK]) * egBase;
+  weights->doubledPawns.mg.g += position->coeffs.doubledPawns * mgBase;
+  weights->doubledPawns.eg.g += position->coeffs.doubledPawns * egBase;
 
-  weights->opposedIsolatedPawns.mg.g +=
-      (position->coeffs.opposedIsolatedPawns[WHITE] - position->coeffs.opposedIsolatedPawns[BLACK]) * mgBase;
-  weights->opposedIsolatedPawns.eg.g +=
-      (position->coeffs.opposedIsolatedPawns[WHITE] - position->coeffs.opposedIsolatedPawns[BLACK]) * egBase;
+  weights->opposedIsolatedPawns.mg.g += position->coeffs.opposedIsolatedPawns * mgBase;
+  weights->opposedIsolatedPawns.eg.g += position->coeffs.opposedIsolatedPawns * egBase;
 
-  weights->openIsolatedPawns.mg.g +=
-      (position->coeffs.openIsolatedPawns[WHITE] - position->coeffs.openIsolatedPawns[BLACK]) * mgBase;
-  weights->openIsolatedPawns.eg.g +=
-      (position->coeffs.openIsolatedPawns[WHITE] - position->coeffs.openIsolatedPawns[BLACK]) * egBase;
+  weights->openIsolatedPawns.mg.g += position->coeffs.openIsolatedPawns * mgBase;
+  weights->openIsolatedPawns.eg.g += position->coeffs.openIsolatedPawns * egBase;
 
-  weights->backwardsPawns.mg.g +=
-      (position->coeffs.backwardsPawns[WHITE] - position->coeffs.backwardsPawns[BLACK]) * mgBase;
-  weights->backwardsPawns.eg.g +=
-      (position->coeffs.backwardsPawns[WHITE] - position->coeffs.backwardsPawns[BLACK]) * egBase;
+  weights->backwardsPawns.mg.g += position->coeffs.backwardsPawns * mgBase;
+  weights->backwardsPawns.eg.g += position->coeffs.backwardsPawns * egBase;
 
   for (int r = 0; r < 8; r++) {
-    weights->connectedPawn[r].mg.g +=
-        (position->coeffs.connectedPawn[WHITE][r] - position->coeffs.connectedPawn[BLACK][r]) * mgBase;
-    weights->connectedPawn[r].eg.g +=
-        (position->coeffs.connectedPawn[WHITE][r] - position->coeffs.connectedPawn[BLACK][r]) * egBase;
+    weights->connectedPawn[r].mg.g += position->coeffs.connectedPawn[r] * mgBase;
+    weights->connectedPawn[r].eg.g += position->coeffs.connectedPawn[r] * egBase;
 
-    weights->candidatePasser[r].mg.g +=
-        (position->coeffs.candidatePasser[WHITE][r] - position->coeffs.candidatePasser[BLACK][r]) * mgBase;
-    weights->candidatePasser[r].eg.g +=
-        (position->coeffs.candidatePasser[WHITE][r] - position->coeffs.candidatePasser[BLACK][r]) * egBase;
+    weights->candidatePasser[r].mg.g += position->coeffs.candidatePasser[r] * mgBase;
+    weights->candidatePasser[r].eg.g += position->coeffs.candidatePasser[r] * egBase;
   }
 }
 
@@ -674,26 +586,18 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
   double egBase = position->phaseEg * position->scale * loss;
 
   for (int r = 0; r < 8; r++) {
-    weights->passedPawn[r].mg.g +=
-        (position->coeffs.passedPawn[WHITE][r] - position->coeffs.passedPawn[BLACK][r]) * mgBase;
-    weights->passedPawn[r].eg.g +=
-        (position->coeffs.passedPawn[WHITE][r] - position->coeffs.passedPawn[BLACK][r]) * egBase;
+    weights->passedPawn[r].mg.g += position->coeffs.passedPawn[r] * mgBase;
+    weights->passedPawn[r].eg.g += position->coeffs.passedPawn[r] * egBase;
   }
 
-  weights->passedPawnEdgeDistance.mg.g +=
-      (position->coeffs.passedPawnEdgeDistance[WHITE] - position->coeffs.passedPawnEdgeDistance[BLACK]) * mgBase;
-  weights->passedPawnEdgeDistance.eg.g +=
-      (position->coeffs.passedPawnEdgeDistance[WHITE] - position->coeffs.passedPawnEdgeDistance[BLACK]) * egBase;
+  weights->passedPawnEdgeDistance.mg.g += position->coeffs.passedPawnEdgeDistance * mgBase;
+  weights->passedPawnEdgeDistance.eg.g += position->coeffs.passedPawnEdgeDistance * egBase;
 
-  weights->passedPawnKingProximity.mg.g +=
-      (position->coeffs.passedPawnKingProximity[WHITE] - position->coeffs.passedPawnKingProximity[BLACK]) * mgBase;
-  weights->passedPawnKingProximity.eg.g +=
-      (position->coeffs.passedPawnKingProximity[WHITE] - position->coeffs.passedPawnKingProximity[BLACK]) * egBase;
+  weights->passedPawnKingProximity.mg.g += position->coeffs.passedPawnKingProximity * mgBase;
+  weights->passedPawnKingProximity.eg.g += position->coeffs.passedPawnKingProximity * egBase;
 
-  weights->passedPawnAdvance.mg.g +=
-      (position->coeffs.passedPawnAdvance[WHITE] - position->coeffs.passedPawnAdvance[BLACK]) * mgBase;
-  weights->passedPawnAdvance.eg.g +=
-      (position->coeffs.passedPawnAdvance[WHITE] - position->coeffs.passedPawnAdvance[BLACK]) * egBase;
+  weights->passedPawnAdvance.mg.g += position->coeffs.passedPawnAdvance * mgBase;
+  weights->passedPawnAdvance.eg.g += position->coeffs.passedPawnAdvance * egBase;
 }
 
 void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights) {
@@ -702,29 +606,28 @@ void UpdatePawnShelterGradients(Position* position, double loss, Weights* weight
 
   for (int f = 0; f < 4; f++) {
     for (int r = 0; r < 8; r++) {
-      weights->ksPawnShelter[f][r].mg.g +=
-          (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) * mgBase;
-      weights->ksPawnShelter[f][r].eg.g +=
-          (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) * egBase;
+      weights->pawnShelter[f][r].mg.g += position->coeffs.pawnShelter[f][r] * mgBase;
+      weights->pawnShelter[f][r].eg.g += position->coeffs.pawnShelter[f][r] * egBase;
 
-      weights->ksPawnStorm[f][r].mg.g +=
-          (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) * mgBase;
-      weights->ksPawnStorm[f][r].eg.g +=
-          (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) * egBase;
+      weights->pawnStorm[f][r].mg.g += position->coeffs.pawnStorm[f][r] * mgBase;
+      weights->pawnStorm[f][r].eg.g += position->coeffs.pawnStorm[f][r] * egBase;
     }
   }
 
   for (int f = 0; f < 8; f++) {
-    weights->ksBlocked[f].mg.g +=
-        (position->coeffs.blockedPawnStorm[WHITE][f] - position->coeffs.blockedPawnStorm[BLACK][f]) * mgBase;
-    weights->ksBlocked[f].eg.g +=
-        (position->coeffs.blockedPawnStorm[WHITE][f] - position->coeffs.blockedPawnStorm[BLACK][f]) * egBase;
+    weights->blockedPawnStorm[f].mg.g += position->coeffs.blockedPawnStorm[f] * mgBase;
+    weights->blockedPawnStorm[f].eg.g += position->coeffs.blockedPawnStorm[f] * egBase;
   }
 
   for (int f = 0; f < 4; f++) {
-    weights->ksFile[f].mg.g += (position->coeffs.kingFile[WHITE][f] - position->coeffs.kingFile[BLACK][f]) * mgBase;
-    weights->ksFile[f].eg.g += (position->coeffs.kingFile[WHITE][f] - position->coeffs.kingFile[BLACK][f]) * egBase;
+    weights->kingFile[f].mg.g += position->coeffs.kingFile[f] * mgBase;
+    weights->kingFile[f].eg.g += position->coeffs.kingFile[f] * egBase;
   }
+}
+
+void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w) {
+  *mg += coeff * w->mg.value;
+  *eg += coeff * w->eg.value;
 }
 
 double EvaluateCoeffs(Position* position, Weights* weights) {
@@ -740,8 +643,8 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
   EvaluatePasserBonusValues(&mg, &eg, position, weights);
   EvaluatePawnShelterValues(&mg, &eg, position, weights);
 
-  mg += scoreMG(position->coeffs.ks[WHITE]) - scoreMG(position->coeffs.ks[BLACK]);
-  eg += scoreEG(position->coeffs.ks[WHITE]) - scoreEG(position->coeffs.ks[BLACK]);
+  mg += scoreMG(position->coeffs.ks);
+  eg += scoreEG(position->coeffs.ks);
 
   int result = (mg * position->phase + eg * (128 - position->phase)) / 128;
   result = (result * position->scale + MAX_SCALE / 2) / MAX_SCALE;
@@ -749,223 +652,97 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
 }
 
 void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights) {
-  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-    *mg += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * weights->material[pc].mg.value;
-    *eg += (position->coeffs.pieces[WHITE][pc] - position->coeffs.pieces[BLACK][pc]) * weights->material[pc].eg.value;
-  }
+  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++)
+    ApplyCoeff(mg, eg, position->coeffs.pieces[pc], &weights->pieces[pc]);
 }
 
 void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* weights) {
-  for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++) {
-    for (int sq = 0; sq < 32; sq++) {
-      *mg += (position->coeffs.psqt[WHITE][pc][sq] - position->coeffs.psqt[BLACK][pc][sq]) *
-             weights->psqt[pc][sq].mg.value;
-      *eg += (position->coeffs.psqt[WHITE][pc][sq] - position->coeffs.psqt[BLACK][pc][sq]) *
-             weights->psqt[pc][sq].eg.value;
-    }
-  }
+  for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++)
+    for (int sq = 0; sq < 32; sq++)
+      ApplyCoeff(mg, eg, position->coeffs.psqt[pc][sq], &weights->psqt[pc][sq]);
 }
 
 void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights* weights) {
-  for (int sq = 0; sq < 32; sq++) {
-    *mg += (position->coeffs.knightPostPsqt[WHITE][sq] - position->coeffs.knightPostPsqt[BLACK][sq]) *
-           weights->knightPostPsqt[sq].mg.value;
-    *eg += (position->coeffs.knightPostPsqt[WHITE][sq] - position->coeffs.knightPostPsqt[BLACK][sq]) *
-           weights->knightPostPsqt[sq].eg.value;
+  for (int sq = 0; sq < 12; sq++) {
+    ApplyCoeff(mg, eg, position->coeffs.knightPostPsqt[sq], &weights->knightPostPsqt[sq]);
 
-    *mg += (position->coeffs.bishopPostPsqt[WHITE][sq] - position->coeffs.bishopPostPsqt[BLACK][sq]) *
-           weights->bishopPostPsqt[sq].mg.value;
-    *eg += (position->coeffs.bishopPostPsqt[WHITE][sq] - position->coeffs.bishopPostPsqt[BLACK][sq]) *
-           weights->bishopPostPsqt[sq].eg.value;
+    ApplyCoeff(mg, eg, position->coeffs.bishopPostPsqt[sq], &weights->bishopPostPsqt[sq]);
   }
 }
 
 void EvaluateMobilityValues(double* mg, double* eg, Position* position, Weights* weights) {
-  for (int c = 0; c < 9; c++) {
-    *mg += (position->coeffs.knightMobilities[WHITE][c] - position->coeffs.knightMobilities[BLACK][c]) *
-           weights->knightMobilities[c].mg.value;
-    *eg += (position->coeffs.knightMobilities[WHITE][c] - position->coeffs.knightMobilities[BLACK][c]) *
-           weights->knightMobilities[c].eg.value;
-  }
+  for (int c = 0; c < 9; c++)
+    ApplyCoeff(mg, eg, position->coeffs.knightMobilities[c], &weights->knightMobilities[c]);
 
-  for (int c = 0; c < 14; c++) {
-    *mg += (position->coeffs.bishopMobilities[WHITE][c] - position->coeffs.bishopMobilities[BLACK][c]) *
-           weights->bishopMobilities[c].mg.value;
-    *eg += (position->coeffs.bishopMobilities[WHITE][c] - position->coeffs.bishopMobilities[BLACK][c]) *
-           weights->bishopMobilities[c].eg.value;
-  }
+  for (int c = 0; c < 14; c++)
+    ApplyCoeff(mg, eg, position->coeffs.bishopMobilities[c], &weights->bishopMobilities[c]);
 
-  for (int c = 0; c < 15; c++) {
-    *mg += (position->coeffs.rookMobilities[WHITE][c] - position->coeffs.rookMobilities[BLACK][c]) *
-           weights->rookMobilities[c].mg.value;
-    *eg += (position->coeffs.rookMobilities[WHITE][c] - position->coeffs.rookMobilities[BLACK][c]) *
-           weights->rookMobilities[c].eg.value;
-  }
+  for (int c = 0; c < 15; c++)
+    ApplyCoeff(mg, eg, position->coeffs.rookMobilities[c], &weights->rookMobilities[c]);
 
-  for (int c = 0; c < 28; c++) {
-    *mg += (position->coeffs.queenMobilities[WHITE][c] - position->coeffs.queenMobilities[BLACK][c]) *
-           weights->queenMobilities[c].mg.value;
-    *eg += (position->coeffs.queenMobilities[WHITE][c] - position->coeffs.queenMobilities[BLACK][c]) *
-           weights->queenMobilities[c].eg.value;
-  }
+  for (int c = 0; c < 28; c++)
+    ApplyCoeff(mg, eg, position->coeffs.queenMobilities[c], &weights->queenMobilities[c]);
 }
 
 void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* weights) {
   for (int pc = 0; pc < 6; pc++) {
-    *mg += (position->coeffs.knightThreats[WHITE][pc] - position->coeffs.knightThreats[BLACK][pc]) *
-           weights->knightThreats[pc].mg.value;
-    *eg += (position->coeffs.knightThreats[WHITE][pc] - position->coeffs.knightThreats[BLACK][pc]) *
-           weights->knightThreats[pc].eg.value;
-
-    *mg += (position->coeffs.bishopThreats[WHITE][pc] - position->coeffs.bishopThreats[BLACK][pc]) *
-           weights->bishopThreats[pc].mg.value;
-    *eg += (position->coeffs.bishopThreats[WHITE][pc] - position->coeffs.bishopThreats[BLACK][pc]) *
-           weights->bishopThreats[pc].eg.value;
-
-    *mg += (position->coeffs.rookThreats[WHITE][pc] - position->coeffs.rookThreats[BLACK][pc]) *
-           weights->rookThreats[pc].mg.value;
-    *eg += (position->coeffs.rookThreats[WHITE][pc] - position->coeffs.rookThreats[BLACK][pc]) *
-           weights->rookThreats[pc].eg.value;
-
-    *mg += (position->coeffs.kingThreats[WHITE][pc] - position->coeffs.kingThreats[BLACK][pc]) *
-           weights->kingThreats[pc].mg.value;
-    *eg += (position->coeffs.kingThreats[WHITE][pc] - position->coeffs.kingThreats[BLACK][pc]) *
-           weights->kingThreats[pc].eg.value;
+    ApplyCoeff(mg, eg, position->coeffs.knightThreats[pc], &weights->knightThreats[pc]);
+    ApplyCoeff(mg, eg, position->coeffs.bishopThreats[pc], &weights->bishopThreats[pc]);
+    ApplyCoeff(mg, eg, position->coeffs.rookThreats[pc], &weights->rookThreats[pc]);
+    ApplyCoeff(mg, eg, position->coeffs.kingThreats[pc], &weights->kingThreats[pc]);
   }
 
-  *mg += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.mg.value;
-  *eg += (position->coeffs.pawnThreat[WHITE] - position->coeffs.pawnThreat[BLACK]) * weights->pawnThreat.eg.value;
-
-  *mg += (position->coeffs.pawnPushThreat[WHITE] - position->coeffs.pawnPushThreat[BLACK]) *
-         weights->pawnPushThreat.mg.value;
-  *eg += (position->coeffs.pawnPushThreat[WHITE] - position->coeffs.pawnPushThreat[BLACK]) *
-         weights->pawnPushThreat.eg.value;
-
-  *mg +=
-      (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * weights->hangingThreat.mg.value;
-  *eg +=
-      (position->coeffs.hangingThreat[WHITE] - position->coeffs.hangingThreat[BLACK]) * weights->hangingThreat.eg.value;
+  ApplyCoeff(mg, eg, position->coeffs.pawnThreat, &weights->pawnThreat);
+  ApplyCoeff(mg, eg, position->coeffs.pawnPushThreat, &weights->pawnPushThreat);
+  ApplyCoeff(mg, eg, position->coeffs.hangingThreat, &weights->hangingThreat);
 }
 
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
-  *mg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.mg.value;
-  *eg += (position->coeffs.bishopPair[WHITE] - position->coeffs.bishopPair[BLACK]) * weights->bishopPair.eg.value;
-
-  *mg += (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) *
-         weights->knightPostReachable.mg.value;
-  *eg += (position->coeffs.knightPostReachable[WHITE] - position->coeffs.knightPostReachable[BLACK]) *
-         weights->knightPostReachable.eg.value;
-
-  *mg += (position->coeffs.bishopPostReachable[WHITE] - position->coeffs.bishopPostReachable[BLACK]) *
-         weights->bishopPostReachable.mg.value;
-  *eg += (position->coeffs.bishopPostReachable[WHITE] - position->coeffs.bishopPostReachable[BLACK]) *
-         weights->bishopPostReachable.eg.value;
-
-  *mg +=
-      (position->coeffs.bishopTrapped[WHITE] - position->coeffs.bishopTrapped[BLACK]) * weights->bishopTrapped.mg.value;
-  *eg +=
-      (position->coeffs.bishopTrapped[WHITE] - position->coeffs.bishopTrapped[BLACK]) * weights->bishopTrapped.eg.value;
-
-  *mg += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * weights->rookTrapped.mg.value;
-  *eg += (position->coeffs.rookTrapped[WHITE] - position->coeffs.rookTrapped[BLACK]) * weights->rookTrapped.eg.value;
-
-  *mg += (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) *
-         weights->badBishopPawns.mg.value;
-  *eg += (position->coeffs.badBishopPawns[WHITE] - position->coeffs.badBishopPawns[BLACK]) *
-         weights->badBishopPawns.eg.value;
-
-  *mg += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * weights->dragonBishop.mg.value;
-  *eg += (position->coeffs.dragonBishop[WHITE] - position->coeffs.dragonBishop[BLACK]) * weights->dragonBishop.eg.value;
-
-  *mg += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * weights->rookOpenFile.mg.value;
-  *eg += (position->coeffs.rookOpenFile[WHITE] - position->coeffs.rookOpenFile[BLACK]) * weights->rookOpenFile.eg.value;
-
-  *mg += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * weights->rookSemiOpen.mg.value;
-  *eg += (position->coeffs.rookSemiOpen[WHITE] - position->coeffs.rookSemiOpen[BLACK]) * weights->rookSemiOpen.eg.value;
+  ApplyCoeff(mg, eg, position->coeffs.bishopPair, &weights->bishopPair);
+  ApplyCoeff(mg, eg, position->coeffs.knightPostReachable, &weights->knightPostReachable);
+  ApplyCoeff(mg, eg, position->coeffs.bishopPostReachable, &weights->bishopPostReachable);
+  ApplyCoeff(mg, eg, position->coeffs.bishopTrapped, &weights->bishopTrapped);
+  ApplyCoeff(mg, eg, position->coeffs.rookTrapped, &weights->rookTrapped);
+  ApplyCoeff(mg, eg, position->coeffs.badBishopPawns, &weights->badBishopPawns);
+  ApplyCoeff(mg, eg, position->coeffs.dragonBishop, &weights->dragonBishop);
+  ApplyCoeff(mg, eg, position->coeffs.rookOpenFile, &weights->rookOpenFile);
+  ApplyCoeff(mg, eg, position->coeffs.rookSemiOpen, &weights->rookSemiOpen);
 }
 
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
-  *mg += (position->coeffs.doubledPawns[WHITE] - position->coeffs.doubledPawns[BLACK]) * weights->doubledPawns.mg.value;
-  *eg += (position->coeffs.doubledPawns[WHITE] - position->coeffs.doubledPawns[BLACK]) * weights->doubledPawns.eg.value;
-
-  *mg += (position->coeffs.opposedIsolatedPawns[WHITE] - position->coeffs.opposedIsolatedPawns[BLACK]) *
-         weights->opposedIsolatedPawns.mg.value;
-  *eg += (position->coeffs.opposedIsolatedPawns[WHITE] - position->coeffs.opposedIsolatedPawns[BLACK]) *
-         weights->opposedIsolatedPawns.eg.value;
-
-  *mg += (position->coeffs.openIsolatedPawns[WHITE] - position->coeffs.openIsolatedPawns[BLACK]) *
-         weights->openIsolatedPawns.mg.value;
-  *eg += (position->coeffs.openIsolatedPawns[WHITE] - position->coeffs.openIsolatedPawns[BLACK]) *
-         weights->openIsolatedPawns.eg.value;
-
-  *mg += (position->coeffs.backwardsPawns[WHITE] - position->coeffs.backwardsPawns[BLACK]) *
-         weights->backwardsPawns.mg.value;
-  *eg += (position->coeffs.backwardsPawns[WHITE] - position->coeffs.backwardsPawns[BLACK]) *
-         weights->backwardsPawns.eg.value;
+  ApplyCoeff(mg, eg, position->coeffs.doubledPawns, &weights->doubledPawns);
+  ApplyCoeff(mg, eg, position->coeffs.opposedIsolatedPawns, &weights->opposedIsolatedPawns);
+  ApplyCoeff(mg, eg, position->coeffs.openIsolatedPawns, &weights->openIsolatedPawns);
+  ApplyCoeff(mg, eg, position->coeffs.backwardsPawns, &weights->backwardsPawns);
 
   for (int r = 0; r < 8; r++) {
-    *mg += (position->coeffs.connectedPawn[WHITE][r] - position->coeffs.connectedPawn[BLACK][r]) *
-           weights->connectedPawn[r].mg.value;
-    *eg += (position->coeffs.connectedPawn[WHITE][r] - position->coeffs.connectedPawn[BLACK][r]) *
-           weights->connectedPawn[r].eg.value;
-
-    *mg += (position->coeffs.candidatePasser[WHITE][r] - position->coeffs.candidatePasser[BLACK][r]) *
-           weights->candidatePasser[r].mg.value;
-    *eg += (position->coeffs.candidatePasser[WHITE][r] - position->coeffs.candidatePasser[BLACK][r]) *
-           weights->candidatePasser[r].eg.value;
+    ApplyCoeff(mg, eg, position->coeffs.connectedPawn[r], &weights->connectedPawn[r]);
+    ApplyCoeff(mg, eg, position->coeffs.candidatePasser[r], &weights->candidatePasser[r]);
   }
 }
 
 void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
-  for (int r = 0; r < 8; r++) {
-    *mg += (position->coeffs.passedPawn[WHITE][r] - position->coeffs.passedPawn[BLACK][r]) *
-           weights->passedPawn[r].mg.value;
-    *eg += (position->coeffs.passedPawn[WHITE][r] - position->coeffs.passedPawn[BLACK][r]) *
-           weights->passedPawn[r].eg.value;
-  }
+  for (int r = 0; r < 8; r++)
+    ApplyCoeff(mg, eg, position->coeffs.passedPawn[r], &weights->passedPawn[r]);
 
-  *mg += (position->coeffs.passedPawnEdgeDistance[WHITE] - position->coeffs.passedPawnEdgeDistance[BLACK]) *
-         weights->passedPawnEdgeDistance.mg.value;
-  *eg += (position->coeffs.passedPawnEdgeDistance[WHITE] - position->coeffs.passedPawnEdgeDistance[BLACK]) *
-         weights->passedPawnEdgeDistance.eg.value;
-
-  *mg += (position->coeffs.passedPawnKingProximity[WHITE] - position->coeffs.passedPawnKingProximity[BLACK]) *
-         weights->passedPawnKingProximity.mg.value;
-  *eg += (position->coeffs.passedPawnKingProximity[WHITE] - position->coeffs.passedPawnKingProximity[BLACK]) *
-         weights->passedPawnKingProximity.eg.value;
-
-  *mg += (position->coeffs.passedPawnAdvance[WHITE] - position->coeffs.passedPawnAdvance[BLACK]) *
-         weights->passedPawnAdvance.mg.value;
-  *eg += (position->coeffs.passedPawnAdvance[WHITE] - position->coeffs.passedPawnAdvance[BLACK]) *
-         weights->passedPawnAdvance.eg.value;
+  ApplyCoeff(mg, eg, position->coeffs.passedPawnEdgeDistance, &weights->passedPawnEdgeDistance);
+  ApplyCoeff(mg, eg, position->coeffs.passedPawnKingProximity, &weights->passedPawnKingProximity);
+  ApplyCoeff(mg, eg, position->coeffs.passedPawnAdvance, &weights->passedPawnAdvance);
 }
 
 void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights) {
   for (int f = 0; f < 4; f++) {
     for (int r = 0; r < 8; r++) {
-      *mg += (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) *
-             weights->ksPawnShelter[f][r].mg.value;
-      *eg += (position->coeffs.pawnShelter[WHITE][f][r] - position->coeffs.pawnShelter[BLACK][f][r]) *
-             weights->ksPawnShelter[f][r].eg.value;
-
-      *mg += (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) *
-             weights->ksPawnStorm[f][r].mg.value;
-      *eg += (position->coeffs.pawnStorm[WHITE][f][r] - position->coeffs.pawnStorm[BLACK][f][r]) *
-             weights->ksPawnStorm[f][r].eg.value;
+      ApplyCoeff(mg, eg, position->coeffs.pawnShelter[f][r], &weights->pawnShelter[f][r]);
+      ApplyCoeff(mg, eg, position->coeffs.pawnStorm[f][r], &weights->pawnStorm[f][r]);
     }
   }
 
-  for (int r = 0; r < 8; r++) {
-    *mg += (position->coeffs.blockedPawnStorm[WHITE][r] - position->coeffs.blockedPawnStorm[BLACK][r]) *
-           weights->ksBlocked[r].mg.value;
-    *eg += (position->coeffs.blockedPawnStorm[WHITE][r] - position->coeffs.blockedPawnStorm[BLACK][r]) *
-           weights->ksBlocked[r].eg.value;
-  }
+  for (int r = 0; r < 8; r++)
+    ApplyCoeff(mg, eg, position->coeffs.blockedPawnStorm[r], &weights->blockedPawnStorm[r]);
 
-  for (int r = 0; r < 4; r++) {
-    *mg += (position->coeffs.kingFile[WHITE][r] - position->coeffs.kingFile[BLACK][r]) * weights->ksFile[r].mg.value;
-    *eg += (position->coeffs.kingFile[WHITE][r] - position->coeffs.kingFile[BLACK][r]) * weights->ksFile[r].eg.value;
-  }
+  for (int r = 0; r < 4; r++)
+    ApplyCoeff(mg, eg, position->coeffs.kingFile[r], &weights->kingFile[r]);
 }
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread) {
@@ -1046,8 +823,8 @@ Position* LoadPositions(int* n) {
 
 void InitMaterialWeights(Weights* weights) {
   for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
-    weights->material[pc].mg.value = scoreMG(MATERIAL_VALUES[pc]);
-    weights->material[pc].eg.value = scoreEG(MATERIAL_VALUES[pc]);
+    weights->pieces[pc].mg.value = scoreMG(MATERIAL_VALUES[pc]);
+    weights->pieces[pc].eg.value = scoreEG(MATERIAL_VALUES[pc]);
   }
 }
 
@@ -1074,7 +851,7 @@ void InitPsqtWeights(Weights* weights) {
 }
 
 void InitPostPsqtWeights(Weights* weights) {
-  for (int sq = 0; sq < 32; sq++) {
+  for (int sq = 0; sq < 12; sq++) {
     weights->knightPostPsqt[sq].mg.value = scoreMG(KNIGHT_POST_PSQT[sq]);
     weights->knightPostPsqt[sq].eg.value = scoreEG(KNIGHT_POST_PSQT[sq]);
 
@@ -1200,22 +977,22 @@ void InitPasserBonusWeights(Weights* weights) {
 void InitPawnShelterWeights(Weights* weights) {
   for (int f = 0; f < 4; f++) {
     for (int r = 0; r < 8; r++) {
-      weights->ksPawnShelter[f][r].mg.value = scoreMG(PAWN_SHELTER[f][r]);
-      weights->ksPawnShelter[f][r].eg.value = scoreEG(PAWN_SHELTER[f][r]);
+      weights->pawnShelter[f][r].mg.value = scoreMG(PAWN_SHELTER[f][r]);
+      weights->pawnShelter[f][r].eg.value = scoreEG(PAWN_SHELTER[f][r]);
 
-      weights->ksPawnStorm[f][r].mg.value = scoreMG(PAWN_STORM[f][r]);
-      weights->ksPawnStorm[f][r].eg.value = scoreEG(PAWN_STORM[f][r]);
+      weights->pawnStorm[f][r].mg.value = scoreMG(PAWN_STORM[f][r]);
+      weights->pawnStorm[f][r].eg.value = scoreEG(PAWN_STORM[f][r]);
     }
   }
 
   for (int r = 0; r < 8; r++) {
-    weights->ksBlocked[r].mg.value = scoreMG(BLOCKED_PAWN_STORM[r]);
-    weights->ksBlocked[r].eg.value = scoreEG(BLOCKED_PAWN_STORM[r]);
+    weights->blockedPawnStorm[r].mg.value = scoreMG(BLOCKED_PAWN_STORM[r]);
+    weights->blockedPawnStorm[r].eg.value = scoreEG(BLOCKED_PAWN_STORM[r]);
   }
 
   for (int f = 0; f < 4; f++) {
-    weights->ksFile[f].mg.value = scoreMG(KS_KING_FILE[f]);
-    weights->ksFile[f].eg.value = scoreEG(KS_KING_FILE[f]);
+    weights->kingFile[f].mg.value = scoreMG(KS_KING_FILE[f]);
+    weights->kingFile[f].eg.value = scoreEG(KS_KING_FILE[f]);
   }
 }
 
@@ -1231,7 +1008,7 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "Epoch: %d, Error: %f\n", epoch, error);
 
   fprintf(fp, "\nconst Score MATERIAL_VALUES[7] = {");
-  PrintWeightArray(fp, weights->material, 5, 0);
+  PrintWeightArray(fp, weights->pieces, 5, 0);
   fprintf(fp, " S(   0,   0), S(   0,   0) };\n");
 
   fprintf(fp, "\nconst Score BISHOP_PAIR = ");
@@ -1261,12 +1038,12 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   PrintWeightArray(fp, weights->psqt[KING_TYPE], 32, 4);
   fprintf(fp, "};\n");
 
-  fprintf(fp, "\nconst Score KNIGHT_POST_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->knightPostPsqt, 32, 4);
+  fprintf(fp, "\nconst Score KNIGHT_POST_PSQT[12] = {\n");
+  PrintWeightArray(fp, weights->knightPostPsqt, 12, 4);
   fprintf(fp, "};\n");
 
-  fprintf(fp, "\nconst Score BISHOP_POST_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->bishopPostPsqt, 32, 4);
+  fprintf(fp, "\nconst Score BISHOP_POST_PSQT[12] = {\n");
+  PrintWeightArray(fp, weights->bishopPostPsqt, 12, 4);
   fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score KNIGHT_MOBILITIES[9] = {\n");
@@ -1369,34 +1146,34 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score PAWN_SHELTER[4][8] = {\n");
   fprintf(fp, " {");
-  PrintWeightArray(fp, weights->ksPawnShelter[0], 8, 0);
+  PrintWeightArray(fp, weights->pawnShelter[0], 8, 0);
   fprintf(fp, "},\n {");
-  PrintWeightArray(fp, weights->ksPawnShelter[1], 8, 0);
+  PrintWeightArray(fp, weights->pawnShelter[1], 8, 0);
   fprintf(fp, "},\n {");
-  PrintWeightArray(fp, weights->ksPawnShelter[2], 8, 0);
+  PrintWeightArray(fp, weights->pawnShelter[2], 8, 0);
   fprintf(fp, "},\n {");
-  PrintWeightArray(fp, weights->ksPawnShelter[3], 8, 0);
+  PrintWeightArray(fp, weights->pawnShelter[3], 8, 0);
   fprintf(fp, "},\n");
   fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score PAWN_STORM[4][8] = {\n");
   fprintf(fp, " {");
-  PrintWeightArray(fp, weights->ksPawnStorm[0], 8, 0);
+  PrintWeightArray(fp, weights->pawnStorm[0], 8, 0);
   fprintf(fp, "},\n {");
-  PrintWeightArray(fp, weights->ksPawnStorm[1], 8, 0);
+  PrintWeightArray(fp, weights->pawnStorm[1], 8, 0);
   fprintf(fp, "},\n {");
-  PrintWeightArray(fp, weights->ksPawnStorm[2], 8, 0);
+  PrintWeightArray(fp, weights->pawnStorm[2], 8, 0);
   fprintf(fp, "},\n {");
-  PrintWeightArray(fp, weights->ksPawnStorm[3], 8, 0);
+  PrintWeightArray(fp, weights->pawnStorm[3], 8, 0);
   fprintf(fp, "},\n");
   fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score BLOCKED_PAWN_STORM[8] = {\n");
-  PrintWeightArray(fp, weights->ksBlocked, 8, 0);
+  PrintWeightArray(fp, weights->blockedPawnStorm, 8, 0);
   fprintf(fp, "\n};\n");
 
   fprintf(fp, "\nconst Score KS_KING_FILE[4] = {");
-  PrintWeightArray(fp, weights->ksFile, 4, 0);
+  PrintWeightArray(fp, weights->kingFile, 4, 0);
   fprintf(fp, "};\n");
 
   fprintf(fp, "\n");

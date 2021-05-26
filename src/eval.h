@@ -47,8 +47,8 @@ extern const Score ROOK_PSQT[32];
 extern const Score QUEEN_PSQT[32];
 extern const Score KING_PSQT[32];
 
-extern const Score KNIGHT_POST_PSQT[32];
-extern const Score BISHOP_POST_PSQT[32];
+extern const Score KNIGHT_POST_PSQT[12];
+extern const Score BISHOP_POST_PSQT[12];
 
 extern const Score KNIGHT_MOBILITIES[9];
 extern const Score BISHOP_MOBILITIES[14];

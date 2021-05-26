@@ -40,6 +40,7 @@
 // a utility for texel tuning
 // berserk uses a coeff based tuner, ethereal's design
 EvalCoeffs C;
+const int cs[2] = {1, -1};
 
 #define S(mg, eg) (makeScore((mg), (eg)))
 
@@ -121,26 +122,16 @@ const Score KING_PSQT[32] = {
  S(   2, -48), S(   8, -11), S(  -4, -17), S( -17, -37),
 };
 
-const Score KNIGHT_POST_PSQT[32] = {
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
+const Score KNIGHT_POST_PSQT[12] = {
  S( -25,  33), S(  17,  27), S(  44,  14), S(  34,  37),
  S(  17,  15), S(  39,  20), S(  31,  29), S(  48,  27),
  S(  14,   2), S(  22,  20), S(  11,  22), S(  13,  30),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
 };
 
-const Score BISHOP_POST_PSQT[32] = {
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
+const Score BISHOP_POST_PSQT[12] = {
  S(   5,  19), S(  31,  16), S(  60,  20), S(  52,   1),
  S(  12,  14), S(  17,  21), S(  28,   9), S(  36,   6),
  S( -19,  25), S(  24,  15), S(  18,   7), S(  29,  18),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
- S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
 };
 
 const Score KNIGHT_MOBILITIES[9] = {
@@ -281,8 +272,10 @@ void InitPSQT() {
     PSQT[QUEEN_WHITE][sq] = PSQT[QUEEN_BLACK][MIRROR[sq]] = QUEEN_PSQT[psqtIdx(sq)] + MATERIAL_VALUES[QUEEN_TYPE];
     PSQT[KING_WHITE][sq] = PSQT[KING_BLACK][MIRROR[sq]] = KING_PSQT[psqtIdx(sq)];
 
-    KNIGHT_POSTS[WHITE][sq] = KNIGHT_POSTS[BLACK][MIRROR[sq]] = KNIGHT_POST_PSQT[psqtIdx(sq)];
-    BISHOP_POSTS[WHITE][sq] = BISHOP_POSTS[BLACK][MIRROR[sq]] = BISHOP_POST_PSQT[psqtIdx(sq)];
+    if (sq >= A6 && sq <= H4) {
+      KNIGHT_POSTS[WHITE][sq] = KNIGHT_POSTS[BLACK][MIRROR[sq]] = KNIGHT_POST_PSQT[psqtIdx(sq) - 8];
+      BISHOP_POSTS[WHITE][sq] = BISHOP_POSTS[BLACK][MIRROR[sq]] = BISHOP_POST_PSQT[psqtIdx(sq) - 8];
+    }
   }
 }
 
@@ -355,7 +348,7 @@ Score MaterialValue(Board* board, int side) {
     BitBoard pieces = board->pieces[pc];
 
     if (T)
-      C.pieces[side][PIECE_TYPE[pc]] = bits(pieces);
+      C.pieces[PIECE_TYPE[pc]] += cs[side] * bits(pieces);
 
     while (pieces) {
       int sq = lsb(pieces);
@@ -364,7 +357,7 @@ Score MaterialValue(Board* board, int side) {
       popLsb(pieces);
 
       if (T)
-        C.psqt[side][PIECE_TYPE[pc]][psqtIdx(side == WHITE ? sq : MIRROR[sq])]++;
+        C.psqt[PIECE_TYPE[pc]][psqtIdx(side == WHITE ? sq : MIRROR[sq])] += cs[side];
     }
   }
 
@@ -389,7 +382,7 @@ Score PieceEval(Board* board, EvalData* data, int side) {
     s += BISHOP_PAIR;
 
     if (T)
-      C.bishopPair[side] = 1;
+      C.bishopPair += cs[side];
   }
 
   for (int p = KNIGHT[side]; p <= KING[side]; p += 2) {
@@ -410,14 +403,14 @@ Score PieceEval(Board* board, EvalData* data, int side) {
         s += KNIGHT_MOBILITIES[bits(movement & mob)];
 
         if (T)
-          C.knightMobilities[side][bits(movement & mob)]++;
+          C.knightMobilities[bits(movement & mob)] += cs[side];
         break;
       case BISHOP_TYPE:
         movement = GetBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
         s += BISHOP_MOBILITIES[bits(movement & mob)];
 
         if (T)
-          C.bishopMobilities[side][bits(movement & mob)]++;
+          C.bishopMobilities[bits(movement & mob)] += cs[side];
         break;
       case ROOK_TYPE:
         movement =
@@ -425,14 +418,14 @@ Score PieceEval(Board* board, EvalData* data, int side) {
         s += ROOK_MOBILITIES[bits(movement & mob)];
 
         if (T)
-          C.rookMobilities[side][bits(movement & mob)]++;
+          C.rookMobilities[bits(movement & mob)] += cs[side];
         break;
       case QUEEN_TYPE:
         movement = GetQueenAttacks(sq, board->occupancies[BOTH]);
         s += QUEEN_MOBILITIES[bits(movement & mob)];
 
         if (T)
-          C.queenMobilities[side][bits(movement & mob)]++;
+          C.queenMobilities[bits(movement & mob)] += cs[side];
         break;
       case KING_TYPE:
         movement = GetKingAttacks(sq) & ~enemyKingArea;
@@ -455,12 +448,12 @@ Score PieceEval(Board* board, EvalData* data, int side) {
           s += KNIGHT_POSTS[side][sq];
 
           if (T)
-            C.knightPostPsqt[side][psqtIdx(side == WHITE ? sq : MIRROR[sq])]++;
+            C.knightPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq]) - 8] += cs[side];
         } else if (movement & outposts) {
           s += KNIGHT_OUTPOST_REACHABLE;
 
           if (T)
-            C.knightPostReachable[side]++;
+            C.knightPostReachable += cs[side];
         }
       } else if (pieceType == BISHOP_TYPE) {
         BitBoard bishopSquares = (bb & DARK_SQS) ? DARK_SQS : ~DARK_SQS;
@@ -472,25 +465,25 @@ Score PieceEval(Board* board, EvalData* data, int side) {
         s += BAD_BISHOP_PAWNS * scalar;
 
         if (T)
-          C.badBishopPawns[side] += scalar;
+          C.badBishopPawns += cs[side] * scalar;
 
         if (!(CENTER_SQS & bb) && bits(CENTER_SQS & GetBishopAttacks(sq, (myPawns | opponentPawns))) > 1) {
           s += DRAGON_BISHOP;
 
           if (T)
-            C.dragonBishop[side]++;
+            C.dragonBishop += cs[side];
         }
 
         if (outposts & bb) {
           s += BISHOP_POSTS[side][sq];
 
           if (T)
-            C.bishopPostPsqt[side][psqtIdx(side == WHITE ? sq : MIRROR[sq])]++;
+            C.bishopPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq]) - 8] += cs[side];
         } else if (movement & outposts) {
           s += BISHOP_OUTPOST_REACHABLE;
 
           if (T)
-            C.bishopPostReachable[side]++;
+            C.bishopPostReachable += cs[side];
         }
 
         if (side == WHITE) {
@@ -498,24 +491,24 @@ Score PieceEval(Board* board, EvalData* data, int side) {
             s += BISHOP_TRAPPED;
 
             if (T)
-              C.bishopTrapped[side]++;
+              C.bishopTrapped += cs[side];
           } else if ((sq == H7 || sq == G8) && getBit(opponentPawns, F7) && getBit(opponentPawns, G6)) {
             s += BISHOP_TRAPPED;
 
             if (T)
-              C.bishopTrapped[side]++;
+              C.bishopTrapped += cs[side];
           }
         } else {
           if ((sq == A2 || sq == B1) && getBit(opponentPawns, B3) && getBit(opponentPawns, C2)) {
             s += BISHOP_TRAPPED;
 
             if (T)
-              C.bishopTrapped[side]++;
+              C.bishopTrapped += cs[side];
           } else if ((sq == H2 || sq == G1) && getBit(opponentPawns, G3) && getBit(opponentPawns, F2)) {
             s += BISHOP_TRAPPED;
 
             if (T)
-              C.bishopTrapped[side]++;
+              C.bishopTrapped += cs[side];
           }
         }
       } else if (pieceType == ROOK_TYPE) {
@@ -524,12 +517,12 @@ Score PieceEval(Board* board, EvalData* data, int side) {
             s += ROOK_OPEN_FILE;
 
             if (T)
-              C.rookOpenFile[side]++;
+              C.rookOpenFile += cs[side];
           } else {
             s += ROOK_SEMI_OPEN;
 
             if (T)
-              C.rookSemiOpen[side]++;
+              C.rookSemiOpen += cs[side];
           }
         }
 
@@ -538,24 +531,24 @@ Score PieceEval(Board* board, EvalData* data, int side) {
             s += ROOK_TRAPPED;
 
             if (T)
-              C.rookTrapped[side]++;
+              C.rookTrapped += cs[side];
           } else if ((sq == H1 || sq == H2 || sq == G1) && (data->kingSq[side] == F1 || data->kingSq[side] == G1)) {
             s += ROOK_TRAPPED;
 
             if (T)
-              C.rookTrapped[side]++;
+              C.rookTrapped += cs[side];
           }
         } else {
           if ((sq == A8 || sq == A7 || sq == B8) && (data->kingSq[side] == B8 || data->kingSq[side] == C8)) {
             s += ROOK_TRAPPED;
 
             if (T)
-              C.rookTrapped[side]++;
+              C.rookTrapped += cs[side];
           } else if ((sq == H8 || sq == H7 || sq == G8) && (data->kingSq[side] == F8 || data->kingSq[side] == G8)) {
             s += ROOK_TRAPPED;
 
             if (T)
-              C.rookTrapped[side]++;
+              C.rookTrapped += cs[side];
           }
         }
       }
@@ -591,25 +584,25 @@ Score Threats(Board* board, EvalData* data, int side) {
         s += KNIGHT_THREATS[attacked];
 
         if (T)
-          C.knightThreats[side][attacked]++;
+          C.knightThreats[attacked] += cs[side];
         break;
       case BISHOP_TYPE:
         s += BISHOP_THREATS[attacked];
 
         if (T)
-          C.bishopThreats[side][attacked]++;
+          C.bishopThreats[attacked] += cs[side];
         break;
       case ROOK_TYPE:
         s += ROOK_THREATS[attacked];
 
         if (T)
-          C.rookThreats[side][attacked]++;
+          C.rookThreats[attacked] += cs[side];
         break;
       case KING_TYPE:
         s += KING_THREATS[attacked];
 
         if (T)
-          C.kingThreats[side][attacked]++;
+          C.kingThreats[attacked] += cs[side];
         break;
       }
 
@@ -630,12 +623,10 @@ Score Threats(Board* board, EvalData* data, int side) {
       (board->occupancies[xside] & ~board->pieces[PAWN[xside]]);
   s += bits(pawnPushAttacks) * PAWN_PUSH_THREAT;
 
-  if (T)
-    C.pawnPushThreat[side] += bits(pawnPushAttacks);
-
   if (T) {
-    C.pawnThreat[side] += bits(pawnThreats);
-    C.hangingThreat[side] += bits(hangingPieces);
+    C.pawnThreat += cs[side] * bits(pawnThreats);
+    C.hangingThreat += cs[side] * bits(hangingPieces);
+    C.pawnPushThreat += cs[side] * bits(pawnPushAttacks);
   }
 
   return s;
@@ -665,7 +656,7 @@ Score KingSafety(Board* board, EvalData* data, int side) {
     int pawnRank = ourPawnFile ? (side ? 7 - rank(lsb(ourPawnFile)) : rank(msb(ourPawnFile))) : 0;
     shelter += PAWN_SHELTER[adjustedFile][pawnRank];
     if (T)
-      C.pawnShelter[side][adjustedFile][pawnRank]++;
+      C.pawnShelter[adjustedFile][pawnRank] += cs[side];
 
     BitBoard opponentPawnFile = opponentPawns & FILE_MASKS[file];
     int theirRank = opponentPawnFile ? (side ? 7 - rank(lsb(opponentPawnFile)) : rank(msb(opponentPawnFile))) : 0;
@@ -673,12 +664,12 @@ Score KingSafety(Board* board, EvalData* data, int side) {
       shelter += BLOCKED_PAWN_STORM[theirRank];
 
       if (T)
-        C.blockedPawnStorm[side][theirRank]++;
+        C.blockedPawnStorm[theirRank] += cs[side];
     } else {
       shelter += PAWN_STORM[adjustedFile][theirRank];
 
       if (T)
-        C.pawnStorm[side][adjustedFile][theirRank]++;
+        C.pawnStorm[adjustedFile][theirRank] += cs[side];
     }
 
     // the quality of the file the king is on is recorded
@@ -687,7 +678,7 @@ Score KingSafety(Board* board, EvalData* data, int side) {
       shelter += KS_KING_FILE[idx];
 
       if (T)
-        C.kingFile[side][idx]++;
+        C.kingFile[idx] += cs[side];
     }
   }
 
@@ -726,7 +717,7 @@ Score KingSafety(Board* board, EvalData* data, int side) {
 
   // TODO: Utilize Texel tuning for these values
   if (T)
-    C.ks[side] = s;
+    C.ks += s * cs[side];
 
   s += shelter;
   return s;

@@ -112,47 +112,53 @@ typedef struct {
 } SearchData;
 
 typedef struct {
-  int8_t pieces[2][5];
-  int8_t psqt[2][6][32];
-  int8_t bishopPair[2];
-  int8_t bishopTrapped[2];
-  int8_t knightPostPsqt[2][32];
-  int8_t bishopPostPsqt[2][32];
-  int8_t knightPostReachable[2];
-  int8_t bishopPostReachable[2];
-  int8_t knightMobilities[2][9];
-  int8_t bishopMobilities[2][14];
-  int8_t rookMobilities[2][15];
-  int8_t queenMobilities[2][28];
-  int8_t doubledPawns[2];
-  int8_t opposedIsolatedPawns[2];
-  int8_t openIsolatedPawns[2];
-  int8_t backwardsPawns[2];
-  int8_t connectedPawn[2][8];
-  int8_t candidatePasser[2][8];
-  int8_t passedPawn[2][8];
-  int8_t passedPawnAdvance[2];
-  int8_t passedPawnEdgeDistance[2];
-  int8_t passedPawnKingProximity[2];
-  int8_t badBishopPawns[2];
-  int8_t dragonBishop[2];
-  int8_t rookOpenFile[2];
-  int8_t rookSemiOpen[2];
-  int8_t rookTrapped[2];
-  int8_t knightThreats[2][6];
-  int8_t bishopThreats[2][6];
-  int8_t rookThreats[2][6];
-  int8_t kingThreats[2][6];
-  int8_t pawnThreat[2];
-  int8_t hangingThreat[2];
-  int8_t pawnPushThreat[2];
+  int8_t pieces[5];
+  int8_t psqt[6][32];
+  int8_t bishopPair;
 
-  int pawnShelter[2][4][8];
-  int blockedPawnStorm[2][8];
-  int pawnStorm[2][4][8];
-  int kingFile[2][4];
+  int8_t knightPostPsqt[12];
+  int8_t bishopPostPsqt[12];
 
-  int ks[2];
+  int8_t knightMobilities[9];
+  int8_t bishopMobilities[14];
+  int8_t rookMobilities[15];
+  int8_t queenMobilities[28];
+
+  int8_t knightPostReachable;
+  int8_t bishopPostReachable;
+  int8_t bishopTrapped;
+  int8_t rookTrapped;
+  int8_t badBishopPawns;
+  int8_t dragonBishop;
+  int8_t rookOpenFile;
+  int8_t rookSemiOpen;
+
+  int8_t doubledPawns;
+  int8_t opposedIsolatedPawns;
+  int8_t openIsolatedPawns;
+  int8_t backwardsPawns;
+  int8_t connectedPawn[8];
+  int8_t candidatePasser[8];
+
+  int8_t passedPawn[8];
+  int8_t passedPawnEdgeDistance;
+  int8_t passedPawnKingProximity;
+  int8_t passedPawnAdvance;
+
+  int8_t knightThreats[6];
+  int8_t bishopThreats[6];
+  int8_t rookThreats[6];
+  int8_t kingThreats[6];
+  int8_t pawnThreat;
+  int8_t pawnPushThreat;
+  int8_t hangingThreat;
+
+  int8_t pawnShelter[4][8];
+  int8_t pawnStorm[4][8];
+  int8_t blockedPawnStorm[8];
+  int8_t kingFile[4];
+
+  int ks;
 
   int8_t ss;
 } EvalCoeffs;
