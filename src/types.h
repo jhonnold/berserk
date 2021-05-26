@@ -149,7 +149,7 @@ typedef struct {
   int8_t knightThreats[6];
   int8_t bishopThreats[6];
   int8_t rookThreats[6];
-  int8_t kingThreats[6];
+  int8_t kingThreat;
   int8_t pawnThreat;
   int8_t pawnPushThreat;
   int8_t hangingThreat;

@@ -80,7 +80,7 @@ extern const Score PASSED_PAWN_KING_PROXIMITY;
 extern const Score KNIGHT_THREATS[6];
 extern const Score BISHOP_THREATS[6];
 extern const Score ROOK_THREATS[6];
-extern const Score KING_THREATS[6];
+extern const Score KING_THREAT;
 extern const Score PAWN_THREAT;
 extern const Score PAWN_PUSH_THREAT;
 extern const Score HANGING_THREAT;
