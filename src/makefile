@@ -16,10 +16,10 @@ PEXT = $(POPCOUNT) -DPEXT -mbmi2
 AVX2PEXT = $(POPCOUNT) -DPEXT -mbmi2 -mavx2 -msse4.1 -mssse3 -msse2
 
 all:
-	$(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
+	$(CC) $(CFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
 
-popcount:
-	$(CC) $(CFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)-x64-popcnt
+no-popcount:
+	$(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)-x64-no-popcnt
 
 avx2:
 	$(CC) $(CFLAGS) $(SRC) $(LIBS) $(AVX2) -o $(EXE)-x64-avx2
