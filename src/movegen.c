@@ -67,12 +67,12 @@ inline void AppendMove(MoveList* moveList, Move move) { moveList->moves[moveList
 void GeneratePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibilities, Board* board) {
   BitBoard promotingPawns = pawns & PROMOTION_RANKS[board->side];
 
-  BitBoard quietPromoters =
-      Shift(promotingPawns, PAWN_DIRECTIONS[board->side]) & ~board->occupancies[BOTH] & possibilities;
-  BitBoard capturingPromotersW =
-      Shift(promotingPawns, PAWN_DIRECTIONS[board->side] + W) & board->occupancies[board->xside] & possibilities;
-  BitBoard capturingPromotersE =
-      Shift(promotingPawns, PAWN_DIRECTIONS[board->side] + E) & board->occupancies[board->xside] & possibilities;
+  BitBoard quietPromoters = (board->side == WHITE ? ShiftN(promotingPawns) : ShiftS(promotingPawns)) &
+                            ~board->occupancies[BOTH] & possibilities;
+  BitBoard capturingPromotersW = (board->side == WHITE ? ShiftNW(promotingPawns) : ShiftSW(promotingPawns)) &
+                                 board->occupancies[board->xside] & possibilities;
+  BitBoard capturingPromotersE = (board->side == WHITE ? ShiftNE(promotingPawns) : ShiftSE(promotingPawns)) &
+                                 board->occupancies[board->xside] & possibilities;
 
   while (quietPromoters) {
     int end = lsb(quietPromoters);
@@ -113,10 +113,10 @@ void GeneratePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibi
 
 void GeneratePawnCaptures(MoveList* moveList, BitBoard pawns, BitBoard possibilities, Board* board) {
   BitBoard nonPromotingPawns = pawns & ~PROMOTION_RANKS[board->side];
-  BitBoard capturingW =
-      Shift(nonPromotingPawns, PAWN_DIRECTIONS[board->side] + W) & board->occupancies[board->xside] & possibilities;
-  BitBoard capturingE =
-      Shift(nonPromotingPawns, PAWN_DIRECTIONS[board->side] + E) & board->occupancies[board->xside] & possibilities;
+  BitBoard capturingW = (board->side == WHITE ? ShiftNW(nonPromotingPawns) : ShiftSW(nonPromotingPawns)) &
+                        board->occupancies[board->xside] & possibilities;
+  BitBoard capturingE = (board->side == WHITE ? ShiftNE(nonPromotingPawns) : ShiftSE(nonPromotingPawns)) &
+                        board->occupancies[board->xside] & possibilities;
 
   while (capturingE) {
     int end = lsb(capturingE);
@@ -147,8 +147,8 @@ void GeneratePawnQuiets(MoveList* moveList, BitBoard pawns, BitBoard possibiliti
   BitBoard empty = ~board->occupancies[BOTH];
   BitBoard nonPromotingPawns = pawns & ~PROMOTION_RANKS[board->side];
 
-  BitBoard singlePush = Shift(nonPromotingPawns, PAWN_DIRECTIONS[board->side]) & empty;
-  BitBoard doublePush = Shift(singlePush & THIRD_RANKS[board->side], PAWN_DIRECTIONS[board->side]) & empty;
+  BitBoard singlePush = (board->side == WHITE ? ShiftN(nonPromotingPawns) : ShiftS(nonPromotingPawns)) & empty;
+  BitBoard doublePush = (board->side == WHITE ? ShiftN(singlePush & RANK_3) : ShiftS(singlePush & RANK_6)) & empty;
 
   singlePush &= possibilities;
   doublePush &= possibilities;
@@ -588,7 +588,7 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
       assert(mover != NO_PIECE);
 
       int seeScore = 0;
-      if ((PIECE_TYPE[captured] <= PIECE_TYPE[mover]) && (seeScore = SEE(board, move)) < 0) {
+      if ((PIECE_TYPE[captured] < PIECE_TYPE[mover]) && (seeScore = SEE(board, move)) < 0) {
         moveList->scores[i] = BAD_CAPTURE_SCORE + seeScore;
       } else {
         moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[mover][captured];

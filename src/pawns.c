@@ -43,7 +43,7 @@ Score PawnEval(Board* board, EvalData* data, int side) {
     int adjustedRank = side ? 7 - rank : rank;
 
     BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
-    BitBoard doubled = board->pieces[PAWN[side]] & Shift(bb, PAWN_DIRECTIONS[xside]);
+    BitBoard doubled = board->pieces[PAWN[side]] & (side == WHITE ? ShiftS(bb) : ShiftN(bb));
     BitBoard neighbors = board->pieces[PAWN[side]] & ADJACENT_FILE_MASKS[file];
     BitBoard connected = neighbors & RANK_MASKS[rank];
     BitBoard defenders = board->pieces[PAWN[side]] & GetPawnAttacks(sq, xside);

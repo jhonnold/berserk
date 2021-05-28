@@ -61,8 +61,18 @@ int bits(BitBoard bb);
 #define bits(bb) (__builtin_popcountll(bb))
 #endif
 
+#define ShiftN(bb) ((bb) >> 8)
+#define ShiftS(bb) ((bb) << 8)
+#define ShiftNN(bb) ((bb) >> 16)
+#define ShiftSS(bb) ((bb) << 16)
+#define ShiftW(bb) (((bb) & ~A_FILE) >> 1)
+#define ShiftE(bb) (((bb) & ~H_FILE) << 1)
+#define ShiftNE(bb) (((bb) & ~H_FILE) >> 7)
+#define ShiftSW(bb) (((bb) & ~A_FILE) << 7)
+#define ShiftNW(bb) (((bb) & ~A_FILE) >> 9)
+#define ShiftSE(bb) (((bb) & ~H_FILE) << 9)
+
 int popAndGetLsb(BitBoard* bb);
-BitBoard Shift(BitBoard bb, int dir);
 BitBoard Fill(BitBoard initial, int direction);
 void PrintBB(BitBoard bb);
 

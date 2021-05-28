@@ -362,7 +362,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (skipMove == move)
       continue;
 
-    int tactical = MovePromo(move) || MoveCapture(move);
+    int tactical = !!Tactical(move);
 
     if (bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
       continue;

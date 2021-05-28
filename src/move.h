@@ -40,7 +40,7 @@ extern const char* SQ_TO_COORD[];
 // just mask the start/end bits into a single int for indexing butterfly tables
 #define MoveStartEnd(move) ((move)&0xfff)
 
-#define Tactical(move) (MoveCapture(move) || MovePromo(move))
+#define Tactical(move) (((move)&0x1f0000) >> 16)
 
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move);
