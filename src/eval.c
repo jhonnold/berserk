@@ -312,21 +312,21 @@ inline int Scale(Board* board, int ss) {
 void InitEvalData(EvalData* data, Board* board) {
   BitBoard whitePawns = board->pieces[PAWN_WHITE];
   BitBoard blackPawns = board->pieces[PAWN_BLACK];
-  BitBoard whitePawnAttacks = Shift(whitePawns, NE) | Shift(whitePawns, NW);
-  BitBoard blackPawnAttacks = Shift(blackPawns, SE) | Shift(blackPawns, SW);
+  BitBoard whitePawnAttacks = ShiftNE(whitePawns) | ShiftNW(whitePawns);
+  BitBoard blackPawnAttacks = ShiftSE(blackPawns) | ShiftSW(blackPawns);
 
   data->allAttacks[WHITE] = data->attacks[WHITE][PAWN_TYPE] = whitePawnAttacks;
   data->allAttacks[BLACK] = data->attacks[BLACK][PAWN_TYPE] = blackPawnAttacks;
-  data->twoAttacks[WHITE] = Shift(whitePawns, NE) & Shift(whitePawns, NW);
-  data->twoAttacks[BLACK] = Shift(blackPawns, SE) & Shift(blackPawns, SW);
+  data->twoAttacks[WHITE] = ShiftNE(whitePawns) & ShiftNW(whitePawns);
+  data->twoAttacks[BLACK] = ShiftSE(blackPawns) & ShiftSW(blackPawns);
 
   data->outposts[WHITE] =
-      ~Fill(blackPawnAttacks, S) & (whitePawnAttacks | Shift(whitePawns | blackPawns, S)) & (RANK_4 | RANK_5 | RANK_6);
+      ~Fill(blackPawnAttacks, S) & (whitePawnAttacks | ShiftS(whitePawns | blackPawns)) & (RANK_4 | RANK_5 | RANK_6);
   data->outposts[BLACK] =
-      ~Fill(whitePawnAttacks, N) & (blackPawnAttacks | Shift(whitePawns | blackPawns, N)) & (RANK_5 | RANK_4 | RANK_3);
+      ~Fill(whitePawnAttacks, N) & (blackPawnAttacks | ShiftN(whitePawns | blackPawns)) & (RANK_5 | RANK_4 | RANK_3);
 
-  BitBoard inTheWayWhitePawns = (Shift(board->occupancies[BOTH], S) | RANK_2 | RANK_3) & whitePawns;
-  BitBoard inTheWayBlackPawns = (Shift(board->occupancies[BOTH], N) | RANK_7 | RANK_6) & blackPawns;
+  BitBoard inTheWayWhitePawns = (ShiftS(board->occupancies[BOTH]) | RANK_2 | RANK_3) & whitePawns;
+  BitBoard inTheWayBlackPawns = (ShiftN(board->occupancies[BOTH]) | RANK_7 | RANK_6) & blackPawns;
 
   data->mobilitySquares[WHITE] = ~(inTheWayWhitePawns | blackPawnAttacks);
   data->mobilitySquares[BLACK] = ~(inTheWayBlackPawns | whitePawnAttacks);
@@ -458,10 +458,11 @@ Score PieceEval(Board* board, EvalData* data, int side) {
       } else if (pieceType == BISHOP_TYPE) {
         BitBoard bishopSquares = (bb & DARK_SQS) ? DARK_SQS : ~DARK_SQS;
         BitBoard inTheWayPawns = board->pieces[PAWN[side]] & bishopSquares;
-        BitBoard blockedInTheWayPawns = Shift(board->occupancies[BOTH], PAWN_DIRECTIONS[xside]) &
-                                        board->pieces[PAWN[side]] & ~(A_FILE | B_FILE | G_FILE | H_FILE);
-        int scalar = bits(inTheWayPawns) * bits(blockedInTheWayPawns);
+        BitBoard blockedInTheWayPawns =
+            (side == WHITE ? ShiftS(board->occupancies[BOTH]) : ShiftN(board->occupancies[BOTH])) &
+            board->pieces[PAWN[side]] & ~(A_FILE | B_FILE | G_FILE | H_FILE);
 
+        int scalar = bits(inTheWayPawns) * bits(blockedInTheWayPawns);
         s += BAD_BISHOP_PAWNS * scalar;
 
         if (T)
@@ -615,11 +616,13 @@ Score Threats(Board* board, EvalData* data, int side) {
   BitBoard hangingPieces = board->occupancies[xside] & ~data->allAttacks[xside] & data->allAttacks[side];
   s += bits(hangingPieces) * HANGING_THREAT;
 
-  BitBoard pawnPushes = ~board->occupancies[BOTH] & Shift(board->pieces[PAWN[side]], PAWN_DIRECTIONS[side]);
-  pawnPushes |= ~board->occupancies[BOTH] & Shift(pawnPushes & THIRD_RANKS[side], PAWN_DIRECTIONS[side]);
+  BitBoard pawnPushes = ~board->occupancies[BOTH] &
+                        (side == WHITE ? ShiftN(board->pieces[PAWN_WHITE]) : ShiftS(board->pieces[PAWN_BLACK]));
+  pawnPushes |= ~board->occupancies[BOTH] & (side == WHITE ? ShiftN(pawnPushes & RANK_3) : ShiftS(pawnPushes & RANK_6));
   BitBoard pawnPushAttacks =
-      (Shift(pawnPushes, PAWN_DIRECTIONS[side] + E) | Shift(pawnPushes, PAWN_DIRECTIONS[side] + W)) &
-      (board->occupancies[xside] & ~board->pieces[PAWN[xside]]);
+      (side == WHITE ? ShiftNE(pawnPushes) | ShiftNW(pawnPushes) : ShiftSE(pawnPushes) | ShiftSW(pawnPushes));
+  pawnPushAttacks &= (board->occupancies[xside] & ~board->pieces[PAWN[xside]]);
+
   s += bits(pawnPushAttacks) * PAWN_PUSH_THREAT;
 
   if (T) {

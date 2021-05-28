@@ -64,34 +64,6 @@ inline int bits(BitBoard bb) {
 }
 #endif
 
-// Shifts a bitboard in a cardinal direction, with protection against off-the-board problems
-inline BitBoard Shift(BitBoard bb, int dir) {
-  switch (dir) {
-  case N:
-    return bb >> 8;
-  case S:
-    return bb << 8;
-  case (N + N):
-    return bb >> 16;
-  case (S + S):
-    return bb << 16;
-  case W:
-    return (bb & ~A_FILE) >> 1;
-  case E:
-    return (bb & ~H_FILE) << 1;
-  case NE:
-    return (bb & ~H_FILE) >> 7;
-  case SW:
-    return (bb & ~A_FILE) << 7;
-  case NW:
-    return (bb & ~A_FILE) >> 9;
-  case SE:
-    return (bb & ~H_FILE) << 9;
-  default:
-    return 0;
-  }
-}
-
 inline int popAndGetLsb(BitBoard* bb) {
   int sq = lsb(*bb);
   popLsb(*bb);

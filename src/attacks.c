@@ -160,11 +160,11 @@ BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   setBit(board, sq);
 
   if (color == WHITE) {
-    attacks |= Shift(board, NW);
-    attacks |= Shift(board, NE);
+    attacks |= ShiftNW(board);
+    attacks |= ShiftNE(board);
   } else {
-    attacks |= Shift(board, SE);
-    attacks |= Shift(board, SW);
+    attacks |= ShiftSE(board);
+    attacks |= ShiftSW(board);
   }
 
   return attacks;
@@ -213,14 +213,14 @@ BitBoard GetGeneratedKingAttacks(int sq) {
 
   setBit(board, sq);
 
-  attacks |= Shift(board, N);
-  attacks |= Shift(board, NE);
-  attacks |= Shift(board, E);
-  attacks |= Shift(board, SE);
-  attacks |= Shift(board, S);
-  attacks |= Shift(board, SW);
-  attacks |= Shift(board, W);
-  attacks |= Shift(board, NW);
+  attacks |= ShiftN(board);
+  attacks |= ShiftNE(board);
+  attacks |= ShiftE(board);
+  attacks |= ShiftSE(board);
+  attacks |= ShiftS(board);
+  attacks |= ShiftSW(board);
+  attacks |= ShiftW(board);
+  attacks |= ShiftNW(board);
 
   return attacks;
 }
