@@ -223,9 +223,6 @@ void UpdateWeights(Weights* weights) {
 
   for (int r = 0; r < 8; r++)
     UpdateWeight(&weights->blockedPawnStorm[r]);
-
-  for (int f = 0; f < 4; f++)
-    UpdateWeight(&weights->kingFile[f]);
 }
 
 void MergeWeightGradients(Weight* dest, Weight* src) {
@@ -399,11 +396,6 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
     for (int r = 0; r < 8; r++) {
       weights->blockedPawnStorm[r].mg.g += w->blockedPawnStorm[r].mg.g;
       weights->blockedPawnStorm[r].eg.g += w->blockedPawnStorm[r].eg.g;
-    }
-
-    for (int r = 0; r < 4; r++) {
-      weights->kingFile[r].mg.g += w->kingFile[r].mg.g;
-      weights->kingFile[r].eg.g += w->kingFile[r].eg.g;
     }
   }
 
@@ -628,11 +620,6 @@ void UpdatePawnShelterGradients(Position* position, double loss, Weights* weight
     weights->blockedPawnStorm[f].mg.g += position->coeffs.blockedPawnStorm[f] * mgBase;
     weights->blockedPawnStorm[f].eg.g += position->coeffs.blockedPawnStorm[f] * egBase;
   }
-
-  for (int f = 0; f < 4; f++) {
-    weights->kingFile[f].mg.g += position->coeffs.kingFile[f] * mgBase;
-    weights->kingFile[f].eg.g += position->coeffs.kingFile[f] * egBase;
-  }
 }
 
 void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w) {
@@ -751,9 +738,6 @@ void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weigh
 
   for (int r = 0; r < 8; r++)
     ApplyCoeff(mg, eg, position->coeffs.blockedPawnStorm[r], &weights->blockedPawnStorm[r]);
-
-  for (int r = 0; r < 4; r++)
-    ApplyCoeff(mg, eg, position->coeffs.kingFile[r], &weights->kingFile[r]);
 }
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread) {
@@ -1003,11 +987,6 @@ void InitPawnShelterWeights(Weights* weights) {
     weights->blockedPawnStorm[r].mg.value = scoreMG(BLOCKED_PAWN_STORM[r]);
     weights->blockedPawnStorm[r].eg.value = scoreEG(BLOCKED_PAWN_STORM[r]);
   }
-
-  for (int f = 0; f < 4; f++) {
-    weights->kingFile[f].mg.value = scoreMG(KS_KING_FILE[f]);
-    weights->kingFile[f].eg.value = scoreEG(KS_KING_FILE[f]);
-  }
 }
 
 double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 400.0)); }
@@ -1188,12 +1167,7 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   PrintWeightArray(fp, weights->blockedPawnStorm, 8, 0);
   fprintf(fp, "\n};\n");
 
-  fprintf(fp, "\nconst Score KS_KING_FILE[4] = {");
-  PrintWeightArray(fp, weights->kingFile, 4, 0);
-  fprintf(fp, "};\n");
-
   fprintf(fp, "\n");
-
   fclose(fp);
 }
 

@@ -69,7 +69,6 @@ typedef struct {
   Weight pawnShelter[4][8];
   Weight pawnStorm[4][8];
   Weight blockedPawnStorm[8];
-  Weight kingFile[4];
 } Weights;
 
 typedef struct {
