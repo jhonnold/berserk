@@ -579,7 +579,7 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
     if (move == hashMove) {
       moveList->scores[i] = HASH_MOVE_SCORE;
     } else if (MoveEP(move)) {
-      moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN[board->side]][PAWN[board->xside]];
+      moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][PAWN_WHITE];
     } else if (MoveCapture(move)) {
       int mover = MovePiece(move);
       int captured = board->squares[MoveEnd(move)];
@@ -593,8 +593,13 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
       } else {
         moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[mover][captured];
       }
-    } else if (MovePromo(move) >= 8) {
-      moveList->scores[i] = GOOD_CAPTURE_SCORE + STATIC_MATERIAL_VALUE[QUEEN_TYPE];
+    } else if (MovePromo(move)) {
+      int seeScore = SEE(board, move);
+      if (seeScore < 0) {
+        moveList->scores[i] = BAD_CAPTURE_SCORE + seeScore;
+      } else {
+        moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][MovePromo(move)];
+      }
     } else if (move == data->killers[data->ply][0]) {
       moveList->scores[i] = KILLER1_SCORE;
     } else if (move == data->killers[data->ply][1]) {
