@@ -183,6 +183,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   Move bestMove = NULL_MOVE;
   Move skipMove = data->skipMove[data->ply]; // skip used in SE (concept from SF)
 
+  Move move;
+  MoveList moves;
+
   // drop into tactical moves only
   if (depth <= 0)
     return Quiesce(alpha, beta, thread, pv);
@@ -315,12 +318,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     int probBeta = beta + 100;
     if (depth > 4 && abs(beta) < MATE_BOUND &&
         !(ttHit && tt->depth >= depth - 3 && TTScore(tt, data->ply) < probBeta)) {
-      MoveList moveList;
-      GenerateTacticalMoves(&moveList, board);
-
-      for (int i = 0; i < moveList.count; i++) {
-        Move move = moveList.moves[i];
-
+      
+      InitTacticalMoves(&moves, board);
+      while ((move = NextMove(&moves, 1))) {
         data->moves[data->ply++] = move;
         MakeMove(move, board);
 
@@ -345,19 +345,12 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   if (depth >= 4 && !ttHit && !skipMove)
     depth--;
 
-  MoveList moveList;
-  GenerateAllMoves(&moveList, board, data);
-
+  int totalMoves = 0, nonPrunedMoves = 0;
   MoveList quiets;
   quiets.count = 0;
+  InitAllMoves(&moves, board, data);
 
-  // TODO: totalMoves will just become standard moves with a proper phased generation
-  // nonPrunedMoves are moves that aren't skipped by LMP but get pruned by SEE
-  int totalMoves = 0, nonPrunedMoves = 0;
-  for (int i = 0; i < moveList.count; i++) {
-    ChooseTopMove(&moveList, i);
-    Move move = moveList.moves[i];
-
+  while ((move = NextMove(&moves, 0))) {
     // don't search this during singular
     if (skipMove == move)
       continue;
@@ -437,11 +430,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
         // decrease reduction if we're looking at a "specific" quiet move
         // killer1, killer2, and counter
-        if (moveList.scores[i] >= COUNTER_SCORE)
+        if (moves.scores[moves.idx - 1] >= COUNTER_SCORE)
           R--;
 
         // adjust reduction based on historical score
-        R -= moveList.scores[i] / 16384;
+        R -= moves.scores[moves.idx - 1] / 16384;
       } else {
         R--;
       }
@@ -489,7 +482,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   }
 
   // Checkmate detection using movecount
-  if (!moveList.count)
+  if (!moves.count)
     return board->checkers ? -CHECKMATE + data->ply : 0;
 
   // don't let our score inflate too high (tb)
@@ -563,19 +556,18 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   Move bestMove = NULL_MOVE;
   int origAlpha = alpha;
 
-  MoveList moveList;
-  GenerateTacticalMoves(&moveList, board);
+  Move move;
+  MoveList moves;
+  InitTacticalMoves(&moves, board);
 
-  for (int i = 0; i < moveList.count; i++) {
-    ChooseTopMove(&moveList, i);
-    Move move = moveList.moves[i];
-
+  while ((move = NextMove(&moves, 0))) {
+    int moveScore = moves.scores[moves.idx - 1];
     // a delta prune look-a-like by Halogen
     // prune based on SEE scores rather than flat mat val
-    if (eval + moveList.scores[i] + DELTA_CUTOFF < alpha)
+    if (eval + moveScore + DELTA_CUTOFF < alpha)
       break;
 
-    if (moveList.scores[i] < 0)
+    if (moveScore < 0)
       break;
 
     data->moves[data->ply++] = move;

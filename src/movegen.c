@@ -616,6 +616,44 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
   }
 }
 
+void InitAllMoves(MoveList* moves, Board* board, SearchData* data) {
+  moves->count = 0;
+  moves->idx = 0;
+
+  GenerateAllMoves(moves, board, data);
+}
+
+void InitTacticalMoves(MoveList* moves, Board* board) {
+  moves->count = 0;
+  moves->idx = 0;
+
+  GenerateTacticalMoves(moves, board);
+}
+
+Move NextMove(MoveList* moves, int skipSort) {
+  if (moves->idx == moves->count)
+    return NULL_MOVE;
+
+  if (!skipSort) {
+    int max = moves->idx;
+    for (int i = max + 1; i < moves->count; i++)
+      if (moves->scores[i] > moves->scores[max])
+        max = i;
+
+    if (max != moves->idx) {
+      int temp = moves->moves[max];
+      moves->moves[max] = moves->moves[moves->idx];
+      moves->moves[moves->idx] = temp;
+
+      temp = moves->scores[max];
+      moves->scores[max] = moves->scores[moves->idx];
+      moves->scores[moves->idx] = temp;
+    }
+  }
+
+  return moves->moves[moves->idx++];
+}
+
 // From a given index (to the end) find the best move
 // and put it at the from index
 // This is a single step of selection sort

@@ -23,22 +23,22 @@
 #include "types.h"
 #include "util.h"
 
+SearchData PERFT_DUMMY_DATA = {0};
+
 int Perft(int depth, Board* board) {
   if (depth == 0)
     return 1;
 
-  MoveList moveList = {0};
-  SearchData data = {0};
-  GenerateAllMoves(&moveList, board, &data);
+  Move move;
+  MoveList moves;
+  InitAllMoves(&moves, board, &PERFT_DUMMY_DATA);
 
   if (depth == 1)
-    return moveList.count;
+    return moves.count;
 
   int nodes = 0;
 
-  for (int i = 0; i < moveList.count; i++) {
-    Move move = moveList.moves[i];
-
+  while ((move = NextMove(&moves, 1))) {
     MakeMove(move, board);
     nodes += Perft(depth - 1, board);
     UndoMove(move, board);
@@ -54,14 +54,11 @@ void PerftTest(int depth, Board* board) {
 
   long startTime = GetTimeMS();
 
-  MoveList moveList = {0};
-  SearchData data = {0};
+  Move move;
+  MoveList moves;
+  InitAllMoves(&moves, board, &PERFT_DUMMY_DATA);
 
-  GenerateAllMoves(&moveList, board, &data);
-
-  for (int i = 0; i < moveList.count; i++) {
-    Move move = moveList.moves[i];
-
+  while ((move = NextMove(&moves, 1))) {
     MakeMove(move, board);
     int nodes = Perft(depth - 1, board);
     UndoMove(move, board);
@@ -74,5 +71,5 @@ void PerftTest(int depth, Board* board) {
 
   printf("\nNodes: %d\n", total);
   printf("Time: %ldms\n", (endTime - startTime));
-  printf("NPS: %ld\n\n", total / (endTime - startTime) * 1000);
+  printf("NPS: %ld\n\n", total / max(1, (endTime - startTime)) * 1000);
 }
