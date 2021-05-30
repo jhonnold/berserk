@@ -37,4 +37,8 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board);
 void ChooseTopMove(MoveList* moveList, int from);
 void PrintMoves(MoveList* moveList);
 
+void InitAllMoves(MoveList* moves, Board* board, SearchData* data);
+void InitTacticalMoves(MoveList* moves, Board* board);
+Move NextMove(MoveList* moves);
+
 #endif

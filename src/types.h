@@ -47,6 +47,7 @@ typedef int Move;
 // Move generation storage
 // moves/scores idx's match
 typedef struct {
+  int idx;
   int count;
   Move moves[MAX_MOVES];
   int scores[MAX_MOVES];
