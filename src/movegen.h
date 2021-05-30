@@ -39,6 +39,6 @@ void PrintMoves(MoveList* moveList);
 
 void InitAllMoves(MoveList* moves, Board* board, SearchData* data);
 void InitTacticalMoves(MoveList* moves, Board* board);
-Move NextMove(MoveList* moves, int skipSort);
+Move NextMove(MoveList* moves);
 
 #endif

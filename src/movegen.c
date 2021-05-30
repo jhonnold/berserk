@@ -630,25 +630,23 @@ void InitTacticalMoves(MoveList* moves, Board* board) {
   GenerateTacticalMoves(moves, board);
 }
 
-Move NextMove(MoveList* moves, int skipSort) {
+Move NextMove(MoveList* moves) {
   if (moves->idx == moves->count)
     return NULL_MOVE;
 
-  if (!skipSort) {
-    int max = moves->idx;
-    for (int i = max + 1; i < moves->count; i++)
-      if (moves->scores[i] > moves->scores[max])
-        max = i;
+  int max = moves->idx;
+  for (int i = max + 1; i < moves->count; i++)
+    if (moves->scores[i] > moves->scores[max])
+      max = i;
 
-    if (max != moves->idx) {
-      int temp = moves->moves[max];
-      moves->moves[max] = moves->moves[moves->idx];
-      moves->moves[moves->idx] = temp;
+  if (max != moves->idx) {
+    int temp = moves->moves[max];
+    moves->moves[max] = moves->moves[moves->idx];
+    moves->moves[moves->idx] = temp;
 
-      temp = moves->scores[max];
-      moves->scores[max] = moves->scores[moves->idx];
-      moves->scores[moves->idx] = temp;
-    }
+    temp = moves->scores[max];
+    moves->scores[max] = moves->scores[moves->idx];
+    moves->scores[moves->idx] = temp;
   }
 
   return moves->moves[moves->idx++];
