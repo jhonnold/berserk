@@ -2,7 +2,7 @@
 
 <img src="resources/berserk.jpg" alt="Berserk" width="400" />
 
-A UCI chess engine written in C.
+A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://lichess.org/@/BerserkEngine)!
 
 ## Elo History
 
