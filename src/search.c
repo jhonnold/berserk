@@ -431,8 +431,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (!improving)
           R++;
 
-        if (nullThreat && (MoveStart(move) == MoveEnd(nullThreat)))
-          R--;
+        if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
+          R++;
 
         // decrease reduction if we're looking at a "specific" quiet move
         // killer1, killer2, and counter
