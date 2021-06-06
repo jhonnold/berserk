@@ -359,11 +359,15 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       continue;
 
     int tactical = !!Tactical(move);
+    int moveScore = moves.scores[moves.idx - 1];
 
     if (bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
       continue;
 
     totalMoves++;
+
+    if (bestScore > -MATE_BOUND && !tactical && depth <= 2 && moveScore <= -2048 * depth * depth)
+      continue;
 
     // Static evaluation pruning, this applies for both quiet and tactical moves
     // quiet moves use a quadratic scale upwards
@@ -436,11 +440,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
         // decrease reduction if we're looking at a "specific" quiet move
         // killer1, killer2, and counter
-        if (moves.scores[moves.idx - 1] >= COUNTER_SCORE)
+        if (moveScore >= COUNTER_SCORE)
           R--;
 
         // adjust reduction based on historical score
-        R -= moves.scores[moves.idx - 1] / 16384;
+        R -= moveScore / 16384;
       } else {
         R--;
       }
