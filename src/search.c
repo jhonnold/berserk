@@ -182,6 +182,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   Move bestMove = NULL_MOVE;
   Move skipMove = data->skipMove[data->ply]; // skip used in SE (concept from SF)
+  Move nullThreat = NULL_MOVE;
 
   Move move;
   MoveList moves;
@@ -310,6 +311,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       if (score >= beta)
         return beta;
+
+      nullThreat = childPv.count ? childPv.moves[0] : NULL_MOVE;
     }
 
     // Prob cut
@@ -426,6 +429,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
         // increase reduction if our eval is declining
         if (!improving)
+          R++;
+
+        if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
           R++;
 
         // decrease reduction if we're looking at a "specific" quiet move
