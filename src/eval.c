@@ -240,21 +240,21 @@ const Score BLOCKED_PAWN_STORM[8] = {
  S(-30, -8), S(46, -55), S(18, -35), S(17, -27), S(2, -18), S(-34, -24), S(0, 0), S(0, 0),
 };
 
-const Score KS_ATTACKER_WEIGHTS[5] = {0, 28, 18, 15, 4};
+const Score KS_ATTACKER_WEIGHTS[5] = {0, 29, 19, 16, 5};
 
-const Score KS_ATTACK = 24;
+const Score KS_ATTACK = 25;
 
-const Score KS_WEAK_SQS = 63;
+const Score KS_WEAK_SQS = 65;
 
-const Score KS_PINNED = 31;
+const Score KS_PINNED = 32;
 
-const Score KS_SAFE_CHECK = 200;
+const Score KS_SAFE_CHECK = 204;
 
-const Score KS_UNSAFE_CHECK = 51;
+const Score KS_UNSAFE_CHECK = 52;
 
-const Score KS_ENEMY_QUEEN = 300;
+const Score KS_ENEMY_QUEEN = -307;
 
-const Score KS_KNIGHT_DEFENSE = 20;
+const Score KS_KNIGHT_DEFENSE = -21;
 
 const Score TEMPO = 20;
 // clang-format on
@@ -701,12 +701,12 @@ Score KingSafety(Board* board, EvalData* data, int side) {
                  + (KS_WEAK_SQS * bits(weak & kingArea))                    // weak sqs makes you vulnerable
                  + (KS_ATTACK * data->ksSqAttackCount[xside])               // general pieces aimed
                  + (KS_PINNED * bits(board->pinned & board->occupancies[side]))           //
-                 - (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])                        //
-                 - (KS_KNIGHT_DEFENSE * !!(data->attacks[side][KNIGHT_TYPE] & kingArea)); // knight f8 = no m8
+                 + (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])                        //
+                 + (KS_KNIGHT_DEFENSE * !!(data->attacks[side][KNIGHT_TYPE] & kingArea)); // knight f8 = no m8
 
   // only include this if in danger
   if (danger > 0)
-    s += S(-danger * danger / 1000, -danger / 30);
+    s += S(-danger * danger / 1024, -danger / 32);
 
   // TODO: Utilize Texel tuning for these values
   if (T)
