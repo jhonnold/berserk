@@ -23,6 +23,7 @@
 
 #define file(sq) ((sq)&7)
 #define rank(sq) ((sq) >> 3)
+#define sq(r, f) ((r) * 8 + (f))
 
 extern const BitBoard EMPTY;
 

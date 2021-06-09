@@ -334,8 +334,13 @@ void InitEvalData(EvalData* data, Board* board) {
   data->kingSq[WHITE] = lsb(board->pieces[KING_WHITE]);
   data->kingSq[BLACK] = lsb(board->pieces[KING_BLACK]);
 
-  data->kingArea[WHITE] = GetKingAttacks(data->kingSq[WHITE]);
-  data->kingArea[BLACK] = GetKingAttacks(data->kingSq[BLACK]);
+  int whiteKingF = max(1, min(6, file(data->kingSq[WHITE])));
+  int whiteKingR = max(1, min(6, rank(data->kingSq[WHITE])));
+  int blackKingF = max(1, min(6, file(data->kingSq[BLACK])));
+  int blackKingR = max(1, min(6, rank(data->kingSq[BLACK])));
+
+  data->kingArea[WHITE] = GetKingAttacks(sq(whiteKingR, whiteKingF)) | bit(sq(whiteKingR, whiteKingF));
+  data->kingArea[BLACK] = GetKingAttacks(sq(blackKingR, blackKingF)) | bit(sq(blackKingR, blackKingF));
 }
 
 // Material + PSQT value
