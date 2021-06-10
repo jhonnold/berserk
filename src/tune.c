@@ -44,7 +44,7 @@ void Tune() {
   ALPHA *= sqrt(n);
 
   ValidateEval(n, positions, &weights);
-  // DetermineK(n, positions);
+  ComputeK(n, positions);
 
   for (int epoch = 1; epoch < 10000; epoch++) {
     double error = UpdateAndTrain(epoch, n, positions, &weights);
@@ -71,42 +71,41 @@ void ValidateEval(int n, Position* positions, Weights* weights) {
   }
 }
 
-void DetermineK(int n, Position* positions) {
-  double min = -10, max = 10, delta = 1, best = 1, error = 100;
+// Finn Eggers method for determining K
+void ComputeK(int n, Position* positions) {
+  double dK = 0.01;
+  double dEdK = 1;
 
-  for (int p = 0; p < 10; p++) {
-    printf("Determining K: (%.9f, %.9f, %.9f)\n", min, max, delta);
+  double rate = 100;
+  double dev = 1e-8;
 
-    while (min < max) {
-      K = min;
+  while (fabs(dEdK) > dev) {
+    K += dK;
+    double Epdk = TotalStaticError(n, positions);
+    K -= 2 * dK;
+    double Emdk = TotalStaticError(n, positions);
+    K += dK;
 
-      double e = 0;
+    dEdK = (Epdk - Emdk) / (2 * dK);
+
+    printf("K: %.9f, Error: %.9f, Deviation: %.9f\n", K, (Epdk + Emdk) / 2, fabs(dEdK));
+
+    K -= dEdK * rate;
+  }
+}
+
+double TotalStaticError(int n, Position* positions) {
+  double e = 0;
 
 #pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
-      for (int i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++) {
 
-        double sigmoid = Sigmoid(positions[i].staticEval);
-        double difference = sigmoid - positions[i].result;
-        e += pow(difference, 2);
-      }
-
-      e /= n;
-
-      if (e < error) {
-        error = e;
-        best = K;
-        printf("New best K of %.9f, Error %.9f\n", K, error);
-      }
-      min += delta;
-    }
-
-    min = best - delta;
-    max = best + delta;
-    delta /= 10;
+    double sigmoid = Sigmoid(positions[i].staticEval);
+    double difference = sigmoid - positions[i].result;
+    e += pow(difference, 2);
   }
 
-  K = best;
-  printf("Using K of %.9f\n", K);
+  return e / n;
 }
 
 void UpdateWeight(Weight* w) {

@@ -8,7 +8,7 @@
 #include "types.h"
 
 #define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean.epd"
-#define THREADS 8
+#define THREADS 16
 
 typedef struct {
   int epoch;
@@ -92,7 +92,8 @@ typedef struct {
 void Tune();
 
 void ValidateEval(int n, Position* positions, Weights* weights);
-void DetermineK(int n, Position* positions);
+void ComputeK(int n, Position* positions);
+double TotalStaticError(int n, Position* positions);
 
 void UpdateParam(Param* p);
 void UpdateWeight(Weight* w);
