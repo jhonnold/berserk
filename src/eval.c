@@ -48,7 +48,7 @@ const int MAX_PHASE = 24;
 const int PHASE_MULTIPLIERS[5] = {0, 1, 1, 2, 4};
 const int MAX_SCALE = 128;
 
-const int STATIC_MATERIAL_VALUE[7] = {100, 540, 540, 675, 1045, 30000, 0};
+const int STATIC_MATERIAL_VALUE[7] = {100, 565, 565, 705, 1000, 30000, 0};
 const int SHELTER_STORM_FILES[8][2] = {{0, 2}, {0, 2}, {1, 3}, {2, 4}, {3, 5}, {4, 6}, {5, 7}, {5, 7}};
 
 // clang-format off
