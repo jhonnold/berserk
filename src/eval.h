@@ -85,6 +85,8 @@ extern const Score PAWN_THREAT;
 extern const Score PAWN_PUSH_THREAT;
 extern const Score HANGING_THREAT;
 
+extern const Score SPACE[15];
+
 extern const Score TEMPO;
 
 extern const Score PAWN_SHELTER[4][8];
