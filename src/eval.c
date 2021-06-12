@@ -222,11 +222,11 @@ const Score PAWN_PUSH_THREAT = S(23, 2);
 
 const Score HANGING_THREAT = S(7, 11);
 
-const Score SPACE[17] = {
- S(   0,   0), S(   0,   0), S( 256,  -8), S( 131, -12), S(  53,  -8),
- S(  17,  -4), S(   1,   0), S(  -8,   2), S( -12,   5), S( -12,   7),
- S( -11,   9), S(  -8,  13), S(  -5,  14), S(  -2,  20), S(   2,  21),
- S(   7,  13), S(  12,-197),};
+const Score SPACE[15] = {
+ S( 256,  -8), S( 131, -12), S(  53,  -8), S(  17,  -4), S(   1,   0), 
+ S(  -8,   2), S( -12,   5), S( -12,   7), S( -11,   9), S(  -8,  13), 
+ S(  -5,  14), S(  -2,  20), S(   2,  21), S(   7,  13), S(  12,-197),
+};
 
 const Score PAWN_SHELTER[4][8] = {
  { S(-23, 5), S(45, 54), S(-12, 58), S(-12, 12), S(4, 0), S(32, -19), S(28, -42), S(0, 0),},
@@ -727,21 +727,26 @@ Score KingSafety(Board* board, EvalData* data, int side) {
   return s;
 }
 
+// Space evaluation
+// space is determined by # of pieces (scalar) and number of squares in the center
+// that are behind pawns and not occupied by allied pawns or attacked by enemy
+// pawns.
+// https://www.chessprogramming.org/Space, Laser, Chess22k, and SF as references
 Score Space(Board* board, EvalData* data, int side) {
   Score s = S(0, 0);
   int xside = side ^ 1;
 
+  static const BitBoard CENTER_FILES = (C_FILE | D_FILE | E_FILE | F_FILE);
+
   BitBoard space = side == WHITE ? ShiftS(board->pieces[PAWN[side]]) : ShiftN(board->pieces[PAWN[side]]);
   space |= side == WHITE ? (ShiftS(space) | ShiftSS(space)) : (ShiftN(space) | ShiftNN(space));
+  space &= ~(board->pieces[PAWN[side]] | data->attacks[xside][PAWN_TYPE]);
+  space &= CENTER_FILES;
 
-  s +=
-      SPACE[bits(board->occupancies[side])] *
-      bits(space & ~board->pieces[PAWN[side]] & ~data->attacks[xside][PAWN_TYPE] & (C_FILE | D_FILE | E_FILE | F_FILE));
+  s += SPACE[bits(board->occupancies[side]) - 2] * bits(space);
 
   if (T)
-    C.space[bits(board->occupancies[side])] +=
-        cs[side] * bits(space & ~board->pieces[PAWN[side]] & ~data->attacks[xside][PAWN_TYPE] &
-                        (C_FILE | D_FILE | E_FILE | F_FILE));
+    C.space[bits(board->occupancies[side]) - 2] += cs[side] * bits(space);
 
   return s;
 }

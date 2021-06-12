@@ -155,7 +155,7 @@ typedef struct {
   int8_t pawnPushThreat;
   int8_t hangingThreat;
 
-  int8_t space[17];
+  int8_t space[15];
 
   int8_t pawnShelter[4][8];
   int8_t pawnStorm[4][8];

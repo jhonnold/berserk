@@ -226,7 +226,7 @@ void UpdateWeights(Weights* weights) {
   for (int r = 0; r < 8; r++)
     UpdateWeight(&weights->blockedPawnStorm[r]);
 
-  for (int s = 0; s < 17; s++)
+  for (int s = 0; s < 15; s++)
     UpdateWeight(&weights->space[s]);
 }
 
@@ -403,7 +403,7 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
       weights->blockedPawnStorm[r].eg.g += w->blockedPawnStorm[r].eg.g;
     }
 
-    for (int s = 0; s < 17; s++) {
+    for (int s = 0; s < 15; s++) {
       weights->space[s].mg.g += w->space[s].mg.g;
       weights->space[s].eg.g += w->space[s].eg.g;
     }
@@ -637,7 +637,7 @@ void UpdateSpaceGradients(Position* position, double loss, Weights* weights) {
   double mgBase = position->phaseMg * position->scale * loss;
   double egBase = position->phaseEg * position->scale * loss;
 
-  for (int s = 0; s < 17; s++) {
+  for (int s = 0; s < 15; s++) {
     weights->space[s].mg.g += position->coeffs.space[s] * mgBase;
     weights->space[s].eg.g += position->coeffs.space[s] * egBase;
   }
@@ -763,7 +763,7 @@ void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weigh
 }
 
 void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* weights) {
-  for (int s = 0; s < 17; s++) {
+  for (int s = 0; s < 15; s++) {
     ApplyCoeff(mg, eg, position->coeffs.space[s], &weights->space[s]);
   }
 }
@@ -1016,7 +1016,7 @@ void InitPawnShelterWeights(Weights* weights) {
 }
 
 void InitSpaceWeights(Weights* weights) {
-  for (int s = 0; s < 17; s++) {
+  for (int s = 0; s < 15; s++) {
     weights->space[s].mg.value = scoreMG(SPACE[s]);
     weights->space[s].eg.value = scoreEG(SPACE[s]);
   }
@@ -1172,8 +1172,8 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score HANGING_THREAT = ");
   PrintWeight(fp, &weights->hangingThreat);
 
-  fprintf(fp, "\nconst Score SPACE[17] = {\n");
-  PrintWeightArray(fp, weights->space, 17, 5);
+  fprintf(fp, "\nconst Score SPACE[15] = {\n");
+  PrintWeightArray(fp, weights->space, 15, 5);
   fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score PAWN_SHELTER[4][8] = {\n");
