@@ -67,8 +67,10 @@ void ValidateEval(int n, Position* positions, Weights* weights) {
     }
 
     if (i % 4096 == 0)
-      printf("Validated %d position evaluations...\n", i);
+      printf("Validated %d position evaluations...\r", i);
   }
+  
+  printf("Successfully validated %d positions!\n", n);
 }
 
 // Finn Eggers method for determining K
@@ -784,14 +786,12 @@ Position* LoadPositions(int* n) {
     sscanf(buffer + i, "c2 \"%f\"", &positions[p].result);
 
     ParseFen(buffer, &board);
+
+    // Q search and apply the PV
     ResetThreadPool(&board, &params, threads);
     Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
-
     for (int m = 0; m < pv.count; m++)
       MakeMove(pv.moves[m], &board);
-
-    // if (board.checkers)
-    //   continue;
 
     if (!(board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
       continue;
@@ -800,11 +800,11 @@ Position* LoadPositions(int* n) {
       continue;
 
     LoadPosition(&board, &positions[p], threads);
-    if (positions[p].staticEval > 3000)
+    if (abs(positions[p].staticEval) > 3000)
       continue;
 
     if (!(++p & 4095))
-      printf("Loaded %d positions...\n", p);
+      printf("Loaded %d positions...\r", p);
   }
 
   printf("Successfully loaded %d positions.\n", p);

@@ -85,6 +85,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
     params->timeset = 1;
+    params->timeToSpend = moveTime - MOVE_BUFFER;
     params->endTime = params->startTime + moveTime - MOVE_BUFFER;
     params->maxTime = params->startTime + moveTime - MOVE_BUFFER;
   } else {
