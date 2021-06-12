@@ -66,6 +66,8 @@ typedef struct {
   Weight pawnPushThreat;
   Weight hangingThreat;
 
+  Weight space[17];
+
   Weight pawnShelter[4][8];
   Weight pawnStorm[4][8];
   Weight blockedPawnStorm[8];
@@ -111,6 +113,7 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights);
+void UpdateSpaceGradients(Position* position, double loss, Weights* weights);
 
 void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w);
 double EvaluateCoeffs(Position* position, Weights* weights);
@@ -123,6 +126,7 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights);
+void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* weights);
 
 void InitMaterialWeights(Weights* weights);
 void InitPsqtWeights(Weights* weights);
@@ -134,6 +138,7 @@ void InitPieceBonusWeights(Weights* weights);
 void InitPawnBonusWeights(Weights* weights);
 void InitPasserBonusWeights(Weights* weights);
 void InitPawnShelterWeights(Weights* weights);
+void InitSpaceWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
 Position* LoadPositions(int* n);

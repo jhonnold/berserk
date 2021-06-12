@@ -38,6 +38,7 @@ void Tune() {
   InitPawnBonusWeights(&weights);
   InitPasserBonusWeights(&weights);
   InitPawnShelterWeights(&weights);
+  InitSpaceWeights(&weights);
 
   int n = 0;
   Position* positions = LoadPositions(&n);
@@ -224,6 +225,9 @@ void UpdateWeights(Weights* weights) {
 
   for (int r = 0; r < 8; r++)
     UpdateWeight(&weights->blockedPawnStorm[r]);
+
+  for (int s = 0; s < 17; s++)
+    UpdateWeight(&weights->space[s]);
 }
 
 void MergeWeightGradients(Weight* dest, Weight* src) {
@@ -398,6 +402,11 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
       weights->blockedPawnStorm[r].mg.g += w->blockedPawnStorm[r].mg.g;
       weights->blockedPawnStorm[r].eg.g += w->blockedPawnStorm[r].eg.g;
     }
+
+    for (int s = 0; s < 17; s++) {
+      weights->space[s].mg.g += w->space[s].mg.g;
+      weights->space[s].eg.g += w->space[s].eg.g;
+    }
   }
 
   printf("Epoch: %5d, Error: %9.8f\n", epoch, error / n);
@@ -429,6 +438,7 @@ void* UpdateGradients(void* arg) {
     UpdatePawnBonusGradients(&positions[i], loss, weights);
     UpdatePasserBonusGradients(&positions[i], loss, weights);
     UpdatePawnShelterGradients(&positions[i], loss, weights);
+    UpdateSpaceGradients(&positions[i], loss, weights);
 
     job->error += pow(positions[i].result - sigmoid, 2);
   }
@@ -623,6 +633,16 @@ void UpdatePawnShelterGradients(Position* position, double loss, Weights* weight
   }
 }
 
+void UpdateSpaceGradients(Position* position, double loss, Weights* weights) {
+  double mgBase = position->phaseMg * position->scale * loss;
+  double egBase = position->phaseEg * position->scale * loss;
+
+  for (int s = 0; s < 17; s++) {
+    weights->space[s].mg.g += position->coeffs.space[s] * mgBase;
+    weights->space[s].eg.g += position->coeffs.space[s] * egBase;
+  }
+}
+
 void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w) {
   *mg += coeff * w->mg.value;
   *eg += coeff * w->eg.value;
@@ -640,6 +660,7 @@ double EvaluateCoeffs(Position* position, Weights* weights) {
   EvaluatePawnBonusValues(&mg, &eg, position, weights);
   EvaluatePasserBonusValues(&mg, &eg, position, weights);
   EvaluatePawnShelterValues(&mg, &eg, position, weights);
+  EvaluateSpaceValues(&mg, &eg, position, weights);
 
   mg += scoreMG(position->coeffs.ks);
   eg += scoreEG(position->coeffs.ks);
@@ -739,6 +760,12 @@ void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weigh
 
   for (int r = 0; r < 8; r++)
     ApplyCoeff(mg, eg, position->coeffs.blockedPawnStorm[r], &weights->blockedPawnStorm[r]);
+}
+
+void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* weights) {
+  for (int s = 0; s < 17; s++) {
+    ApplyCoeff(mg, eg, position->coeffs.space[s], &weights->space[s]);
+  }
 }
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread) {
@@ -988,6 +1015,13 @@ void InitPawnShelterWeights(Weights* weights) {
   }
 }
 
+void InitSpaceWeights(Weights* weights) {
+  for (int s = 0; s < 17; s++) {
+    weights->space[s].mg.value = scoreMG(SPACE[s]);
+    weights->space[s].eg.value = scoreEG(SPACE[s]);
+  }
+}
+
 double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 400.0)); }
 
 void PrintWeights(Weights* weights, int epoch, double error) {
@@ -1137,6 +1171,10 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score HANGING_THREAT = ");
   PrintWeight(fp, &weights->hangingThreat);
+
+  fprintf(fp, "\nconst Score SPACE[17] = {\n");
+  PrintWeightArray(fp, weights->space, 17, 5);
+  fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score PAWN_SHELTER[4][8] = {\n");
   fprintf(fp, " {");
