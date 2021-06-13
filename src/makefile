@@ -4,7 +4,7 @@ EXE = berserk
 VERSION = 4.3.0-dev
 
 LIBS = -lm -lpthread
-WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
+WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow -g
 CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG
 TFLAGS = -O3 $(WFLAGS) -flto -fopenmp -march=native -DTUNE -DNDEBUG 
 RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG
