@@ -96,6 +96,7 @@ extern const Score KS_KING_FILE[4];
 
 extern const Score KS_ATTACKER_WEIGHTS[5];
 extern const Score KS_ATTACK;
+extern const Score KS_PINNED;
 extern const Score KS_WEAK_SQS;
 extern const Score KS_SAFE_CHECK;
 extern const Score KS_UNSAFE_CHECK;

@@ -451,6 +451,12 @@ Score PieceEval(Board* board, EvalData* data, int side) {
         data->ksAttackWeight[side] += KS_ATTACKER_WEIGHTS[pieceType];
         data->ksSqAttackCount[side] += bits(movement & enemyKingArea);
         data->ksAttackerCount[side]++;
+
+        if (T) {
+          C.ksAttackerCount[xside]++;
+          C.ksAttackerWeights[xside][pieceType]++;
+          C.ksAttack[xside] += bits(movement & enemyKingArea); 
+        }
       }
 
       // Piece specific bonus'
@@ -720,8 +726,17 @@ Score KingSafety(Board* board, EvalData* data, int side) {
     s += S(-danger * danger / 1024, -danger / 32);
 
   // TODO: Utilize Texel tuning for these values
-  if (T)
+  if (T) {
     C.ks += s * cs[side];
+    C.danger[side] = danger;
+
+    C.ksSafeCheck[side] = safeChecks;
+    C.ksUnsafeCheck[side] = unsafeChecks;
+    C.ksWeakSqs[side] = bits(weak & kingArea);
+    C.ksPinned[side] = bits(board->pinned & board->occupancies[side]);
+    C.ksEnemyQueen[side] = !board->pieces[QUEEN[xside]];
+    C.ksKnightDefense[side] = !!(data->attacks[side][KNIGHT_TYPE] & kingArea);
+  }
 
   s += shelter;
   return s;

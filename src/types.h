@@ -162,6 +162,16 @@ typedef struct {
   int8_t blockedPawnStorm[8];
   
   int ks;
+  int danger[2];
+  int8_t ksAttackerCount[2];
+  int8_t ksAttackerWeights[2][5];
+  int8_t ksAttack[2];
+  int8_t ksWeakSqs[2];
+  int8_t ksPinned[2];
+  int8_t ksSafeCheck[2];
+  int8_t ksUnsafeCheck[2];
+  int8_t ksEnemyQueen[2];
+  int8_t ksKnightDefense[2];
 
   int8_t ss;
 } EvalCoeffs;

@@ -9,6 +9,7 @@
 
 #define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean-mixed.epd"
 #define THREADS 16
+#define TUNE_KS 0
 
 typedef struct {
   int epoch;
@@ -71,6 +72,15 @@ typedef struct {
   Weight pawnShelter[4][8];
   Weight pawnStorm[4][8];
   Weight blockedPawnStorm[8];
+
+  Weight ksAttackerWeight[5];
+  Weight ksAttack;
+  Weight ksWeakSqs;
+  Weight ksPinned;
+  Weight ksSafeCheck;
+  Weight ksUnsafeCheck;
+  Weight ksEnemyQueen;
+  Weight ksKnightDefense;
 } Weights;
 
 typedef struct {
@@ -82,7 +92,13 @@ typedef struct {
   float phaseEg;
   Score staticEval;
   EvalCoeffs coeffs;
+  char fen[128];
 } Position;
+
+typedef struct {
+  float wDanger;
+  float bDanger;
+} KSGradient;
 
 typedef struct {
   float error;
@@ -114,9 +130,10 @@ void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights)
 void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights);
 void UpdateSpaceGradients(Position* position, double loss, Weights* weights);
+void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights, KSGradient* ks);
 
 void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w);
-double EvaluateCoeffs(Position* position, Weights* weights);
+double EvaluateCoeffs(Position* position, Weights* weights, KSGradient* ks);
 void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights* weights);
@@ -127,6 +144,7 @@ void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights
 void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* weights);
+void EvaluateKingSafetyValues(double* mg, double* eg, Position* position, Weights* weights, KSGradient* ks);
 
 void InitMaterialWeights(Weights* weights);
 void InitPsqtWeights(Weights* weights);
@@ -139,6 +157,7 @@ void InitPawnBonusWeights(Weights* weights);
 void InitPasserBonusWeights(Weights* weights);
 void InitPawnShelterWeights(Weights* weights);
 void InitSpaceWeights(Weights* weights);
+void InitKingSafetyWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
 Position* LoadPositions(int* n);
