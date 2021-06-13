@@ -24,7 +24,7 @@
 #define BUCKET_SIZE 4
 
 typedef struct {
-  uint8_t flags;
+  uint16_t flags;
   uint16_t depth;
   int16_t eval;
   int16_t score;
@@ -33,7 +33,6 @@ typedef struct {
 } TTEntry;
 
 typedef struct {
-  uint32_t padding;
   TTEntry entries[BUCKET_SIZE];
 } TTBucket;
 
