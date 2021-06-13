@@ -35,9 +35,9 @@ int main(int argc, char** argv) {
   SeedRandom(0);
 
   InitPSQT();
-  InitAttacks();
   InitZobristKeys();
   InitPruningAndReductionTables();
+  InitAttacks();
 
   TTInit(32);
 
