@@ -21,7 +21,7 @@
 #include "util.h"
 
 void AddKillerMove(SearchData* data, Move move) {
-  if (data->killers[data->ply][0] == move)
+  if (data->killers[data->ply][0] != move)
     data->killers[data->ply][1] = data->killers[data->ply][0];
 
   data->killers[data->ply][0] = move;
