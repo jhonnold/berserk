@@ -65,13 +65,13 @@ inline void TTPrefetch(uint64_t hash) { __builtin_prefetch(&TT.buckets[TT.mask &
 
 inline TTEntry* TTProbe(int* hit, uint64_t hash) {
 #ifndef TUNE
-  TTBucket* bucket = &TT.buckets[TT.mask & hash];
+  TTEntry* bucket = TT.buckets[TT.mask & hash].entries;
   uint32_t shortHash = hash >> 32;
 
   for (int i = 0; i < BUCKET_SIZE; i++)
-    if (bucket->entries[i].hash == shortHash) {
+    if (bucket[i].hash == shortHash) {
       *hit = 1;
-      return &bucket->entries[i];
+      return &bucket[i];
     }
 #endif
 

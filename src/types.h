@@ -42,7 +42,7 @@ typedef int Score;
 
 typedef uint64_t BitBoard;
 
-typedef int Move;
+typedef uint32_t Move;
 
 // Move generation storage
 // moves/scores idx's match
