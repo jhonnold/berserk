@@ -27,10 +27,9 @@ typedef struct {
   uint32_t hash, move;
   int16_t eval, score;
   uint8_t flags, depth;
-} __attribute__((packed)) TTEntry;
+} TTEntry;
 
 typedef struct {
-  uint64_t padding;
   TTEntry entries[BUCKET_SIZE];
 } TTBucket;
 
