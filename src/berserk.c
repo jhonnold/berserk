@@ -52,6 +52,5 @@ int main(int argc, char** argv) {
     UCILoop();
   }
 
-  TTFree();
   return 0;
 }
