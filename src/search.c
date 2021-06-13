@@ -127,7 +127,7 @@ void* Search(void* arg) {
       // delta is our window for search. early depths get full searches
       // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
       // vary this slightly based on the previous depths window expansion count
-      int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW + expands : CHECKMATE;
+      int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW : CHECKMATE;
 
       expands = 0;
       alpha = max(score - delta, -CHECKMATE);
