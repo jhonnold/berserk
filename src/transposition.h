@@ -21,21 +21,17 @@
 
 #define NO_ENTRY 0ULL
 #define MEGABYTE 0x100000ULL
-#define BUCKET_SIZE 3
+#define BUCKET_SIZE 4
 
 typedef struct {
-  uint8_t flags;
-  uint8_t depth;
-  int16_t eval;
-  int16_t score;
-  uint32_t hash;
-  Move move;
-} TTEntry;
+  uint32_t hash, move;
+  int16_t eval, score;
+  uint8_t flags, depth;
+} __attribute__((packed)) TTEntry;
 
 typedef struct {
-  uint16_t paddingLow;
+  uint64_t padding;
   TTEntry entries[BUCKET_SIZE];
-  uint16_t paddingHigh;
 } TTBucket;
 
 typedef struct {

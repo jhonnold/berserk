@@ -244,8 +244,6 @@ void UCILoop() {
         printf("info string FAILED!\n");
     }
   }
-
-  free(threads);
 }
 
 int GetOptionIntValue(char* in) {
