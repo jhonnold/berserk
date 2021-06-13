@@ -4,11 +4,11 @@ EXE = berserk
 VERSION = 4.3.0-dev
 
 LIBS = -lm -lpthread
-WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow -g
-CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG
-TFLAGS = -O3 $(WFLAGS) -flto -fopenmp -march=native -DTUNE -DNDEBUG 
-RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG
-DFLAGS = -O0 $(WFLAGS) -g
+WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
+CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG -g
+TFLAGS = -O3 $(WFLAGS) -flto -fopenmp -march=native -DTUNE -DNDEBUG -g
+RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG -g
+DFLAGS = -O3 $(WFLAGS) -g
 
 POPCOUNT = -DPOPCOUNT -msse -msse3 -mpopcnt
 AVX2 = $(POPCOUNT) -mavx2 -msse4.1 -mssse3 -msse2
