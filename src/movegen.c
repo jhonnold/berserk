@@ -652,7 +652,7 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data) {
   switch (moves->phase) {
   case HASH_MOVE:
     moves->phase = GEN_MOVES;
-    if (moves->hashMove && MovePseudoLegal(moves->hashMove, board))
+    if (moves->hashMove && MoveIsLegal(moves->hashMove, board))
       return moves->hashMove;
     // fallthrough
   case GEN_MOVES:

@@ -62,6 +62,6 @@ void MakeMove(Move move, Board* board);
 void UndoMove(Move move, Board* board);
 
 int IsMoveLegal(Move move, Board* board);
-int MovePseudoLegal(Move move, Board* board);
+int MoveIsLegal(Move move, Board* board);
 
 #endif

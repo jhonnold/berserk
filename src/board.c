@@ -757,57 +757,104 @@ void UndoNullMove(Board* board) {
   board->pinned = board->pinnedHistory[board->moveNo];
 }
 
-int MovePseudoLegal(Move move, Board* board) {
+int MoveIsLegal(Move move, Board* board) {
   int piece = MovePiece(move);
   int start = MoveStart(move);
   int end = MoveEnd(move);
 
-  if (start < A8 || start > H1 || end < A8 || end > H1)
-    return 0;
-
   // moving piece isn't where it says it is
-  if (piece != board->squares[start])
+  if (!move || piece > KING_BLACK || (piece & 1) != board->side || piece != board->squares[start])
     return 0;
 
   // can't capture our own piece
-  if (board->squares[end] != NO_PIECE && (board->squares[end] & 1) == board->side)
+  if (board->squares[end] != NO_PIECE && (!MoveCapture(move) || (board->squares[end] & 1) == board->side))
     return 0;
 
-  BitBoard pinnedMovement = -1ULL;
+  // can't capture air
+  if (MoveCapture(move) && board->squares[end] == NO_PIECE && !MoveEP(move))
+    return 0;
+
+  // non-pawns can't promote/dp/ep
+  if ((MovePromo(move) || MoveDoublePush(move) || MoveEP(move)) && PIECE_TYPE[piece] != PAWN_TYPE)
+    return 0;
+
+  // non-kings can't castle
+  if (MoveCastle(move) && PIECE_TYPE[piece] != KING_TYPE)
+    return 0;
+
+  BitBoard possible = -1ULL;
   if (getBit(board->pinned, start))
-    pinnedMovement = GetPinnedMovementSquares(start, lsb(board->pieces[KING[board->side]]));
+    possible &= GetPinnedMovementSquares(start, lsb(board->pieces[KING[board->side]]));
+
+  if (board->checkers)
+    possible &= GetInBetweenSquares(lsb(board->checkers), lsb(board->pieces[KING[board->side]])) | board->checkers;
+
+  if (bits(board->checkers) > 1 && PIECE_TYPE[piece] != KING_TYPE)
+    return 0;
 
   switch (PIECE_TYPE[piece]) {
+  case KING_TYPE:
+    if (!MoveCastle(move) && !getBit(GetKingAttacks(start), end))
+      return 0;
+    break;
   case KNIGHT_TYPE:
-    return !!getBit(GetKnightAttacks(start) & pinnedMovement, end);
+    return !!getBit(GetKnightAttacks(start) & possible, end);
   case BISHOP_TYPE:
-    return !!getBit(GetBishopAttacks(start, board->occupancies[BOTH]) & pinnedMovement, end);
+    return !!getBit(GetBishopAttacks(start, board->occupancies[BOTH]) & possible, end);
   case ROOK_TYPE:
-    return !!getBit(GetRookAttacks(start, board->occupancies[BOTH]) & pinnedMovement, end);
+    return !!getBit(GetRookAttacks(start, board->occupancies[BOTH]) & possible, end);
   case QUEEN_TYPE:
-    return !!getBit(GetQueenAttacks(start, board->occupancies[BOTH]) & pinnedMovement, end);
+    return !!getBit(GetQueenAttacks(start, board->occupancies[BOTH]) & possible, end);
   case PAWN_TYPE:
     if (MoveEP(move))
       break;
 
-    if (MoveCapture(move)) {
-      return !!getBit(GetPawnAttacks(start, board->side) & pinnedMovement & board->occupancies[board->xside], end);
-    } else if (MoveDoublePush(move)) {
-      return !(board->occupancies[BOTH] & GetInBetweenSquares(start, end)) &&
-             (getBit(board->side == WHITE ? RANK_2 : RANK_7, start));
-    } else {
-      return !getBit(board->occupancies[BOTH], end) && end == start + PAWN_DIRECTIONS[board->side];
-    }
+    BitBoard atx = GetPawnAttacks(start, board->side);
+    BitBoard adv = board->side == WHITE ? ShiftN(bit(start)) : ShiftS(bit(start));
+    adv &= ~board->occupancies[BOTH];
+
+    if (MovePromo(move))
+      return !!getBit((board->side == WHITE ? RANK_8 : RANK_1) & ((atx & board->occupancies[board->xside]) | adv) &
+                          possible,
+                      end) &&
+             MovePromo(move) >= KNIGHT_WHITE && MovePromo(move) <= QUEEN_BLACK &&
+             (MovePromo(move) & 1) == board->side && !MoveDoublePush(move);
+
+    adv |= board->side == WHITE ? ShiftN(adv & RANK_3) : ShiftS(adv & RANK_6);
+    adv &= ~board->occupancies[BOTH];
+
+    return !!getBit((board->side == WHITE ? ~RANK_8 : ~RANK_1) & ((atx & board->occupancies[board->xside]) | adv) &
+                        possible,
+                    end) &&
+           MoveDoublePush(move) == (abs(start - end) == 16);
   }
 
   if (MoveEP(move)) {
-    if (!board->epSquare || PIECE_TYPE[piece] != PAWN_TYPE ||
-        !getBit(GetPawnAttacks(start, board->side), board->epSquare))
+    if (!MoveCapture(move) || MoveDoublePush(move) || MovePromo(move) || !board->epSquare || board->epSquare != end ||
+        PIECE_TYPE[piece] != PAWN_TYPE || !getBit(GetPawnAttacks(start, board->side), board->epSquare))
       return 0;
   }
 
   if (MoveCastle(move)) {
-    if (board->occupancies[BOTH] & GetInBetweenSquares(start, end))
+    if (board->checkers)
+      return 0;
+
+    if (start != (board->side == WHITE ? E1 : E8))
+      return 0;
+
+    if ((board->side == WHITE && end != G1 && end != C1) || (board->side == BLACK && end != G8 && end != C8))
+      return 0;
+
+    if (end == G1 && ((board->occupancies[BOTH] & GetInBetweenSquares(E1, H1)) || !(board->castling & 0x8)))
+      return 0;
+
+    if (end == C1 && ((board->occupancies[BOTH] & GetInBetweenSquares(E1, A1)) || !(board->castling & 0x4)))
+      return 0;
+
+    if (end == G8 && ((board->occupancies[BOTH] & GetInBetweenSquares(E8, H8)) || !(board->castling & 0x2)))
+      return 0;
+
+    if (end == C8 && ((board->occupancies[BOTH] & GetInBetweenSquares(E8, A8)) || !(board->castling & 0x1)))
       return 0;
   }
 
