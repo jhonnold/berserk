@@ -672,69 +672,31 @@ int DoesMoveCheck(Move move, Board* board) {
   } else if (MoveEP(move)) {
     newOccupancy = newOccupancy ^ bit(end - PAWN_DIRECTIONS[board->side]);
 
-    return (GetBishopAttacks(enemyKingSq, newOccupancy) & (board->pieces[BISHOP[board->side]] | board->pieces[QUEEN[board->side]]))
-      || (GetRookAttacks(enemyKingSq, newOccupancy) & (board->pieces[ROOK[board->side]] | board->pieces[QUEEN[board->side]]));
+    return (GetBishopAttacks(enemyKingSq, newOccupancy) &
+            (board->pieces[BISHOP[board->side]] | board->pieces[QUEEN[board->side]])) ||
+           (GetRookAttacks(enemyKingSq, newOccupancy) &
+            (board->pieces[ROOK[board->side]] | board->pieces[QUEEN[board->side]]));
   } else if (MoveCastle(move)) {
     int rookEnd = 0;
     switch (end) {
-      case G1:
-        rookEnd = F1;
-        break;
-      case C1:
-        rookEnd = D1;
-        break;
-      case G8:
-        rookEnd = F8;
-        break;
-      case C8:
-        rookEnd = D8;
-        break;
+    case G1:
+      rookEnd = F1;
+      break;
+    case C1:
+      rookEnd = D1;
+      break;
+    case G8:
+      rookEnd = F8;
+      break;
+    case C8:
+      rookEnd = D8;
+      break;
     }
 
     return !!(GetRookAttacks(enemyKingSq, board->occupancies[BOTH]) & bit(rookEnd));
   }
 
   return 0;
-}
-
-// this is NOT a legality checker for ALL moves
-// it is only used by move generation for king moves, castles, and ep captures
-int IsMoveLegal(Move move, Board* board) {
-  int start = MoveStart(move);
-  int end = MoveEnd(move);
-
-  if (MoveEP(move)) {
-    // ep is checked by just applying the move
-    int kingSq = lsb(board->pieces[KING[board->side]]);
-    int captureSq = end - PAWN_DIRECTIONS[board->side];
-    BitBoard newOccupancy = board->occupancies[BOTH];
-    popBit(newOccupancy, start);
-    popBit(newOccupancy, captureSq);
-    setBit(newOccupancy, end);
-
-    // EP can only be illegal due to crazy discover checks
-    return !(GetBishopAttacks(kingSq, newOccupancy) &
-             (board->pieces[BISHOP[board->xside]] | board->pieces[QUEEN[board->xside]])) &&
-           !(GetRookAttacks(kingSq, newOccupancy) &
-             (board->pieces[ROOK[board->xside]] | board->pieces[QUEEN[board->xside]]));
-  } else if (MoveCastle(move)) {
-    int step = (end > start) ? -1 : 1;
-
-    // pieces in-between have been checked, now check that it's not castling through or into check
-    for (int i = end; i != start; i += step) {
-      if (IsSquareAttacked(i, board->xside, board->occupancies[BOTH], board))
-        return 0;
-    }
-
-    return 1;
-  } else if (MovePiece(move) >= KING[WHITE]) {
-    BitBoard kingOff = board->occupancies[BOTH];
-    popBit(kingOff, start);
-    // check king attacks with it off board, because it may move along the checking line
-    return !IsSquareAttacked(end, board->xside, kingOff, board);
-  }
-
-  return 1;
 }
 
 inline int IsRepetition(Board* board, int ply) {
@@ -749,7 +711,7 @@ inline int IsRepetition(Board* board, int ply) {
       reps++;
       if (reps == 2) // 3-fold before+including root
         return 1;
-    }    
+    }
   }
 
   return 0;
@@ -793,4 +755,102 @@ void UndoNullMove(Board* board) {
   board->halfMove = board->halfMoveHistory[board->moveNo];
   board->checkers = board->checkersHistory[board->moveNo];
   board->pinned = board->pinnedHistory[board->moveNo];
+}
+
+int MovePseudoLegal(Move move, Board* board) {
+  int piece = MovePiece(move);
+  int start = MoveStart(move);
+  int end = MoveEnd(move);
+
+  if (start < A8 || start > H1 || end < A8 || end > H1)
+    return 0;
+
+  // moving piece isn't where it says it is
+  if (piece != board->squares[start])
+    return 0;
+
+  // can't capture our own piece
+  if (board->squares[end] != NO_PIECE && (board->squares[end] & 1) == board->side)
+    return 0;
+
+  BitBoard pinnedMovement = -1ULL;
+  if (getBit(board->pinned, start))
+    pinnedMovement = GetPinnedMovementSquares(start, lsb(board->pieces[KING[board->side]]));
+
+  switch (PIECE_TYPE[piece]) {
+  case KNIGHT_TYPE:
+    return !!getBit(GetKnightAttacks(start) & pinnedMovement, end);
+  case BISHOP_TYPE:
+    return !!getBit(GetBishopAttacks(start, board->occupancies[BOTH]) & pinnedMovement, end);
+  case ROOK_TYPE:
+    return !!getBit(GetRookAttacks(start, board->occupancies[BOTH]) & pinnedMovement, end);
+  case QUEEN_TYPE:
+    return !!getBit(GetQueenAttacks(start, board->occupancies[BOTH]) & pinnedMovement, end);
+  case PAWN_TYPE:
+    if (MoveEP(move))
+      break;
+
+    if (MoveCapture(move)) {
+      return !!getBit(GetPawnAttacks(start, board->side) & pinnedMovement & board->occupancies[board->xside], end);
+    } else if (MoveDoublePush(move)) {
+      return !(board->occupancies[BOTH] & GetInBetweenSquares(start, end)) &&
+             (getBit(board->side == WHITE ? RANK_2 : RANK_7, start));
+    } else {
+      return !getBit(board->occupancies[BOTH], end) && end == start + PAWN_DIRECTIONS[board->side];
+    }
+  }
+
+  if (MoveEP(move)) {
+    if (!board->epSquare || PIECE_TYPE[piece] != PAWN_TYPE ||
+        !getBit(GetPawnAttacks(start, board->side), board->epSquare))
+      return 0;
+  }
+
+  if (MoveCastle(move)) {
+    if (board->occupancies[BOTH] & GetInBetweenSquares(start, end))
+      return 0;
+  }
+
+  // this is a legality checker for ep/king/castles (used by movegen)
+  return IsMoveLegal(move, board);
+}
+
+// this is NOT a legality checker for ALL moves
+// it is only used by move generation for king moves, castles, and ep captures
+int IsMoveLegal(Move move, Board* board) {
+  int start = MoveStart(move);
+  int end = MoveEnd(move);
+
+  if (MoveEP(move)) {
+    // ep is checked by just applying the move
+    int kingSq = lsb(board->pieces[KING[board->side]]);
+    int captureSq = end - PAWN_DIRECTIONS[board->side];
+    BitBoard newOccupancy = board->occupancies[BOTH];
+    popBit(newOccupancy, start);
+    popBit(newOccupancy, captureSq);
+    setBit(newOccupancy, end);
+
+    // EP can only be illegal due to crazy discover checks
+    return !(GetBishopAttacks(kingSq, newOccupancy) &
+             (board->pieces[BISHOP[board->xside]] | board->pieces[QUEEN[board->xside]])) &&
+           !(GetRookAttacks(kingSq, newOccupancy) &
+             (board->pieces[ROOK[board->xside]] | board->pieces[QUEEN[board->xside]]));
+  } else if (MoveCastle(move)) {
+    int step = (end > start) ? -1 : 1;
+
+    // pieces in-between have been checked, now check that it's not castling through or into check
+    for (int i = end; i != start; i += step) {
+      if (IsSquareAttacked(i, board->xside, board->occupancies[BOTH], board))
+        return 0;
+    }
+
+    return 1;
+  } else if (MovePiece(move) >= KING[WHITE]) {
+    BitBoard kingOff = board->occupancies[BOTH];
+    popBit(kingOff, start);
+    // check king attacks with it off board, because it may move along the checking line
+    return !IsSquareAttacked(end, board->xside, kingOff, board);
+  }
+
+  return 1;
 }

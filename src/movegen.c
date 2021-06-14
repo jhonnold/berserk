@@ -563,11 +563,6 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
       ++curr;
   }
 
-  // Get the hash move for sorting
-  int ttHit = 0;
-  TTEntry* tt = TTProbe(&ttHit, board->zobrist); // TODO: Don't I know this already from the search?
-  Move hashMove = ttHit ? tt->move : NULL_MOVE;
-
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
 
@@ -576,9 +571,7 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
     // HASH -> GOOD CAPTURES -> KILLERS -> COUNTER -> QUIETS -> BAD CAPTURES
     // large integers are used to spread these categories out to prevent conflict when sorting
 
-    if (move == hashMove) {
-      moveList->scores[i] = HASH_MOVE_SCORE;
-    } else if (MoveEP(move)) {
+    if (MoveEP(move)) {
       moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][PAWN_WHITE];
     } else if (MoveCapture(move)) {
       int mover = MovePiece(move);
@@ -659,7 +652,7 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data) {
   switch (moves->phase) {
   case HASH_MOVE:
     moves->phase = GEN_MOVES;
-    if (moves->hashMove)
+    if (moves->hashMove && MovePseudoLegal(moves->hashMove, board))
       return moves->hashMove;
     // fallthrough
   case GEN_MOVES:
