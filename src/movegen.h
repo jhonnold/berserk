@@ -34,11 +34,13 @@ extern const int COUNTER_SCORE;
 void AppendMove(MoveList* moveList, Move move);
 void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data);
 void GenerateTacticalMoves(MoveList* moveList, Board* board);
-void ChooseTopMove(MoveList* moveList, int from);
-void PrintMoves(MoveList* moveList);
 
-void InitAllMoves(MoveList* moves, Board* board, SearchData* data);
-void InitTacticalMoves(MoveList* moves, Board* board);
-Move NextMove(MoveList* moves);
+void InitAllMoves(MoveList* moves, Move hashMove);
+void InitTacticalMoves(MoveList* moves);
+Move NextMove(MoveList* moves, Board* board, SearchData* data);
+uint8_t TopMoveIdx(MoveList* moves);
+void Swap(MoveList* moves, uint8_t a, uint8_t b);
+
+void PrintMoves(MoveList* moveList);
 
 #endif

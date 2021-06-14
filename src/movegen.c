@@ -616,75 +616,88 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
   }
 }
 
-void InitAllMoves(MoveList* moves, Board* board, SearchData* data) {
+void InitAllMoves(MoveList* moves, Move hashMove) {
   moves->count = 0;
   moves->idx = 0;
+  moves->type = ALL_MOVES;
+  moves->phase = hashMove ? HASH_MOVE : GEN_MOVES;
+  moves->hashMove = hashMove;
 
-  GenerateAllMoves(moves, board, data);
+  // GenerateAllMoves(moves, board, data);
 }
 
-void InitTacticalMoves(MoveList* moves, Board* board) {
+void InitTacticalMoves(MoveList* moves) {
   moves->count = 0;
   moves->idx = 0;
+  moves->type = TACTICAL_MOVES;
+  moves->phase = GEN_MOVES;
+  moves->hashMove = NULL_MOVE;
 
-  GenerateTacticalMoves(moves, board);
+  // GenerateTacticalMoves(moves, board);
 }
 
-Move NextMove(MoveList* moves) {
-  if (moves->idx == moves->count)
-    return NULL_MOVE;
-
-  int max = moves->idx;
-  for (int i = max + 1; i < moves->count; i++)
+uint8_t TopMoveIdx(MoveList* moves) {
+  uint8_t max = moves->idx;
+  for (uint8_t i = max + 1; i < moves->count; i++)
     if (moves->scores[i] > moves->scores[max])
       max = i;
 
-  if (max != moves->idx) {
-    int temp = moves->moves[max];
-    moves->moves[max] = moves->moves[moves->idx];
-    moves->moves[moves->idx] = temp;
-
-    temp = moves->scores[max];
-    moves->scores[max] = moves->scores[moves->idx];
-    moves->scores[moves->idx] = temp;
-  }
-
-  return moves->moves[moves->idx++];
+  return max;
 }
 
-// From a given index (to the end) find the best move
-// and put it at the from index
-// This is a single step of selection sort
-void ChooseTopMove(MoveList* moveList, int from) {
-  int max = moveList->scores[from];
-  int idx = from;
+void Swap(MoveList* moves, uint8_t a, uint8_t b) {
+  Move temp = moves->moves[a];
+  moves->moves[a] = moves->moves[b];
+  moves->moves[b] = temp;
 
-  for (int i = from + 1; i < moveList->count; i++) {
-    if (moveList->scores[i] > max) {
-      idx = i;
-      max = moveList->scores[i];
+  int tempScore = moves->scores[a];
+  moves->scores[a] = moves->scores[b];
+  moves->scores[b] = tempScore;
+}
+
+Move NextMove(MoveList* moves, Board* board, SearchData* data) {
+  switch (moves->phase) {
+  case HASH_MOVE:
+    moves->phase = GEN_MOVES;
+    if (moves->hashMove)
+      return moves->hashMove;
+    // fallthrough
+  case GEN_MOVES:
+    if (moves->type == TACTICAL_MOVES)
+      GenerateTacticalMoves(moves, board);
+    else
+      GenerateAllMoves(moves, board, data);
+
+    moves->phase = PLAY_MOVES;
+    // fallthrough
+  case PLAY_MOVES:
+    if (moves->idx < moves->count) {
+      uint8_t top = TopMoveIdx(moves);
+      Swap(moves, moves->idx, top);
+      Move topMove = moves->moves[moves->idx];
+      moves->idx++;
+
+      if (topMove == moves->hashMove) {
+        return NextMove(moves, board, data);
+      } else {
+        return topMove;
+      }
     }
+    moves->phase = NO_MORE_MOVES;
+    // fallthrough
+  case NO_MORE_MOVES:
+    return NULL_MOVE;
   }
 
-  // We don't have to swap
-  if (idx != from) {
-    Move temp = moveList->moves[from];
-    moveList->moves[from] = moveList->moves[idx];
-    moveList->moves[idx] = temp;
-
-    temp = moveList->scores[from];
-    moveList->scores[from] = moveList->scores[idx];
-    moveList->scores[idx] = temp;
-  }
+  return NULL_MOVE;
 }
 
 void PrintMoves(MoveList* moveList) {
-  printf("move  score p c d e t\n");
+  // printf("move  score p c d e t\n");
 
-  for (int i = 0; i < moveList->count; i++) {
-    ChooseTopMove(moveList, i);
-    Move move = moveList->moves[i];
-    printf("%s %5d %c %d %d %d %d\n", MoveToStr(move), moveList->scores[i], PIECE_TO_CHAR[MovePiece(move)],
-           MoveCapture(move), MoveDoublePush(move), MoveEP(move), MoveCastle(move));
-  }
+  // Move move;
+  // while ((move = NextMove(moveList))) {
+  //   printf("%s %5d %c %d %d %d %d\n", MoveToStr(move), moveList->scores[moveList->idx - 1],
+  //          PIECE_TO_CHAR[MovePiece(move)], MoveCapture(move), MoveDoublePush(move), MoveEP(move), MoveCastle(move));
+  // }
 }

@@ -183,6 +183,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   Move bestMove = NULL_MOVE;
   Move skipMove = data->skipMove[data->ply]; // skip used in SE (concept from SF)
   Move nullThreat = NULL_MOVE;
+  Move hashMove = NULL_MOVE;
 
   Move move;
   MoveList moves;
@@ -220,6 +221,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   // we ignore the tt on singular extension searches
   int ttHit = 0;
   TTEntry* tt = skipMove ? NULL : TTProbe(&ttHit, board->zobrist);
+  if (ttHit)
+    hashMove = tt->move;
 
   // if the TT has a value that fits our position and has been searched to an equal or greater depth, then we accept
   // this score and prune
@@ -322,8 +325,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (depth > 4 && abs(beta) < MATE_BOUND &&
         !(ttHit && tt->depth >= depth - 3 && TTScore(tt, data->ply) < probBeta)) {
 
-      InitTacticalMoves(&moves, board);
-      while ((move = NextMove(&moves))) {
+      InitTacticalMoves(&moves);
+      while ((move = NextMove(&moves, board, data))) {
         data->moves[data->ply++] = move;
         MakeMove(move, board);
 
@@ -351,9 +354,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   int totalMoves = 0, nonPrunedMoves = 0;
   MoveList quiets;
   quiets.count = 0;
-  InitAllMoves(&moves, board, data);
+  InitAllMoves(&moves, hashMove);
 
-  while ((move = NextMove(&moves))) {
+  while ((move = NextMove(&moves, board, data))) {
     // don't search this during singular
     if (skipMove == move)
       continue;
@@ -488,7 +491,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   }
 
   // Checkmate detection using movecount
-  if (!moves.count)
+  if (!totalMoves)
     return board->checkers ? -CHECKMATE + data->ply : 0;
 
   // don't let our score inflate too high (tb)
@@ -564,9 +567,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   Move move;
   MoveList moves;
-  InitTacticalMoves(&moves, board);
+  InitTacticalMoves(&moves);
 
-  while ((move = NextMove(&moves))) {
+  while ((move = NextMove(&moves, board, data))) {
     int moveScore = moves.scores[moves.idx - 1];
     // a delta prune look-a-like by Halogen
     // prune based on SEE scores rather than flat mat val
