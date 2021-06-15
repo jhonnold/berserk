@@ -570,14 +570,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   InitTacticalMoves(&moves);
 
   while ((move = NextMove(&moves, board, data))) {
-    int moveScore = moves.scores[moves.idx - 1];
+    int see = SEE(board, move);
     // a delta prune look-a-like by Halogen
     // prune based on SEE scores rather than flat mat val
-    if (eval + moveScore + DELTA_CUTOFF < alpha)
-      break;
-
-    if (moveScore < 0)
-      break;
+    if (eval + see + DELTA_CUTOFF < alpha || see < 0)
+      continue;
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);

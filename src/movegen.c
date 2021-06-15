@@ -479,12 +479,10 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
   // for tactical moves just SEE is utilized for ordering
   for (int i = 0; i < moveList->count; i++) {
     Move move = moveList->moves[i];
+    int attacker = MovePiece(move);
+    int victim = MoveEP(move) ? PAWN_WHITE : MovePromo(move) ? QUEEN_WHITE : board->squares[MoveEnd(move)];
 
-    int see = SEE(board, move);
-    if (MoveEP(move))
-      see += STATIC_MATERIAL_VALUE[PAWN_TYPE];
-
-    moveList->scores[i] = see;
+    moveList->scores[i] = MVV_LVA[attacker][victim];
   }
 }
 
