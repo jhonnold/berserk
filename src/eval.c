@@ -421,10 +421,10 @@ void InitEvalData(EvalData* data, Board* board) {
 // Material + PSQT value
 // TODO: Perhaps a/b lazy eval at this point? Would require eval saving to occur
 // separate from search
-Score MaterialValue(Board* board, EvalData* data, int side) {
+Score MaterialValue(Board* board, int side) {
   Score s = 0;
 
-  BitBoard enemyKingSide = SQ_SIDE[data->kingSq[side ^ 1]];
+  uint8_t enemyKingSide = SQ_SIDE[lsb(board->pieces[KING[side ^ 1]])];
 
   for (int pc = PAWN[side]; pc <= KING[side]; pc += 2) {
     BitBoard pieces = board->pieces[pc];
@@ -858,11 +858,11 @@ Score Evaluate(Board* board, ThreadData* thread) {
   InitEvalData(&data, board);
 
   Score s;
-  // if (!T) {
-  //   s = board->side == WHITE ? board->mat : -board->mat;
-  // } else {
-  s = MaterialValue(board, &data, WHITE) - MaterialValue(board, &data, BLACK);
-  // }
+  if (!T) {
+    s = board->side == WHITE ? board->mat : -board->mat;
+  } else {
+    s = MaterialValue(board, WHITE) - MaterialValue(board, BLACK);
+  }
 
   s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
 

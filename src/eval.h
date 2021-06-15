@@ -110,6 +110,7 @@ void InitPSQT();
 int Scale(Board* board, int ss);
 Score GetPhase(Board* board);
 
+Score MaterialValue(Board* board, int side);
 Score Evaluate(Board* board, ThreadData* thread);
 
 #endif
