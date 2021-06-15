@@ -110,12 +110,6 @@ void ParseFen(char* fen, Board* board) {
       setBit(board->pieces[piece], i);
       board->squares[i] = piece;
 
-      if (piece & 1) {
-        board->mat -= PSQT[piece][i];
-      } else {
-        board->mat += PSQT[piece][i];
-      }
-
       if (PIECE_TYPE[piece] == PAWN_TYPE)
         board->pawnHash ^= ZOBRIST_PIECES[piece][i];
 
@@ -173,6 +167,7 @@ void ParseFen(char* fen, Board* board) {
   SetSpecialPieces(board);
 
   board->zobrist = Zobrist(board);
+  board->mat = MaterialValue(board, board->side) - MaterialValue(board, board->xside);
 }
 
 void BoardToFen(char* fen, Board* board) {
@@ -353,6 +348,9 @@ void MakeMove(Move move, Board* board) {
   int ep = MoveEP(move);
   int castle = MoveCastle(move);
   int captured = board->squares[end];
+  int startSameSideKing = SQ_SIDE[lsb(board->pieces[KING[board->xside]])] == SQ_SIDE[start];
+  int endSameSideKing = SQ_SIDE[lsb(board->pieces[KING[board->xside]])] == SQ_SIDE[end];
+  int endSameSideOurKing = SQ_SIDE[lsb(board->pieces[KING[board->side]])] == SQ_SIDE[end];
 
   // store hard to recalculate values
   board->zobristHistory[board->moveNo] = board->zobrist;
@@ -363,6 +361,7 @@ void MakeMove(Move move, Board* board) {
   board->halfMoveHistory[board->moveNo] = board->halfMove;
   board->checkersHistory[board->moveNo] = board->checkers;
   board->pinnedHistory[board->moveNo] = board->pinned;
+  board->materialHistory[board->moveNo] = board->mat;
 
   popBit(board->pieces[piece], start);
   setBit(board->pieces[piece], end);
@@ -370,7 +369,7 @@ void MakeMove(Move move, Board* board) {
   board->squares[start] = NO_PIECE;
   board->squares[end] = piece;
 
-  board->mat += PSQT[piece][end] - PSQT[piece][start];
+  board->mat += PSQT[piece][endSameSideKing][end] - PSQT[piece][startSameSideKing][start];
 
   board->zobrist ^= ZOBRIST_PIECES[piece][start];
   board->zobrist ^= ZOBRIST_PIECES[piece][end];
@@ -387,7 +386,7 @@ void MakeMove(Move move, Board* board) {
     board->captureHistory[board->moveNo] = captured;
     popBit(board->pieces[captured], end);
 
-    board->mat += PSQT[captured][end];
+    board->mat += PSQT[captured][endSameSideOurKing][end];
 
     board->zobrist ^= ZOBRIST_PIECES[captured][end];
     if (captured == PAWN[board->xside])
@@ -403,7 +402,7 @@ void MakeMove(Move move, Board* board) {
 
     board->squares[end] = promoted;
 
-    board->mat += PSQT[promoted][end] - PSQT[piece][end];
+    board->mat += PSQT[promoted][endSameSideKing][end] - PSQT[piece][endSameSideKing][end];
 
     board->zobrist ^= ZOBRIST_PIECES[piece][end];
     board->zobrist ^= ZOBRIST_PIECES[promoted][end];
@@ -419,7 +418,7 @@ void MakeMove(Move move, Board* board) {
 
     board->squares[end - PAWN_DIRECTIONS[board->side]] = NO_PIECE;
 
-    board->mat += PSQT[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
+    board->mat += PSQT[PAWN[board->xside]][endSameSideOurKing][end - PAWN_DIRECTIONS[board->side]];
 
     board->zobrist ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
     board->pawnHash ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
@@ -447,7 +446,7 @@ void MakeMove(Move move, Board* board) {
       board->squares[H1] = NO_PIECE;
       board->squares[F1] = ROOK[WHITE];
 
-      board->mat += PSQT[ROOK_WHITE][F1] - PSQT[ROOK_WHITE][H1];
+      board->mat += PSQT[ROOK_WHITE][endSameSideKing][F1] - PSQT[ROOK_WHITE][endSameSideKing][H1];
 
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][H1];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][F1];
@@ -458,7 +457,7 @@ void MakeMove(Move move, Board* board) {
       board->squares[A1] = NO_PIECE;
       board->squares[D1] = ROOK[WHITE];
 
-      board->mat += PSQT[ROOK_WHITE][D1] - PSQT[ROOK_WHITE][A1];
+      board->mat += PSQT[ROOK_WHITE][endSameSideKing][D1] - PSQT[ROOK_WHITE][endSameSideKing][A1];
 
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][A1];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][D1];
@@ -466,7 +465,7 @@ void MakeMove(Move move, Board* board) {
       popBit(board->pieces[ROOK[BLACK]], H8);
       setBit(board->pieces[ROOK[BLACK]], F8);
 
-      board->mat += PSQT[ROOK_BLACK][F8] - PSQT[ROOK_BLACK][H8];
+      board->mat += PSQT[ROOK_BLACK][endSameSideKing][F8] - PSQT[ROOK_BLACK][endSameSideKing][H8];
 
       board->squares[H8] = NO_PIECE;
       board->squares[F8] = ROOK[BLACK];
@@ -480,7 +479,7 @@ void MakeMove(Move move, Board* board) {
       board->squares[A8] = NO_PIECE;
       board->squares[D8] = ROOK[BLACK];
 
-      board->mat += PSQT[ROOK_BLACK][D8] - PSQT[ROOK_BLACK][A8];
+      board->mat += PSQT[ROOK_BLACK][endSameSideKing][D8] - PSQT[ROOK_BLACK][endSameSideKing][A8];
 
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][A8];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][D8];
@@ -493,6 +492,8 @@ void MakeMove(Move move, Board* board) {
   board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
 
   SetOccupancies(board);
+  if (piece > QUEEN_BLACK)
+    board->mat = MaterialValue(board, board->side) - MaterialValue(board, board->xside);
 
   board->moveNo++;
   board->xside = board->side;
@@ -520,7 +521,6 @@ void UndoMove(Move move, Board* board) {
   board->side = board->xside;
   board->xside ^= 1;
   board->moveNo--;
-  board->mat = -board->mat;
 
   // reload historical values
   board->epSquare = board->epSquareHistory[board->moveNo];
@@ -530,6 +530,7 @@ void UndoMove(Move move, Board* board) {
   board->halfMove = board->halfMoveHistory[board->moveNo];
   board->checkers = board->checkersHistory[board->moveNo];
   board->pinned = board->pinnedHistory[board->moveNo];
+  board->mat = board->materialHistory[board->moveNo];
 
   popBit(board->pieces[piece], end);
   setBit(board->pieces[piece], start);
@@ -537,7 +538,7 @@ void UndoMove(Move move, Board* board) {
   board->squares[end] = NO_PIECE;
   board->squares[start] = piece;
 
-  board->mat -= PSQT[piece][end] - PSQT[piece][start];
+  // board->mat -= PSQT[piece][end] - PSQT[piece][start];
 
   if (capture) {
     int captured = board->captureHistory[board->moveNo];
@@ -546,16 +547,12 @@ void UndoMove(Move move, Board* board) {
     if (!ep) {
       board->squares[end] = captured;
 
-      board->mat -= PSQT[captured][end];
-
       board->piecesCounts += PIECE_COUNT_IDX[captured];
     }
   }
 
   if (promoted) {
     popBit(board->pieces[promoted], end);
-
-    board->mat -= PSQT[promoted][end] - PSQT[piece][end];
 
     board->piecesCounts -= PIECE_COUNT_IDX[promoted];
     board->piecesCounts += PIECE_COUNT_IDX[piece];
@@ -564,8 +561,6 @@ void UndoMove(Move move, Board* board) {
   if (ep) {
     setBit(board->pieces[PAWN[board->xside]], end - PAWN_DIRECTIONS[board->side]);
     board->squares[end - PAWN_DIRECTIONS[board->side]] = PAWN[board->xside];
-
-    board->mat -= PSQT[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
 
     board->piecesCounts += PIECE_COUNT_IDX[PAWN[board->xside]];
   }
@@ -578,32 +573,24 @@ void UndoMove(Move move, Board* board) {
 
       board->squares[F1] = NO_PIECE;
       board->squares[H1] = ROOK[WHITE];
-
-      board->mat -= PSQT[ROOK_WHITE][F1] - PSQT[ROOK_WHITE][H1];
     } else if (end == C1) {
       popBit(board->pieces[ROOK[WHITE]], D1);
       setBit(board->pieces[ROOK[WHITE]], A1);
 
       board->squares[D1] = NO_PIECE;
       board->squares[A1] = ROOK[WHITE];
-
-      board->mat -= PSQT[ROOK_WHITE][D1] - PSQT[ROOK_WHITE][A1];
     } else if (end == G8) {
       popBit(board->pieces[ROOK[BLACK]], F8);
       setBit(board->pieces[ROOK[BLACK]], H8);
 
       board->squares[F8] = NO_PIECE;
       board->squares[H8] = ROOK[BLACK];
-
-      board->mat -= PSQT[ROOK_BLACK][F8] - PSQT[ROOK_BLACK][H8];
     } else if (end == C8) {
       popBit(board->pieces[ROOK[BLACK]], D8);
       setBit(board->pieces[ROOK[BLACK]], A8);
 
       board->squares[D8] = NO_PIECE;
       board->squares[A8] = ROOK[BLACK];
-
-      board->mat -= PSQT[ROOK_BLACK][D8] - PSQT[ROOK_BLACK][A8];
     }
   }
 
@@ -725,6 +712,7 @@ void MakeNullMove(Board* board) {
   board->halfMoveHistory[board->moveNo] = board->halfMove;
   board->checkersHistory[board->moveNo] = board->checkers;
   board->pinnedHistory[board->moveNo] = board->pinned;
+  board->materialHistory[board->moveNo] = board->mat;
 
   board->halfMove++;
 
@@ -747,7 +735,6 @@ void UndoNullMove(Board* board) {
   board->side = board->xside;
   board->xside ^= 1;
   board->moveNo--;
-  board->mat = -board->mat;
 
   board->zobrist = board->zobristHistory[board->moveNo];
   board->castling = board->castlingHistory[board->moveNo];
@@ -755,6 +742,7 @@ void UndoNullMove(Board* board) {
   board->halfMove = board->halfMoveHistory[board->moveNo];
   board->checkers = board->checkersHistory[board->moveNo];
   board->pinned = board->pinnedHistory[board->moveNo];
+  board->mat = board->materialHistory[board->moveNo];
 }
 
 int MoveIsLegal(Move move, Board* board) {

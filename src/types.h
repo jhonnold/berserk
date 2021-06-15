@@ -86,12 +86,13 @@ typedef struct {
   uint64_t pawnHash;
 
   // data that is hard to track, so it is "remembered" when search undoes moves
-  uint64_t zobristHistory[MAX_GAME_PLY];
-  uint64_t pawnHashHistory[MAX_GAME_PLY];
   int castlingHistory[MAX_GAME_PLY];
   int epSquareHistory[MAX_GAME_PLY];
   int captureHistory[MAX_GAME_PLY];
   int halfMoveHistory[MAX_GAME_PLY];
+  Score materialHistory[MAX_GAME_PLY];
+  uint64_t zobristHistory[MAX_GAME_PLY];
+  uint64_t pawnHashHistory[MAX_GAME_PLY];
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
 } Board;
@@ -126,7 +127,7 @@ typedef struct {
 
 typedef struct {
   int8_t pieces[5];
-  int8_t psqt[6][32];
+  int8_t psqt[6][2][32];
   int8_t bishopPair;
 
   int8_t knightPostPsqt[12];
