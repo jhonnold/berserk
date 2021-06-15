@@ -20,8 +20,10 @@
 #include "board.h"
 #include "move.h"
 #include "movegen.h"
+#include "movepick.h"
 #include "types.h"
 #include "util.h"
+
 
 SearchData PERFT_DUMMY_DATA = {0};
 
@@ -31,17 +33,11 @@ int Perft(int depth, Board* board) {
 
   Move move;
   MoveList moves;
-
-  if (depth == 1) {
-    GenerateAllMoves(&moves, board, &PERFT_DUMMY_DATA);
-    return moves.count;
-  }
-
-  InitAllMoves(&moves, NULL_MOVE);
+  InitAllMoves(&moves, NULL_MOVE, &PERFT_DUMMY_DATA);
 
   int nodes = 0;
 
-  while ((move = NextMove(&moves, board, &PERFT_DUMMY_DATA))) {
+  while ((move = NextMove(&moves, board, &PERFT_DUMMY_DATA, 0))) {
     MakeMove(move, board);
     nodes += Perft(depth - 1, board);
     UndoMove(move, board);
@@ -59,9 +55,9 @@ void PerftTest(int depth, Board* board) {
 
   Move move;
   MoveList moves;
-  InitAllMoves(&moves, NULL_MOVE);
+  InitAllMoves(&moves, NULL_MOVE, &PERFT_DUMMY_DATA);
 
-  while ((move = NextMove(&moves, board, &PERFT_DUMMY_DATA))) {
+  while ((move = NextMove(&moves, board, &PERFT_DUMMY_DATA, 0))) {
     MakeMove(move, board);
     int nodes = Perft(depth - 1, board);
     UndoMove(move, board);

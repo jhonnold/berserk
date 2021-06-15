@@ -57,7 +57,7 @@ const BitBoard HOME_RANKS[] = {RANK_2, RANK_7};
 const BitBoard THIRD_RANKS[] = {RANK_3, RANK_6};
 const BitBoard FILLED = -1ULL;
 
-inline void AppendMove(MoveList* moveList, Move move) { moveList->moves[moveList->count++] = move; }
+inline void AppendMove(Move* arr, uint8_t* n, Move move) { arr[(*n)++] = move; }
 
 // Move generation is pretty similar across all piece types with captures and quiets.
 // Both receieve a BitBoard of acceptable squares, and additional logic is applied within
@@ -78,10 +78,14 @@ void GeneratePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibi
     int end = lsb(quietPromoters);
     int start = end - PAWN_DIRECTIONS[board->side];
 
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], QUEEN[board->side], 0, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], ROOK[board->side], 0, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], BISHOP[board->side], 0, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], KNIGHT[board->side], 0, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], QUEEN[board->side], 0, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], ROOK[board->side], 0, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], BISHOP[board->side], 0, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], KNIGHT[board->side], 0, 0, 0, 0));
 
     popLsb(quietPromoters);
   }
@@ -90,10 +94,14 @@ void GeneratePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibi
     int end = lsb(capturingPromotersE);
     int start = end - (PAWN_DIRECTIONS[board->side] + E);
 
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], QUEEN[board->side], 1, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], ROOK[board->side], 1, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], BISHOP[board->side], 1, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], KNIGHT[board->side], 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], QUEEN[board->side], 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], ROOK[board->side], 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], BISHOP[board->side], 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], KNIGHT[board->side], 1, 0, 0, 0));
 
     popLsb(capturingPromotersE);
   }
@@ -102,10 +110,14 @@ void GeneratePawnPromotions(MoveList* moveList, BitBoard pawns, BitBoard possibi
     int end = lsb(capturingPromotersW);
     int start = end - (PAWN_DIRECTIONS[board->side] + W);
 
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], QUEEN[board->side], 1, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], ROOK[board->side], 1, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], BISHOP[board->side], 1, 0, 0, 0));
-    AppendMove(moveList, BuildMove(start, end, PAWN[board->side], KNIGHT[board->side], 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], QUEEN[board->side], 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], ROOK[board->side], 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], BISHOP[board->side], 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(start, end, PAWN[board->side], KNIGHT[board->side], 1, 0, 0, 0));
 
     popLsb(capturingPromotersW);
   }
@@ -121,14 +133,16 @@ void GeneratePawnCaptures(MoveList* moveList, BitBoard pawns, BitBoard possibili
   while (capturingE) {
     int end = lsb(capturingE);
 
-    AppendMove(moveList, BuildMove(end - (PAWN_DIRECTIONS[board->side] + E), end, PAWN[board->side], 0, 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(end - (PAWN_DIRECTIONS[board->side] + E), end, PAWN[board->side], 0, 1, 0, 0, 0));
 
     popLsb(capturingE);
   }
 
   while (capturingW) {
     int end = lsb(capturingW);
-    AppendMove(moveList, BuildMove(end - (PAWN_DIRECTIONS[board->side] + W), end, PAWN[board->side], 0, 1, 0, 0, 0));
+    AppendMove(moveList->tactical, &moveList->nTactical,
+               BuildMove(end - (PAWN_DIRECTIONS[board->side] + W), end, PAWN[board->side], 0, 1, 0, 0, 0));
     popLsb(capturingW);
   }
 
@@ -137,7 +151,8 @@ void GeneratePawnCaptures(MoveList* moveList, BitBoard pawns, BitBoard possibili
 
     while (epPawns) {
       int start = lsb(epPawns);
-      AppendMove(moveList, BuildMove(start, board->epSquare, PAWN[board->side], 0, 1, 0, 1, 0));
+      AppendMove(moveList->tactical, &moveList->nTactical,
+                 BuildMove(start, board->epSquare, PAWN[board->side], 0, 1, 0, 1, 0));
       popLsb(epPawns);
     }
   }
@@ -155,14 +170,16 @@ void GeneratePawnQuiets(MoveList* moveList, BitBoard pawns, BitBoard possibiliti
 
   while (singlePush) {
     int end = lsb(singlePush);
-    AppendMove(moveList, BuildMove(end - PAWN_DIRECTIONS[board->side], end, PAWN[board->side], 0, 0, 0, 0, 0));
+    AppendMove(moveList->quiet, &moveList->nQuiets,
+               BuildMove(end - PAWN_DIRECTIONS[board->side], end, PAWN[board->side], 0, 0, 0, 0, 0));
     popLsb(singlePush);
   }
 
   while (doublePush) {
     int end = lsb(doublePush);
-    AppendMove(moveList, BuildMove(end - PAWN_DIRECTIONS[board->side] - PAWN_DIRECTIONS[board->side], end,
-                                   PAWN[board->side], 0, 0, 1, 0, 0));
+    AppendMove(moveList->quiet, &moveList->nQuiets,
+               BuildMove(end - PAWN_DIRECTIONS[board->side] - PAWN_DIRECTIONS[board->side], end, PAWN[board->side], 0,
+                         0, 1, 0, 0));
     popLsb(doublePush);
   }
 }
@@ -181,7 +198,7 @@ void GenerateKnightCaptures(MoveList* moveList, BitBoard knights, BitBoard possi
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, KNIGHT[board->side], 0, 1, 0, 0, 0));
+      AppendMove(moveList->tactical, &moveList->nTactical, BuildMove(start, end, KNIGHT[board->side], 0, 1, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -198,7 +215,7 @@ void GenerateKnightQuiets(MoveList* moveList, BitBoard knights, BitBoard possibi
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, KNIGHT[board->side], 0, 0, 0, 0, 0));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(start, end, KNIGHT[board->side], 0, 0, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -221,7 +238,7 @@ void generateBishopCaptures(MoveList* moveList, BitBoard bishops, BitBoard possi
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, BISHOP[board->side], 0, 1, 0, 0, 0));
+      AppendMove(moveList->tactical, &moveList->nTactical, BuildMove(start, end, BISHOP[board->side], 0, 1, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -238,7 +255,7 @@ void GenerateBishopQuiets(MoveList* moveList, BitBoard bishops, BitBoard possibi
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, BISHOP[board->side], 0, 0, 0, 0, 0));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(start, end, BISHOP[board->side], 0, 0, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -261,7 +278,7 @@ void generateRookCaptures(MoveList* moveList, BitBoard rooks, BitBoard possibili
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, ROOK[board->side], 0, 1, 0, 0, 0));
+      AppendMove(moveList->tactical, &moveList->nTactical, BuildMove(start, end, ROOK[board->side], 0, 1, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -278,7 +295,7 @@ void GenerateRookQuiets(MoveList* moveList, BitBoard rooks, BitBoard possibiliti
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, ROOK[board->side], 0, 0, 0, 0, 0));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(start, end, ROOK[board->side], 0, 0, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -301,7 +318,7 @@ void GenerateQueenCaptures(MoveList* moveList, BitBoard queens, BitBoard possibi
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, QUEEN[board->side], 0, 1, 0, 0, 0));
+      AppendMove(moveList->tactical, &moveList->nTactical, BuildMove(start, end, QUEEN[board->side], 0, 1, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -318,7 +335,7 @@ void GenerateQueenQuiets(MoveList* moveList, BitBoard queens, BitBoard possibili
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, QUEEN[board->side], 0, 0, 0, 0, 0));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(start, end, QUEEN[board->side], 0, 0, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -342,7 +359,7 @@ void GenerateKingCaptures(MoveList* moveList, Board* board) {
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, KING[board->side], 0, 1, 0, 0, 0));
+      AppendMove(moveList->tactical, &moveList->nTactical, BuildMove(start, end, KING[board->side], 0, 1, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -360,14 +377,14 @@ void GenerateCastles(MoveList* moveList, Board* board) {
   // square attack logic is applied later
   if (board->side == WHITE) {
     if ((board->castling & 0x8) && !(board->occupancies[BOTH] & GetInBetweenSquares(E1, H1)))
-      AppendMove(moveList, BuildMove(E1, G1, KING[board->side], 0, 0, 0, 0, 1));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(E1, G1, KING[board->side], 0, 0, 0, 0, 1));
     if ((board->castling & 0x4) && !(board->occupancies[BOTH] & GetInBetweenSquares(E1, A1)))
-      AppendMove(moveList, BuildMove(E1, C1, KING[board->side], 0, 0, 0, 0, 1));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(E1, C1, KING[board->side], 0, 0, 0, 0, 1));
   } else {
     if ((board->castling & 0x2) && !(board->occupancies[BOTH] & GetInBetweenSquares(E8, H8)))
-      AppendMove(moveList, BuildMove(E8, G8, KING[board->side], 0, 0, 0, 0, 1));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(E8, G8, KING[board->side], 0, 0, 0, 0, 1));
     if ((board->castling & 0x1) && !(board->occupancies[BOTH] & GetInBetweenSquares(E8, A8)))
-      AppendMove(moveList, BuildMove(E8, C8, KING[board->side], 0, 0, 0, 0, 1));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(E8, C8, KING[board->side], 0, 0, 0, 0, 1));
   }
 }
 
@@ -381,7 +398,7 @@ void GenerateKingQuiets(MoveList* moveList, Board* board) {
     while (attacks) {
       int end = lsb(attacks);
 
-      AppendMove(moveList, BuildMove(start, end, KING[board->side], 0, 0, 0, 0, 0));
+      AppendMove(moveList->quiet, &moveList->nQuiets, BuildMove(start, end, KING[board->side], 0, 0, 0, 0, 0));
 
       popLsb(attacks);
     }
@@ -398,8 +415,6 @@ void GenerateAllKingMoves(MoveList* moveList, Board* board) {
 
 // captures and promotions
 void GenerateTacticalMoves(MoveList* moveList, Board* board) {
-  moveList->count = 0;
-
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
   if (bits(board->checkers) > 1) {
@@ -466,36 +481,21 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
 
   // this is the final legality check for moves - certain move types are specifically checked here
   // king moves, castles, and EP (some crazy pins)
-  Move* curr = moveList->moves;
-  while (curr != moveList->moves + moveList->count) {
+  Move* curr = moveList->tactical;
+  while (curr != moveList->tactical + moveList->nTactical) {
     if ((MoveStart(*curr) == kingSq || MoveEP(*curr)) && !IsMoveLegal(*curr, board))
-      *curr = moveList->moves[--moveList->count]; // overwrite this illegal move with the last move and try again
-    else if (MovePromo(*curr) && MovePromo(*curr) < QUEEN_WHITE)
-      *curr = moveList->moves[--moveList->count]; // filter out under promotions
+      *curr = moveList->tactical[--moveList->nTactical]; // overwrite this illegal move with the last move and try again
     else
       ++curr;
   }
-
-  // for tactical moves just SEE is utilized for ordering
-  for (int i = 0; i < moveList->count; i++) {
-    Move move = moveList->moves[i];
-
-    int see = SEE(board, move);
-    if (MoveEP(move))
-      see += STATIC_MATERIAL_VALUE[PAWN_TYPE];
-
-    moveList->scores[i] = see;
-  }
 }
 
-void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
-  moveList->count = 0;
-
+void GenerateQuietMoves(MoveList* moveList, Board* board) {
   int kingSq = lsb(board->pieces[KING[board->side]]);
 
   if (bits(board->checkers) > 1) {
     // double check, only king moves
-    GenerateAllKingMoves(moveList, board);
+    GenerateKingQuiets(moveList, board);
   } else if (board->checkers) {
     // while in check, only non pinned pieces can move
     // they can move to squares that block the check, or capture
@@ -504,23 +504,23 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
     BitBoard betweens = GetInBetweenSquares(kingSq, lsb(board->checkers));
 
     BitBoard nonPinned = ~board->pinned;
-    GenerateAllPawnMoves(moveList, board->pieces[PAWN[board->side]] & nonPinned, betweens | board->checkers, board);
-    GenerateAllKnightMoves(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, betweens | board->checkers, board);
-    GenerateAllBishopMoves(moveList, board->pieces[BISHOP[board->side]] & nonPinned, betweens | board->checkers, board);
-    GnerateAllRookMoves(moveList, board->pieces[ROOK[board->side]] & nonPinned, betweens | board->checkers, board);
-    GenerateAllQueenMoves(moveList, board->pieces[QUEEN[board->side]] & nonPinned, betweens | board->checkers, board);
-
-    GenerateAllKingMoves(moveList, board);
+    GeneratePawnQuiets(moveList, board->pieces[PAWN[board->side]] & nonPinned, betweens, board);
+    GenerateKnightQuiets(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, betweens, board);
+    GenerateBishopQuiets(moveList, board->pieces[BISHOP[board->side]] & nonPinned, betweens, board);
+    GenerateRookQuiets(moveList, board->pieces[ROOK[board->side]] & nonPinned, betweens, board);
+    GenerateQueenQuiets(moveList, board->pieces[QUEEN[board->side]] & nonPinned, betweens, board);
+    GenerateKingQuiets(moveList, board);
   } else {
     // all non-pinned moves to anywhere on the board (FILLED)
 
     BitBoard nonPinned = ~board->pinned;
-    GenerateAllPawnMoves(moveList, board->pieces[PAWN[board->side]] & nonPinned, FILLED, board);
-    GenerateAllKnightMoves(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, FILLED, board);
-    GenerateAllBishopMoves(moveList, board->pieces[BISHOP[board->side]] & nonPinned, FILLED, board);
-    GnerateAllRookMoves(moveList, board->pieces[ROOK[board->side]] & nonPinned, FILLED, board);
-    GenerateAllQueenMoves(moveList, board->pieces[QUEEN[board->side]] & nonPinned, FILLED, board);
-    GenerateAllKingMoves(moveList, board);
+    GeneratePawnQuiets(moveList, board->pieces[PAWN[board->side]] & nonPinned, FILLED, board);
+    GenerateKnightQuiets(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, FILLED, board);
+    GenerateBishopQuiets(moveList, board->pieces[BISHOP[board->side]] & nonPinned, FILLED, board);
+    GenerateRookQuiets(moveList, board->pieces[ROOK[board->side]] & nonPinned, FILLED, board);
+    GenerateQueenQuiets(moveList, board->pieces[QUEEN[board->side]] & nonPinned, FILLED, board);
+    GenerateKingQuiets(moveList, board);
+    GenerateCastles(moveList, board);
 
     // generate pinned piece moves, knights cannot move while pinned
     BitBoard pinnedPawns = board->pieces[PAWN[board->side]] & board->pinned;
@@ -530,167 +530,36 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
 
     while (pinnedPawns) {
       int sq = lsb(pinnedPawns);
-      GenerateAllPawnMoves(moveList, pinnedPawns & -pinnedPawns, GetPinnedMovementSquares(sq, kingSq), board);
+      GeneratePawnQuiets(moveList, pinnedPawns & -pinnedPawns, GetPinnedMovementSquares(sq, kingSq), board);
       popLsb(pinnedPawns);
     }
 
     while (pinnedBishops) {
       int sq = lsb(pinnedBishops);
-      GenerateAllBishopMoves(moveList, pinnedBishops & -pinnedBishops, GetPinnedMovementSquares(sq, kingSq), board);
+      GenerateBishopQuiets(moveList, pinnedBishops & -pinnedBishops, GetPinnedMovementSquares(sq, kingSq), board);
       popLsb(pinnedBishops);
     }
 
     while (pinnedRooks) {
       int sq = lsb(pinnedRooks);
-      GnerateAllRookMoves(moveList, pinnedRooks & -pinnedRooks, GetPinnedMovementSquares(sq, kingSq), board);
+      GenerateRookQuiets(moveList, pinnedRooks & -pinnedRooks, GetPinnedMovementSquares(sq, kingSq), board);
       popLsb(pinnedRooks);
     }
 
     while (pinnedQueens) {
       int sq = lsb(pinnedQueens);
-      GenerateAllQueenMoves(moveList, pinnedQueens & -pinnedQueens, GetPinnedMovementSquares(sq, kingSq), board);
+      GenerateQueenQuiets(moveList, pinnedQueens & -pinnedQueens, GetPinnedMovementSquares(sq, kingSq), board);
       popLsb(pinnedQueens);
     }
   }
 
   // this is the final legality check for moves - certain move types are specifically checked here
   // king moves, castles, and EP (some crazy pins)
-  Move* curr = moveList->moves;
-  while (curr != moveList->moves + moveList->count) {
-    if ((MoveStart(*curr) == kingSq || MoveEP(*curr)) && !IsMoveLegal(*curr, board))
-      *curr = moveList->moves[--moveList->count]; // overwrite this illegal move with the last move and try again
+  Move* curr = moveList->quiet;
+  while (curr != moveList->quiet + moveList->nQuiets) {
+    if (MoveStart(*curr) == kingSq && !IsMoveLegal(*curr, board))
+      *curr = moveList->quiet[--moveList->nQuiets]; // overwrite this illegal move with the last move and try again
     else
       ++curr;
   }
-
-  for (int i = 0; i < moveList->count; i++) {
-    Move move = moveList->moves[i];
-
-    // this is really ugly and should be made phased
-    // we check the type of move being made and apply a score
-    // HASH -> GOOD CAPTURES -> KILLERS -> COUNTER -> QUIETS -> BAD CAPTURES
-    // large integers are used to spread these categories out to prevent conflict when sorting
-
-    if (MoveEP(move)) {
-      moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][PAWN_WHITE];
-    } else if (MoveCapture(move)) {
-      int mover = MovePiece(move);
-      int captured = board->squares[MoveEnd(move)];
-
-      assert(captured != NO_PIECE);
-      assert(mover != NO_PIECE);
-
-      int seeScore = 0;
-      if ((PIECE_TYPE[captured] < PIECE_TYPE[mover]) && (seeScore = SEE(board, move)) < 0) {
-        moveList->scores[i] = BAD_CAPTURE_SCORE + seeScore;
-      } else {
-        moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[mover][captured];
-      }
-    } else if (MovePromo(move)) {
-      int seeScore = SEE(board, move);
-      if (seeScore < 0) {
-        moveList->scores[i] = BAD_CAPTURE_SCORE + seeScore;
-      } else {
-        moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][MovePromo(move)];
-      }
-    } else if (move == data->killers[data->ply][0]) {
-      moveList->scores[i] = KILLER1_SCORE;
-    } else if (move == data->killers[data->ply][1]) {
-      moveList->scores[i] = KILLER2_SCORE;
-    } else if (data->ply && move == data->counters[MoveStartEnd(data->moves[data->ply - 1])]) {
-      moveList->scores[i] = COUNTER_SCORE;
-    } else {
-      // if the move is totally quiet, we use our history heuristic.
-      // hh is how many times this move caused a beta cutoff (depth scaled)
-      // bf is how many times this move was searched and DIDNT cause a beta cutoff (depth scaled)
-      // we scale hh by 100 for granularity sake
-      moveList->scores[i] = data->hh[board->side][MoveStartEnd(move)];
-    }
-  }
-}
-
-void InitAllMoves(MoveList* moves, Move hashMove) {
-  moves->count = 0;
-  moves->idx = 0;
-  moves->type = ALL_MOVES;
-  moves->phase = hashMove ? HASH_MOVE : GEN_MOVES;
-  moves->hashMove = hashMove;
-
-  // GenerateAllMoves(moves, board, data);
-}
-
-void InitTacticalMoves(MoveList* moves) {
-  moves->count = 0;
-  moves->idx = 0;
-  moves->type = TACTICAL_MOVES;
-  moves->phase = GEN_MOVES;
-  moves->hashMove = NULL_MOVE;
-
-  // GenerateTacticalMoves(moves, board);
-}
-
-uint8_t TopMoveIdx(MoveList* moves) {
-  uint8_t max = moves->idx;
-  for (uint8_t i = max + 1; i < moves->count; i++)
-    if (moves->scores[i] > moves->scores[max])
-      max = i;
-
-  return max;
-}
-
-void Swap(MoveList* moves, uint8_t a, uint8_t b) {
-  Move temp = moves->moves[a];
-  moves->moves[a] = moves->moves[b];
-  moves->moves[b] = temp;
-
-  int tempScore = moves->scores[a];
-  moves->scores[a] = moves->scores[b];
-  moves->scores[b] = tempScore;
-}
-
-Move NextMove(MoveList* moves, Board* board, SearchData* data) {
-  switch (moves->phase) {
-  case HASH_MOVE:
-    moves->phase = GEN_MOVES;
-    if (moves->hashMove && MoveIsLegal(moves->hashMove, board))
-      return moves->hashMove;
-    // fallthrough
-  case GEN_MOVES:
-    if (moves->type == TACTICAL_MOVES)
-      GenerateTacticalMoves(moves, board);
-    else
-      GenerateAllMoves(moves, board, data);
-
-    moves->phase = PLAY_MOVES;
-    // fallthrough
-  case PLAY_MOVES:
-    if (moves->idx < moves->count) {
-      uint8_t top = TopMoveIdx(moves);
-      Swap(moves, moves->idx, top);
-      Move topMove = moves->moves[moves->idx];
-      moves->idx++;
-
-      if (topMove == moves->hashMove) {
-        return NextMove(moves, board, data);
-      } else {
-        return topMove;
-      }
-    }
-    moves->phase = NO_MORE_MOVES;
-    // fallthrough
-  case NO_MORE_MOVES:
-    return NULL_MOVE;
-  }
-
-  return NULL_MOVE;
-}
-
-void PrintMoves(MoveList* moveList) {
-  // printf("move  score p c d e t\n");
-
-  // Move move;
-  // while ((move = NextMove(moveList))) {
-  //   printf("%s %5d %c %d %d %d %d\n", MoveToStr(move), moveList->scores[moveList->idx - 1],
-  //          PIECE_TO_CHAR[MovePiece(move)], MoveCapture(move), MoveDoublePush(move), MoveEP(move), MoveCastle(move));
-  // }
 }

@@ -218,14 +218,7 @@ void UCILoop() {
       Score s = Evaluate(&board, &threads[0]);
       printf("Score: %dcp\n", s);
     } else if (!strncmp(in, "moves", 5)) {
-      // Print possible moves. If a search has been run and stopped, it will
-      // print the moves in the order in which they would be searched on the
-      // next iteration. This has been very helpful to debug move ordering
-      // related problems.
-
-      MoveList moveList;
-      GenerateAllMoves(&moveList, &board, &threads->data);
-      PrintMoves(&moveList);
+      // TODO: Fix this
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
       mb = max(4, min(65536, mb));

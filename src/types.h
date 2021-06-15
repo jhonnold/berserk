@@ -46,23 +46,32 @@ typedef uint32_t Move;
 
 // Move generation storage
 // moves/scores idx's match
-enum {
-  ALL_MOVES,
-  TACTICAL_MOVES
-};
+enum { ALL_MOVES, TACTICAL_MOVES };
 
 enum {
-  HASH_MOVE,
-  GEN_MOVES,
-  PLAY_MOVES,
-  NO_MORE_MOVES
+    HASH_MOVE,
+    GEN_TACTICAL_MOVES,
+    PLAY_GOOD_TACTICAL,
+    PLAY_KILLER_1,
+    PLAY_KILLER_2,
+    PLAY_COUNTER,
+    GEN_QUIET_MOVES,
+    PLAY_QUIETS,
+    PLAY_BAD_TACTICAL,
+    NO_MORE_MOVES
 };
 
 typedef struct {
-  uint8_t type, phase, idx, count;
-  Move hashMove;
-  Move moves[MAX_MOVES];
-  int scores[MAX_MOVES];
+  uint8_t type, phase;
+  uint8_t nTactical, nQuiets, nBadTactical;
+
+  Move hashMove, killer1, killer2, counter;
+  
+  Move tactical[MAX_MOVES];
+  Move quiet[MAX_MOVES];
+
+  int sTactical[MAX_MOVES];
+  int sQuiet[MAX_MOVES];
 } MoveList;
 
 typedef struct {
