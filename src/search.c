@@ -274,6 +274,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
   }
 
+  // IIR by Ed Schroder
+  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
+  if (depth >= 4 && !ttHit && !skipMove)
+    depth--;
+
   // pull previous static eval from tt - this is depth independent
   int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
   // getting better if eval has gone up
@@ -345,11 +350,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       }
     }
   }
-
-  // IIR by Ed Schroder
-  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
-  if (depth >= 4 && !ttHit && !skipMove)
-    depth--;
 
   int totalMoves = 0, nonPrunedMoves = 0;
   MoveList quiets;
