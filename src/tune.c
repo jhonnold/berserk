@@ -143,7 +143,8 @@ void UpdateWeights(Weights* weights) {
 
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++)
     for (int sq = 0; sq < 32; sq++)
-      UpdateWeight(&weights->psqt[pc][sq]);
+      for (int i = 0; i < 2; i++)
+        UpdateWeight(&weights->psqt[pc][i][sq]);
 
   for (int sq = 0; sq < 12; sq++) {
     UpdateWeight(&weights->knightPostPsqt[sq]);
@@ -287,8 +288,10 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++) {
       for (int sq = 0; sq < 32; sq++) {
-        weights->psqt[pc][sq].mg.g += w->psqt[pc][sq].mg.g;
-        weights->psqt[pc][sq].eg.g += w->psqt[pc][sq].eg.g;
+        for (int i = 0; i < 2; i++) {
+          weights->psqt[pc][i][sq].mg.g += w->psqt[pc][i][sq].mg.g;
+          weights->psqt[pc][i][sq].eg.g += w->psqt[pc][i][sq].eg.g;
+        }
       }
     }
 
@@ -491,8 +494,10 @@ void UpdatePsqtGradients(Position* position, double loss, Weights* weights) {
 
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++) {
     for (int sq = 0; sq < 32; sq++) {
-      weights->psqt[pc][sq].mg.g += position->coeffs.psqt[pc][sq] * mgBase;
-      weights->psqt[pc][sq].eg.g += position->coeffs.psqt[pc][sq] * egBase;
+      for (int i = 0; i < 2; i++) {
+        weights->psqt[pc][i][sq].mg.g += position->coeffs.psqt[pc][i][sq] * mgBase;
+        weights->psqt[pc][i][sq].eg.g += position->coeffs.psqt[pc][i][sq] * egBase;
+      }
     }
   }
 }
@@ -761,7 +766,8 @@ void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights*
 void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* weights) {
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++)
     for (int sq = 0; sq < 32; sq++)
-      ApplyCoeff(mg, eg, position->coeffs.psqt[pc][sq], &weights->psqt[pc][sq]);
+      for (int i = 0; i < 2; i++)
+        ApplyCoeff(mg, eg, position->coeffs.psqt[pc][i][sq], &weights->psqt[pc][i][sq]);
 }
 
 void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -972,23 +978,25 @@ void InitMaterialWeights(Weights* weights) {
 
 void InitPsqtWeights(Weights* weights) {
   for (int sq = 0; sq < 32; sq++) {
-    weights->psqt[PAWN_TYPE][sq].mg.value = scoreMG(PAWN_PSQT[sq]);
-    weights->psqt[PAWN_TYPE][sq].eg.value = scoreEG(PAWN_PSQT[sq]);
+    for (int i = 0; i < 2; i++) {
+      weights->psqt[PAWN_TYPE][i][sq].mg.value = scoreMG(PAWN_PSQT[i][sq]);
+      weights->psqt[PAWN_TYPE][i][sq].eg.value = scoreEG(PAWN_PSQT[i][sq]);
 
-    weights->psqt[KNIGHT_TYPE][sq].mg.value = scoreMG(KNIGHT_PSQT[sq]);
-    weights->psqt[KNIGHT_TYPE][sq].eg.value = scoreEG(KNIGHT_PSQT[sq]);
+      weights->psqt[KNIGHT_TYPE][i][sq].mg.value = scoreMG(KNIGHT_PSQT[i][sq]);
+      weights->psqt[KNIGHT_TYPE][i][sq].eg.value = scoreEG(KNIGHT_PSQT[i][sq]);
 
-    weights->psqt[BISHOP_TYPE][sq].mg.value = scoreMG(BISHOP_PSQT[sq]);
-    weights->psqt[BISHOP_TYPE][sq].eg.value = scoreEG(BISHOP_PSQT[sq]);
+      weights->psqt[BISHOP_TYPE][i][sq].mg.value = scoreMG(BISHOP_PSQT[i][sq]);
+      weights->psqt[BISHOP_TYPE][i][sq].eg.value = scoreEG(BISHOP_PSQT[i][sq]);
 
-    weights->psqt[ROOK_TYPE][sq].mg.value = scoreMG(ROOK_PSQT[sq]);
-    weights->psqt[ROOK_TYPE][sq].eg.value = scoreEG(ROOK_PSQT[sq]);
+      weights->psqt[ROOK_TYPE][i][sq].mg.value = scoreMG(ROOK_PSQT[i][sq]);
+      weights->psqt[ROOK_TYPE][i][sq].eg.value = scoreEG(ROOK_PSQT[i][sq]);
 
-    weights->psqt[QUEEN_TYPE][sq].mg.value = scoreMG(QUEEN_PSQT[sq]);
-    weights->psqt[QUEEN_TYPE][sq].eg.value = scoreEG(QUEEN_PSQT[sq]);
+      weights->psqt[QUEEN_TYPE][i][sq].mg.value = scoreMG(QUEEN_PSQT[i][sq]);
+      weights->psqt[QUEEN_TYPE][i][sq].eg.value = scoreEG(QUEEN_PSQT[i][sq]);
 
-    weights->psqt[KING_TYPE][sq].mg.value = scoreMG(KING_PSQT[sq]);
-    weights->psqt[KING_TYPE][sq].eg.value = scoreEG(KING_PSQT[sq]);
+      weights->psqt[KING_TYPE][i][sq].mg.value = scoreMG(KING_PSQT[i][sq]);
+      weights->psqt[KING_TYPE][i][sq].eg.value = scoreEG(KING_PSQT[i][sq]);
+    }
   }
 }
 
@@ -1174,29 +1182,47 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score BISHOP_PAIR = ");
   PrintWeight(fp, &weights->bishopPair);
 
-  fprintf(fp, "\nconst Score PAWN_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->psqt[PAWN_TYPE], 32, 4);
-  fprintf(fp, "};\n");
+  fprintf(fp, "\nconst Score PAWN_PSQT[2][32] = {\n");
+  fprintf(fp, "{\n");
+  PrintWeightArray(fp, weights->psqt[PAWN_TYPE][0], 32, 4);
+  fprintf(fp, "},{\n");
+  PrintWeightArray(fp, weights->psqt[PAWN_TYPE][1], 32, 4);
+  fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score KNIGHT_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->psqt[KNIGHT_TYPE], 32, 4);
-  fprintf(fp, "};\n");
+  fprintf(fp, "\nconst Score KNIGHT_PSQT[2][32] = {\n");
+  fprintf(fp, "{\n");
+  PrintWeightArray(fp, weights->psqt[KNIGHT_TYPE][0], 32, 4);
+  fprintf(fp, "},{\n");
+  PrintWeightArray(fp, weights->psqt[KNIGHT_TYPE][1], 32, 4);
+  fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score BISHOP_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->psqt[BISHOP_TYPE], 32, 4);
-  fprintf(fp, "};\n");
+  fprintf(fp, "\nconst Score BISHOP_PSQT[2][32] = {\n");
+  fprintf(fp, "{\n");
+  PrintWeightArray(fp, weights->psqt[BISHOP_TYPE][0], 32, 4);
+  fprintf(fp, "},{\n");
+  PrintWeightArray(fp, weights->psqt[BISHOP_TYPE][1], 32, 4);
+  fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score ROOK_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->psqt[ROOK_TYPE], 32, 4);
-  fprintf(fp, "};\n");
+  fprintf(fp, "\nconst Score ROOK_PSQT[2][32] = {\n");
+  fprintf(fp, "{\n");
+  PrintWeightArray(fp, weights->psqt[ROOK_TYPE][0], 32, 4);
+  fprintf(fp, "},{\n");
+  PrintWeightArray(fp, weights->psqt[ROOK_TYPE][1], 32, 4);
+  fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score QUEEN_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->psqt[QUEEN_TYPE], 32, 4);
-  fprintf(fp, "};\n");
+  fprintf(fp, "\nconst Score QUEEN_PSQT[2][32] = {\n");
+  fprintf(fp, "{\n");
+  PrintWeightArray(fp, weights->psqt[QUEEN_TYPE][0], 32, 4);
+  fprintf(fp, "},{\n");
+  PrintWeightArray(fp, weights->psqt[QUEEN_TYPE][1], 32, 4);
+  fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score KING_PSQT[32] = {\n");
-  PrintWeightArray(fp, weights->psqt[KING_TYPE], 32, 4);
-  fprintf(fp, "};\n");
+  fprintf(fp, "\nconst Score KING_PSQT[2][32] = {\n");
+  fprintf(fp, "{\n");
+  PrintWeightArray(fp, weights->psqt[KING_TYPE][0], 32, 4);
+  fprintf(fp, "},{\n");
+  PrintWeightArray(fp, weights->psqt[KING_TYPE][1], 32, 4);
+  fprintf(fp, "}};\n");
 
   fprintf(fp, "\nconst Score KNIGHT_POST_PSQT[12] = {\n");
   PrintWeightArray(fp, weights->knightPostPsqt, 12, 4);

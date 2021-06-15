@@ -40,12 +40,12 @@ extern const int STATIC_MATERIAL_VALUE[7];
 extern const Score MATERIAL_VALUES[7];
 extern const Score BISHOP_PAIR;
 
-extern const Score PAWN_PSQT[32];
-extern const Score KNIGHT_PSQT[32];
-extern const Score BISHOP_PSQT[32];
-extern const Score ROOK_PSQT[32];
-extern const Score QUEEN_PSQT[32];
-extern const Score KING_PSQT[32];
+extern const Score PAWN_PSQT[2][32];
+extern const Score KNIGHT_PSQT[2][32];
+extern const Score BISHOP_PSQT[2][32];
+extern const Score ROOK_PSQT[2][32];
+extern const Score QUEEN_PSQT[2][32];
+extern const Score KING_PSQT[2][32];
 
 extern const Score KNIGHT_POST_PSQT[12];
 extern const Score BISHOP_POST_PSQT[12];
@@ -103,7 +103,7 @@ extern const Score KS_UNSAFE_CHECK;
 extern const Score KS_ENEMY_QUEEN;
 extern const Score KS_KNIGHT_DEFENSE;
 
-extern Score PSQT[12][64];
+extern Score PSQT[12][2][64];
 
 void InitPSQT();
 

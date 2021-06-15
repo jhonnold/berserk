@@ -126,7 +126,7 @@ typedef struct {
 
 typedef struct {
   int8_t pieces[5];
-  int8_t psqt[6][32];
+  int8_t psqt[6][2][32];
   int8_t bishopPair;
 
   int8_t knightPostPsqt[12];
