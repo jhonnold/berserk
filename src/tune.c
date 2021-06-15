@@ -1182,43 +1182,37 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score BISHOP_PAIR = ");
   PrintWeight(fp, &weights->bishopPair);
 
-  fprintf(fp, "\nconst Score PAWN_PSQT[2][32] = {\n");
-  fprintf(fp, "{\n");
+  fprintf(fp, "\nconst Score PAWN_PSQT[2][32] = {{\n");
   PrintWeightArray(fp, weights->psqt[PAWN_TYPE][0], 32, 4);
   fprintf(fp, "},{\n");
   PrintWeightArray(fp, weights->psqt[PAWN_TYPE][1], 32, 4);
   fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score KNIGHT_PSQT[2][32] = {\n");
-  fprintf(fp, "{\n");
+  fprintf(fp, "\nconst Score KNIGHT_PSQT[2][32] = {{\n");
   PrintWeightArray(fp, weights->psqt[KNIGHT_TYPE][0], 32, 4);
   fprintf(fp, "},{\n");
   PrintWeightArray(fp, weights->psqt[KNIGHT_TYPE][1], 32, 4);
   fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score BISHOP_PSQT[2][32] = {\n");
-  fprintf(fp, "{\n");
+  fprintf(fp, "\nconst Score BISHOP_PSQT[2][32] = {{\n");
   PrintWeightArray(fp, weights->psqt[BISHOP_TYPE][0], 32, 4);
   fprintf(fp, "},{\n");
   PrintWeightArray(fp, weights->psqt[BISHOP_TYPE][1], 32, 4);
   fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score ROOK_PSQT[2][32] = {\n");
-  fprintf(fp, "{\n");
+  fprintf(fp, "\nconst Score ROOK_PSQT[2][32] = {{\n");
   PrintWeightArray(fp, weights->psqt[ROOK_TYPE][0], 32, 4);
   fprintf(fp, "},{\n");
   PrintWeightArray(fp, weights->psqt[ROOK_TYPE][1], 32, 4);
   fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score QUEEN_PSQT[2][32] = {\n");
-  fprintf(fp, "{\n");
+  fprintf(fp, "\nconst Score QUEEN_PSQT[2][32] = {{\n");
   PrintWeightArray(fp, weights->psqt[QUEEN_TYPE][0], 32, 4);
   fprintf(fp, "},{\n");
   PrintWeightArray(fp, weights->psqt[QUEEN_TYPE][1], 32, 4);
   fprintf(fp, "}};\n");
 
-  fprintf(fp, "\nconst Score KING_PSQT[2][32] = {\n");
-  fprintf(fp, "{\n");
+  fprintf(fp, "\nconst Score KING_PSQT[2][32] = {{\n");
   PrintWeightArray(fp, weights->psqt[KING_TYPE][0], 32, 4);
   fprintf(fp, "},{\n");
   PrintWeightArray(fp, weights->psqt[KING_TYPE][1], 32, 4);

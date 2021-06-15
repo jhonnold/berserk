@@ -56,8 +56,7 @@ const Score MATERIAL_VALUES[7] = { S(78, 171), S(375, 436), S(404, 456), S(599, 
 
 const Score BISHOP_PAIR = S(31, 94);
 
-const Score PAWN_PSQT[2][32] = {
-{
+const Score PAWN_PSQT[2][32] = {{
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
  S(  63, 225), S(  58, 247), S(  34, 221), S(  79, 190),
  S(   9,  65), S(  -9,  77), S(  36,  21), S(  47, -14),
@@ -77,8 +76,7 @@ const Score PAWN_PSQT[2][32] = {
  S(   0,   0), S(   0,   0), S(   0,   0), S(   0,   0),
 }};
 
-const Score KNIGHT_PSQT[2][32] = {
-{
+const Score KNIGHT_PSQT[2][32] = {{
  S(-132,  33), S(-119,  61), S( -75,  74), S( -40,  65),
  S( -20,  63), S(   4,  76), S(  51,  60), S(  54,  69),
  S(  43,  46), S(  58,  58), S(  56,  78), S(  49,  86),
@@ -98,8 +96,7 @@ const Score KNIGHT_PSQT[2][32] = {
  S(  18,  80), S(  17,  71), S(  37,  73), S(  39,  81),
 }};
 
-const Score BISHOP_PSQT[2][32] = {
-{
+const Score BISHOP_PSQT[2][32] = {{
  S( -31,  69), S( -13,  93), S( -53,  88), S( -75, 101),
  S( -14,  87), S( -20,  68), S(  24,  78), S(  19,  85),
  S(  27,  80), S(  29,  85), S(   1,  63), S(  43,  79),
@@ -119,8 +116,7 @@ const Score BISHOP_PSQT[2][32] = {
  S(  40,  33), S(  36,  95), S(  27,  92), S(  42,  78),
 }};
 
-const Score ROOK_PSQT[2][32] = {
-{
+const Score ROOK_PSQT[2][32] = {{
  S( -11, 104), S( -12, 112), S( -10, 118), S( -32, 122),
  S(   4,  88), S(  -6, 102), S(  13, 102), S(  34,  85),
  S( -12,  92), S(  26,  89), S(  15,  92), S(  17,  87),
@@ -140,8 +136,7 @@ const Score ROOK_PSQT[2][32] = {
  S(  16,  57), S(  12,  70), S(  13,  66), S(  24,  64),
 }};
 
-const Score QUEEN_PSQT[2][32] = {
-{
+const Score QUEEN_PSQT[2][32] = {{
  S( -62, 170), S(   0, 106), S(  56, 109), S(  50, 140),
  S( -30, 138), S( -38, 142), S( -20, 176), S( -33, 197),
  S(  -1, 108), S(   9, 101), S(   4, 133), S(   4, 155),
@@ -161,8 +156,7 @@ const Score QUEEN_PSQT[2][32] = {
  S(  35,  40), S(   7,  66), S(   5,  52), S(  17,  77),
 }};
 
-const Score KING_PSQT[2][32] = {
-{
+const Score KING_PSQT[2][32] = {{
  S( 175,-105), S( 155, -45), S(  34,  -6), S(  92, -20),
  S( -20,  42), S(  34,  54), S(  27,  58), S(  29,  28),
  S(  45,  28), S(  91,  49), S(  62,  57), S( -34,  67),
@@ -419,12 +413,13 @@ void InitEvalData(EvalData* data, Board* board) {
 }
 
 // Material + PSQT value
-// TODO: Perhaps a/b lazy eval at this point? Would require eval saving to occur
-// separate from search
+// Berserk uses reflected PSQTs in 2 states (same side as enemy king or not)
+// A similar idea has been implemented in koi and is the inspiration for this
+// simpler implementation
 Score MaterialValue(Board* board, int side) {
-  Score s = 0;
+  Score s = S(0, 0);
 
-  uint8_t enemyKingSide = SQ_SIDE[lsb(board->pieces[KING[side ^ 1]])];
+  uint8_t eks = SQ_SIDE[lsb(board->pieces[KING[side ^ 1]])];
 
   for (int pc = PAWN[side]; pc <= KING[side]; pc += 2) {
     BitBoard pieces = board->pieces[pc];
@@ -435,12 +430,12 @@ Score MaterialValue(Board* board, int side) {
     while (pieces) {
       int sq = lsb(pieces);
 
-      s += PSQT[pc][enemyKingSide == SQ_SIDE[sq]][sq];
+      s += PSQT[pc][eks == SQ_SIDE[sq]][sq];
 
       popLsb(pieces);
 
       if (T)
-        C.psqt[PIECE_TYPE[pc]][enemyKingSide == SQ_SIDE[sq]][psqtIdx(side == WHITE ? sq : MIRROR[sq])] += cs[side];
+        C.psqt[PIECE_TYPE[pc]][eks == SQ_SIDE[sq]][psqtIdx(side == WHITE ? sq : MIRROR[sq])] += cs[side];
     }
   }
 
