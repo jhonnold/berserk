@@ -79,18 +79,20 @@ char* benchmarks[] = {"r3k2r/2pb1ppp/2pp1q2/p7/1nP1B3/1P2P3/P2N1PPP/R2QK2R w KQk
                       "3br1k1/p1pn3p/1p3n2/5pNq/2P1p3/1PN3PP/P2Q1PB1/4R1K1 w - - 0 23",
                       "2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93"};
 
+const int NUM_BENCH_POSITIONS = 50;
+
 void Bench() {
   Board board;
   SearchParams params = {.depth = 13, .timeset = 0, .stopped = 0, .quit = 0, .endTime = 0};
   ThreadData* threads = CreatePool(1);
 
-  Move bestMoves[50];
-  int scores[50];
-  int nodes[50];
-  long times[50];
+  Move bestMoves[NUM_BENCH_POSITIONS];
+  int scores[NUM_BENCH_POSITIONS];
+  int nodes[NUM_BENCH_POSITIONS];
+  long times[NUM_BENCH_POSITIONS];
 
   long startTime = GetTimeMS();
-  for (int i = 0; i < 50; i++) {
+  for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
     TTClear();
     ResetThreadPool(&board, &params, threads);
 
@@ -108,13 +110,13 @@ void Bench() {
   long totalTime = GetTimeMS() - startTime;
 
   printf("\n\n");
-  for (int i = 0; i < 50; i++) {
+  for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
     printf("Bench #%2d: bestmove %5s score %5d %12d nodes %8d nps\n", i + 1, MoveToStr(bestMoves[i]), scores[i],
            nodes[i], (int)(1000.0 * nodes[i] / (times[i] + 1)));
   }
 
   int totalNodes = 0;
-  for (int i = 0; i < 50; i++)
+  for (int i = 0; i < NUM_BENCH_POSITIONS; i++)
     totalNodes += nodes[i];
 
   printf("\nResults: %41d nodes %8d nps\n\n", totalNodes, (int)(1000.0 * totalNodes / (totalTime + 1)));

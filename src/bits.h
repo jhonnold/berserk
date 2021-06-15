@@ -47,10 +47,10 @@ extern const BitBoard CENTER_SQS;
 #define RANK_8 0x00000000000000FFULL
 
 #define bit(sq) (1ULL << (sq))
-#define setBit(bb, sq) (bb |= bit(sq))
-#define getBit(bb, sq) (bb & bit(sq))
-#define popBit(bb, sq) (bb &= ~bit(sq))
-#define popLsb(bb) (bb &= bb - 1)
+#define setBit(bb, sq) ((bb) |= bit(sq))
+#define getBit(bb, sq) ((bb) & bit(sq))
+#define popBit(bb, sq) ((bb) &= ~bit(sq))
+#define popLsb(bb) ((bb) &= (bb) - 1)
 #define lsb(bb) (__builtin_ctzll(bb))
 #define msb(bb) (63 ^ __builtin_clzll(bb))
 #define subset(a, b) (((a) & (b)) == (a))

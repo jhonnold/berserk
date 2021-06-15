@@ -46,9 +46,21 @@ typedef uint32_t Move;
 
 // Move generation storage
 // moves/scores idx's match
+enum {
+  ALL_MOVES,
+  TACTICAL_MOVES
+};
+
+enum {
+  HASH_MOVE,
+  GEN_MOVES,
+  PLAY_MOVES,
+  NO_MORE_MOVES
+};
+
 typedef struct {
-  int idx;
-  int count;
+  uint8_t type, phase, idx, count;
+  Move hashMove;
   Move moves[MAX_MOVES];
   int scores[MAX_MOVES];
 } MoveList;
