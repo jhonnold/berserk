@@ -275,6 +275,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
   }
 
+  // IIR by Ed Schroder
+  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
+  if (depth >= 4 && !ttHit && !skipMove)
+    depth--;
+
   // pull previous static eval from tt - this is depth independent
   int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
   // getting better if eval has gone up
@@ -347,11 +352,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
   }
 
-  // IIR by Ed Schroder
-  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
-  if (depth >= 4 && !ttHit && !skipMove)
-    depth--;
-
   Move quiets[64] = {0};
   int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0;
   InitAllMoves(&moves, hashMove, data);
@@ -362,14 +362,15 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       continue;
 
     int tactical = !!Tactical(move);
-    int moveScore = !tactical ? data->hh[board->side][MoveStartEnd(move)] : 0;
+    int specialQuiet = !tactical && (move == moves.k1 || move == moves.k2 || move == moves.cm);
+    int hist = !tactical ? data->hh[board->side][MoveStartEnd(move)] : 0;
 
     if (bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
       continue;
 
     totalMoves++;
 
-    if (bestScore > -MATE_BOUND && !tactical && depth <= 2 && moveScore <= -2048 * depth * depth)
+    if (bestScore > -MATE_BOUND && !tactical && depth <= 2 && !specialQuiet && hist <= -2048 * depth * depth)
       continue;
 
     // Static evaluation pruning, this applies for both quiet and tactical moves
@@ -422,7 +423,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Late move reductions
     int R = 1;
-    if (depth > 2 && nonPrunedMoves > 1) {
+    if (depth > 2 && nonPrunedMoves > 1 && !specialQuiet) {
       R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
 
       if (!tactical) {
@@ -437,14 +438,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
           R++;
 
-        // decrease reduction if we're looking at a "specific" quiet move
-        // killer1, killer2, and counter
-        if (move == data->killers[data->ply][0] || move == data->killers[data->ply][1] ||
-            (!isRoot && move == data->counters[MoveStartEnd(data->moves[data->ply - 1])]))
-          R--;
-
         // adjust reduction based on historical score
-        R -= moveScore / 16384;
+        R -= hist / 16384;
       } else {
         R--;
       }
@@ -574,11 +569,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     int moveScore = SEE(board, move);
     // a delta prune look-a-like by Halogen
     // prune based on SEE scores rather than flat mat val
-    if (eval + moveScore + DELTA_CUTOFF < alpha)
-      break;
-
-    if (moveScore < 0)
-      break;
+    if (eval + see + DELTA_CUTOFF < alpha || see < 0)
+      continue;
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);

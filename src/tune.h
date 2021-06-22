@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
   Weight pieces[5];
-  Weight psqt[6][32];
+  Weight psqt[6][2][32];
   Weight bishopPair;
 
   Weight knightPostPsqt[12];
