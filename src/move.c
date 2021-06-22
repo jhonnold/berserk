@@ -41,7 +41,7 @@ Move ParseMove(char* moveStr, Board* board) {
   int end = (moveStr[2] - 'a') + (8 - (moveStr[3] - '0')) * 8;
 
   Move match;
-  while ((match = NextMove(&moveList, board, &data, 0))) {
+  while ((match = NextMove(&moveList, board, 0))) {
     if (start != MoveStart(match) || end != MoveEnd(match))
       continue;
 

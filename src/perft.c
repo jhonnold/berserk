@@ -37,7 +37,7 @@ int Perft(int depth, Board* board) {
 
   int nodes = 0;
 
-  while ((move = NextMove(&moves, board, &PERFT_DUMMY_DATA, 0))) {
+  while ((move = NextMove(&moves, board, 0))) {
     MakeMove(move, board);
     nodes += Perft(depth - 1, board);
     UndoMove(move, board);
@@ -57,7 +57,7 @@ void PerftTest(int depth, Board* board) {
   MoveList moves;
   InitAllMoves(&moves, NULL_MOVE, &PERFT_DUMMY_DATA);
 
-  while ((move = NextMove(&moves, board, &PERFT_DUMMY_DATA, 0))) {
+  while ((move = NextMove(&moves, board, 0))) {
     MakeMove(move, board);
     int nodes = Perft(depth - 1, board);
     UndoMove(move, board);

@@ -20,7 +20,7 @@
 #include "types.h"
 
 void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data);
-void InitTacticalMoves(MoveList* moves);
-Move NextMove(MoveList* moves, Board* board, SearchData* data, int skipQuiets);
+void InitTacticalMoves(MoveList* moves, SearchData* data);
+Move NextMove(MoveList* moves, Board* board, int skipQuiets);
 
 #endif

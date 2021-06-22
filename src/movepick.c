@@ -16,13 +16,12 @@
 
 #include <stdio.h>
 
-#include "movepick.h"
 #include "board.h"
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
+#include "movepick.h"
 #include "see.h"
-
 
 void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->type = ALL_MOVES;
@@ -35,9 +34,11 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->killer1 = data->killers[data->ply][0];
   moves->killer2 = data->killers[data->ply][1];
   moves->counter = data->ply ? data->counters[MoveStartEnd(data->moves[data->ply - 1])] : NULL_MOVE;
+
+  moves->data = data;
 }
 
-void InitTacticalMoves(MoveList* moves) {
+void InitTacticalMoves(MoveList* moves, SearchData* data) {
   moves->type = TACTICAL_MOVES;
   moves->phase = GEN_TACTICAL_MOVES;
   moves->nTactical = 0;
@@ -48,6 +49,8 @@ void InitTacticalMoves(MoveList* moves) {
   moves->killer1 = NULL_MOVE;
   moves->killer2 = NULL_MOVE;
   moves->counter = NULL_MOVE;
+
+  moves->data = data;
 }
 
 int GetTopIdx(int* arr, int n) {
@@ -139,7 +142,7 @@ void ScoreTacticalMovesWithSEE(MoveList* moves, Board* board) {
   }
 }
 
-Move NextMove(MoveList* moves, Board* board, SearchData* data, int skipQuiets) {
+Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
   switch (moves->phase) {
   case HASH_MOVE:
     moves->phase = GEN_TACTICAL_MOVES;
@@ -148,10 +151,7 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data, int skipQuiets) {
     // fallthrough
   case GEN_TACTICAL_MOVES:
     GenerateTacticalMoves(moves, board);
-    if (moves->type == TACTICAL_MOVES)
-      ScoreTacticalMovesWithSEE(moves, board);
-    else
-      ScoreTacticalMoves(moves, board);
+    ScoreTacticalMoves(moves, board);
     moves->phase = PLAY_GOOD_TACTICAL;
     // fallthrough
   case PLAY_GOOD_TACTICAL:
@@ -161,7 +161,7 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data, int skipQuiets) {
 
       if (m == moves->hashMove) {
         PopGoodCapture(moves, idx);
-        return NextMove(moves, board, data, skipQuiets);
+        return NextMove(moves, board, skipQuiets);
       }
 
       int see = 0;
@@ -171,7 +171,7 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data, int skipQuiets) {
       if (see < 0) {
         moves->sTactical[idx] = see;
         ShiftToBadCaptures(moves, idx);
-        return NextMove(moves, board, data, skipQuiets);
+        return NextMove(moves, board, skipQuiets);
       }
 
       return PopGoodCapture(moves, idx);
@@ -179,31 +179,31 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data, int skipQuiets) {
 
     if (skipQuiets) {
       moves->phase = PLAY_BAD_TACTICAL;
-      return NextMove(moves, board, data, skipQuiets);
+      return NextMove(moves, board, skipQuiets);
     }
 
     moves->phase = PLAY_KILLER_1;
     // fallthrough
   case PLAY_KILLER_1:
     moves->phase = PLAY_KILLER_2;
-    if (moves->killer1 != moves->hashMove && MoveIsLegal(moves->killer1, board))
+    if (!skipQuiets && moves->killer1 != moves->hashMove && MoveIsLegal(moves->killer1, board))
       return moves->killer1;
     // fallthrough
   case PLAY_KILLER_2:
     moves->phase = PLAY_COUNTER;
-    if (moves->killer2 != moves->hashMove && MoveIsLegal(moves->killer2, board))
+    if (!skipQuiets && moves->killer2 != moves->hashMove && MoveIsLegal(moves->killer2, board))
       return moves->killer2;
     // fallthrough
   case PLAY_COUNTER:
     moves->phase = GEN_QUIET_MOVES;
-    if (moves->counter != moves->hashMove && moves->counter != moves->killer1 && moves->counter != moves->killer2 &&
+    if (!skipQuiets && moves->counter != moves->hashMove && moves->counter != moves->killer1 && moves->counter != moves->killer2 &&
         MoveIsLegal(moves->counter, board))
       return moves->counter;
     // fallthrough
   case GEN_QUIET_MOVES:
     if (!skipQuiets) {
       GenerateQuietMoves(moves, board);
-      ScoreQuietMoves(moves, board, data);
+      ScoreQuietMoves(moves, board, moves->data);
     }
 
     moves->phase = PLAY_QUIETS;
@@ -213,7 +213,7 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data, int skipQuiets) {
       int idx = GetTopIdx(moves->sQuiet, moves->nQuiets);
       Move m = PopQuiet(moves, idx);
 
-      return m != moves->hashMove ? m : NextMove(moves, board, data, skipQuiets);
+      return m != moves->hashMove ? m : NextMove(moves, board, skipQuiets);
     }
 
     moves->phase = PLAY_BAD_TACTICAL;
@@ -223,7 +223,7 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data, int skipQuiets) {
       int idx = GetTopReverseIdx(moves->sTactical, moves->nBadTactical);
       Move m = PopBadCapture(moves, idx);
 
-      return m != moves->hashMove ? m : NextMove(moves, board, data, skipQuiets);
+      return m != moves->hashMove ? m : NextMove(moves, board, skipQuiets);
     }
 
     moves->phase = NO_MORE_MOVES;
