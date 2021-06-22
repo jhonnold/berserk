@@ -330,8 +330,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (depth > 4 && abs(beta) < MATE_BOUND &&
         !(ttHit && tt->depth >= depth - 3 && TTScore(tt, data->ply) < probBeta)) {
 
-      InitTacticalMoves(&moves);
-      while ((move = NextMove(&moves, board, data))) {
+      InitTacticalMoves(&moves, data);
+      while ((move = NextMove(&moves, board))) {
         data->moves[data->ply++] = move;
         MakeMove(move, board);
 
@@ -354,22 +354,23 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   int totalMoves = 0, nonPrunedMoves = 0;
   MoveList quiets;
   quiets.count = 0;
-  InitAllMoves(&moves, hashMove);
+  InitAllMoves(&moves, data, hashMove);
 
-  while ((move = NextMove(&moves, board, data))) {
+  while ((move = NextMove(&moves, board))) {
     // don't search this during singular
     if (skipMove == move)
       continue;
 
     int tactical = !!Tactical(move);
-    int moveScore = moves.scores[moves.idx - 1];
+    int specialQuiet = !tactical && (move == moves.k1 || move == moves.k2 || move == moves.cm);
+    int hist = !tactical ? data->hh[board->side][MoveStartEnd(move)] : 0;
 
     if (bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
       continue;
 
     totalMoves++;
 
-    if (bestScore > -MATE_BOUND && !tactical && depth <= 2 && moveScore <= -2048 * depth * depth)
+    if (bestScore > -MATE_BOUND && !tactical && depth <= 2 && !specialQuiet && hist <= -2048 * depth * depth)
       continue;
 
     // Static evaluation pruning, this applies for both quiet and tactical moves
@@ -422,7 +423,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Late move reductions
     int R = 1;
-    if (depth > 2 && nonPrunedMoves > 1) {
+    if (depth > 2 && nonPrunedMoves > 1 && !specialQuiet) {
       R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
 
       if (!tactical) {
@@ -437,13 +438,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
           R++;
 
-        // decrease reduction if we're looking at a "specific" quiet move
-        // killer1, killer2, and counter
-        if (moveScore >= COUNTER_SCORE)
-          R--;
-
         // adjust reduction based on historical score
-        R -= moveScore / 16384;
+        R -= hist / 16384;
       } else {
         R--;
       }
@@ -567,9 +563,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   Move move;
   MoveList moves;
-  InitTacticalMoves(&moves);
+  InitTacticalMoves(&moves, data);
 
-  while ((move = NextMove(&moves, board, data))) {
+  while ((move = NextMove(&moves, board))) {
     int see = SEE(board, move);
     // a delta prune look-a-like by Halogen
     // prune based on SEE scores rather than flat mat val

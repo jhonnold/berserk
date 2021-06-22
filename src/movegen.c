@@ -475,18 +475,9 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
     else
       ++curr;
   }
-
-  // for tactical moves just SEE is utilized for ordering
-  for (int i = 0; i < moveList->count; i++) {
-    Move move = moveList->moves[i];
-    int attacker = MovePiece(move);
-    int victim = MoveEP(move) ? PAWN_WHITE : MovePromo(move) ? QUEEN_WHITE : board->squares[MoveEnd(move)];
-
-    moveList->scores[i] = MVV_LVA[attacker][victim];
-  }
 }
 
-void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
+void GenerateAllMoves(MoveList* moveList, Board* board) {
   moveList->count = 0;
 
   int kingSq = lsb(board->pieces[KING[board->side]]);
@@ -560,9 +551,11 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
     else
       ++curr;
   }
+}
 
-  for (int i = 0; i < moveList->count; i++) {
-    Move move = moveList->moves[i];
+void ScoreAllMoves(MoveList* moves, Board* board) {
+  for (int i = 0; i < moves->count; i++) {
+    Move move = moves->moves[i];
 
     // this is really ugly and should be made phased
     // we check the type of move being made and apply a score
@@ -570,7 +563,7 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
     // large integers are used to spread these categories out to prevent conflict when sorting
 
     if (MoveEP(move)) {
-      moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][PAWN_WHITE];
+      moves->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][PAWN_WHITE];
     } else if (MoveCapture(move)) {
       int mover = MovePiece(move);
       int captured = board->squares[MoveEnd(move)];
@@ -580,51 +573,66 @@ void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data) {
 
       int seeScore = 0;
       if ((PIECE_TYPE[captured] < PIECE_TYPE[mover]) && (seeScore = SEE(board, move)) < 0) {
-        moveList->scores[i] = BAD_CAPTURE_SCORE + seeScore;
+        moves->scores[i] = BAD_CAPTURE_SCORE + seeScore;
       } else {
-        moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[mover][captured];
+        moves->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[mover][captured];
       }
     } else if (MovePromo(move)) {
       int seeScore = SEE(board, move);
       if (seeScore < 0) {
-        moveList->scores[i] = BAD_CAPTURE_SCORE + seeScore;
+        moves->scores[i] = BAD_CAPTURE_SCORE + seeScore;
       } else {
-        moveList->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][MovePromo(move)];
+        moves->scores[i] = GOOD_CAPTURE_SCORE + MVV_LVA[PAWN_WHITE][MovePromo(move)];
       }
-    } else if (move == data->killers[data->ply][0]) {
-      moveList->scores[i] = KILLER1_SCORE;
-    } else if (move == data->killers[data->ply][1]) {
-      moveList->scores[i] = KILLER2_SCORE;
-    } else if (data->ply && move == data->counters[MoveStartEnd(data->moves[data->ply - 1])]) {
-      moveList->scores[i] = COUNTER_SCORE;
+    } else if (move == moves->k1) {
+      moves->scores[i] = KILLER1_SCORE;
+    } else if (move == moves->k2) {
+      moves->scores[i] = KILLER2_SCORE;
+    } else if (move == moves->cm) {
+      moves->scores[i] = COUNTER_SCORE;
     } else {
       // if the move is totally quiet, we use our history heuristic.
       // hh is how many times this move caused a beta cutoff (depth scaled)
       // bf is how many times this move was searched and DIDNT cause a beta cutoff (depth scaled)
       // we scale hh by 100 for granularity sake
-      moveList->scores[i] = data->hh[board->side][MoveStartEnd(move)];
+      moves->scores[i] = moves->data->hh[board->side][MoveStartEnd(move)];
     }
   }
 }
 
-void InitAllMoves(MoveList* moves, Move hashMove) {
+void ScoreTacticalMoves(MoveList* moves, Board* board) {
+  // for tactical moves just SEE is utilized for ordering
+  for (int i = 0; i < moves->count; i++) {
+    Move move = moves->moves[i];
+    int attacker = MovePiece(move);
+    int victim = MoveEP(move) ? PAWN_WHITE : MovePromo(move) ? QUEEN_WHITE : board->squares[MoveEnd(move)];
+
+    moves->scores[i] = MVV_LVA[attacker][victim];
+  }
+}
+
+void InitAllMoves(MoveList* moves, SearchData* data, Move hashMove) {
   moves->count = 0;
   moves->idx = 0;
   moves->type = ALL_MOVES;
   moves->phase = hashMove ? HASH_MOVE : GEN_MOVES;
   moves->hashMove = hashMove;
-
-  // GenerateAllMoves(moves, board, data);
+  moves->k1 = data->killers[data->ply][0];
+  moves->k2 = data->killers[data->ply][1];
+  moves->cm = data->ply ? data->counters[MoveStartEnd(data->moves[data->ply - 1])] : NULL_MOVE;
+  moves->data = data;
 }
 
-void InitTacticalMoves(MoveList* moves) {
+void InitTacticalMoves(MoveList* moves, SearchData* data) {
   moves->count = 0;
   moves->idx = 0;
   moves->type = TACTICAL_MOVES;
   moves->phase = GEN_MOVES;
   moves->hashMove = NULL_MOVE;
-
-  // GenerateTacticalMoves(moves, board);
+  moves->k1 = NULL_MOVE;
+  moves->k2 = NULL_MOVE;
+  moves->cm = NULL_MOVE;
+  moves->data = data;
 }
 
 uint8_t TopMoveIdx(MoveList* moves) {
@@ -646,7 +654,7 @@ void Swap(MoveList* moves, uint8_t a, uint8_t b) {
   moves->scores[b] = tempScore;
 }
 
-Move NextMove(MoveList* moves, Board* board, SearchData* data) {
+Move NextMove(MoveList* moves, Board* board) {
   switch (moves->phase) {
   case HASH_MOVE:
     moves->phase = GEN_MOVES;
@@ -654,10 +662,13 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data) {
       return moves->hashMove;
     // fallthrough
   case GEN_MOVES:
-    if (moves->type == TACTICAL_MOVES)
+    if (moves->type == TACTICAL_MOVES) {
       GenerateTacticalMoves(moves, board);
-    else
-      GenerateAllMoves(moves, board, data);
+      ScoreTacticalMoves(moves, board);
+    } else {
+      GenerateAllMoves(moves, board);
+      ScoreAllMoves(moves, board);
+    }
 
     moves->phase = PLAY_MOVES;
     // fallthrough
@@ -669,7 +680,7 @@ Move NextMove(MoveList* moves, Board* board, SearchData* data) {
       moves->idx++;
 
       if (topMove == moves->hashMove) {
-        return NextMove(moves, board, data);
+        return NextMove(moves, board);
       } else {
         return topMove;
       }

@@ -44,26 +44,7 @@ typedef uint64_t BitBoard;
 
 typedef uint32_t Move;
 
-// Move generation storage
-// moves/scores idx's match
-enum {
-  ALL_MOVES,
-  TACTICAL_MOVES
-};
 
-enum {
-  HASH_MOVE,
-  GEN_MOVES,
-  PLAY_MOVES,
-  NO_MORE_MOVES
-};
-
-typedef struct {
-  uint8_t type, phase, idx, count;
-  Move hashMove;
-  Move moves[MAX_MOVES];
-  int scores[MAX_MOVES];
-} MoveList;
 
 typedef struct {
   BitBoard pieces[12];     // individual piece data
@@ -246,6 +227,28 @@ typedef struct {
   SearchParams* params;
   ThreadData* threads;
 } SearchArgs;
+
+// Move generation storage
+// moves/scores idx's match
+enum {
+  ALL_MOVES,
+  TACTICAL_MOVES
+};
+
+enum {
+  HASH_MOVE,
+  GEN_MOVES,
+  PLAY_MOVES,
+  NO_MORE_MOVES
+};
+
+typedef struct {
+  SearchData* data;
+  Move hashMove, k1, k2, cm;
+  uint8_t type, phase, idx, count;
+  Move moves[MAX_MOVES];
+  int scores[MAX_MOVES];
+} MoveList;
 
 enum { WHITE, BLACK, BOTH };
 

@@ -32,12 +32,12 @@ extern const int KILLER2_SCORE;
 extern const int COUNTER_SCORE;
 
 void AppendMove(MoveList* moveList, Move move);
-void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data);
+void GenerateAllMoves(MoveList* moveList, Board* board);
 void GenerateTacticalMoves(MoveList* moveList, Board* board);
 
-void InitAllMoves(MoveList* moves, Move hashMove);
-void InitTacticalMoves(MoveList* moves);
-Move NextMove(MoveList* moves, Board* board, SearchData* data);
+void InitAllMoves(MoveList* moves, SearchData* data, Move hashMove);
+void InitTacticalMoves(MoveList* moves, SearchData* data);
+Move NextMove(MoveList* moves, Board* board);
 uint8_t TopMoveIdx(MoveList* moves);
 void Swap(MoveList* moves, uint8_t a, uint8_t b);
 
