@@ -26,7 +26,7 @@
 typedef struct {
   uint32_t hash, move;
   int16_t eval, score;
-  uint8_t flags, depth;
+  uint8_t flags, depth, age;
 } TTEntry;
 
 typedef struct {
@@ -37,6 +37,7 @@ typedef struct {
   TTBucket* buckets;
   uint64_t mask;
   uint64_t size;
+  uint8_t age;
 } TTTable;
 
 enum { TT_LOWER = 1, TT_UPPER = 2, TT_EXACT = 4 };
@@ -46,6 +47,7 @@ extern TTTable TT;
 size_t TTInit(int mb);
 void TTFree();
 void TTClear();
+void TTUpdate();
 void TTPrefetch(uint64_t hash);
 TTEntry* TTProbe(int* hit, uint64_t hash);
 int TTScore(TTEntry* e, int ply);

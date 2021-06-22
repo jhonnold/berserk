@@ -89,6 +89,7 @@ int BestMove(Board* board, SearchParams* params, ThreadData* threads) {
   InitPool(board, params, threads);
 
   params->stopped = 0;
+  TTUpdate();
 
   // start at 1, we will resuse main-thread
   for (int i = 1; i < threads->count; i++)

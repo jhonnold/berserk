@@ -57,6 +57,8 @@ void TTFree() { free(TT.buckets); }
 
 inline void TTClear() { memset(TT.buckets, 0, (TT.mask + 1ULL) * sizeof(TTBucket)); }
 
+inline void TTUpdate() { TT.age += 1; }
+
 inline int TTScore(TTEntry* e, int ply) {
   return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
 }
@@ -71,6 +73,7 @@ inline TTEntry* TTProbe(int* hit, uint64_t hash) {
   for (int i = 0; i < BUCKET_SIZE; i++)
     if (bucket[i].hash == shortHash) {
       *hit = 1;
+      bucket[i].age = TT.age;
       return &bucket[i];
     }
 #endif
@@ -85,39 +88,27 @@ inline void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Mov
 
   TTBucket* bucket = &TT.buckets[TT.mask & hash];
   uint32_t shortHash = hash >> 32;
+  TTEntry* toReplace = bucket->entries;
 
-  int replacementDepth = INT32_MAX;
-  int replacementIdx = 0;
+  if (score > MATE_BOUND)
+    score += ply;
+  else if (score < -MATE_BOUND)
+    score -= ply;
 
-  for (int i = 0; i < BUCKET_SIZE; i++) {
-    TTEntry* entry = &bucket->entries[i];
-    if (!entry->hash) {
-      replacementIdx = i;
-      break;
-    }
-
+  for (TTEntry* entry = bucket->entries; entry < bucket->entries + BUCKET_SIZE; entry++) {
     if (entry->hash == shortHash) {
-      if (entry->depth >= depth * 2 && !(flag & TT_EXACT))
-        return;
+      if (entry->depth < depth * 2 || (flag & TT_EXACT))
+        *entry =
+            (TTEntry){.flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move};
 
-      replacementIdx = i;
-      break;
+      return;
     }
 
-    if (entry->depth < replacementDepth) {
-      replacementIdx = i;
-      replacementDepth = entry->depth;
-    }
+    if (toReplace->depth - ((256 + TT.age - toReplace->age) << 2) > entry->depth - ((256 + TT.age - entry->age) << 2))
+      toReplace = entry;
   }
 
-  int adjustedScore = score;
-  if (score > MATE_BOUND)
-    adjustedScore += ply;
-  else if (score < -MATE_BOUND)
-    adjustedScore -= ply;
-
-  TTEntry* entry = &bucket->entries[replacementIdx];
-  *entry = (TTEntry){.flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move};
+  *toReplace = (TTEntry){.flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move};
 #endif
 }
 
@@ -128,7 +119,7 @@ inline int TTFull() {
   for (int i = 0; i < c; i++) {
     TTBucket b = TT.buckets[i];
     for (int j = 0; j < BUCKET_SIZE; j++) {
-      if (b.entries[j].hash)
+      if (b.entries[j].hash && b.entries[j].age == TT.age)
         t++;
     }
   }
