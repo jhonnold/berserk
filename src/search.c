@@ -375,7 +375,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Static evaluation pruning, this applies for both quiet and tactical moves
     // quiet moves use a quadratic scale upwards
-    if (bestScore > -MATE_BOUND && SEE(board, move) < STATIC_PRUNE[tactical][depth])
+    if (bestScore > -MATE_BOUND && tactical && moves.phase > PLAY_GOOD_TACTICAL &&
+        SEE(board, move) < STATIC_PRUNE[1][depth])
+      continue;
+
+    if (bestScore > -MATE_BOUND && !tactical && SEE(board, move) < STATIC_PRUNE[0][depth])
       continue;
 
     nonPrunedMoves++;
