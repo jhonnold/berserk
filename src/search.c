@@ -361,14 +361,14 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (skipMove == move)
       continue;
 
+    totalMoves++;
+
     int tactical = !!Tactical(move);
     int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
     int hist = !tactical ? data->hh[board->side][MoveStartEnd(move)] : 0;
 
     if (bestScore > -MATE_BOUND && depth <= 8 && totalMoves >= LMP[improving][depth])
       skipQuiets = 1;
-
-    totalMoves++;
 
     if (bestScore > -MATE_BOUND && !tactical && depth <= 2 && !specialQuiet && hist <= -2048 * depth * depth)
       continue;
