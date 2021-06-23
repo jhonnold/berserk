@@ -28,6 +28,7 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
+#include "noobprobe/noobprobe.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
 #include "see.h"
@@ -81,6 +82,11 @@ void* UCISearch(void* arg) {
 int BestMove(Board* board, SearchParams* params, ThreadData* threads) {
   Move bestMove;
   if ((bestMove = TBRootProbe(board))) {
+    printf("bestmove %s\n", MoveToStr(bestMove));
+    return 0;
+  }
+
+  if ((bestMove = ProbeNoob(board))) {
     printf("bestmove %s\n", MoveToStr(bestMove));
     return 0;
   }
