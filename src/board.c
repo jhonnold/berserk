@@ -267,23 +267,6 @@ inline int IsMaterialDraw(Board* board) {
   }
 }
 
-// Check each type of piece movement from given square and see if an enemy piece of that
-// movement type is there. If so, then it's attacked
-inline int IsSquareAttacked(int sq, int attackColor, BitBoard occupancy, Board* board) {
-  if (GetPawnAttacks(sq, attackColor ^ 1) & board->pieces[PAWN[attackColor]])
-    return 1;
-  if (GetKnightAttacks(sq) & board->pieces[KNIGHT[attackColor]])
-    return 1;
-  if (GetBishopAttacks(sq, occupancy) & (board->pieces[BISHOP[attackColor]] | board->pieces[QUEEN[attackColor]]))
-    return 1;
-  if (GetRookAttacks(sq, occupancy) & (board->pieces[ROOK[attackColor]] | board->pieces[QUEEN[attackColor]]))
-    return 1;
-  if (GetKingAttacks(sq) & board->pieces[KING[attackColor]])
-    return 1;
-
-  return 0;
-}
-
 // Reset general piece locations on the board
 inline void SetOccupancies(Board* board) {
   board->occupancies[WHITE] = EMPTY;
@@ -875,16 +858,14 @@ int IsMoveLegal(Move move, Board* board) {
 
     // pieces in-between have been checked, now check that it's not castling through or into check
     for (int i = end; i != start; i += step) {
-      if (IsSquareAttacked(i, board->xside, board->occupancies[BOTH], board))
+      if (AttacksToSquare(board, i, board->occupancies[BOTH]) & board->occupancies[board->xside])
         return 0;
     }
 
     return 1;
   } else if (MovePiece(move) >= KING[WHITE]) {
-    BitBoard kingOff = board->occupancies[BOTH];
-    popBit(kingOff, start);
-    // check king attacks with it off board, because it may move along the checking line
-    return !IsSquareAttacked(end, board->xside, kingOff, board);
+    return !(AttacksToSquare(board, end, board->occupancies[BOTH] ^ board->pieces[KING[board->side]]) &
+             board->occupancies[board->xside]);
   }
 
   return 1;

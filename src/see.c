@@ -35,7 +35,7 @@ inline int SEE(Board* board, Move move) {
   int start = MoveStart(move);
   int end = MoveEnd(move);
 
-  BitBoard attackers = AttacksToSquare(board, end);
+  BitBoard attackers = AttacksToSquare(board, end, board->occupancies[BOTH]);
   int attackedPieceVal = STATIC_MATERIAL_VALUE[PIECE_TYPE[board->squares[MoveEnd(move)]]];
 
   side ^= 1;
