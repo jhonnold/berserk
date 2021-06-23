@@ -14,14 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef HISTORY_H
-#define HISTORY_H
+#ifndef MOVEPICK_H
+#define MOVEPICK_H
 
 #include "types.h"
 
-void AddKillerMove(SearchData* data, Move move);
-void AddCounterMove(SearchData* data, Move move, Move parent);
-void AddHistoryHeuristic(SearchData* data, Move move, int stm, int inc);
-void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ);
+void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data);
+void InitTacticalMoves(MoveList* moves, SearchData* data);
+Move NextMove(MoveList* moves, Board* board, int skipQuiets);
+
+void PrintMoves(Board* board, ThreadData* thread);
 
 #endif

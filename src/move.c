@@ -18,6 +18,7 @@
 
 #include "move.h"
 #include "movegen.h"
+#include "movepick.h"
 #include "types.h"
 
 const int CHAR_TO_PIECE[] = {['P'] = 0, ['N'] = 2, ['B'] = 4, ['R'] = 6, ['Q'] = 8, ['K'] = 10,
@@ -33,13 +34,14 @@ const char* SQ_TO_COORD[] = {
 
 Move ParseMove(char* moveStr, Board* board) {
   MoveList moveList = {0};
-  GenerateAllMoves(&moveList, board);
+  SearchData data = {0};
+  InitAllMoves(&moveList, NULL_MOVE, &data);
 
   int start = (moveStr[0] - 'a') + (8 - (moveStr[1] - '0')) * 8;
   int end = (moveStr[2] - 'a') + (8 - (moveStr[3] - '0')) * 8;
 
-  for (int i = 0; i < moveList.count; i++) {
-    Move match = moveList.moves[i];
+  Move match;
+  while ((match = NextMove(&moveList, board, 0))) {
     if (start != MoveStart(match) || end != MoveEnd(match))
       continue;
 

@@ -27,6 +27,7 @@
 #include "history.h"
 #include "move.h"
 #include "movegen.h"
+#include "movepick.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
 #include "see.h"
@@ -331,7 +332,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         !(ttHit && tt->depth >= depth - 3 && TTScore(tt, data->ply) < probBeta)) {
 
       InitTacticalMoves(&moves, data);
-      while ((move = NextMove(&moves, board))) {
+      while ((move = NextMove(&moves, board, 1))) {
         data->moves[data->ply++] = move;
         MakeMove(move, board);
 
@@ -351,18 +352,17 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
   }
 
-  int totalMoves = 0, nonPrunedMoves = 0;
-  MoveList quiets;
-  quiets.count = 0;
-  InitAllMoves(&moves, data, hashMove);
+  Move quiets[64] = {0};
+  int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0;
+  InitAllMoves(&moves, hashMove, data);
 
-  while ((move = NextMove(&moves, board))) {
+  while ((move = NextMove(&moves, board, 0))) {
     // don't search this during singular
     if (skipMove == move)
       continue;
 
     int tactical = !!Tactical(move);
-    int specialQuiet = !tactical && (move == moves.k1 || move == moves.k2 || move == moves.cm);
+    int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
     int hist = !tactical ? data->hh[board->side][MoveStartEnd(move)] : 0;
 
     if (bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
@@ -384,7 +384,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), nonPrunedMoves);
 
     if (!tactical)
-      quiets.moves[quiets.count++] = move;
+      quiets[numQuiets++] = move;
 
     // singular extension
     // if one move is better than all the rest, then we consider this singular
@@ -480,7 +480,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(data, move, depth, board->side, &quiets);
+        UpdateHistories(data, move, depth, board->side, &quiets, numQuiets);
         break;
       }
     }
@@ -565,7 +565,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   MoveList moves;
   InitTacticalMoves(&moves, data);
 
-  while ((move = NextMove(&moves, board))) {
+  while ((move = NextMove(&moves, board, 1))) {
     int see = SEE(board, move);
     // a delta prune look-a-like by Halogen
     // prune based on SEE scores rather than flat mat val

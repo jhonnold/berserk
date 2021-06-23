@@ -46,6 +46,7 @@ typedef uint32_t Move;
 
 
 
+
 typedef struct {
   BitBoard pieces[12];     // individual piece data
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
@@ -230,24 +231,30 @@ typedef struct {
 
 // Move generation storage
 // moves/scores idx's match
-enum {
-  ALL_MOVES,
-  TACTICAL_MOVES
-};
+enum { ALL_MOVES, TACTICAL_MOVES };
 
 enum {
-  HASH_MOVE,
-  GEN_MOVES,
-  PLAY_MOVES,
-  NO_MORE_MOVES
+    HASH_MOVE,
+    GEN_TACTICAL_MOVES,
+    PLAY_GOOD_TACTICAL,
+    PLAY_KILLER_1,
+    PLAY_KILLER_2,
+    PLAY_COUNTER,
+    GEN_QUIET_MOVES,
+    PLAY_QUIETS,
+    PLAY_BAD_TACTICAL,
+    NO_MORE_MOVES
 };
 
 typedef struct {
   SearchData* data;
-  Move hashMove, k1, k2, cm;
-  uint8_t type, phase, idx, count;
-  Move moves[MAX_MOVES];
-  int scores[MAX_MOVES];
+  Move hashMove, killer1, killer2, counter;
+  uint8_t type, phase, nTactical, nQuiets, nBadTactical;
+
+  Move tactical[MAX_MOVES];
+  Move quiet[MAX_MOVES];
+  int sTactical[MAX_MOVES];
+  int sQuiet[MAX_MOVES];
 } MoveList;
 
 enum { WHITE, BLACK, BOTH };

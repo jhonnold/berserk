@@ -23,6 +23,7 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
+#include "movepick.h"
 #include "perft.h"
 #include "search.h"
 #include "thread.h"
@@ -218,6 +219,7 @@ void UCILoop() {
       Score s = Evaluate(&board, &threads[0]);
       printf("Score: %dcp\n", s);
     } else if (!strncmp(in, "moves", 5)) {
+      PrintMoves(&board, threads);
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
       mb = max(4, min(65536, mb));
