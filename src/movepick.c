@@ -22,6 +22,8 @@
 #include "movegen.h"
 #include "movepick.h"
 #include "see.h"
+#include "transposition.h"
+#include "types.h"
 
 void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->type = ALL_MOVES;
@@ -196,8 +198,8 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
     // fallthrough
   case PLAY_COUNTER:
     moves->phase = GEN_QUIET_MOVES;
-    if (!skipQuiets && moves->counter != moves->hashMove && moves->counter != moves->killer1 && moves->counter != moves->killer2 &&
-        MoveIsLegal(moves->counter, board))
+    if (!skipQuiets && moves->counter != moves->hashMove && moves->counter != moves->killer1 &&
+        moves->counter != moves->killer2 && MoveIsLegal(moves->counter, board))
       return moves->counter;
     // fallthrough
   case GEN_QUIET_MOVES:
@@ -213,7 +215,10 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
       int idx = GetTopIdx(moves->sQuiet, moves->nQuiets);
       Move m = PopQuiet(moves, idx);
 
-      return m != moves->hashMove ? m : NextMove(moves, board, skipQuiets);
+      if (m == moves->hashMove || m == moves->killer1 || m == moves->killer2 || m == moves->counter)
+        return NextMove(moves, board, skipQuiets);
+
+      return m;
     }
 
     moves->phase = PLAY_BAD_TACTICAL;
@@ -233,4 +238,47 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
   }
 
   return NULL_MOVE;
+}
+
+char* PhaseName(MoveList* list) {
+  switch (list->phase) {
+  case HASH_MOVE:
+    return "HASH_MOVE";
+  case PLAY_GOOD_TACTICAL:
+    return "PLAY_GOOD_TACTICAL";
+  case PLAY_KILLER_1:
+    return "PLAY_KILLER_1";
+  case PLAY_KILLER_2:
+    return "PLAY_KILLER_2";
+  case PLAY_COUNTER:
+    return "PLAY_COUNTER";
+  case PLAY_QUIETS:
+    return "PLAY_QUIETS";
+  case PLAY_BAD_TACTICAL:
+    return "PLAY_BAD_TACTICAL";
+  default:
+    return "UNKNOWN";
+  }
+}
+
+void PrintMoves(Board* board, ThreadData* thread) {
+  int hit = 0;
+  TTEntry* tt = TTProbe(&hit, board->zobrist);
+
+  printf("#HM: %5s\n", hit ? MoveToStr(tt->move) : "N/A");
+
+  Move k1 = thread->data.killers[0][0];
+  Move k2 = thread->data.killers[0][1];
+
+  printf("#K1: %5s\n", k1 ? MoveToStr(k1) : "N/A");
+  printf("#K2: %5s\n\n", k2 ? MoveToStr(k2) : "N/A");
+
+  thread->data.ply = 0;
+  MoveList list = {0};
+  InitAllMoves(&list, hit ? tt->move : NULL_MOVE, &thread->data);
+
+  int i = 1;
+  Move move;
+  while ((move = NextMove(&list, board, 0)))
+    printf("#%2d: %5s - %24s\n", i++, MoveToStr(move), PhaseName(&list));
 }

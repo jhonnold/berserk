@@ -427,7 +427,8 @@ void GenerateTacticalMoves(MoveList* moveList, Board* board) {
     BitBoard nonPinned = ~board->pinned;
 
     GeneratePawnCaptures(moveList, board->pieces[PAWN[board->side]] & nonPinned, board->checkers, board);
-    GeneratePawnPromotions(moveList, board->pieces[PAWN[board->side]] & nonPinned, board->checkers, board);
+    GeneratePawnPromotions(moveList, board->pieces[PAWN[board->side]] & nonPinned,
+                           board->checkers | GetInBetweenSquares(kingSq, lsb(board->checkers)), board);
     GenerateKnightCaptures(moveList, board->pieces[KNIGHT[board->side]] & nonPinned, board->checkers, board);
     generateBishopCaptures(moveList, board->pieces[BISHOP[board->side]] & nonPinned, board->checkers, board);
     generateRookCaptures(moveList, board->pieces[ROOK[board->side]] & nonPinned, board->checkers, board);

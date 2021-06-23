@@ -40,7 +40,8 @@ void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move q
 
   if (!Tactical(bestMove)) {
     AddKillerMove(data, bestMove);
-    AddCounterMove(data, bestMove, data->moves[data->ply - 1]);
+    if (data->ply > 0)
+      AddCounterMove(data, bestMove, data->moves[data->ply - 1]);
     AddHistoryHeuristic(data, bestMove, stm, inc);
   }
 

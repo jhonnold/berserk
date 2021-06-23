@@ -23,4 +23,6 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data);
 void InitTacticalMoves(MoveList* moves, SearchData* data);
 Move NextMove(MoveList* moves, Board* board, int skipQuiets);
 
+void PrintMoves(Board* board, ThreadData* thread);
+
 #endif
