@@ -353,10 +353,10 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   }
 
   Move quiets[64] = {0};
-  int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0;
+  int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0, skipQuiets = 0;
   InitAllMoves(&moves, hashMove, data);
 
-  while ((move = NextMove(&moves, board, 0))) {
+  while ((move = NextMove(&moves, board, skipQuiets))) {
     // don't search this during singular
     if (skipMove == move)
       continue;
@@ -365,8 +365,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
     int hist = !tactical ? data->hh[board->side][MoveStartEnd(move)] : 0;
 
-    if (bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
-      continue;
+    if (bestScore > -MATE_BOUND && depth <= 8 && totalMoves >= LMP[improving][depth])
+      skipQuiets = 1;
 
     totalMoves++;
 
