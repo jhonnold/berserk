@@ -96,19 +96,25 @@ inline void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Mov
     score -= ply;
 
   for (TTEntry* entry = bucket->entries; entry < bucket->entries + BUCKET_SIZE; entry++) {
-    if (entry->hash == shortHash) {
-      if (entry->depth < depth * 2 || (flag & TT_EXACT))
-        *entry =
-            (TTEntry){.flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move};
-
-      return;
+    if (!entry->hash) {
+      toReplace = entry;
+      break;
     }
 
-    if (toReplace->depth - ((256 + TT.age - toReplace->age) << 2) > entry->depth - ((256 + TT.age - entry->age) << 2))
+    if (entry->hash == shortHash) {
+      if (entry->depth >= depth * 2 && !(flag & TT_EXACT))
+        return;
+
+      toReplace = entry;
+      break;
+    }
+
+    if (entry->depth - (256 + TT.age - entry->age) * 4 < toReplace->depth - (256 + TT.age - toReplace->age) * 4)
       toReplace = entry;
   }
 
-  *toReplace = (TTEntry){.flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move};
+  *toReplace = (TTEntry){
+      .flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move, .age = TT.age};
 #endif
 }
 
