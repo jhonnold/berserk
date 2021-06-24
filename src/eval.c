@@ -888,6 +888,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
     C.ss = res >= 0 ? WHITE : BLACK;
 
   // scale the score
-  res = (res * Scale(board, res >= 0 ? WHITE : BLACK) + MAX_SCALE / 2) / MAX_SCALE;
+  res = (res * Scale(board, res >= 0 ? WHITE : BLACK)) / MAX_SCALE;
   return TEMPO + (board->side == WHITE ? res : -res);
 }
