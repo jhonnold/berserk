@@ -1,5 +1,5 @@
 CC = gcc
-SRC = *.c pyrrhic/tbprobe.c
+SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
 EXE = berserk
 VERSION = 4.3.0-dev
 
@@ -14,6 +14,10 @@ POPCOUNT = -DPOPCOUNT -msse -msse3 -mpopcnt
 AVX2 = $(POPCOUNT) -mavx2 -msse4.1 -mssse3 -msse2
 PEXT = $(POPCOUNT) -DPEXT -mbmi2
 AVX2PEXT = $(POPCOUNT) -DPEXT -mbmi2 -mavx2 -msse4.1 -mssse3 -msse2
+
+ifeq ($(OS), Windows_NT)
+	LIBS += -lwsock32
+endif
 
 all:
 	$(CC) $(CFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)

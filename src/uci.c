@@ -24,13 +24,14 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
+#include "noobprobe/noobprobe.h"
 #include "perft.h"
+#include "pyrrhic/tbprobe.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
 #include "uci.h"
 #include "util.h"
-#include "pyrrhic/tbprobe.h"
 
 #define NAME "Berserk"
 #define VERSION "4.3.0-dev"
@@ -140,10 +141,8 @@ void ParsePosition(char* in, Board* board) {
   ptrChar = strstr(in, "moves");
   Move enteredMove;
 
-  if (ptrChar == NULL) {
-    PrintBoard(board);
+  if (ptrChar == NULL)
     return;
-  }
 
   ptrChar += 6;
   while (*ptrChar) {
@@ -156,8 +155,6 @@ void ParsePosition(char* in, Board* board) {
       ptrChar++;
     ptrChar++;
   }
-
-  PrintBoard(board);
 }
 
 void PrintUCIOptions() {
@@ -165,6 +162,8 @@ void PrintUCIOptions() {
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 65536\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
+  printf("option name NoobBookLimit type spin default 8 min 0 max 32\n");
+  printf("option name NoobBook type check default false\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("uciok\n");
 }
@@ -204,6 +203,7 @@ void UCILoop() {
       ParsePosition("position startpos\n", &board);
       TTClear();
       ResetThreadPool(&board, &searchParameters, threads);
+      failedQueries = 0;
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
     } else if (!strncmp(in, "stop", 4)) {
@@ -236,6 +236,15 @@ void UCILoop() {
         printf("info string set SyzygyPath to value %s\n", in + 32);
       else
         printf("info string FAILED!\n");
+    } else if (!strncmp(in, "setoption name NoobBookLimit value ", 35)) {
+      NOOB_DEPTH_LIMIT = min(32, max(0, GetOptionIntValue(in)));
+      printf("info string set NoobBookLimit to value %d\n", NOOB_DEPTH_LIMIT);
+    } else if (!strncmp(in, "setoption name NoobBook value ", 30)) {
+      char opt[5];
+      sscanf(in, "%*s %*s %*s %*s %5s", opt);
+
+      NOOB_BOOK = !strncmp(opt, "true", 4);
+      printf("info string set NoobBook to value %s\n", NOOB_BOOK ? "true" : "false");
     }
   }
 }
