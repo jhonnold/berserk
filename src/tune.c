@@ -754,7 +754,7 @@ double EvaluateCoeffs(Position* position, Weights* weights, KSGradient* ks) {
   EvaluateKingSafetyValues(&mg, &eg, position, weights, ks);
 
   int result = (mg * position->phase + eg * (128 - position->phase)) / 128;
-  result = (result * position->scale + MAX_SCALE / 2) / MAX_SCALE;
+  result = (result * position->scale) / MAX_SCALE;
   return result + (position->stm == WHITE ? TEMPO : -TEMPO);
 }
 
