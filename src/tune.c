@@ -479,8 +479,8 @@ void* UpdateGradients(void* arg) {
 }
 
 void UpdateMaterialGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
     weights->pieces[pc].mg.g += position->coeffs.pieces[pc] * mgBase;
@@ -489,8 +489,8 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights) 
 }
 
 void UpdatePsqtGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++) {
     for (int sq = 0; sq < 32; sq++) {
@@ -503,8 +503,8 @@ void UpdatePsqtGradients(Position* position, double loss, Weights* weights) {
 }
 
 void UpdatePostPsqtGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int sq = 0; sq < 12; sq++) {
     weights->knightPostPsqt[sq].mg.g += position->coeffs.knightPostPsqt[sq] * mgBase;
@@ -516,8 +516,8 @@ void UpdatePostPsqtGradients(Position* position, double loss, Weights* weights) 
 }
 
 void UpdateMobilityGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int c = 0; c < 9; c++) {
     weights->knightMobilities[c].mg.g += position->coeffs.knightMobilities[c] * mgBase;
@@ -541,8 +541,8 @@ void UpdateMobilityGradients(Position* position, double loss, Weights* weights) 
 }
 
 void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int pc = 0; pc < 6; pc++) {
     weights->knightThreats[pc].mg.g += position->coeffs.knightThreats[pc] * mgBase;
@@ -569,8 +569,8 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
 }
 
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   weights->bishopPair.mg.g += position->coeffs.bishopPair * mgBase;
   weights->bishopPair.eg.g += position->coeffs.bishopPair * egBase;
@@ -601,8 +601,8 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 }
 
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   weights->defendedPawns.mg.g += position->coeffs.defendedPawns * mgBase;
   weights->defendedPawns.eg.g += position->coeffs.defendedPawns * egBase;
@@ -629,8 +629,8 @@ void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights)
 }
 
 void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int r = 0; r < 8; r++) {
     weights->passedPawn[r].mg.g += position->coeffs.passedPawn[r] * mgBase;
@@ -648,8 +648,8 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
 }
 
 void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int f = 0; f < 4; f++) {
     for (int r = 0; r < 8; r++) {
@@ -668,8 +668,8 @@ void UpdatePawnShelterGradients(Position* position, double loss, Weights* weight
 }
 
 void UpdateSpaceGradients(Position* position, double loss, Weights* weights) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int s = 0; s < 15; s++) {
     weights->space[s].mg.g += position->coeffs.space[s] * mgBase;
@@ -678,8 +678,8 @@ void UpdateSpaceGradients(Position* position, double loss, Weights* weights) {
 }
 
 void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights, KSGradient* ks) {
-  double mgBase = position->phaseMg * position->scale * loss;
-  double egBase = position->phaseEg * position->scale * loss;
+  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
   for (int i = 1; i < 5; i++) {
     weights->ksAttackerWeight[i].mg.g += (mgBase / 512) * fmax(ks->bDanger, 0) *
