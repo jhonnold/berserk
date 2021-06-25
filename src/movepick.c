@@ -166,11 +166,11 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
         return NextMove(moves, board, skipQuiets);
       }
 
-      int see = 0;
-      if (MoveCapture(m) && !MoveEP(m) && PIECE_TYPE[board->squares[MoveEnd(m)]] < PIECE_TYPE[MovePiece(m)])
-        see = SEE(board, m);
+      int attacker = PIECE_TYPE[MovePiece(m)];
+      int victim = MoveEP(m) ? PAWN_TYPE : MoveCapture(m) ? PIECE_TYPE[board->squares[MoveEnd(m)]] : -1;
 
-      if (see < 0) {
+      int see;
+      if (attacker > victim && (see = SEE(board, m)) < 0) {
         moves->sTactical[idx] = see;
         ShiftToBadCaptures(moves, idx);
         return NextMove(moves, board, skipQuiets);
