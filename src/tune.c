@@ -138,8 +138,9 @@ void UpdateParam(Param* p) {
 }
 
 void UpdateWeights(Weights* weights) {
-  for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++)
-    UpdateWeight(&weights->pieces[pc]);
+  // Fix these values, let the PSQT tune
+  // for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++)
+  //   UpdateWeight(&weights->pieces[pc]);
 
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++)
     for (int sq = 0; sq < 32; sq++)
@@ -753,7 +754,7 @@ double EvaluateCoeffs(Position* position, Weights* weights, KSGradient* ks) {
   EvaluateSpaceValues(&mg, &eg, position, weights);
   EvaluateKingSafetyValues(&mg, &eg, position, weights, ks);
 
-  int result = (mg * position->phase + eg * (128 - position->phase)) / 128;
+  double result = (mg * position->phase + eg * (128 - position->phase)) / 128;
   result = (result * position->scale) / MAX_SCALE;
   return result + (position->stm == WHITE ? TEMPO : -TEMPO);
 }
