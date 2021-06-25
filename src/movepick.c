@@ -31,6 +31,7 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->nTactical = 0;
   moves->nQuiets = 0;
   moves->nBadTactical = 0;
+  moves->seeCutoff = 0;
 
   moves->hashMove = hashMove;
   moves->killer1 = data->killers[data->ply][0];
@@ -40,12 +41,13 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->data = data;
 }
 
-void InitTacticalMoves(MoveList* moves, SearchData* data) {
+void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
   moves->type = TACTICAL_MOVES;
   moves->phase = GEN_TACTICAL_MOVES;
   moves->nTactical = 0;
   moves->nQuiets = 0;
   moves->nBadTactical = 0;
+  moves->seeCutoff = cutoff;
 
   moves->hashMove = NULL_MOVE;
   moves->killer1 = NULL_MOVE;
@@ -166,14 +168,23 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
         return NextMove(moves, board, skipQuiets);
       }
 
-      int attacker = PIECE_TYPE[MovePiece(m)];
-      int victim = MoveEP(m) ? PAWN_TYPE : MoveCapture(m) ? PIECE_TYPE[board->squares[MoveEnd(m)]] : -1;
+      if (moves->seeCutoff <= 0) {
+        int attacker = PIECE_TYPE[MovePiece(m)];
+        int victim = MoveEP(m) ? PAWN_TYPE : MoveCapture(m) ? PIECE_TYPE[board->squares[MoveEnd(m)]] : -1;
 
-      int see;
-      if (attacker > victim && (see = SEE(board, m)) < 0) {
-        moves->sTactical[idx] = see;
-        ShiftToBadCaptures(moves, idx);
-        return NextMove(moves, board, skipQuiets);
+        int see;
+        if (attacker > victim && (see = SEE(board, m)) < moves->seeCutoff) {
+          moves->sTactical[idx] = see;
+          ShiftToBadCaptures(moves, idx);
+          return NextMove(moves, board, skipQuiets);
+        }
+      } else {
+        int see;
+        if ((see = SEE(board, m)) < moves->seeCutoff) {
+          moves->sTactical[idx] = see;
+          ShiftToBadCaptures(moves, idx);
+          return NextMove(moves, board, skipQuiets);
+        }
       }
 
       return PopGoodCapture(moves, idx);

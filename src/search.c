@@ -338,7 +338,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (depth > 4 && abs(beta) < MATE_BOUND &&
         !(ttHit && tt->depth >= depth - 3 && TTScore(tt, data->ply) < probBeta)) {
 
-      InitTacticalMoves(&moves, data);
+      InitTacticalMoves(&moves, data, 0);
       while ((move = NextMove(&moves, board, 1))) {
         data->moves[data->ply++] = move;
         MakeMove(move, board);
@@ -574,14 +574,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   Move move;
   MoveList moves;
-  InitTacticalMoves(&moves, data);
+  InitTacticalMoves(&moves, data, alpha - eval - DELTA_CUTOFF);
 
   while ((move = NextMove(&moves, board, 1))) {
-    int see = SEE(board, move);
-    // a delta prune look-a-like by Halogen
-    // prune based on SEE scores rather than flat mat val
-    if (eval + see + DELTA_CUTOFF < alpha || see < 0)
-      continue;
+    if (moves.phase > PLAY_GOOD_TACTICAL)
+      break;
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);
