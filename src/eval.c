@@ -880,9 +880,10 @@ Score Evaluate(Board* board, ThreadData* thread) {
   }
 
   // lazy eval is based on distance from 0, not a/b. we can be more inaccurate the higher the score
-  // this idea exists in SF classical in multiple stages
+  // this idea exists in SF classical in multiple stages. In berserk we just execute it after the
+  // two cached values have been determined (material/pawns)
   Score mat = NonPawnMaterialValue(board);
-  if (600 + mat / 25 > abs(scoreMG(s) + scoreEG(s) / 2)) {
+  if (500 + mat > abs(scoreMG(s) + scoreEG(s)) / 2) {
     s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
     s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
     s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
