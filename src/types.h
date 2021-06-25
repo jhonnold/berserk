@@ -249,6 +249,7 @@ enum {
 typedef struct {
   SearchData* data;
   Move hashMove, killer1, killer2, counter;
+  int seeCutoff;
   uint8_t type, phase, nTactical, nQuiets, nBadTactical;
 
   Move tactical[MAX_MOVES];
