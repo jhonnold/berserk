@@ -409,6 +409,15 @@ void InitEvalData(EvalData* data, Board* board) {
   data->kingArea[BLACK] = GetKingAttacks(sq(blackKingR, blackKingF)) | bit(sq(blackKingR, blackKingF));
 }
 
+Score NonPawnMaterialValue(Board* board) {
+  Score s = 0;
+
+  for (int pc = KNIGHT_WHITE; pc <= KNIGHT_BLACK; pc++)
+    s += bits(board->pieces[pc]) * scoreMG(MATERIAL_VALUES[PIECE_TYPE[pc]]);
+
+  return s;
+}
+
 // Material + PSQT value
 // Berserk uses reflected PSQTs in 2 states (same side as enemy king or not)
 // A similar idea has been implemented in koi and is the inspiration for this
@@ -856,8 +865,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
     s = MaterialValue(board, WHITE) - MaterialValue(board, BLACK);
   }
 
-  s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
-
   if (!T) {
     PawnHashEntry* pawnEntry = TTPawnProbe(board->pawnHash, thread);
     if (pawnEntry != NULL) {
@@ -872,10 +879,17 @@ Score Evaluate(Board* board, ThreadData* thread) {
     s += PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
   }
 
-  s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
-  s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
-  s += KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
-  s += Space(board, &data, WHITE) - Space(board, &data, BLACK);
+  // lazy eval is based on distance from 0, not a/b. we can be more inaccurate the higher the score
+  // this idea exists in SF classical in multiple stages. In berserk we just execute it after the
+  // two cached values have been determined (material/pawns)
+  Score mat = NonPawnMaterialValue(board);
+  if (596 + mat / 24 > abs(scoreMG(s) + scoreEG(s)) / 2) {
+    s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
+    s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
+    s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
+    s += KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
+    s += Space(board, &data, WHITE) - Space(board, &data, BLACK);
+  }
 
   // taper
   int phase = GetPhase(board);
