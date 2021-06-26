@@ -105,7 +105,7 @@ inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move
     }
 
     if (entry->hash == shortHash) {
-      if (entry->depth >= depth * 2 && !(flag & TT_EXACT))
+      if (entry->depth > depth * 2 && !(flag & TT_EXACT))
         return;
 
       toReplace = entry;
