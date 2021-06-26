@@ -187,6 +187,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   int bestScore = -CHECKMATE;   //
   int maxScore = CHECKMATE;     // best possible
   int origAlpha = alpha;        // remember first alpha for tt storage
+  int ttScore = UNKNOWN;
 
   Move bestMove = NULL_MOVE;
   Move skipMove = data->skipMove[data->ply]; // skip used in SE (concept from SF)
@@ -229,14 +230,14 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   // we ignore the tt on singular extension searches
   int ttHit = 0;
   TTEntry* tt = skipMove ? NULL : TTProbe(&ttHit, board->zobrist);
-  if (ttHit)
+  if (ttHit) {
     hashMove = tt->move;
+    ttScore = TTScore(tt, data->ply);
+  }
 
   // if the TT has a value that fits our position and has been searched to an equal or greater depth, then we accept
   // this score and prune
-  if (!isPV && ttHit && tt->depth >= depth) {
-    int ttScore = TTScore(tt, data->ply);
-
+  if (!isPV && ttHit && tt->depth >= depth && ttScore != UNKNOWN) {
     if ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
         ((tt->flags & TT_UPPER) && ttScore <= alpha))
       return ttScore;
@@ -284,11 +285,14 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
-  if (depth >= 4 && !ttHit && !skipMove)
+  if (depth >= 4 && !hashMove && !skipMove)
     depth--;
 
   // pull previous static eval from tt - this is depth independent
   int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
+  if (!ttHit)
+    TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
+
   // getting better if eval has gone up
   int improving = data->ply >= 2 && (data->evals[data->ply] > data->evals[data->ply - 2]);
 
@@ -299,8 +303,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   if (!isPV && !board->checkers) {
     // Our TT might have a more accurate evaluation score, use this
-    if (ttHit && tt->depth >= depth) {
-      int ttScore = TTScore(tt, data->ply);
+    if (ttHit && tt->depth >= depth && ttScore != UNKNOWN) {
       if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER))
         eval = ttScore;
     }
@@ -335,8 +338,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 100;
-    if (depth > 4 && abs(beta) < MATE_BOUND &&
-        !(ttHit && tt->depth >= depth - 3 && TTScore(tt, data->ply) < probBeta)) {
+    if (depth > 4 && abs(beta) < MATE_BOUND && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
 
       InitTacticalMoves(&moves, data, 0);
       while ((move = NextMove(&moves, board, 1))) {
@@ -404,8 +406,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
     int extension = 0;
     if (depth >= 8 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
-        abs(TTScore(tt, data->ply)) < MATE_BOUND && (tt->flags & TT_LOWER)) {
-      int sBeta = max(TTScore(tt, data->ply) - depth * 2, -CHECKMATE);
+        abs(ttScore) < MATE_BOUND && (tt->flags & TT_LOWER)) {
+      int sBeta = max(ttScore - depth * 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
@@ -541,24 +543,26 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     return Evaluate(board, thread);
 
   // check the transposition table for previous info
-  int ttHit = 0;
+  int ttHit = 0, ttScore = UNKNOWN;
   TTEntry* tt = TTProbe(&ttHit, board->zobrist);
   // TT score pruning - no depth check required since everything in QS is depth 0
   if (ttHit) {
-    int ttScore = TTScore(tt, data->ply);
-    if ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
-        ((tt->flags & TT_UPPER) && ttScore <= alpha))
+    ttScore = TTScore(tt, data->ply);
+
+    if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
+                               ((tt->flags & TT_UPPER) && ttScore <= alpha)))
       return ttScore;
   }
 
   // pull cached eval if it exists
   int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
+  if (!ttHit)
+    TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 
   // can we use an improved evaluation from the tt?
-  if (ttHit) {
-    int ttEval = TTScore(tt, data->ply);
-    if (tt->flags & (ttEval > eval ? TT_LOWER : TT_UPPER))
-      eval = ttEval;
+  if (ttHit && ttScore != UNKNOWN) {
+    if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER))
+      eval = ttScore;
   }
 
   // stand pat

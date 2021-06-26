@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "attacks.h"
 #include "bits.h"
@@ -26,7 +27,7 @@
 #include "move.h"
 #include "movegen.h"
 #include "pawns.h"
-#include "string.h"
+#include "search.h"
 #include "tune.h"
 #include "types.h"
 #include "util.h"

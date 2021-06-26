@@ -21,6 +21,7 @@
 #include "board.h"
 #include "endgame.h"
 #include "eval.h"
+#include "search.h"
 #include "util.h"
 
 const uint8_t kpkResults[2 * 64 * 64 * 24 / 8] = {

@@ -28,7 +28,6 @@
 #define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
 #define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
 
-#define UNKNOWN INT32_MAX
 extern EvalCoeffs C;
 
 extern const int MAX_SCALE;

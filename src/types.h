@@ -18,14 +18,14 @@
 #define TYPES_H
 
 #include <setjmp.h>
-#include <stdint.h>
+#include <inttypes.h>
 
 #ifdef TUNE
 #define MAX_SEARCH_PLY 16
 #define MAX_MOVES 256
 #define MAX_GAME_PLY 32
 #else
-#define MAX_SEARCH_PLY 128
+#define MAX_SEARCH_PLY INT8_MAX
 #define MAX_MOVES 256
 #define MAX_GAME_PLY 1024
 #endif
