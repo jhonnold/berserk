@@ -883,7 +883,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // this idea exists in SF classical in multiple stages. In berserk we just execute it after the
   // two cached values have been determined (material/pawns)
   Score mat = NonPawnMaterialValue(board);
-  if (640 + mat / 24 > abs(scoreMG(s) + scoreEG(s)) / 2) {
+  if (596 + mat / 24 > abs(scoreMG(s) + scoreEG(s)) / 2) {
     s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
     s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
     s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
