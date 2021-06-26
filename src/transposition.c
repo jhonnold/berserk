@@ -60,6 +60,9 @@ inline void TTClear() { memset(TT.buckets, 0, (TT.mask + 1ULL) * sizeof(TTBucket
 inline void TTUpdate() { TT.age += 1; }
 
 inline int TTScore(TTEntry* e, int ply) {
+  if (e->score == UNKNOWN)
+    return UNKNOWN;
+
   return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
 }
 
@@ -81,7 +84,7 @@ inline TTEntry* TTProbe(int* hit, uint64_t hash) {
   return 0;
 }
 
-inline void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval) {
+inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval) {
 #ifdef TUNE
   return;
 #else
