@@ -120,6 +120,7 @@ typedef struct {
   int8_t rookMobilities[15];
   int8_t queenMobilities[28];
 
+  int8_t minorBehindPawn;
   int8_t knightPostReachable;
   int8_t bishopPostReachable;
   int8_t bishopTrapped;
