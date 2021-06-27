@@ -180,6 +180,8 @@ void UpdateWeights(Weights* weights) {
 
   UpdateWeight(&weights->bishopPair);
 
+  UpdateWeight(&weights->minorBehindPawn);
+
   UpdateWeight(&weights->knightPostReachable);
 
   UpdateWeight(&weights->bishopPostReachable);
@@ -346,6 +348,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->hangingThreat.mg.g += w->hangingThreat.mg.g;
     weights->hangingThreat.eg.g += w->hangingThreat.eg.g;
+
+    weights->minorBehindPawn.mg.g += w->minorBehindPawn.mg.g;
+    weights->minorBehindPawn.eg.g += w->minorBehindPawn.eg.g;
 
     weights->knightPostReachable.mg.g += w->knightPostReachable.mg.g;
     weights->knightPostReachable.eg.g += w->knightPostReachable.eg.g;
@@ -575,6 +580,9 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 
   weights->bishopPair.mg.g += position->coeffs.bishopPair * mgBase;
   weights->bishopPair.eg.g += position->coeffs.bishopPair * egBase;
+
+  weights->minorBehindPawn.mg.g += position->coeffs.minorBehindPawn * mgBase;
+  weights->minorBehindPawn.eg.g += position->coeffs.minorBehindPawn * egBase;
 
   weights->knightPostReachable.mg.g += position->coeffs.knightPostReachable * mgBase;
   weights->knightPostReachable.eg.g += position->coeffs.knightPostReachable * egBase;
@@ -808,6 +816,7 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
 
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
   ApplyCoeff(mg, eg, position->coeffs.bishopPair, &weights->bishopPair);
+  ApplyCoeff(mg, eg, position->coeffs.minorBehindPawn, &weights->minorBehindPawn);
   ApplyCoeff(mg, eg, position->coeffs.knightPostReachable, &weights->knightPostReachable);
   ApplyCoeff(mg, eg, position->coeffs.bishopPostReachable, &weights->bishopPostReachable);
   ApplyCoeff(mg, eg, position->coeffs.bishopTrapped, &weights->bishopTrapped);
@@ -1062,6 +1071,9 @@ void InitPieceBonusWeights(Weights* weights) {
   weights->bishopPair.mg.value = scoreMG(BISHOP_PAIR);
   weights->bishopPair.eg.value = scoreEG(BISHOP_PAIR);
 
+  weights->minorBehindPawn.mg.value = scoreMG(MINOR_BEHIND_PAWN);
+  weights->minorBehindPawn.eg.value = scoreEG(MINOR_BEHIND_PAWN);
+
   weights->knightPostReachable.mg.value = scoreMG(KNIGHT_OUTPOST_REACHABLE);
   weights->knightPostReachable.eg.value = scoreEG(KNIGHT_OUTPOST_REACHABLE);
 
@@ -1242,6 +1254,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score QUEEN_MOBILITIES[28] = {\n");
   PrintWeightArray(fp, weights->queenMobilities, 28, 4);
   fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score MINOR_BEHIND_PAWN = ");
+  PrintWeight(fp, &weights->minorBehindPawn);
 
   fprintf(fp, "\nconst Score KNIGHT_OUTPOST_REACHABLE = ");
   PrintWeight(fp, &weights->knightPostReachable);
