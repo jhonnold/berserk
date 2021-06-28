@@ -416,7 +416,7 @@ Score NonPawnMaterialValue(Board* board) {
   Score s = 0;
 
   for (int pc = KNIGHT_WHITE; pc <= QUEEN_BLACK; pc++)
-    s += bits(board->pieces[pc]) * STATIC_MATERIAL_VALUE[PIECE_TYPE[pc]];
+    s += bits(board->pieces[pc]) * scoreMG(MATERIAL_VALUES[PIECE_TYPE[pc]]);
 
   return s;
 }
