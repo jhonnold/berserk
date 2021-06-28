@@ -415,7 +415,7 @@ void InitEvalData(EvalData* data, Board* board) {
 Score NonPawnMaterialValue(Board* board) {
   Score s = 0;
 
-  for (int pc = KNIGHT_WHITE; pc <= KNIGHT_BLACK; pc++)
+  for (int pc = KNIGHT_WHITE; pc <= QUEEN_BLACK; pc++)
     s += bits(board->pieces[pc]) * scoreMG(MATERIAL_VALUES[PIECE_TYPE[pc]]);
 
   return s;
@@ -891,11 +891,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
     s += PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
   }
 
-  // lazy eval is based on distance from 0, not a/b. we can be more inaccurate the higher the score
-  // this idea exists in SF classical in multiple stages. In berserk we just execute it after the
-  // two cached values have been determined (material/pawns)
-  Score mat = NonPawnMaterialValue(board);
-  if (T || (596 + mat / 24 > abs(scoreMG(s) + scoreEG(s)) / 2)) {
+  if (T || abs(scoreMG(s) + scoreEG(s)) / 2 < 640) {
     s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
     s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
     s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
