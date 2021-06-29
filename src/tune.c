@@ -42,10 +42,9 @@ void Tune() {
   InitKingSafetyWeights(&weights);
 
   int n = 0;
-  Position* positions = LoadPositions(&n);
+  Position* positions = LoadPositions(&n, &weights);
   ALPHA *= sqrt(n);
 
-  ValidateEval(n, positions, &weights);
   ComputeK(n, positions);
 
   for (int epoch = 1; epoch < 10000; epoch++) {
@@ -56,25 +55,6 @@ void Tune() {
   }
 
   free(positions);
-}
-
-void ValidateEval(int n, Position* positions, Weights* weights) {
-#pragma omp parallel for schedule(static) num_threads(THREADS)
-  for (int i = 0; i < n; i++) {
-    KSGradient ks[1];
-    double eval = EvaluateCoeffs(&positions[i], weights, ks);
-    if (fabs(positions[i].staticEval - eval) > 3) {
-      printf("The coefficient based evaluation does NOT match the eval!\n");
-      printf("FEN: %s\n", positions[i].fen);
-      printf("Static: %d, Coeffs: %f\n", positions[i].staticEval, eval);
-      exit(1);
-    }
-
-    if (i % 4096 == 0)
-      printf("Validated %d position evaluations...\r", i);
-  }
-
-  printf("Successfully validated %d positions!\n", n);
 }
 
 // Finn Eggers method for determining K
@@ -919,12 +899,10 @@ void LoadPosition(Board* board, Position* position, ThreadData* thread) {
 
   position->scale = Scale(board, C.ss);
 
-  BoardToFen(position->fen, board);
-
   memcpy(&position->coeffs, &C, sizeof(EvalCoeffs));
 }
 
-Position* LoadPositions(int* n) {
+Position* LoadPositions(int* n, Weights* weights) {
   FILE* fp;
   fp = fopen(EPD_FILE_PATH, "r");
 
@@ -933,6 +911,7 @@ Position* LoadPositions(int* n) {
 
   Position* positions = calloc(MAX_POSITIONS, sizeof(Position));
 
+  KSGradient ks;
   Board board;
   ThreadData* threads = CreatePool(1);
   SearchParams params = {0};
@@ -966,6 +945,14 @@ Position* LoadPositions(int* n) {
     LoadPosition(&board, &positions[p], threads);
     if (abs(positions[p].staticEval) > 3000)
       continue;
+
+    double eval = EvaluateCoeffs(&positions[p], weights, &ks);
+    if (fabs(positions[p].staticEval - eval) > 3) {
+      printf("The coefficient based evaluation does NOT match the eval!\n");
+      printf("FEN: %s\n", buffer);
+      printf("Static: %d, Coeffs: %f\n", positions[p].staticEval, eval);
+      exit(1);
+    }
 
     if (!(++p & 4095))
       printf("Loaded %d positions...\r", p);

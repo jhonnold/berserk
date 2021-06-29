@@ -93,7 +93,6 @@ typedef struct {
   float phaseEg;
   Score staticEval;
   EvalCoeffs coeffs;
-  char fen[128];
 } Position;
 
 typedef struct {
@@ -161,7 +160,7 @@ void InitSpaceWeights(Weights* weights);
 void InitKingSafetyWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
-Position* LoadPositions(int* n);
+Position* LoadPositions(int* n, Weights* weights);
 
 double Sigmoid(double s);
 
