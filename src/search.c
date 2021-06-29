@@ -436,10 +436,12 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Late move reductions
     int R = 1;
-    if (depth > 2 && nonPrunedMoves > 1 && !specialQuiet) {
+    if (depth > 2 && nonPrunedMoves > 1) {
       R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
 
-      if (!tactical) {
+      if (specialQuiet) {
+        R = min(2, R);
+      } else if (!tactical) {
         // increase reduction on non-pv
         if (!isPV)
           R++;
