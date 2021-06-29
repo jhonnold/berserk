@@ -556,6 +556,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
       return ttScore;
   }
 
+  Move bestMove = NULL_MOVE;
+  int origAlpha = alpha;
+
   // pull cached eval if it exists
   int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
   if (!ttHit)
@@ -575,8 +578,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     alpha = eval;
 
   int bestScore = eval;
-  Move bestMove = NULL_MOVE;
-  int origAlpha = alpha;
 
   Move move;
   MoveList moves;
