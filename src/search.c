@@ -407,7 +407,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     int extension = 0;
     if (depth >= 8 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
         abs(ttScore) < MATE_BOUND && (tt->flags & TT_LOWER)) {
-      int sBeta = max(ttScore - depth * 2, -CHECKMATE);
+      int sBeta = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
