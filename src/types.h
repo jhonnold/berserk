@@ -17,8 +17,9 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <setjmp.h>
 #include <inttypes.h>
+#include <setjmp.h>
+
 
 #ifdef TUNE
 #define MAX_SEARCH_PLY 16
@@ -43,9 +44,6 @@ typedef int Score;
 typedef uint64_t BitBoard;
 
 typedef uint32_t Move;
-
-
-
 
 typedef struct {
   BitBoard pieces[12];     // individual piece data
@@ -156,7 +154,7 @@ typedef struct {
   int8_t pawnShelter[4][8];
   int8_t pawnStorm[4][8];
   int8_t blockedPawnStorm[8];
-  
+
   int ks;
   int danger[2];
   int8_t ksAttackerCount[2];
@@ -186,20 +184,20 @@ typedef struct {
 } SearchParams;
 
 typedef struct {
-  // these are general data objects, for buildup during eval
-  int kingSq[2];
-  BitBoard kingArea[2];
+  BitBoard passedPawns;
+
   BitBoard attacks[2][6];  // attacks by piece type
   BitBoard allAttacks[2];  // all attacks
   BitBoard twoAttacks[2];  // squares attacked twice
+
+  int kingSq[2];
+  BitBoard kingArea[2];
   Score ksAttackWeight[2]; // king safety attackers weight
   int ksSqAttackCount[2];  // king safety sq attack count
   int ksAttackerCount[2];  // attackers
 
-  BitBoard passedPawns;
   BitBoard mobilitySquares[2];
   BitBoard outposts[2];
-
 } EvalData;
 
 typedef struct {
@@ -211,17 +209,18 @@ typedef struct {
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int count, idx;
   ThreadData* threads;
-  jmp_buf exit;
-
   SearchParams* params;
+
   SearchData data;
-
-  PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
-
   Board board;
   PV pv;
+
+  int count, idx;
+
+  jmp_buf exit;
+  EvalData evalData[MAX_SEARCH_PLY];
+  PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
 };
 
 typedef struct {
@@ -235,16 +234,16 @@ typedef struct {
 enum { ALL_MOVES, TACTICAL_MOVES };
 
 enum {
-    HASH_MOVE,
-    GEN_TACTICAL_MOVES,
-    PLAY_GOOD_TACTICAL,
-    PLAY_KILLER_1,
-    PLAY_KILLER_2,
-    PLAY_COUNTER,
-    GEN_QUIET_MOVES,
-    PLAY_QUIETS,
-    PLAY_BAD_TACTICAL,
-    NO_MORE_MOVES
+  HASH_MOVE,
+  GEN_TACTICAL_MOVES,
+  PLAY_GOOD_TACTICAL,
+  PLAY_KILLER_1,
+  PLAY_KILLER_2,
+  PLAY_COUNTER,
+  GEN_QUIET_MOVES,
+  PLAY_QUIETS,
+  PLAY_BAD_TACTICAL,
+  NO_MORE_MOVES
 };
 
 typedef struct {

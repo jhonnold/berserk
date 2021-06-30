@@ -379,8 +379,11 @@ inline int Scale(Board* board, int ss) {
 
 // preload a bunch of important evalution data
 void InitEvalData(EvalData* data, Board* board) {
+  data->passedPawns = 0ULL;
+  
   BitBoard whitePawns = board->pieces[PAWN_WHITE];
   BitBoard blackPawns = board->pieces[PAWN_BLACK];
+
   BitBoard whitePawnAttacks = ShiftNE(whitePawns) | ShiftNW(whitePawns);
   BitBoard blackPawnAttacks = ShiftSE(blackPawns) | ShiftSW(blackPawns);
 
@@ -388,6 +391,12 @@ void InitEvalData(EvalData* data, Board* board) {
   data->allAttacks[BLACK] = data->attacks[BLACK][PAWN_TYPE] = blackPawnAttacks;
   data->twoAttacks[WHITE] = ShiftNE(whitePawns) & ShiftNW(whitePawns);
   data->twoAttacks[BLACK] = ShiftSE(blackPawns) & ShiftSW(blackPawns);
+
+  data->attacks[WHITE][KNIGHT_TYPE] = data->attacks[BLACK][KNIGHT_TYPE] = 0ULL;
+  data->attacks[WHITE][BISHOP_TYPE] = data->attacks[BLACK][BISHOP_TYPE] = 0ULL;
+  data->attacks[WHITE][ROOK_TYPE] = data->attacks[BLACK][ROOK_TYPE] = 0ULL;
+  data->attacks[WHITE][QUEEN_TYPE] = data->attacks[BLACK][QUEEN_TYPE] = 0ULL;
+  data->attacks[WHITE][KING_TYPE] = data->attacks[BLACK][KING_TYPE] = 0ULL;
 
   data->outposts[WHITE] =
       ~Fill(blackPawnAttacks, S) & (whitePawnAttacks | ShiftS(whitePawns | blackPawns)) & (RANK_4 | RANK_5 | RANK_6);
@@ -399,6 +408,10 @@ void InitEvalData(EvalData* data, Board* board) {
 
   data->mobilitySquares[WHITE] = ~(inTheWayWhitePawns | blackPawnAttacks);
   data->mobilitySquares[BLACK] = ~(inTheWayBlackPawns | whitePawnAttacks);
+
+  data->ksAttackWeight[WHITE] = data->ksAttackWeight[BLACK] = 0;
+  data->ksSqAttackCount[WHITE] = data->ksSqAttackCount[BLACK] = 0;
+  data->ksAttackerCount[WHITE] = data->ksAttackerCount[BLACK] = 0;
 
   data->kingSq[WHITE] = lsb(board->pieces[KING_WHITE]);
   data->kingSq[BLACK] = lsb(board->pieces[KING_BLACK]);
@@ -859,6 +872,9 @@ Score Space(Board* board, EvalData* data, int side) {
 
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
+  EvalData* data = &thread->evalData[thread->data.ply];
+  InitEvalData(data, board);
+
   if (IsMaterialDraw(board))
     return 0;
 
@@ -873,9 +889,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (eval != UNKNOWN)
     return eval;
 
-  EvalData data = {0};
-  InitEvalData(&data, board);
-
   Score s;
   if (!T) {
     s = board->side == WHITE ? board->mat : -board->mat;
@@ -887,22 +900,22 @@ Score Evaluate(Board* board, ThreadData* thread) {
     PawnHashEntry* pawnEntry = TTPawnProbe(board->pawnHash, thread);
     if (pawnEntry != NULL) {
       s += pawnEntry->s;
-      data.passedPawns = pawnEntry->passedPawns;
+      data->passedPawns = pawnEntry->passedPawns;
     } else {
-      Score pawnS = PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
-      TTPawnPut(board->pawnHash, pawnS, data.passedPawns, thread);
+      Score pawnS = PawnEval(board, data, WHITE) - PawnEval(board, data, BLACK);
+      TTPawnPut(board->pawnHash, pawnS, data->passedPawns, thread);
       s += pawnS;
     }
   } else {
-    s += PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
+    s += PawnEval(board, data, WHITE) - PawnEval(board, data, BLACK);
   }
 
   if (T || abs(scoreMG(s) + scoreEG(s)) / 2 < 640) {
-    s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
-    s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
-    s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
-    s += KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
-    s += Space(board, &data, WHITE) - Space(board, &data, BLACK);
+    s += PieceEval(board, data, WHITE) - PieceEval(board, data, BLACK);
+    s += PasserEval(board, data, WHITE) - PasserEval(board, data, BLACK);
+    s += Threats(board, data, WHITE) - Threats(board, data, BLACK);
+    s += KingSafety(board, data, WHITE) - KingSafety(board, data, BLACK);
+    s += Space(board, data, WHITE) - Space(board, data, BLACK);
   }
 
   // taper
