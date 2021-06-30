@@ -304,22 +304,22 @@ const Score BLOCKED_PAWN_STORM[8] = {
 };
 
 const Score KS_ATTACKER_WEIGHTS[5] = {
- 0, 29, 19, 16, 5
+ 0, 32, 31, 18, 24
 };
 
-const Score KS_ATTACK = 25;
+const Score KS_ATTACK = 4;
 
-const Score KS_WEAK_SQS = 65;
+const Score KS_WEAK_SQS = 78;
 
-const Score KS_PINNED = 32;
+const Score KS_PINNED = 74;
 
-const Score KS_SAFE_CHECK = 204;
+const Score KS_SAFE_CHECK = 248;
 
-const Score KS_UNSAFE_CHECK = 52;
+const Score KS_UNSAFE_CHECK = 57;
 
-const Score KS_ENEMY_QUEEN = -307;
+const Score KS_ENEMY_QUEEN = -190;
 
-const Score KS_KNIGHT_DEFENSE = -21;
+const Score KS_KNIGHT_DEFENSE = -87;
 
 const Score TEMPO = 20;
 // clang-format on
