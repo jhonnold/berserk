@@ -7,7 +7,7 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean-mixed.epd"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\eth-master.book"
 #define THREADS 16
 #define TUNE_KS 0
 
