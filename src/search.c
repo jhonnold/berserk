@@ -289,12 +289,13 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     depth--;
 
   // pull previous static eval from tt - this is depth independent
-  int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
+  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
   if (!ttHit)
     TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 
   // getting better if eval has gone up
-  int improving = data->ply >= 2 && (data->evals[data->ply] > data->evals[data->ply - 2]);
+  int improving = !board->checkers && data->ply >= 2 &&
+                  (data->evals[data->ply] > data->evals[data->ply - 2] || data->evals[data->ply - 2] == UNKNOWN);
 
   // reset moves to moves related to 1 additional ply
   data->skipMove[data->ply + 1] = NULL_MOVE;
@@ -558,9 +559,10 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   Move bestMove = NULL_MOVE;
   int origAlpha = alpha;
+  int bestScore = -CHECKMATE;
 
   // pull cached eval if it exists
-  int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
+  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
   if (!ttHit)
     TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 
@@ -571,13 +573,15 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   }
 
   // stand pat
-  if (eval >= beta)
-    return eval;
+  if (!board->checkers) {
+    if (eval >= beta)
+      return eval;
 
-  if (eval > alpha)
-    alpha = eval;
+    if (eval > alpha)
+      alpha = eval;
 
-  int bestScore = eval;
+    bestScore = eval;
+  }
 
   Move move;
   MoveList moves;
