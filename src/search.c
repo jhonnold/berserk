@@ -559,7 +559,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   Move bestMove = NULL_MOVE;
   int origAlpha = alpha;
-  int bestScore = -CHECKMATE;
+  int bestScore = -CHECKMATE + data->ply;
 
   // pull cached eval if it exists
   int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
