@@ -121,9 +121,10 @@ void ScoreTacticalMoves(MoveList* moves, Board* board) {
   for (int i = 0; i < moves->nTactical; i++) {
     Move m = moves->tactical[i];
     int attacker = MovePiece(m);
-    int victim = MoveEP(m) ? PAWN_WHITE : MovePromo(m) ? MovePromo(m) : board->squares[MoveEnd(m)];
-
-    moves->sTactical[i] = MVV_LVA[attacker][victim];
+    moves->sTactical[i] = MoveEP(m)                   ? MVV_LVA[attacker][PAWN_WHITE]
+                          : !MovePromo(m)             ? MVV_LVA[attacker][board->squares[MoveEnd(m)]]
+                          : MovePromo(m) > ROOK_BLACK ? MVV_LVA[attacker][QUEEN_WHITE]
+                                                      : -1;
   }
 }
 
@@ -132,17 +133,6 @@ void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
     Move m = moves->quiet[i];
 
     moves->sQuiet[i] = data->hh[board->side][MoveStartEnd(m)];
-  }
-}
-
-void ScoreTacticalMovesWithSEE(MoveList* moves, Board* board) {
-  for (int i = 0; i < moves->nTactical; i++) {
-    Move m = moves->tactical[i];
-    int see = SEE(board, m);
-    if (MoveEP(m))
-      see += STATIC_MATERIAL_VALUE[PAWN_TYPE];
-
-    moves->sTactical[i] = see;
   }
 }
 
