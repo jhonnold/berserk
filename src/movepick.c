@@ -107,12 +107,12 @@ inline Move PopQuiet(MoveList* moves, int idx) {
   return temp;
 }
 
-inline Move PopBadCapture(MoveList* moves, int idx) {
-  Move temp = moves->tactical[idx];
+inline Move PopBadCapture(MoveList* moves) {
+  Move temp = moves->tactical[MAX_MOVES - 1];
 
   moves->nBadTactical--;
-  moves->tactical[idx] = moves->tactical[MAX_MOVES - 1 - moves->nBadTactical];
-  moves->sTactical[idx] = moves->tactical[MAX_MOVES - 1 - moves->nBadTactical];
+  moves->tactical[MAX_MOVES - 1] = moves->tactical[MAX_MOVES - 1 - moves->nBadTactical];
+  moves->sTactical[MAX_MOVES - 1] = moves->tactical[MAX_MOVES - 1 - moves->nBadTactical];
 
   return temp;
 }
@@ -236,8 +236,7 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
     // fallthrough
   case PLAY_BAD_TACTICAL:
     if (moves->nBadTactical > 0) {
-      int idx = GetTopReverseIdx(moves->sTactical, moves->nBadTactical);
-      Move m = PopBadCapture(moves, idx);
+      Move m = PopBadCapture(moves);
 
       return m != moves->hashMove ? m : NextMove(moves, board, skipQuiets);
     }
