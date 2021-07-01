@@ -132,7 +132,7 @@ typedef struct {
 
   int8_t defendedPawns;
   int8_t doubledPawns;
-  int8_t opposedIsolatedPawns;
+  int8_t isolatedPawns[4];
   int8_t openIsolatedPawns;
   int8_t backwardsPawns;
   int8_t connectedPawn[8];

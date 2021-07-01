@@ -49,7 +49,7 @@ typedef struct {
 
   Weight defendedPawns;
   Weight doubledPawns;
-  Weight opposedIsolatedPawns;
+  Weight isolatedPawns[4];
   Weight openIsolatedPawns;
   Weight backwardsPawns;
   Weight connectedPawn[8];

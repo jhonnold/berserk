@@ -41,6 +41,7 @@ Score PawnEval(Board* board, EvalData* data, int side) {
     int file = file(sq);
     int rank = rank(sq);
     int adjustedRank = side ? 7 - rank : rank;
+    int adjustedFile = file > 3 ? 7 - file : file;
 
     BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
     BitBoard doubled = board->pieces[PAWN[side]] & (side == WHITE ? ShiftS(bb) : ShiftN(bb));
@@ -69,13 +70,11 @@ Score PawnEval(Board* board, EvalData* data, int side) {
     }
 
     if (!neighbors) {
-      s += opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN;
+      s += ISOLATED_PAWN[adjustedFile] + !opposed * OPEN_ISOLATED_PAWN;
 
       if (T) {
-        if (opposed)
-          C.opposedIsolatedPawns += cs[side];
-        else
-          C.openIsolatedPawns += cs[side];
+        C.isolatedPawns[adjustedFile] += cs[side];
+        C.openIsolatedPawns += cs[side] * !opposed;
       }
     } else if (backwards) {
       s += BACKWARDS_PAWN;

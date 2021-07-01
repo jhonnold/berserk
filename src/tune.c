@@ -180,7 +180,8 @@ void UpdateWeights(Weights* weights) {
 
   UpdateWeight(&weights->doubledPawns);
 
-  UpdateWeight(&weights->opposedIsolatedPawns);
+  for (int f = 0; f < 4; f++)
+    UpdateWeight(&weights->isolatedPawns[f]);
 
   UpdateWeight(&weights->openIsolatedPawns);
 
@@ -360,8 +361,10 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
     weights->doubledPawns.mg.g += w->doubledPawns.mg.g;
     weights->doubledPawns.eg.g += w->doubledPawns.eg.g;
 
-    weights->opposedIsolatedPawns.mg.g += w->opposedIsolatedPawns.mg.g;
-    weights->opposedIsolatedPawns.eg.g += w->opposedIsolatedPawns.eg.g;
+    for (int f = 0; f < 4; f++) {
+      weights->isolatedPawns[f].mg.g += w->isolatedPawns[f].mg.g;
+      weights->isolatedPawns[f].eg.g += w->isolatedPawns[f].eg.g;
+    }
 
     weights->openIsolatedPawns.mg.g += w->openIsolatedPawns.mg.g;
     weights->openIsolatedPawns.eg.g += w->openIsolatedPawns.eg.g;
@@ -597,8 +600,10 @@ void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights)
   weights->doubledPawns.mg.g += position->coeffs.doubledPawns * mgBase;
   weights->doubledPawns.eg.g += position->coeffs.doubledPawns * egBase;
 
-  weights->opposedIsolatedPawns.mg.g += position->coeffs.opposedIsolatedPawns * mgBase;
-  weights->opposedIsolatedPawns.eg.g += position->coeffs.opposedIsolatedPawns * egBase;
+  for (int f = 0; f < 4; f++) {
+    weights->isolatedPawns[f].mg.g += position->coeffs.isolatedPawns[f] * mgBase;
+    weights->isolatedPawns[f].eg.g += position->coeffs.isolatedPawns[f] * egBase;
+  }
 
   weights->openIsolatedPawns.mg.g += position->coeffs.openIsolatedPawns * mgBase;
   weights->openIsolatedPawns.eg.g += position->coeffs.openIsolatedPawns * egBase;
@@ -808,9 +813,11 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
   ApplyCoeff(mg, eg, position->coeffs.defendedPawns, &weights->defendedPawns);
   ApplyCoeff(mg, eg, position->coeffs.doubledPawns, &weights->doubledPawns);
-  ApplyCoeff(mg, eg, position->coeffs.opposedIsolatedPawns, &weights->opposedIsolatedPawns);
   ApplyCoeff(mg, eg, position->coeffs.openIsolatedPawns, &weights->openIsolatedPawns);
   ApplyCoeff(mg, eg, position->coeffs.backwardsPawns, &weights->backwardsPawns);
+
+  for (int f = 0; f < 4; f++)
+    ApplyCoeff(mg, eg, position->coeffs.isolatedPawns[f], &weights->isolatedPawns[f]);
 
   for (int r = 0; r < 8; r++) {
     ApplyCoeff(mg, eg, position->coeffs.connectedPawn[r], &weights->connectedPawn[r]);
@@ -1086,8 +1093,10 @@ void InitPawnBonusWeights(Weights* weights) {
   weights->doubledPawns.mg.value = scoreMG(DOUBLED_PAWN);
   weights->doubledPawns.eg.value = scoreEG(DOUBLED_PAWN);
 
-  weights->opposedIsolatedPawns.mg.value = scoreMG(OPPOSED_ISOLATED_PAWN);
-  weights->opposedIsolatedPawns.eg.value = scoreEG(OPPOSED_ISOLATED_PAWN);
+  for (int f = 0; f < 4; f++) {
+    weights->isolatedPawns[f].mg.value = scoreMG(ISOLATED_PAWN[f]);
+    weights->isolatedPawns[f].eg.value = scoreEG(ISOLATED_PAWN[f]);
+  }
 
   weights->openIsolatedPawns.mg.value = scoreMG(OPEN_ISOLATED_PAWN);
   weights->openIsolatedPawns.eg.value = scoreEG(OPEN_ISOLATED_PAWN);
@@ -1268,8 +1277,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score DOUBLED_PAWN = ");
   PrintWeight(fp, &weights->doubledPawns);
 
-  fprintf(fp, "\nconst Score OPPOSED_ISOLATED_PAWN = ");
-  PrintWeight(fp, &weights->opposedIsolatedPawns);
+  fprintf(fp, "\nconst Score ISOLATED_PAWN[4] = {\n");
+  PrintWeightArray(fp, weights->isolatedPawns, 4, 4);
+  fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score OPEN_ISOLATED_PAWN = ");
   PrintWeight(fp, &weights->openIsolatedPawns);
