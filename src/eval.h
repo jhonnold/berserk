@@ -66,7 +66,7 @@ extern const Score ROOK_SEMI_OPEN;
 
 extern const Score DEFENDED_PAWN;
 extern const Score DOUBLED_PAWN;
-extern const Score OPPOSED_ISOLATED_PAWN;
+extern const Score ISOLATED_PAWN[4];
 extern const Score OPEN_ISOLATED_PAWN;
 extern const Score BACKWARDS_PAWN;
 extern const Score CONNECTED_PAWN[8];
