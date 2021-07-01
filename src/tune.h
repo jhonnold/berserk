@@ -7,7 +7,7 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\lichess-big3.book"
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\lichess-big3-resolved.book"
 #define THREADS 28
 #define TUNE_KS 0
 

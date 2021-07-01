@@ -24,7 +24,7 @@ const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
 
-double K = 2.929764431;
+double K = 2.878242507;
 
 void Tune() {
   Weights weights = {0};
@@ -955,26 +955,23 @@ Position* LoadPositions(int* n, Weights* weights) {
   KSGradient ks;
   Board board;
   ThreadData* threads = CreatePool(1);
-  SearchParams params = {0};
-  PV pv;
 
   char buffer[128];
 
   int p = 0;
   while (p < MAX_POSITIONS && fgets(buffer, 128, fp)) {
-    int i;
-    for (i = 0; i < 128; i++)
-      if (!strncmp(buffer + i, "c2", 2))
-        break;
-
-    sscanf(buffer + i, "c2 \"%f\"", &positions[p].result);
+    if (strstr(buffer, "[1.0]"))
+      positions[p].result = 1.0;
+    else if (strstr(buffer, "[0.5]"))
+      positions[p].result = 0.5;
+    else if (strstr(buffer, "[0.0]"))
+      positions[p].result = 0.0;
+    else {
+      printf("Cannot Parse %s\n", buffer);
+      exit(EXIT_FAILURE);
+    }
 
     ParseFen(buffer, &board);
-    ResetThreadPool(&board, &params, threads);
-    Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
-
-    for (int m = 0; m < pv.count; m++)
-      MakeMove(pv.moves[m], &board);
 
     if (board.checkers)
       continue;
