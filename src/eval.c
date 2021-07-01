@@ -315,13 +315,13 @@ const Score KS_WEAK_SQS = 78;
 
 const Score KS_PINNED = 74;
 
-const Score KS_KNIGHT_CHECK = 279;
+const Score KS_KNIGHT_CHECK = 270;
 
-const Score KS_BISHOP_CHECK = 311;
+const Score KS_BISHOP_CHECK = 309;
 
-const Score KS_ROOK_CHECK = 272;
+const Score KS_ROOK_CHECK = 263;
 
-const Score KS_QUEEN_CHECK = 213;
+const Score KS_QUEEN_CHECK = 199;
 
 const Score KS_UNSAFE_CHECK = 57;
 
