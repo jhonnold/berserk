@@ -164,7 +164,10 @@ typedef struct {
   int8_t ksAttack[2];
   int8_t ksWeakSqs[2];
   int8_t ksPinned[2];
-  int8_t ksSafeCheck[2];
+  int8_t ksKnightCheck[2];
+  int8_t ksBishopCheck[2];
+  int8_t ksRookCheck[2];
+  int8_t ksQueenCheck[2];
   int8_t ksUnsafeCheck[2];
   int8_t ksEnemyQueen[2];
   int8_t ksKnightDefense[2];

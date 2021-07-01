@@ -78,7 +78,10 @@ typedef struct {
   Weight ksAttack;
   Weight ksWeakSqs;
   Weight ksPinned;
-  Weight ksSafeCheck;
+  Weight ksKnightCheck;
+  Weight ksBishopCheck;
+  Weight ksRookCheck;
+  Weight ksQueenCheck;
   Weight ksUnsafeCheck;
   Weight ksEnemyQueen;
   Weight ksKnightDefense;
