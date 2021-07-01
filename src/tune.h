@@ -7,8 +7,8 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\texel-set-clean-mixed.epd"
-#define THREADS 16
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\quiet-lichess-big5-resolved.book"
+#define THREADS 28
 #define TUNE_KS 0
 
 typedef struct {

@@ -15,7 +15,7 @@
 #include "tune.h"
 #include "util.h"
 
-const int MAX_POSITIONS = 10000000;
+const int MAX_POSITIONS = 100000000;
 
 const int sideScalar[2] = {1, -1};
 
@@ -24,7 +24,7 @@ const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
 
-double K = 2.575325000;
+double K = 3;
 
 void Tune() {
   Weights weights = {0};
@@ -914,8 +914,6 @@ Position* LoadPositions(int* n, Weights* weights) {
   KSGradient ks;
   Board board;
   ThreadData* threads = CreatePool(1);
-  SearchParams params = {0};
-  PV pv;
 
   char buffer[128];
 
@@ -930,11 +928,8 @@ Position* LoadPositions(int* n, Weights* weights) {
 
     ParseFen(buffer, &board);
 
-    // Q search and apply the PV
-    ResetThreadPool(&board, &params, threads);
-    Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
-    for (int m = 0; m < pv.count; m++)
-      MakeMove(pv.moves[m], &board);
+    if (board.checkers)
+      continue;
 
     if (!(board.pieces[PAWN_WHITE] | board.pieces[PAWN_BLACK]))
       continue;
