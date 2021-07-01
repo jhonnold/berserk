@@ -315,7 +315,13 @@ const Score KS_WEAK_SQS = 78;
 
 const Score KS_PINNED = 74;
 
-const Score KS_SAFE_CHECK = 248;
+const Score KS_KNIGHT_CHECK = 279;
+
+const Score KS_BISHOP_CHECK = 311;
+
+const Score KS_ROOK_CHECK = 272;
+
+const Score KS_QUEEN_CHECK = 213;
 
 const Score KS_UNSAFE_CHECK = 57;
 
@@ -806,12 +812,15 @@ Score KingSafety(Board* board, EvalData* data, int side) {
                      bits(possibleRookChecks & ~vulnerable);
 
   Score danger = data->ksAttackWeight[xside] * data->ksAttackerCount[xside] // Similar concept to toga's weight attack
-                 + (KS_SAFE_CHECK * safeChecks)                             //
-                 + (KS_UNSAFE_CHECK * unsafeChecks)                         //
-                 + (KS_WEAK_SQS * bits(weak & kingArea))                    // weak sqs makes you vulnerable
-                 + (KS_ATTACK * data->ksSqAttackCount[xside])               // general pieces aimed
-                 + (KS_PINNED * bits(board->pinned & board->occupancies[side]))           //
-                 + (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])                        //
+                 + (KS_KNIGHT_CHECK * bits(possibleKnightChecks & vulnerable))  //
+                 + (KS_BISHOP_CHECK * bits(possibleBishopChecks & vulnerable))  //
+                 + (KS_ROOK_CHECK * bits(possibleRookChecks & vulnerable))      //
+                 + (KS_QUEEN_CHECK * bits(possibleQueenChecks & vulnerable))    //
+                 + (KS_UNSAFE_CHECK * unsafeChecks)                             //
+                 + (KS_WEAK_SQS * bits(weak & kingArea))                        // weak sqs makes you vulnerable
+                 + (KS_ATTACK * data->ksSqAttackCount[xside])                   // general pieces aimed
+                 + (KS_PINNED * bits(board->pinned & board->occupancies[side])) //
+                 + (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])              //
                  + (KS_KNIGHT_DEFENSE * !!(data->attacks[side][KNIGHT_TYPE] & kingArea)); // knight f8 = no m8
 
   // only include this if in danger
