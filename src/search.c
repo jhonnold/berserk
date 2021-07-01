@@ -419,7 +419,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // no score failed above sBeta, so this is singular
       if (score < sBeta)
-        extension = 1 + (!isPV && score < sBeta - 100);
+        extension = 1 + (!isPV && score < sBeta - 50);
     }
 
     // re-capture extension - looks for a follow up capture on the same square
