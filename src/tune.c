@@ -24,7 +24,7 @@ const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
 
-double K = 3;
+double K = 3.579664622;
 
 void Tune() {
   Weights weights = {0};
@@ -44,8 +44,6 @@ void Tune() {
   int n = 0;
   Position* positions = LoadPositions(&n, &weights);
   ALPHA *= sqrt(n);
-
-  ComputeK(n, positions);
 
   for (int epoch = 1; epoch < 10000; epoch++) {
     double error = UpdateAndTrain(epoch, n, positions, &weights);
