@@ -54,6 +54,7 @@ typedef struct {
   Weight backwardsPawns;
   Weight connectedPawn[8];
   Weight candidatePasser[8];
+  Weight candidateEdgeDistance;
 
   Weight passedPawn[8];
   Weight passedPawnEdgeDistance;

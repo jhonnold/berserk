@@ -179,6 +179,8 @@ void UpdateWeights(Weights* weights) {
   UpdateWeight(&weights->defendedPawns);
 
   UpdateWeight(&weights->doubledPawns);
+  
+  UpdateWeight(&weights->candidateEdgeDistance);
 
   for (int f = 0; f < 4; f++)
     UpdateWeight(&weights->isolatedPawns[f]);
@@ -374,6 +376,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->backwardsPawns.mg.g += w->backwardsPawns.mg.g;
     weights->backwardsPawns.eg.g += w->backwardsPawns.eg.g;
+
+    weights->candidateEdgeDistance.mg.g += w->candidateEdgeDistance.mg.g;
+    weights->candidateEdgeDistance.eg.g += w->candidateEdgeDistance.eg.g;
 
     for (int r = 0; r < 8; r++) {
       weights->connectedPawn[r].mg.g += w->connectedPawn[r].mg.g;
@@ -617,6 +622,9 @@ void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights)
   weights->backwardsPawns.mg.g += position->coeffs.backwardsPawns * mgBase;
   weights->backwardsPawns.eg.g += position->coeffs.backwardsPawns * egBase;
 
+  weights->candidateEdgeDistance.mg.g += position->coeffs.candidateEdgeDistance * mgBase;
+  weights->candidateEdgeDistance.eg.g += position->coeffs.candidateEdgeDistance * egBase;
+
   for (int r = 0; r < 8; r++) {
     weights->connectedPawn[r].mg.g += position->coeffs.connectedPawn[r] * mgBase;
     weights->connectedPawn[r].eg.g += position->coeffs.connectedPawn[r] * egBase;
@@ -836,6 +844,7 @@ void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights
   ApplyCoeff(mg, eg, position->coeffs.doubledPawns, &weights->doubledPawns);
   ApplyCoeff(mg, eg, position->coeffs.openIsolatedPawns, &weights->openIsolatedPawns);
   ApplyCoeff(mg, eg, position->coeffs.backwardsPawns, &weights->backwardsPawns);
+  ApplyCoeff(mg, eg, position->coeffs.candidateEdgeDistance, &weights->candidateEdgeDistance);
 
   for (int f = 0; f < 4; f++)
     ApplyCoeff(mg, eg, position->coeffs.isolatedPawns[f], &weights->isolatedPawns[f]);
@@ -1138,6 +1147,9 @@ void InitPawnBonusWeights(Weights* weights) {
     weights->candidatePasser[r].mg.value = scoreMG(CANDIDATE_PASSER[r]);
     weights->candidatePasser[r].eg.value = scoreEG(CANDIDATE_PASSER[r]);
   }
+
+  weights->candidateEdgeDistance.mg.value = scoreMG(CANDIDATE_EDGE_DISTANCE);
+  weights->candidateEdgeDistance.eg.value = scoreEG(CANDIDATE_EDGE_DISTANCE);
 }
 
 void InitPasserBonusWeights(Weights* weights) {
@@ -1324,6 +1336,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score CANDIDATE_PASSER[8] = {\n");
   PrintWeightArray(fp, weights->candidatePasser, 8, 4);
   fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score CANDIDATE_EDGE_DISTANCE = ");
+  PrintWeight(fp, &weights->candidateEdgeDistance);
 
   fprintf(fp, "\nconst Score PASSED_PAWN[8] = {\n");
   PrintWeightArray(fp, weights->passedPawn, 8, 4);

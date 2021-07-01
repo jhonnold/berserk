@@ -94,10 +94,12 @@ Score PawnEval(Board* board, EvalData* data, int side) {
         int enoughSupport = !(antiPassers ^ forwardLevers) && bits(connected) >= bits(forwardLevers);
 
         if (enoughSupport) {
-          s += CANDIDATE_PASSER[adjustedRank];
+          s += CANDIDATE_PASSER[adjustedRank] + adjustedFile * CANDIDATE_EDGE_DISTANCE;
 
-          if (T)
+          if (T) {
             C.candidatePasser[adjustedRank] += cs[side];
+            C.candidateEdgeDistance += cs[side] * adjustedFile;
+          }
         }
       }
     }
