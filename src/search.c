@@ -340,9 +340,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 100;
     if (depth > 4 && abs(beta) < MATE_BOUND && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
-
       InitTacticalMoves(&moves, data, 0);
       while ((move = NextMove(&moves, board, 1))) {
+        if (skipMove == move)
+          continue;
+
         data->moves[data->ply++] = move;
         MakeMove(move, board);
 
