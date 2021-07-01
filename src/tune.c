@@ -24,7 +24,7 @@ const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
 
-double K = 3.579664622;
+double K = 2.929764431;
 
 void Tune() {
   Weights weights = {0};
@@ -45,7 +45,7 @@ void Tune() {
   Position* positions = LoadPositions(&n, &weights);
   ALPHA *= sqrt(n);
 
-  for (int epoch = 1; epoch < 10000; epoch++) {
+  for (int epoch = 1; epoch <= 1000; epoch++) {
     double error = UpdateAndTrain(epoch, n, positions, &weights);
 
     if (epoch % 10 == 0)
@@ -179,7 +179,7 @@ void UpdateWeights(Weights* weights) {
   UpdateWeight(&weights->defendedPawns);
 
   UpdateWeight(&weights->doubledPawns);
-  
+
   UpdateWeight(&weights->candidateEdgeDistance);
 
   for (int f = 0; f < 4; f++)
@@ -955,6 +955,8 @@ Position* LoadPositions(int* n, Weights* weights) {
   KSGradient ks;
   Board board;
   ThreadData* threads = CreatePool(1);
+  SearchParams params = {0};
+  PV pv;
 
   char buffer[128];
 
@@ -968,6 +970,11 @@ Position* LoadPositions(int* n, Weights* weights) {
     sscanf(buffer + i, "c2 \"%f\"", &positions[p].result);
 
     ParseFen(buffer, &board);
+    ResetThreadPool(&board, &params, threads);
+    Quiesce(-CHECKMATE, CHECKMATE, threads, &pv);
+
+    for (int m = 0; m < pv.count; m++)
+      MakeMove(pv.moves[m], &board);
 
     if (board.checkers)
       continue;
