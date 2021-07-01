@@ -52,7 +52,7 @@ Score PawnEval(Board* board, EvalData* data, int side) {
     int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][rank(sq + PAWN_DIRECTIONS[side])]) && forwardLevers;
     BitBoard passerSpan = FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]);
     BitBoard antiPassers = board->pieces[xside] & passerSpan;
-    int passed = !antiPassers &&
+    int passed = (!antiPassers || !(antiPassers ^ levers)) &&
                  // make sure we don't double count passers
                  !(board->pieces[PAWN[side]] & FORWARD_RANK_MASKS[side][rank] & FILE_MASKS[file]);
 
@@ -92,10 +92,9 @@ Score PawnEval(Board* board, EvalData* data, int side) {
       // candidate passers are either in tension right now (and a push is all they need)
       // or a pawn 2 ranks down is stopping them, but our pawns can support it through
       if (!passed) {
-        int onlyInTension = !(antiPassers ^ levers);
         int enoughSupport = !(antiPassers ^ forwardLevers) && bits(connected) >= bits(forwardLevers);
 
-        if (onlyInTension | enoughSupport) {
+        if (enoughSupport) {
           s += CANDIDATE_PASSER[adjustedRank];
 
           if (T)
