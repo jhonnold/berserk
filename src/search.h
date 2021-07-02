@@ -33,8 +33,8 @@
 // static evaluation pruning
 // capture cutoff is linear 70x
 // quiet cutoff is quadratic 20x^2
-#define SEE_PRUNE_CAPTURE_CUTOFF 92
-#define SEE_PRUNE_CUTOFF 18
+#define SEE_PRUNE_CAPTURE_CUTOFF 90
+#define SEE_PRUNE_CUTOFF 20
 
 // delta pruning in QS
 #define DELTA_CUTOFF 150
