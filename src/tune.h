@@ -78,7 +78,6 @@ typedef struct {
   Weight blockedPawnStorm[8];
 
   Weight ksAttackerWeight[5];
-  Weight ksAttack;
   Weight ksWeakSqs;
   Weight ksPinned;
   Weight ksKnightCheck;
