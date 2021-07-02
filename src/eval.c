@@ -316,10 +316,8 @@ const Score BLOCKED_PAWN_STORM[8] = {
 };
 
 const Score KS_ATTACKER_WEIGHTS[5] = {
- 0, 32, 31, 18, 24
+ 0, 33, 32, 19, 25
 };
-
-const Score KS_ATTACK = 4;
 
 const Score KS_WEAK_SQS = 78;
 
@@ -551,13 +549,11 @@ Score PieceEval(Board* board, EvalData* data, int side) {
 
       if (movement & enemyKingArea) {
         data->ksAttackWeight[side] += KS_ATTACKER_WEIGHTS[pieceType];
-        data->ksSqAttackCount[side] += bits(movement & enemyKingArea);
         data->ksAttackerCount[side]++;
 
         if (T) {
           C.ksAttackerCount[xside]++;
           C.ksAttackerWeights[xside][pieceType]++;
-          C.ksAttack[xside] += bits(movement & enemyKingArea);
         }
       }
 
@@ -826,7 +822,6 @@ Score KingSafety(Board* board, EvalData* data, int side) {
                  + (KS_QUEEN_CHECK * bits(possibleQueenChecks & vulnerable))    //
                  + (KS_UNSAFE_CHECK * unsafeChecks)                             //
                  + (KS_WEAK_SQS * bits(weak & kingArea))                        // weak sqs makes you vulnerable
-                 + (KS_ATTACK * data->ksSqAttackCount[xside])                   // general pieces aimed
                  + (KS_PINNED * bits(board->pinned & board->occupancies[side])) //
                  + (KS_ENEMY_QUEEN * !board->pieces[QUEEN[xside]])              //
                  + (KS_KNIGHT_DEFENSE * !!(data->attacks[side][KNIGHT_TYPE] & kingArea)); // knight f8 = no m8

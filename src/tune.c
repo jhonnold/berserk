@@ -227,7 +227,6 @@ void UpdateWeights(Weights* weights) {
     for (int i = 0; i < 5; i++)
       UpdateParam(&weights->ksAttackerWeight[i].mg);
 
-    UpdateParam(&weights->ksAttack.mg);
     UpdateParam(&weights->ksWeakSqs.mg);
     UpdateParam(&weights->ksPinned.mg);
     UpdateParam(&weights->ksKnightCheck.mg);
@@ -438,7 +437,6 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
     for (int i = 0; i < 5; i++)
       weights->ksAttackerWeight[i].mg.g += w->ksAttackerWeight[i].mg.g;
 
-    weights->ksAttack.mg.g += w->ksAttack.mg.g;
     weights->ksWeakSqs.mg.g += w->ksWeakSqs.mg.g;
     weights->ksPinned.mg.g += w->ksPinned.mg.g;
     weights->ksKnightCheck.mg.g += w->ksKnightCheck.mg.g;
@@ -723,11 +721,6 @@ void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights
                                          position->coeffs.ksAttackerCount[WHITE];
   }
 
-  weights->ksAttack.mg.g += (mgBase / 512) * fmax(ks->bDanger, 0) * position->coeffs.ksAttack[BLACK];
-  weights->ksAttack.mg.g += (egBase / 32) * (ks->bDanger > 0) * position->coeffs.ksAttack[BLACK];
-  weights->ksAttack.mg.g -= (mgBase / 512) * fmax(ks->wDanger, 0) * position->coeffs.ksAttack[WHITE];
-  weights->ksAttack.mg.g -= (egBase / 32) * (ks->wDanger > 0) * position->coeffs.ksAttack[WHITE];
-
   weights->ksWeakSqs.mg.g += (mgBase / 512) * fmax(ks->bDanger, 0) * position->coeffs.ksWeakSqs[BLACK];
   weights->ksWeakSqs.mg.g += (egBase / 32) * (ks->bDanger > 0) * position->coeffs.ksWeakSqs[BLACK];
   weights->ksWeakSqs.mg.g -= (mgBase / 512) * fmax(ks->wDanger, 0) * position->coeffs.ksWeakSqs[WHITE];
@@ -918,7 +911,6 @@ void EvaluateKingSafetyValues(double* mg, double* eg, Position* position, Weight
                weights->ksAttackerWeight[i].mg.value;
   }
 
-  wDanger += position->coeffs.ksAttack[WHITE] * weights->ksAttack.mg.value;
   wDanger += position->coeffs.ksWeakSqs[WHITE] * weights->ksWeakSqs.mg.value;
   wDanger += position->coeffs.ksPinned[WHITE] * weights->ksPinned.mg.value;
   wDanger += position->coeffs.ksKnightCheck[WHITE] * weights->ksKnightCheck.mg.value;
@@ -929,7 +921,6 @@ void EvaluateKingSafetyValues(double* mg, double* eg, Position* position, Weight
   wDanger += position->coeffs.ksEnemyQueen[WHITE] * weights->ksEnemyQueen.mg.value;
   wDanger += position->coeffs.ksKnightDefense[WHITE] * weights->ksKnightDefense.mg.value;
 
-  bDanger += position->coeffs.ksAttack[BLACK] * weights->ksAttack.mg.value;
   bDanger += position->coeffs.ksWeakSqs[BLACK] * weights->ksWeakSqs.mg.value;
   bDanger += position->coeffs.ksPinned[BLACK] * weights->ksPinned.mg.value;
   bDanger += position->coeffs.ksKnightCheck[BLACK] * weights->ksKnightCheck.mg.value;
@@ -1232,7 +1223,6 @@ void InitKingSafetyWeights(Weights* weights) {
   for (int i = 1; i < 5; i++)
     weights->ksAttackerWeight[i].mg.value = KS_ATTACKER_WEIGHTS[i];
 
-  weights->ksAttack.mg.value = KS_ATTACK;
   weights->ksWeakSqs.mg.value = KS_WEAK_SQS;
   weights->ksPinned.mg.value = KS_PINNED;
   weights->ksKnightCheck.mg.value = KS_KNIGHT_CHECK;
@@ -1464,8 +1454,6 @@ void PrintWeights(Weights* weights, int epoch, double error) {
           (int)round(weights->ksAttackerWeight[2].mg.value), (int)round(weights->ksAttackerWeight[3].mg.value),
           (int)round(weights->ksAttackerWeight[4].mg.value));
   fprintf(fp, "\n};\n");
-
-  fprintf(fp, "\nconst Score KS_ATTACK = %d;\n", (int)round(weights->ksAttack.mg.value));
 
   fprintf(fp, "\nconst Score KS_WEAK_SQS = %d;\n", (int)round(weights->ksWeakSqs.mg.value));
 

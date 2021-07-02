@@ -164,7 +164,6 @@ typedef struct {
   int danger[2];
   int8_t ksAttackerCount[2];
   int8_t ksAttackerWeights[2][5];
-  int8_t ksAttack[2];
   int8_t ksWeakSqs[2];
   int8_t ksPinned[2];
   int8_t ksKnightCheck[2];
@@ -199,7 +198,6 @@ typedef struct {
   BitBoard allAttacks[2];  // all attacks
   BitBoard twoAttacks[2];  // squares attacked twice
   Score ksAttackWeight[2]; // king safety attackers weight
-  int ksSqAttackCount[2];  // king safety sq attack count
   int ksAttackerCount[2];  // attackers
 
   BitBoard passedPawns;
