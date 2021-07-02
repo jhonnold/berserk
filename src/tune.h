@@ -60,6 +60,7 @@ typedef struct {
   Weight passedPawnEdgeDistance;
   Weight passedPawnKingProximity;
   Weight passedPawnAdvance;
+  Weight passedPawnEnemySliderBehind;
 
   Weight knightThreats[6];
   Weight bishopThreats[6];

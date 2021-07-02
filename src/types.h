@@ -143,6 +143,7 @@ typedef struct {
   int8_t passedPawnEdgeDistance;
   int8_t passedPawnKingProximity;
   int8_t passedPawnAdvance;
+  int8_t passedPawnEnemySliderBehind;
 
   int8_t knightThreats[6];
   int8_t bishopThreats[6];
