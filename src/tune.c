@@ -207,7 +207,8 @@ void UpdateWeights(Weights* weights) {
 
   UpdateWeight(&weights->passedPawnKingProximity);
 
-  UpdateWeight(&weights->passedPawnAdvance);
+  for (int r = 0; r < 5; r++)
+    UpdateWeight(&weights->passedPawnAdvance[r]);
 
   UpdateWeight(&weights->passedPawnEnemySliderBehind);
 
@@ -413,8 +414,10 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
     weights->passedPawnKingProximity.mg.g += w->passedPawnKingProximity.mg.g;
     weights->passedPawnKingProximity.eg.g += w->passedPawnKingProximity.eg.g;
 
-    weights->passedPawnAdvance.mg.g += w->passedPawnAdvance.mg.g;
-    weights->passedPawnAdvance.eg.g += w->passedPawnAdvance.eg.g;
+    for (int r = 0; r < 5; r++) {
+      weights->passedPawnAdvance[r].mg.g += w->passedPawnAdvance[r].mg.g;
+      weights->passedPawnAdvance[r].eg.g += w->passedPawnAdvance[r].eg.g;
+    }
 
     weights->passedPawnEnemySliderBehind.mg.g += w->passedPawnEnemySliderBehind.mg.g;
     weights->passedPawnEnemySliderBehind.eg.g += w->passedPawnEnemySliderBehind.eg.g;
@@ -672,8 +675,10 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
   weights->passedPawnKingProximity.mg.g += position->coeffs.passedPawnKingProximity * mgBase;
   weights->passedPawnKingProximity.eg.g += position->coeffs.passedPawnKingProximity * egBase;
 
-  weights->passedPawnAdvance.mg.g += position->coeffs.passedPawnAdvance * mgBase;
-  weights->passedPawnAdvance.eg.g += position->coeffs.passedPawnAdvance * egBase;
+  for (int r = 0; r < 5; r++) {
+    weights->passedPawnAdvance[r].mg.g += position->coeffs.passedPawnAdvance[r] * mgBase;
+    weights->passedPawnAdvance[r].eg.g += position->coeffs.passedPawnAdvance[r] * egBase;
+  }
 
   weights->passedPawnEnemySliderBehind.mg.g += position->coeffs.passedPawnEnemySliderBehind * mgBase;
   weights->passedPawnEnemySliderBehind.eg.g += position->coeffs.passedPawnEnemySliderBehind * egBase;
@@ -887,8 +892,10 @@ void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weigh
 
   ApplyCoeff(mg, eg, position->coeffs.passedPawnEdgeDistance, &weights->passedPawnEdgeDistance);
   ApplyCoeff(mg, eg, position->coeffs.passedPawnKingProximity, &weights->passedPawnKingProximity);
-  ApplyCoeff(mg, eg, position->coeffs.passedPawnAdvance, &weights->passedPawnAdvance);
   ApplyCoeff(mg, eg, position->coeffs.passedPawnEnemySliderBehind, &weights->passedPawnEnemySliderBehind);
+
+  for (int r = 0; r < 5; r++)
+    ApplyCoeff(mg, eg, position->coeffs.passedPawnAdvance[r], &weights->passedPawnAdvance[r]);
 }
 
 void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -1200,8 +1207,10 @@ void InitPasserBonusWeights(Weights* weights) {
   weights->passedPawnKingProximity.mg.value = scoreMG(PASSED_PAWN_KING_PROXIMITY);
   weights->passedPawnKingProximity.eg.value = scoreEG(PASSED_PAWN_KING_PROXIMITY);
 
-  weights->passedPawnAdvance.mg.value = scoreMG(PASSED_PAWN_ADVANCE_DEFENDED);
-  weights->passedPawnAdvance.eg.value = scoreEG(PASSED_PAWN_ADVANCE_DEFENDED);
+  for (int r = 0; r < 5; r++) {
+    weights->passedPawnAdvance[r].mg.value = scoreMG(PASSED_PAWN_ADVANCE_DEFENDED[r]);
+    weights->passedPawnAdvance[r].eg.value = scoreEG(PASSED_PAWN_ADVANCE_DEFENDED[r]);
+  }
 
   weights->passedPawnEnemySliderBehind.mg.value = scoreMG(PASSED_PAWN_ENEMY_SLIDER_BEHIND);
   weights->passedPawnEnemySliderBehind.eg.value = scoreEG(PASSED_PAWN_ENEMY_SLIDER_BEHIND);
@@ -1388,8 +1397,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score PASSED_PAWN_KING_PROXIMITY = ");
   PrintWeight(fp, &weights->passedPawnKingProximity);
 
-  fprintf(fp, "\nconst Score PASSED_PAWN_ADVANCE_DEFENDED = ");
-  PrintWeight(fp, &weights->passedPawnAdvance);
+  fprintf(fp, "\nconst Score PASSED_PAWN_ADVANCE_DEFENDED[5] = {\n");
+  PrintWeightArray(fp, weights->passedPawnAdvance, 5, 5);
+  fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score PASSED_PAWN_ENEMY_SLIDER_BEHIND = ");
   PrintWeight(fp, &weights->passedPawnEnemySliderBehind);
