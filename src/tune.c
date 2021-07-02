@@ -19,7 +19,7 @@ const int MAX_POSITIONS = 100000000;
 
 const int sideScalar[2] = {1, -1};
 
-double ALPHA = 0.00001;
+double ALPHA = 0.0001;
 const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
@@ -40,6 +40,8 @@ void Tune() {
   InitPawnShelterWeights(&weights);
   InitSpaceWeights(&weights);
   InitKingSafetyWeights(&weights);
+
+  PrintWeights(&weights, 0, 0);
 
   int n = 0;
   Position* positions = LoadPositions(&n, &weights);
@@ -157,6 +159,10 @@ void UpdateWeights(Weights* weights) {
   UpdateWeight(&weights->hangingThreat);
 
   UpdateWeight(&weights->bishopPair);
+
+  for (int i = 0; i < 5; i++)
+    for (int j = 0; j < 5; j++)
+      UpdateWeight(&weights->imbalance[i][j]);
 
   UpdateWeight(&weights->minorBehindPawn);
 
@@ -332,6 +338,13 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->hangingThreat.mg.g += w->hangingThreat.mg.g;
     weights->hangingThreat.eg.g += w->hangingThreat.eg.g;
+
+    for (int i = 0; i < 5; i++) {
+      for (int j = 0; j < 5; j++) {
+        weights->imbalance[i][j].mg.g += w->imbalance[i][j].mg.g;
+        weights->imbalance[i][j].eg.g += w->imbalance[i][j].eg.g;
+      }
+    }
 
     weights->minorBehindPawn.mg.g += w->minorBehindPawn.mg.g;
     weights->minorBehindPawn.eg.g += w->minorBehindPawn.eg.g;
@@ -572,6 +585,13 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 
   weights->bishopPair.mg.g += position->coeffs.bishopPair * mgBase;
   weights->bishopPair.eg.g += position->coeffs.bishopPair * egBase;
+
+  for (int i = 0; i < 5; i++) {
+    for (int j = 0; j < 5; j++) {
+      weights->imbalance[i][j].mg.g += position->coeffs.imbalance[i][j] * mgBase;
+      weights->imbalance[i][j].eg.g += position->coeffs.imbalance[i][j] * egBase;
+    }
+  }
 
   weights->minorBehindPawn.mg.g += position->coeffs.minorBehindPawn * mgBase;
   weights->minorBehindPawn.eg.g += position->coeffs.minorBehindPawn * egBase;
@@ -828,6 +848,11 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
 
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
   ApplyCoeff(mg, eg, position->coeffs.bishopPair, &weights->bishopPair);
+
+  for (int i = 0; i < 5; i++)
+    for (int j = 0; j < 5; j++)
+      ApplyCoeff(mg, eg, position->coeffs.imbalance[i][j], &weights->imbalance[i][j]);
+
   ApplyCoeff(mg, eg, position->coeffs.minorBehindPawn, &weights->minorBehindPawn);
   ApplyCoeff(mg, eg, position->coeffs.knightPostReachable, &weights->knightPostReachable);
   ApplyCoeff(mg, eg, position->coeffs.bishopPostReachable, &weights->bishopPostReachable);
@@ -1097,6 +1122,13 @@ void InitThreatWeights(Weights* weights) {
 void InitPieceBonusWeights(Weights* weights) {
   weights->bishopPair.mg.value = scoreMG(BISHOP_PAIR);
   weights->bishopPair.eg.value = scoreEG(BISHOP_PAIR);
+
+  for (int i = 0; i < 5; i++) {
+    for (int j = 0; j < 5; j++) {
+      weights->imbalance[i][j].mg.value = scoreMG(IMBALANCE[i][j]);
+      weights->imbalance[i][j].eg.value = scoreEG(IMBALANCE[i][j]);
+    }
+  }
 
   weights->minorBehindPawn.mg.value = scoreMG(MINOR_BEHIND_PAWN);
   weights->minorBehindPawn.eg.value = scoreEG(MINOR_BEHIND_PAWN);
@@ -1383,6 +1415,20 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score SPACE[15] = {\n");
   PrintWeightArray(fp, weights->space, 15, 5);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score IMBALANCE[5][5] = {\n");
+  fprintf(fp, " {");
+  PrintWeightArray(fp, weights->imbalance[0], 1, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->imbalance[1], 2, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->imbalance[2], 3, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->imbalance[3], 4, 0);
+  fprintf(fp, "},\n {");
+  PrintWeightArray(fp, weights->imbalance[4], 5, 0);
+  fprintf(fp, "},\n");
   fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score PAWN_SHELTER[4][8] = {\n");
