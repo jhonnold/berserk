@@ -74,7 +74,7 @@ extern const Score CANDIDATE_PASSER[8];
 extern const Score CANDIDATE_EDGE_DISTANCE;
 
 extern const Score PASSED_PAWN[8];
-extern const Score PASSED_PAWN_ADVANCE_DEFENDED;
+extern const Score PASSED_PAWN_ADVANCE_DEFENDED[5];
 extern const Score PASSED_PAWN_EDGE_DISTANCE;
 extern const Score PASSED_PAWN_KING_PROXIMITY;
 extern const Score PASSED_PAWN_ENEMY_SLIDER_BEHIND;

@@ -166,10 +166,10 @@ Score PasserEval(Board* board, EvalData* data, int side) {
             advPawnSupp || advTwoAtx || !(data->allAttacks[xside] & advance) || (advOneAtx & ~data->twoAttacks[xside]);
 
         if (safeAdvance) {
-          s += PASSED_PAWN_ADVANCE_DEFENDED;
+          s += PASSED_PAWN_ADVANCE_DEFENDED[adjustedRank];
 
           if (T)
-            C.passedPawnAdvance += cs[side];
+            C.passedPawnAdvance[adjustedRank] += cs[side];
         }
       }
     }
