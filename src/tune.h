@@ -71,6 +71,8 @@ typedef struct {
 
   Weight space[17];
 
+  Weight imbalance[5][5];
+
   Weight pawnShelter[4][8];
   Weight pawnStorm[4][8];
   Weight blockedPawnStorm[8];

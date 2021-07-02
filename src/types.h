@@ -154,6 +154,8 @@ typedef struct {
 
   int8_t space[15];
 
+  int16_t imbalance[5][5];
+
   int8_t pawnShelter[4][8];
   int8_t pawnStorm[4][8];
   int8_t blockedPawnStorm[8];
