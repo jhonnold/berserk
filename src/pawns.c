@@ -157,9 +157,14 @@ Score PasserEval(Board* board, EvalData* data, int side) {
       }
 
       if (!(board->occupancies[xside] & advance)) {
-        BitBoard pusher = behind & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
+        int pusher = !!(behind & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]));
+        BitBoard advanceTwoAtx = (data->twoAttacks[side] | ((pusher * advance) & data->allAttacks[side])) & advance;
 
-        if (pusher | (data->allAttacks[side] & advance)) {
+        int safeAdvance = !(data->allAttacks[xside] & advance)                           // no enemy stopping
+                          || (advance & data->attacks[side][PAWN_TYPE]) || advanceTwoAtx // we strongly support movement
+                          || (((pusher * advance) | data->allAttacks[side]) & ~data->twoAttacks[xside] & advance);
+
+        if (safeAdvance) {
           s += PASSED_PAWN_ADVANCE_DEFENDED;
 
           if (T)
