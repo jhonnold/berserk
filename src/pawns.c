@@ -145,24 +145,25 @@ Score PasserEval(Board* board, EvalData* data, int side) {
       if (T)
         C.passedPawnKingProximity += cs[side] * min(4, max(opponentDistance - myDistance, -4));
 
+      BitBoard behind =
+          GetRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] & FORWARD_RANK_MASKS[xside][rank];
+      BitBoard enemySliderBehind = behind & (board->pieces[ROOK[xside]] | board->pieces[QUEEN[xside]]);
+
+      if (enemySliderBehind) {
+        s += PASSED_PAWN_ENEMY_SLIDER_BEHIND;
+
+        if (T)
+          C.passedPawnEnemySliderBehind += cs[side];
+      }
+
       if (!(board->occupancies[xside] & advance)) {
-        BitBoard behind =
-            GetRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] & FORWARD_RANK_MASKS[xside][rank];
         BitBoard pusher = behind & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
-        BitBoard enemySliderBehind = behind & (board->pieces[ROOK[xside]] | board->pieces[QUEEN[xside]]);
 
         if (pusher | (data->allAttacks[side] & advance)) {
           s += PASSED_PAWN_ADVANCE_DEFENDED;
 
           if (T)
             C.passedPawnAdvance += cs[side];
-        }
-
-        if (enemySliderBehind) {
-          s += PASSED_PAWN_ENEMY_SLIDER_BEHIND;
-
-          if (T)
-            C.passedPawnEnemySliderBehind += cs[side];
         }
       }
     }
