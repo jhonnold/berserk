@@ -193,6 +193,8 @@ typedef struct {
 } SearchParams;
 
 typedef struct {
+  BitBoard passedPawns;
+
   // these are general data objects, for buildup during eval
   int kingSq[2];
   BitBoard kingArea[2];
@@ -202,10 +204,8 @@ typedef struct {
   Score ksAttackWeight[2]; // king safety attackers weight
   int ksAttackerCount[2];  // attackers
 
-  BitBoard passedPawns;
   BitBoard mobilitySquares[2];
   BitBoard outposts[2];
-
 } EvalData;
 
 typedef struct {

@@ -401,6 +401,8 @@ inline int Scale(Board* board, int ss) {
 
 // preload a bunch of important evalution data
 void InitEvalData(EvalData* data, Board* board) {
+  data->passedPawns = 0ULL;
+
   BitBoard whitePawns = board->pieces[PAWN_WHITE];
   BitBoard blackPawns = board->pieces[PAWN_BLACK];
   BitBoard whitePawnAttacks = ShiftNE(whitePawns) | ShiftNW(whitePawns);
@@ -408,6 +410,11 @@ void InitEvalData(EvalData* data, Board* board) {
 
   data->allAttacks[WHITE] = data->attacks[WHITE][PAWN_TYPE] = whitePawnAttacks;
   data->allAttacks[BLACK] = data->attacks[BLACK][PAWN_TYPE] = blackPawnAttacks;
+  data->attacks[WHITE][KNIGHT_TYPE] = data->attacks[BLACK][KNIGHT_TYPE] = 0ULL;
+  data->attacks[WHITE][BISHOP_TYPE] = data->attacks[BLACK][BISHOP_TYPE] = 0ULL;
+  data->attacks[WHITE][ROOK_TYPE] = data->attacks[BLACK][ROOK_TYPE] = 0ULL;
+  data->attacks[WHITE][QUEEN_TYPE] = data->attacks[BLACK][QUEEN_TYPE] = 0ULL;
+  data->attacks[WHITE][KING_TYPE] = data->attacks[BLACK][KING_TYPE] = 0ULL;
   data->twoAttacks[WHITE] = ShiftNE(whitePawns) & ShiftNW(whitePawns);
   data->twoAttacks[BLACK] = ShiftSE(blackPawns) & ShiftSW(blackPawns);
 
@@ -424,6 +431,8 @@ void InitEvalData(EvalData* data, Board* board) {
 
   data->kingSq[WHITE] = lsb(board->pieces[KING_WHITE]);
   data->kingSq[BLACK] = lsb(board->pieces[KING_BLACK]);
+  data->ksAttackWeight[WHITE] = data->ksAttackWeight[BLACK] = 0;
+  data->ksAttackerCount[WHITE] = data->ksAttackerCount[BLACK] = 0;
 
   int whiteKingF = max(1, min(6, file(data->kingSq[WHITE])));
   int whiteKingR = max(1, min(6, rank(data->kingSq[WHITE])));
@@ -912,7 +921,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (eval != UNKNOWN)
     return eval;
 
-  EvalData data = {0};
+  EvalData data;
   InitEvalData(&data, board);
 
   Score s;
