@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "types.h"
+#include "util.h"
 
 // initialize a pool of threads
 ThreadData* CreatePool(int count) {
@@ -91,4 +92,12 @@ uint64_t TBHits(ThreadData* threads) {
     tbhits += threads[i].data.tbhits;
 
   return tbhits;
+}
+
+uint64_t Seldepth(ThreadData* threads) {
+  int seldepth = threads[0].data.seldepth;
+  for (int i = 1; i < threads->count; i++)
+    seldepth = max(seldepth, threads[i].data.seldepth);
+
+  return seldepth;
 }

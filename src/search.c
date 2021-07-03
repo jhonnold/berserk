@@ -21,12 +21,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "board.h"
 #include "eval.h"
 #include "history.h"
 #include "move.h"
 #include "movegen.h"
+#include "movepick.h"
+#include "noobprobe/noobprobe.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
 #include "see.h"
@@ -84,10 +87,16 @@ int BestMove(Board* board, SearchParams* params, ThreadData* threads) {
     return 0;
   }
 
+  if ((bestMove = ProbeNoob(board))) {
+    printf("bestmove %s\n", MoveToStr(bestMove));
+    return 0;
+  }
+
   pthread_t pthreads[threads->count];
   InitPool(board, params, threads);
 
   params->stopped = 0;
+  TTUpdate();
 
   // start at 1, we will resuse main-thread
   for (int i = 1; i < threads->count; i++)
@@ -127,7 +136,7 @@ void* Search(void* arg) {
       // delta is our window for search. early depths get full searches
       // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
       // vary this slightly based on the previous depths window expansion count
-      int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW + expands : CHECKMATE;
+      int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW : CHECKMATE;
 
       expands = 0;
       alpha = max(score - delta, -CHECKMATE);
@@ -179,9 +188,15 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   int bestScore = -CHECKMATE;   //
   int maxScore = CHECKMATE;     // best possible
   int origAlpha = alpha;        // remember first alpha for tt storage
+  int ttScore = UNKNOWN;
 
   Move bestMove = NULL_MOVE;
   Move skipMove = data->skipMove[data->ply]; // skip used in SE (concept from SF)
+  Move nullThreat = NULL_MOVE;
+  Move hashMove = NULL_MOVE;
+
+  Move move;
+  MoveList moves;
 
   // drop into tactical moves only
   if (depth <= 0)
@@ -216,12 +231,14 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   // we ignore the tt on singular extension searches
   int ttHit = 0;
   TTEntry* tt = skipMove ? NULL : TTProbe(&ttHit, board->zobrist);
+  if (ttHit) {
+    hashMove = tt->move;
+    ttScore = TTScore(tt, data->ply);
+  }
 
   // if the TT has a value that fits our position and has been searched to an equal or greater depth, then we accept
   // this score and prune
-  if (!isPV && ttHit && tt->depth >= depth) {
-    int ttScore = TTScore(tt, data->ply);
-
+  if (!isPV && ttHit && tt->depth >= depth && ttScore != UNKNOWN) {
     if ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
         ((tt->flags & TT_UPPER) && ttScore <= alpha))
       return ttScore;
@@ -267,10 +284,19 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
   }
 
+  // IIR by Ed Schroder
+  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
+  if (depth >= 4 && !hashMove && !skipMove)
+    depth--;
+
   // pull previous static eval from tt - this is depth independent
-  int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
+  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
+  if (!ttHit)
+    TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
+
   // getting better if eval has gone up
-  int improving = data->ply >= 2 && (data->evals[data->ply] > data->evals[data->ply - 2]);
+  int improving = !board->checkers && data->ply >= 2 &&
+                  (data->evals[data->ply] > data->evals[data->ply - 2] || data->evals[data->ply - 2] == UNKNOWN);
 
   // reset moves to moves related to 1 additional ply
   data->skipMove[data->ply + 1] = NULL_MOVE;
@@ -279,8 +305,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   if (!isPV && !board->checkers) {
     // Our TT might have a more accurate evaluation score, use this
-    if (ttHit && tt->depth >= depth) {
-      int ttScore = TTScore(tt, data->ply);
+    if (ttHit && tt->depth >= depth && ttScore != UNKNOWN) {
       if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER))
         eval = ttScore;
     }
@@ -294,7 +319,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate threats)
     if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta && HasNonPawn(board)) {
-      int R = 3 + depth / 6 + min((eval - beta) / 200, 3);
+      int R = 4 + depth / 6 + min((eval - beta) / 256, 3);
       R = min(depth, R); // don't go too low
 
       data->moves[data->ply++] = NULL_MOVE;
@@ -307,19 +332,19 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       if (score >= beta)
         return beta;
+
+      nullThreat = childPv.count ? childPv.moves[0] : NULL_MOVE;
     }
 
     // Prob cut
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 100;
-    if (depth > 4 && abs(beta) < MATE_BOUND &&
-        !(ttHit && tt->depth >= depth - 3 && TTScore(tt, data->ply) < probBeta)) {
-      MoveList moveList;
-      GenerateTacticalMoves(&moveList, board);
-
-      for (int i = 0; i < moveList.count; i++) {
-        Move move = moveList.moves[i];
+    if (depth > 4 && abs(beta) < MATE_BOUND && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
+      InitTacticalMoves(&moves, data, 0);
+      while ((move = NextMove(&moves, board, 1))) {
+        if (skipMove == move)
+          continue;
 
         data->moves[data->ply++] = move;
         MakeMove(move, board);
@@ -340,38 +365,34 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
   }
 
-  // IIR by Ed Schroder
-  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
-  if (depth >= 4 && !ttHit && !skipMove)
-    depth--;
+  Move quiets[64];
+  int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0, skipQuiets = 0;
+  InitAllMoves(&moves, hashMove, data);
 
-  MoveList moveList;
-  GenerateAllMoves(&moveList, board, data);
-
-  MoveList quiets;
-  quiets.count = 0;
-
-  // TODO: totalMoves will just become standard moves with a proper phased generation
-  // nonPrunedMoves are moves that aren't skipped by LMP but get pruned by SEE
-  int totalMoves = 0, nonPrunedMoves = 0;
-  for (int i = 0; i < moveList.count; i++) {
-    ChooseTopMove(&moveList, i);
-    Move move = moveList.moves[i];
-
+  while ((move = NextMove(&moves, board, skipQuiets))) {
     // don't search this during singular
     if (skipMove == move)
       continue;
 
-    int tactical = MovePromo(move) || MoveCapture(move);
-
-    if (bestScore > -MATE_BOUND && depth <= 8 && !tactical && totalMoves > LMP[improving][depth])
-      continue;
-
     totalMoves++;
+
+    int tactical = !!Tactical(move);
+    int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
+    int hist = !tactical ? data->hh[board->side][MoveStartEnd(move)] : 0;
+
+    if (bestScore > -MATE_BOUND && depth <= 8 && totalMoves >= LMP[improving][depth])
+      skipQuiets = 1;
+
+    if (bestScore > -MATE_BOUND && !tactical && depth <= 2 && !specialQuiet && hist <= -2048 * depth * depth)
+      continue;
 
     // Static evaluation pruning, this applies for both quiet and tactical moves
     // quiet moves use a quadratic scale upwards
-    if (bestScore > -MATE_BOUND && SEE(board, move) < STATIC_PRUNE[tactical][depth])
+    if (bestScore > -MATE_BOUND && tactical && moves.phase > PLAY_GOOD_TACTICAL &&
+        SEE(board, move) < STATIC_PRUNE[1][depth])
+      continue;
+
+    if (bestScore > -MATE_BOUND && !tactical && SEE(board, move) < STATIC_PRUNE[0][depth])
       continue;
 
     nonPrunedMoves++;
@@ -380,7 +401,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), nonPrunedMoves);
 
     if (!tactical)
-      quiets.moves[quiets.count++] = move;
+      quiets[numQuiets++] = move;
 
     // singular extension
     // if one move is better than all the rest, then we consider this singular
@@ -389,8 +410,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
     int extension = 0;
     if (depth >= 8 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
-        abs(TTScore(tt, data->ply)) < MATE_BOUND && (tt->flags & TT_LOWER)) {
-      int sBeta = max(TTScore(tt, data->ply) - depth * 2, -CHECKMATE);
+        abs(ttScore) < MATE_BOUND && (tt->flags & TT_LOWER)) {
+      int sBeta = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
@@ -399,11 +420,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // no score failed above sBeta, so this is singular
       if (score < sBeta)
-        extension = 1 + (!isPV && score < sBeta - 100);
-      else if (sBeta >= beta)
-        // multi-cut - since a move failed above sBeta which is already above beta,
-        // we can prune (its also assumed tt would fail high)
-        return sBeta;
+        extension = 1 + (!isPV && score < sBeta - 50);
     }
 
     // re-capture extension - looks for a follow up capture on the same square
@@ -426,7 +443,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (depth > 2 && nonPrunedMoves > 1) {
       R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
 
-      if (!tactical) {
+      if (specialQuiet) {
+        R = min(2, R);
+      } else if (!tactical) {
         // increase reduction on non-pv
         if (!isPV)
           R++;
@@ -435,13 +454,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (!improving)
           R++;
 
-        // decrease reduction if we're looking at a "specific" quiet move
-        // killer1, killer2, and counter
-        if (moveList.scores[i] >= COUNTER_SCORE)
-          R--;
+        if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
+          R++;
 
         // adjust reduction based on historical score
-        R -= moveList.scores[i] / 16384;
+        R -= hist / 16384;
       } else {
         R--;
       }
@@ -482,14 +499,14 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(data, move, depth, board->side, &quiets);
+        UpdateHistories(data, move, depth, board->side, quiets, numQuiets);
         break;
       }
     }
   }
 
   // Checkmate detection using movecount
-  if (!moveList.count)
+  if (!totalMoves)
     return board->checkers ? -CHECKMATE + data->ply : 0;
 
   // don't let our score inflate too high (tb)
@@ -532,50 +549,49 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     return Evaluate(board, thread);
 
   // check the transposition table for previous info
-  int ttHit = 0;
+  int ttHit = 0, ttScore = UNKNOWN;
   TTEntry* tt = TTProbe(&ttHit, board->zobrist);
   // TT score pruning - no depth check required since everything in QS is depth 0
   if (ttHit) {
-    int ttScore = TTScore(tt, data->ply);
-    if ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
-        ((tt->flags & TT_UPPER) && ttScore <= alpha))
+    ttScore = TTScore(tt, data->ply);
+
+    if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
+                               ((tt->flags & TT_UPPER) && ttScore <= alpha)))
       return ttScore;
   }
 
+  Move bestMove = NULL_MOVE;
+  int origAlpha = alpha;
+  int bestScore = -CHECKMATE + data->ply;
+
   // pull cached eval if it exists
-  int eval = data->evals[data->ply] = (ttHit ? tt->eval : Evaluate(board, thread));
+  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
+  if (!ttHit)
+    TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 
   // can we use an improved evaluation from the tt?
-  if (ttHit) {
-    int ttEval = TTScore(tt, data->ply);
-    if (tt->flags & (ttEval > eval ? TT_LOWER : TT_UPPER))
-      eval = ttEval;
+  if (ttHit && ttScore != UNKNOWN) {
+    if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER))
+      eval = ttScore;
   }
 
   // stand pat
-  if (eval >= beta)
-    return eval;
+  if (!board->checkers) {
+    if (eval >= beta)
+      return eval;
 
-  if (eval > alpha)
-    alpha = eval;
+    if (eval > alpha)
+      alpha = eval;
 
-  int bestScore = eval;
-  Move bestMove = NULL_MOVE;
-  int origAlpha = alpha;
+    bestScore = eval;
+  }
 
-  MoveList moveList;
-  GenerateTacticalMoves(&moveList, board);
+  Move move;
+  MoveList moves;
+  InitTacticalMoves(&moves, data, alpha - eval - DELTA_CUTOFF);
 
-  for (int i = 0; i < moveList.count; i++) {
-    ChooseTopMove(&moveList, i);
-    Move move = moveList.moves[i];
-
-    // a delta prune look-a-like by Halogen
-    // prune based on SEE scores rather than flat mat val
-    if (eval + moveList.scores[i] + DELTA_CUTOFF < alpha)
-      break;
-
-    if (moveList.scores[i] < 0)
+  while ((move = NextMove(&moves, board, 1))) {
+    if (moves.phase > PLAY_GOOD_TACTICAL)
       break;
 
     data->moves[data->ply++] = move;
@@ -621,16 +637,16 @@ inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld hashfull %d time %lld score mate %d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, movesToMate);
+    printf("info depth %d seldepth %d score mate %d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
+           thread->data.seldepth, movesToMate, time, nodes, nps, tbhits, hashfull);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d  nodes %lld nps %lld tbhits %lld hashfull %d time %lld score mate -%d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, movesToMate);
+    printf("info depth %d seldepth %d score mate -%d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
+           thread->data.seldepth, movesToMate, time, nodes, nps, tbhits, hashfull);
   } else {
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld hashfull %d time %lld score cp %d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, score);
+    printf("info depth %d seldepth %d score cp %d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
+           thread->data.seldepth, score, time, nodes, nps, tbhits, hashfull);
   }
 
   if (pv->count)

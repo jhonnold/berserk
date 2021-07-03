@@ -21,40 +21,38 @@
 
 #define NO_ENTRY 0ULL
 #define MEGABYTE 0x100000ULL
-#define BUCKET_SIZE 3
+#define BUCKET_SIZE 4
 
 typedef struct {
-  uint8_t flags;
-  uint8_t depth;
-  int16_t eval;
-  int16_t score;
-  uint32_t hash;
-  Move move;
+  uint32_t hash, move;
+  int16_t eval, score;
+  int8_t depth;
+  uint8_t flags, age;
 } TTEntry;
 
 typedef struct {
-  uint16_t paddingLow;
   TTEntry entries[BUCKET_SIZE];
-  uint16_t paddingHigh;
 } TTBucket;
 
 typedef struct {
   TTBucket* buckets;
   uint64_t mask;
   uint64_t size;
+  uint8_t age;
 } TTTable;
 
-enum { TT_LOWER = 1, TT_UPPER = 2, TT_EXACT = 4 };
+enum { TT_UNKNOWN = 0, TT_LOWER = 1, TT_UPPER = 2, TT_EXACT = 4 };
 
 extern TTTable TT;
 
 size_t TTInit(int mb);
 void TTFree();
 void TTClear();
+void TTUpdate();
 void TTPrefetch(uint64_t hash);
 TTEntry* TTProbe(int* hit, uint64_t hash);
 int TTScore(TTEntry* e, int ply);
-void TTPut(uint64_t hash, uint8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval);
+void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval);
 int TTFull();
 
 #endif

@@ -19,6 +19,8 @@
 
 #include "types.h"
 
+extern const int MVV_LVA[12][12];
+
 extern const BitBoard PROMOTION_RANKS[];
 extern const BitBoard HOME_RANKS[];
 extern const BitBoard THIRD_RANKS[];
@@ -31,10 +33,8 @@ extern const int KILLER1_SCORE;
 extern const int KILLER2_SCORE;
 extern const int COUNTER_SCORE;
 
-void AppendMove(MoveList* moveList, Move move);
-void GenerateAllMoves(MoveList* moveList, Board* board, SearchData* data);
+void AppendMove(Move* arr, uint8_t* n, Move move);
+void GenerateQuietMoves(MoveList* moveList, Board* board);
 void GenerateTacticalMoves(MoveList* moveList, Board* board);
-void ChooseTopMove(MoveList* moveList, int from);
-void PrintMoves(MoveList* moveList);
 
 #endif

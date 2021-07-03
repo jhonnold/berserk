@@ -32,6 +32,16 @@ const BitBoard BOARD_SIDE[8] = {A_FILE | B_FILE | C_FILE,          A_FILE | B_FI
                                 E_FILE | F_FILE | G_FILE | H_FILE, F_FILE | G_FILE | H_FILE};
 const BitBoard MY_SIDE[2] = {RANK_1 | RANK_2 | RANK_3 | RANK_4, RANK_5 | RANK_6 | RANK_7 | RANK_8};
 
+const uint8_t SQ_SIDE[64] = {
+    QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, KING_SIDE, KING_SIDE, KING_SIDE, KING_SIDE,
+    QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, KING_SIDE, KING_SIDE, KING_SIDE, KING_SIDE,
+    QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, KING_SIDE, KING_SIDE, KING_SIDE, KING_SIDE,
+    QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, KING_SIDE, KING_SIDE, KING_SIDE, KING_SIDE,
+    QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, KING_SIDE, KING_SIDE, KING_SIDE, KING_SIDE,
+    QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, KING_SIDE, KING_SIDE, KING_SIDE, KING_SIDE,
+    QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, KING_SIDE, KING_SIDE, KING_SIDE, KING_SIDE,
+    QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, KING_SIDE, KING_SIDE, KING_SIDE, KING_SIDE};
+
 const BitBoard FORWARD_RANK_MASKS[2][8] = {{
                                                0ULL,
                                                RANK_8,
@@ -63,34 +73,6 @@ inline int bits(BitBoard bb) {
   return c;
 }
 #endif
-
-// Shifts a bitboard in a cardinal direction, with protection against off-the-board problems
-inline BitBoard Shift(BitBoard bb, int dir) {
-  switch (dir) {
-  case N:
-    return bb >> 8;
-  case S:
-    return bb << 8;
-  case (N + N):
-    return bb >> 16;
-  case (S + S):
-    return bb << 16;
-  case W:
-    return (bb & ~A_FILE) >> 1;
-  case E:
-    return (bb & ~H_FILE) << 1;
-  case NE:
-    return (bb & ~H_FILE) >> 7;
-  case SW:
-    return (bb & ~A_FILE) << 7;
-  case NW:
-    return (bb & ~A_FILE) >> 9;
-  case SE:
-    return (bb & ~H_FILE) << 9;
-  default:
-    return 0;
-  }
-}
 
 inline int popAndGetLsb(BitBoard* bb) {
   int sq = lsb(*bb);

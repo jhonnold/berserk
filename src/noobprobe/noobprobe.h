@@ -14,14 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef HISTORY_H
-#define HISTORY_H
+// NOOBPROBE IS WRITTEN BY Terje Kirstihagen (Weiss)
+// I take 0 credit for this code.
 
-#include "types.h"
+#include "../board.h"
+#include "../types.h"
 
-void AddKillerMove(SearchData* data, Move move);
-void AddCounterMove(SearchData* data, Move move, Move parent);
-void AddHistoryHeuristic(SearchData* data, Move move, int stm, int inc);
-void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ);
+extern int NOOB_BOOK;
+extern int NOOB_DEPTH_LIMIT;
+extern int failedQueries;
 
-#endif
+Move ProbeNoob(Board* board);

@@ -21,7 +21,7 @@
 #include "util.h"
 
 void AddKillerMove(SearchData* data, Move move) {
-  if (data->killers[data->ply][0] == move)
+  if (data->killers[data->ply][0] != move)
     data->killers[data->ply][1] = data->killers[data->ply][0];
 
   data->killers[data->ply][0] = move;
@@ -35,16 +35,17 @@ void AddHistoryHeuristic(SearchData* data, Move move, int stm, int inc) {
   *e += 64 * inc - *e * abs(inc) / 1024;
 }
 
-void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, MoveList* quiets) {
+void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ) {
   int inc = min(depth * depth, 576);
-  
+
   if (!Tactical(bestMove)) {
     AddKillerMove(data, bestMove);
-    AddCounterMove(data, bestMove, data->moves[data->ply - 1]);
+    if (data->ply > 0)
+      AddCounterMove(data, bestMove, data->moves[data->ply - 1]);
     AddHistoryHeuristic(data, bestMove, stm, inc);
   }
 
-  for (int i = 0; i < quiets->count; i++)
-    if (quiets->moves[i] != bestMove)
-      AddHistoryHeuristic(data, quiets->moves[i], stm, -inc);
+  for (int i = 0; i < nQ; i++)
+    if (quiets[i] != bestMove)
+      AddHistoryHeuristic(data, quiets[i], stm, -inc);
 }

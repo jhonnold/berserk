@@ -19,6 +19,11 @@
 
 #include "types.h"
 
+enum {
+  KING_SIDE,
+  QUEEN_SIDE
+};
+
 extern const BitBoard FILE_MASKS[8];
 extern const BitBoard RANK_MASKS[8];
 extern const BitBoard ADJACENT_FILE_MASKS[8];
@@ -27,6 +32,7 @@ extern const BitBoard BOARD_SIDE[8];
 extern const BitBoard MY_SIDE[2];
 extern const BitBoard DARK_SQS;
 extern const BitBoard CENTER_SQS;
+extern const uint8_t SQ_SIDE[64];
 
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL
@@ -47,10 +53,10 @@ extern const BitBoard CENTER_SQS;
 #define RANK_8 0x00000000000000FFULL
 
 #define bit(sq) (1ULL << (sq))
-#define setBit(bb, sq) (bb |= bit(sq))
-#define getBit(bb, sq) (bb & bit(sq))
-#define popBit(bb, sq) (bb &= ~bit(sq))
-#define popLsb(bb) (bb &= bb - 1)
+#define setBit(bb, sq) ((bb) |= bit(sq))
+#define getBit(bb, sq) ((bb) & bit(sq))
+#define popBit(bb, sq) ((bb) &= ~bit(sq))
+#define popLsb(bb) ((bb) &= (bb) - 1)
 #define lsb(bb) (__builtin_ctzll(bb))
 #define msb(bb) (63 ^ __builtin_clzll(bb))
 #define subset(a, b) (((a) & (b)) == (a))
@@ -61,8 +67,18 @@ int bits(BitBoard bb);
 #define bits(bb) (__builtin_popcountll(bb))
 #endif
 
+#define ShiftN(bb) ((bb) >> 8)
+#define ShiftS(bb) ((bb) << 8)
+#define ShiftNN(bb) ((bb) >> 16)
+#define ShiftSS(bb) ((bb) << 16)
+#define ShiftW(bb) (((bb) & ~A_FILE) >> 1)
+#define ShiftE(bb) (((bb) & ~H_FILE) << 1)
+#define ShiftNE(bb) (((bb) & ~H_FILE) >> 7)
+#define ShiftSW(bb) (((bb) & ~A_FILE) << 7)
+#define ShiftNW(bb) (((bb) & ~A_FILE) >> 9)
+#define ShiftSE(bb) (((bb) & ~H_FILE) << 9)
+
 int popAndGetLsb(BitBoard* bb);
-BitBoard Shift(BitBoard bb, int dir);
 BitBoard Fill(BitBoard initial, int direction);
 void PrintBB(BitBoard bb);
 

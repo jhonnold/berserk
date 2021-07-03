@@ -26,6 +26,9 @@
 
 // Static exchange evaluation using The Swap Algorithm - https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
 inline int SEE(Board* board, Move move) {
+  if (MoveCastle(move) || (!MoveCapture(move) && PIECE_TYPE[MovePiece(move)] == KING_TYPE))
+    return 0;
+
   BitBoard occupied = board->occupancies[BOTH];
   int side = board->side;
 
@@ -35,15 +38,18 @@ inline int SEE(Board* board, Move move) {
   int start = MoveStart(move);
   int end = MoveEnd(move);
 
-  BitBoard attackers = AttacksToSquare(board, end);
-  int attackedPieceVal = STATIC_MATERIAL_VALUE[PIECE_TYPE[board->squares[MoveEnd(move)]]];
+  BitBoard attackers = AttacksToSquare(board, end, board->occupancies[BOTH]);
+  int attackedPieceVal = MoveEP(move) ? STATIC_MATERIAL_VALUE[PAWN_TYPE]
+                                      : STATIC_MATERIAL_VALUE[PIECE_TYPE[board->squares[MoveEnd(move)]]];
+  popBit(occupied, start);
+  if (MoveEP(move))
+    popBit(occupied, end - PAWN_DIRECTIONS[side]);
 
   side ^= 1;
   gain[0] = attackedPieceVal;
 
   int piece = MovePiece(move);
   attackedPieceVal = STATIC_MATERIAL_VALUE[PIECE_TYPE[piece]];
-  popBit(occupied, start);
 
   // Recalculate attacks if xray now open
   if (PIECE_TYPE[piece] == PAWN_TYPE || PIECE_TYPE[piece] == BISHOP_TYPE || PIECE_TYPE[piece] == QUEEN_TYPE)

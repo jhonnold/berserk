@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #ifdef PEXT
-  #include <immintrin.h>
+#include <immintrin.h>
 #endif
 
 #include "attacks.h"
@@ -160,11 +160,11 @@ BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   setBit(board, sq);
 
   if (color == WHITE) {
-    attacks |= Shift(board, NW);
-    attacks |= Shift(board, NE);
+    attacks |= ShiftNW(board);
+    attacks |= ShiftNE(board);
   } else {
-    attacks |= Shift(board, SE);
-    attacks |= Shift(board, SW);
+    attacks |= ShiftSE(board);
+    attacks |= ShiftSW(board);
   }
 
   return attacks;
@@ -213,14 +213,14 @@ BitBoard GetGeneratedKingAttacks(int sq) {
 
   setBit(board, sq);
 
-  attacks |= Shift(board, N);
-  attacks |= Shift(board, NE);
-  attacks |= Shift(board, E);
-  attacks |= Shift(board, SE);
-  attacks |= Shift(board, S);
-  attacks |= Shift(board, SW);
-  attacks |= Shift(board, W);
-  attacks |= Shift(board, NW);
+  attacks |= ShiftN(board);
+  attacks |= ShiftNE(board);
+  attacks |= ShiftE(board);
+  attacks |= ShiftSE(board);
+  attacks |= ShiftS(board);
+  attacks |= ShiftSW(board);
+  attacks |= ShiftW(board);
+  attacks |= ShiftNW(board);
 
   return attacks;
 }
@@ -415,12 +415,12 @@ void InitBishopAttacks() {
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
 
-      #ifndef PEXT
+#ifndef PEXT
       int idx = (occupancy * BISHOP_MAGICS[sq]) >> (64 - bits);
       BISHOP_ATTACKS[sq][idx] = GetBishopAttacksOTF(sq, occupancy);
-      #else
+#else
       BISHOP_ATTACKS[sq][_pext_u64(occupancy, mask)] = GetBishopAttacksOTF(sq, occupancy);
-      #endif
+#endif
     }
   }
 }
@@ -434,12 +434,12 @@ void InitRookAttacks() {
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
 
-      #ifndef PEXT
+#ifndef PEXT
       int idx = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
       ROOK_ATTACKS[sq][idx] = GetRookAttacksOTF(sq, occupancy);
-      #else
+#else
       ROOK_ATTACKS[sq][_pext_u64(occupancy, mask)] = GetRookAttacksOTF(sq, occupancy);
-      #endif
+#endif
     }
   }
 }
@@ -469,27 +469,27 @@ inline BitBoard GetPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][s
 inline BitBoard GetKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
 
 inline BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
-  #ifndef PEXT
+#ifndef PEXT
   occupancy &= BISHOP_MASKS[sq];
   occupancy *= BISHOP_MAGICS[sq];
   occupancy >>= 64 - BISHOP_RELEVANT_BITS[sq];
 
   return BISHOP_ATTACKS[sq][occupancy];
-  #else
+#else
   return BISHOP_ATTACKS[sq][_pext_u64(occupancy, BISHOP_MASKS[sq])];
-  #endif
+#endif
 }
 
 inline BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
-  #ifndef PEXT
+#ifndef PEXT
   occupancy &= ROOK_MASKS[sq];
   occupancy *= ROOK_MAGICS[sq];
   occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];
 
   return ROOK_ATTACKS[sq][occupancy];
-  #else
+#else
   return ROOK_ATTACKS[sq][_pext_u64(occupancy, ROOK_MASKS[sq])];
-  #endif
+#endif
 }
 
 inline BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
@@ -499,17 +499,13 @@ inline BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
 inline BitBoard GetKingAttacks(int sq) { return KING_ATTACKS[sq]; }
 
 // get a bitboard of ALL pieces attacking a given square
-inline BitBoard AttacksToSquare(Board* board, int sq) {
-  BitBoard attacks = (GetPawnAttacks(sq, WHITE) & board->pieces[PAWN[BLACK]]) |
-                     (GetPawnAttacks(sq, BLACK) & board->pieces[PAWN[WHITE]]) |
-                     (GetKnightAttacks(sq) & (board->pieces[KNIGHT[WHITE]] | board->pieces[KNIGHT[BLACK]])) |
-                     (GetKingAttacks(sq) & (board->pieces[KING[WHITE]] | board->pieces[KING[BLACK]]));
-
-  attacks |=
-      GetBishopAttacks(sq, board->occupancies[BOTH]) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
-                                                        board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
-  attacks |= GetRookAttacks(sq, board->occupancies[BOTH]) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
-                                                             board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]);
-
-  return attacks;
+inline BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
+  return (GetPawnAttacks(sq, WHITE) & board->pieces[PAWN[BLACK]]) |
+         (GetPawnAttacks(sq, BLACK) & board->pieces[PAWN[WHITE]]) |
+         (GetKnightAttacks(sq) & (board->pieces[KNIGHT[WHITE]] | board->pieces[KNIGHT[BLACK]])) |
+         (GetKingAttacks(sq) & (board->pieces[KING[WHITE]] | board->pieces[KING[BLACK]])) |
+         (GetBishopAttacks(sq, occ) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
+                                       board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]])) |
+         (GetRookAttacks(sq, occ) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
+                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]));
 }

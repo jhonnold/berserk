@@ -20,7 +20,8 @@
 #include "types.h"
 
 // search specific score evals
-#define CHECKMATE INT16_MAX
+#define UNKNOWN 32257 // this must be higher than CHECKMATE (some conditional logic relies on this)
+#define CHECKMATE 32256
 #define MATE_BOUND 30000
 #define TB_WIN_BOUND 20000
 
@@ -32,7 +33,7 @@
 // static evaluation pruning
 // capture cutoff is linear 70x
 // quiet cutoff is quadratic 20x^2
-#define SEE_PRUNE_CAPTURE_CUTOFF 70
+#define SEE_PRUNE_CAPTURE_CUTOFF 90
 #define SEE_PRUNE_CUTOFF 20
 
 // delta pruning in QS

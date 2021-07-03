@@ -1,3 +1,19 @@
+// Berserk is a UCI compliant chess engine written in C
+// Copyright (C) 2021 Jay Honnold
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #include "pawns.h"
 #include "attacks.h"
 #include "bits.h"
@@ -14,6 +30,7 @@
 #endif
 
 extern EvalCoeffs C;
+extern int cs[2];
 
 inline PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread) {
   PawnHashEntry* entry = &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)];
@@ -40,9 +57,10 @@ Score PawnEval(Board* board, EvalData* data, int side) {
     int file = file(sq);
     int rank = rank(sq);
     int adjustedRank = side ? 7 - rank : rank;
+    int adjustedFile = file > 3 ? 7 - file : file;
 
     BitBoard opposed = board->pieces[PAWN[xside]] & FILE_MASKS[file] & FORWARD_RANK_MASKS[side][rank];
-    BitBoard doubled = board->pieces[PAWN[side]] & Shift(bb, PAWN_DIRECTIONS[xside]);
+    BitBoard doubled = board->pieces[PAWN[side]] & (side == WHITE ? ShiftS(bb) : ShiftN(bb));
     BitBoard neighbors = board->pieces[PAWN[side]] & ADJACENT_FILE_MASKS[file];
     BitBoard connected = neighbors & RANK_MASKS[rank];
     BitBoard defenders = board->pieces[PAWN[side]] & GetPawnAttacks(sq, xside);
@@ -51,49 +69,53 @@ Score PawnEval(Board* board, EvalData* data, int side) {
     int backwards = !(neighbors & FORWARD_RANK_MASKS[xside][rank(sq + PAWN_DIRECTIONS[side])]) && forwardLevers;
     BitBoard passerSpan = FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]);
     BitBoard antiPassers = board->pieces[xside] & passerSpan;
-    int passed = !antiPassers &&
+    int passed = (!antiPassers || !(antiPassers ^ levers)) &&
                  // make sure we don't double count passers
                  !(board->pieces[PAWN[side]] & FORWARD_RANK_MASKS[side][rank] & FILE_MASKS[file]);
+
+    s += DEFENDED_PAWN * bits(defenders);
+
+    if (T)
+      C.defendedPawns += cs[side] * bits(defenders);
 
     if (doubled) {
       s += DOUBLED_PAWN;
 
       if (T)
-        C.doubledPawns[side]++;
+        C.doubledPawns += cs[side];
     }
 
     if (!neighbors) {
-      s += opposed ? OPPOSED_ISOLATED_PAWN : OPEN_ISOLATED_PAWN;
+      s += ISOLATED_PAWN[adjustedFile] + !opposed * OPEN_ISOLATED_PAWN;
 
       if (T) {
-        if (opposed)
-          C.opposedIsolatedPawns[side]++;
-        else
-          C.openIsolatedPawns[side]++;
+        C.isolatedPawns[adjustedFile] += cs[side];
+        C.openIsolatedPawns += cs[side] * !opposed;
       }
     } else if (backwards) {
       s += BACKWARDS_PAWN;
 
       if (T)
-        C.backwardsPawns[side]++;
+        C.backwardsPawns += cs[side];
     } else if (defenders | connected) {
       int scalar = 2 + !!connected - !!opposed;
       s += CONNECTED_PAWN[adjustedRank] * scalar;
 
       if (T)
-        C.connectedPawn[side][adjustedRank] += scalar;
+        C.connectedPawn[adjustedRank] += cs[side] * scalar;
 
       // candidate passers are either in tension right now (and a push is all they need)
       // or a pawn 2 ranks down is stopping them, but our pawns can support it through
       if (!passed) {
-        int onlyInTension = !(antiPassers ^ levers);
         int enoughSupport = !(antiPassers ^ forwardLevers) && bits(connected) >= bits(forwardLevers);
 
-        if (onlyInTension | enoughSupport) {
-          s += CANDIDATE_PASSER[adjustedRank];
+        if (enoughSupport) {
+          s += CANDIDATE_PASSER[adjustedRank] + adjustedFile * CANDIDATE_EDGE_DISTANCE;
 
-          if (T)
-            C.candidatePasser[side][adjustedRank]++;
+          if (T) {
+            C.candidatePasser[adjustedRank] += cs[side];
+            C.candidateEdgeDistance += cs[side] * adjustedFile;
+          }
         }
       }
     }
@@ -123,8 +145,8 @@ Score PasserEval(Board* board, EvalData* data, int side) {
     s += PASSED_PAWN[adjustedRank] + PASSED_PAWN_EDGE_DISTANCE * adjustedFile;
 
     if (T) {
-      C.passedPawn[side][adjustedRank]++;
-      C.passedPawnEdgeDistance[side] += adjustedFile;
+      C.passedPawn[adjustedRank] += cs[side];
+      C.passedPawnEdgeDistance += cs[side] * adjustedFile;
     }
 
     int advSq = sq + PAWN_DIRECTIONS[side];
@@ -137,17 +159,44 @@ Score PasserEval(Board* board, EvalData* data, int side) {
       s += PASSED_PAWN_KING_PROXIMITY * min(4, max(opponentDistance - myDistance, -4));
 
       if (T)
-        C.passedPawnKingProximity[side] += min(4, max(opponentDistance - myDistance, -4));
+        C.passedPawnKingProximity += cs[side] * min(4, max(opponentDistance - myDistance, -4));
+
+      BitBoard behind =
+          GetRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] & FORWARD_RANK_MASKS[xside][rank];
+      BitBoard enemySliderBehind = behind & (board->pieces[ROOK[xside]] | board->pieces[QUEEN[xside]]);
+
+      if (enemySliderBehind) {
+        s += PASSED_PAWN_ENEMY_SLIDER_BEHIND;
+
+        if (T)
+          C.passedPawnEnemySliderBehind += cs[side];
+      }
 
       if (!(board->occupancies[xside] & advance)) {
-        BitBoard pusher = GetRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] &
-                          FORWARD_RANK_MASKS[xside][rank] & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
+        BitBoard pusher = behind & (board->pieces[ROOK[side]] | board->pieces[QUEEN[side]]);
+        BitBoard advTwoAtx = advance & (pusher ? data->allAttacks[side] : data->twoAttacks[side]);
+        BitBoard advOneAtx = pusher ? advance : advance & data->allAttacks[side];
+        BitBoard advPawnSupp = advance & data->attacks[side][PAWN_TYPE];
 
-        if (pusher | (data->allAttacks[side] & advance)) {
-          s += PASSED_PAWN_ADVANCE_DEFENDED;
+        int safeAdvance =
+            advPawnSupp || advTwoAtx || !(data->allAttacks[xside] & advance) || (advOneAtx & ~data->twoAttacks[xside]);
+
+        if (safeAdvance) {
+          s += PASSED_PAWN_ADVANCE_DEFENDED[adjustedRank];
 
           if (T)
-            C.passedPawnAdvance[side]++;
+            C.passedPawnAdvance[adjustedRank] += cs[side];
+        }
+
+        // pawns only board
+        if (board->piecesCounts < 0x100) {
+          int promoSq = side == WHITE ? file(sq) : A1 + file(sq);
+          if (min(5, distance(sq, promoSq)) < distance(data->kingSq[xside], promoSq) - (board->side == xside)) {
+            s += PASSED_PAWN_SQ_RULE;
+
+            if (T)
+              C.passedPawnSqRule += cs[side];
+          }
         }
       }
     }

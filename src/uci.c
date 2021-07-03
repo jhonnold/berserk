@@ -23,16 +23,18 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
+#include "movepick.h"
+#include "noobprobe/noobprobe.h"
 #include "perft.h"
+#include "pyrrhic/tbprobe.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
 #include "uci.h"
 #include "util.h"
-#include "pyrrhic/tbprobe.h"
 
 #define NAME "Berserk"
-#define VERSION "4.2.0"
+#define VERSION "4.3.0"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -85,6 +87,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
     params->timeset = 1;
+    params->timeToSpend = moveTime - MOVE_BUFFER;
     params->endTime = params->startTime + moveTime - MOVE_BUFFER;
     params->maxTime = params->startTime + moveTime - MOVE_BUFFER;
   } else {
@@ -138,10 +141,8 @@ void ParsePosition(char* in, Board* board) {
   ptrChar = strstr(in, "moves");
   Move enteredMove;
 
-  if (ptrChar == NULL) {
-    PrintBoard(board);
+  if (ptrChar == NULL)
     return;
-  }
 
   ptrChar += 6;
   while (*ptrChar) {
@@ -154,8 +155,6 @@ void ParsePosition(char* in, Board* board) {
       ptrChar++;
     ptrChar++;
   }
-
-  PrintBoard(board);
 }
 
 void PrintUCIOptions() {
@@ -163,6 +162,8 @@ void PrintUCIOptions() {
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 65536\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
+  printf("option name NoobBookLimit type spin default 8 min 0 max 32\n");
+  printf("option name NoobBook type check default false\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("uciok\n");
 }
@@ -202,6 +203,7 @@ void UCILoop() {
       ParsePosition("position startpos\n", &board);
       TTClear();
       ResetThreadPool(&board, &searchParameters, threads);
+      failedQueries = 0;
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
     } else if (!strncmp(in, "stop", 4)) {
@@ -217,14 +219,7 @@ void UCILoop() {
       Score s = Evaluate(&board, &threads[0]);
       printf("Score: %dcp\n", s);
     } else if (!strncmp(in, "moves", 5)) {
-      // Print possible moves. If a search has been run and stopped, it will
-      // print the moves in the order in which they would be searched on the
-      // next iteration. This has been very helpful to debug move ordering
-      // related problems.
-
-      MoveList moveList;
-      GenerateAllMoves(&moveList, &board, &threads->data);
-      PrintMoves(&moveList);
+      PrintMoves(&board, threads);
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
       mb = max(4, min(65536, mb));
@@ -241,10 +236,17 @@ void UCILoop() {
         printf("info string set SyzygyPath to value %s\n", in + 32);
       else
         printf("info string FAILED!\n");
+    } else if (!strncmp(in, "setoption name NoobBookLimit value ", 35)) {
+      NOOB_DEPTH_LIMIT = min(32, max(0, GetOptionIntValue(in)));
+      printf("info string set NoobBookLimit to value %d\n", NOOB_DEPTH_LIMIT);
+    } else if (!strncmp(in, "setoption name NoobBook value ", 30)) {
+      char opt[5];
+      sscanf(in, "%*s %*s %*s %*s %5s", opt);
+
+      NOOB_BOOK = !strncmp(opt, "true", 4);
+      printf("info string set NoobBook to value %s\n", NOOB_BOOK ? "true" : "false");
     }
   }
-
-  free(threads);
 }
 
 int GetOptionIntValue(char* in) {

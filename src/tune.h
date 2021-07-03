@@ -1,3 +1,19 @@
+// Berserk is a UCI compliant chess engine written in C
+// Copyright (C) 2021 Jay Honnold
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 #ifdef TUNE
 
 #ifndef TUNE_H
@@ -7,8 +23,9 @@
 
 #include "types.h"
 
-#define EPD_FILE_PATH "/Users/jhonnold/Downloads/texel-set-clean.epd"
-#define THREADS 1
+#define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\lichess-big3-resolved.book"
+#define THREADS 4
+#define TUNE_KS 0
 
 typedef struct {
   int epoch;
@@ -24,18 +41,19 @@ typedef struct {
 } Weight;
 
 typedef struct {
-  Weight material[5];
+  Weight pieces[5];
+  Weight psqt[6][2][32];
   Weight bishopPair;
 
-  Weight psqt[6][32];
-  Weight knightPostPsqt[32];
-  Weight bishopPostPsqt[32];
+  Weight knightPostPsqt[12];
+  Weight bishopPostPsqt[12];
 
   Weight knightMobilities[9];
   Weight bishopMobilities[14];
   Weight rookMobilities[15];
   Weight queenMobilities[28];
 
+  Weight minorBehindPawn;
   Weight knightPostReachable;
   Weight bishopPostReachable;
   Weight bishopTrapped;
@@ -45,38 +63,48 @@ typedef struct {
   Weight rookOpenFile;
   Weight rookSemiOpen;
 
+  Weight defendedPawns;
   Weight doubledPawns;
-  Weight opposedIsolatedPawns;
+  Weight isolatedPawns[4];
   Weight openIsolatedPawns;
   Weight backwardsPawns;
   Weight connectedPawn[8];
   Weight candidatePasser[8];
+  Weight candidateEdgeDistance;
 
   Weight passedPawn[8];
   Weight passedPawnEdgeDistance;
   Weight passedPawnKingProximity;
-  Weight passedPawnAdvance;
+  Weight passedPawnAdvance[5];
+  Weight passedPawnEnemySliderBehind;
+  Weight passedPawnSqRule;
 
   Weight knightThreats[6];
   Weight bishopThreats[6];
   Weight rookThreats[6];
-  Weight kingThreats[6];
+  Weight kingThreat;
   Weight pawnThreat;
   Weight pawnPushThreat;
   Weight hangingThreat;
 
-  Weight ksAttackerWeight[5];
-  Weight ksSafeCheck;
-  Weight ksUnsafeCheck;
-  Weight ksSqAttack;
-  Weight ksWeak;
-  Weight ksEnemyQueen;
-  Weight ksKnightDefender;
+  Weight space[17];
 
-  Weight ksPawnShelter[4][8];
-  Weight ksPawnStorm[4][8];
-  Weight ksBlocked[8];
-  Weight ksFile[4];
+  Weight imbalance[5][5];
+
+  Weight pawnShelter[4][8];
+  Weight pawnStorm[4][8];
+  Weight blockedPawnStorm[8];
+
+  Weight ksAttackerWeight[5];
+  Weight ksWeakSqs;
+  Weight ksPinned;
+  Weight ksKnightCheck;
+  Weight ksBishopCheck;
+  Weight ksRookCheck;
+  Weight ksQueenCheck;
+  Weight ksUnsafeCheck;
+  Weight ksEnemyQueen;
+  Weight ksKnightDefense;
 } Weights;
 
 typedef struct {
@@ -91,6 +119,11 @@ typedef struct {
 } Position;
 
 typedef struct {
+  float wDanger;
+  float bDanger;
+} KSGradient;
+
+typedef struct {
   float error;
   int n;
   Position* positions;
@@ -100,10 +133,13 @@ typedef struct {
 void Tune();
 
 void ValidateEval(int n, Position* positions, Weights* weights);
-void DetermineK(int n, Position* positions);
+void ComputeK(int n, Position* positions);
+double TotalStaticError(int n, Position* positions);
 
 void UpdateParam(Param* p);
+void UpdateWeight(Weight* w);
 void UpdateWeights(Weights* weights);
+void MergeWeightGradients(Weight* dest, Weight* src);
 double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights);
 
 void* UpdateGradients(void* arg);
@@ -116,8 +152,11 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights);
 void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights);
+void UpdateSpaceGradients(Position* position, double loss, Weights* weights);
+void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights, KSGradient* ks);
 
-double EvaluateCoeffs(Position* position, Weights* weights);
+void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w);
+double EvaluateCoeffs(Position* position, Weights* weights, KSGradient* ks);
 void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights* weights);
@@ -127,6 +166,8 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights);
 void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights);
+void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* weights);
+void EvaluateKingSafetyValues(double* mg, double* eg, Position* position, Weights* weights, KSGradient* ks);
 
 void InitMaterialWeights(Weights* weights);
 void InitPsqtWeights(Weights* weights);
@@ -138,9 +179,11 @@ void InitPieceBonusWeights(Weights* weights);
 void InitPawnBonusWeights(Weights* weights);
 void InitPasserBonusWeights(Weights* weights);
 void InitPawnShelterWeights(Weights* weights);
+void InitSpaceWeights(Weights* weights);
+void InitKingSafetyWeights(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
-Position* LoadPositions(int* n);
+Position* LoadPositions(int* n, Weights* weights);
 
 double Sigmoid(double s);
 
