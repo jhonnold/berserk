@@ -364,7 +364,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
   }
 
-  Move quiets[64] = {0};
+  Move quiets[64];
   int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0, skipQuiets = 0;
   InitAllMoves(&moves, hashMove, data);
 
@@ -498,7 +498,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(data, move, depth, board->side, &quiets, numQuiets);
+        UpdateHistories(data, move, depth, board->side, quiets, numQuiets);
         break;
       }
     }
