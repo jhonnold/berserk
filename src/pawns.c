@@ -171,6 +171,17 @@ Score PasserEval(Board* board, EvalData* data, int side) {
           if (T)
             C.passedPawnAdvance[adjustedRank] += cs[side];
         }
+
+        // pawns only board
+        if (board->piecesCounts < 0x100) {
+          int promoSq = side == WHITE ? file(sq) : A1 + file(sq);
+          if (min(5, distance(sq, promoSq)) < distance(data->kingSq[xside], promoSq) - (board->side == xside)) {
+            s += PASSED_PAWN_SQ_RULE;
+
+            if (T)
+              C.passedPawnSqRule += cs[side];
+          }
+        }
       }
     }
 
