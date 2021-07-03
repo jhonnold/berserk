@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "board.h"
 #include "eval.h"
@@ -636,16 +637,16 @@ inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld hashfull %d time %lld score mate %d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, movesToMate);
+    printf("info depth %d seldepth %d score mate %d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
+           thread->data.seldepth, movesToMate, time, nodes, nps, tbhits, hashfull);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d  nodes %lld nps %lld tbhits %lld hashfull %d time %lld score mate -%d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, movesToMate);
+    printf("info depth %d seldepth %d score mate -%d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
+           thread->data.seldepth, movesToMate, time, nodes, nps, tbhits, hashfull);
   } else {
-    printf("info depth %d seldepth %d nodes %lld nps %lld tbhits %lld hashfull %d time %lld score cp %d pv ", depth,
-           thread->data.seldepth, nodes, nps, tbhits, hashfull, time, score);
+    printf("info depth %d seldepth %d score cp %d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
+           thread->data.seldepth, score, time, nodes, nps, tbhits, hashfull);
   }
 
   if (pv->count)

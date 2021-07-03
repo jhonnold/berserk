@@ -24,5 +24,6 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads);
 void ResetThreadPool(Board* board, SearchParams* params, ThreadData* threads);
 uint64_t NodesSearched(ThreadData* threads);
 uint64_t TBHits(ThreadData* threads);
+uint64_t Seldepth(ThreadData* threads);
 
 #endif
