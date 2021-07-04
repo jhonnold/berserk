@@ -36,6 +36,7 @@ void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move q
   int inc = min(depth * depth, 576);
 
   Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
+  Move grandParent = data->ply > 1 ? data->moves[data->ply - 2] : NULL_MOVE;
 
   if (!Tactical(bestMove)) {
     AddKillerMove(data, bestMove);
@@ -47,6 +48,11 @@ void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move q
           &data->ch[PIECE_TYPE[MovePiece(parent)]][MoveEnd(parent)][PIECE_TYPE[MovePiece(bestMove)]][MoveEnd(bestMove)],
           inc);
     }
+
+    if (grandParent)
+      AddHistoryHeuristic(&data->fh[PIECE_TYPE[MovePiece(grandParent)]][MoveEnd(grandParent)]
+                                   [PIECE_TYPE[MovePiece(bestMove)]][MoveEnd(bestMove)],
+                          inc);
   }
 
   for (int i = 0; i < nQ; i++) {
@@ -56,6 +62,10 @@ void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move q
       if (parent)
         AddHistoryHeuristic(
             &data->ch[PIECE_TYPE[MovePiece(parent)]][MoveEnd(parent)][PIECE_TYPE[MovePiece(m)]][MoveEnd(m)], -inc);
+      if (grandParent)
+        AddHistoryHeuristic(
+            &data->fh[PIECE_TYPE[MovePiece(grandParent)]][MoveEnd(grandParent)][PIECE_TYPE[MovePiece(m)]][MoveEnd(m)],
+            -inc);
     }
   }
 }
@@ -69,6 +79,11 @@ int GetHistory(SearchData* data, Move move, int stm) {
   Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
   if (parent)
     history += data->ch[PIECE_TYPE[MovePiece(parent)]][MoveEnd(parent)][PIECE_TYPE[MovePiece(move)]][MoveEnd(move)];
+
+  Move grandParent = data->ply > 1 ? data->moves[data->ply - 2] : NULL_MOVE;
+  if (grandParent)
+    history +=
+        data->fh[PIECE_TYPE[MovePiece(grandParent)]][MoveEnd(grandParent)][PIECE_TYPE[MovePiece(move)]][MoveEnd(move)];
 
   return history;
 }
