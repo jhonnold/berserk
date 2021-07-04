@@ -15,13 +15,14 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
+
 
 #include "board.h"
 #include "eval.h"
@@ -378,7 +379,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     int tactical = !!Tactical(move);
     int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
-    int hist = !tactical ? data->hh[board->side][MoveStartEnd(move)] : 0;
+    int hist = !tactical ? GetHistory(data, move, board->side) : 0;
 
     if (bestScore > -MATE_BOUND && depth <= 8 && totalMoves >= LMP[improving][depth])
       skipQuiets = 1;
@@ -637,16 +638,19 @@ inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
   if (score > MATE_BOUND) {
     int movesToMate = (CHECKMATE - score) / 2 + ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d score mate %d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
-           thread->data.seldepth, movesToMate, time, nodes, nps, tbhits, hashfull);
+    printf("info depth %d seldepth %d score mate %d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64
+           " hashfull %d pv ",
+           depth, thread->data.seldepth, movesToMate, time, nodes, nps, tbhits, hashfull);
   } else if (score < -MATE_BOUND) {
     int movesToMate = (CHECKMATE + score) / 2 - ((CHECKMATE - score) & 1);
 
-    printf("info depth %d seldepth %d score mate -%d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
-           thread->data.seldepth, movesToMate, time, nodes, nps, tbhits, hashfull);
+    printf("info depth %d seldepth %d score mate -%d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64
+           " hashfull %d pv ",
+           depth, thread->data.seldepth, movesToMate, time, nodes, nps, tbhits, hashfull);
   } else {
-    printf("info depth %d seldepth %d score cp %d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64 " hashfull %d pv ", depth,
-           thread->data.seldepth, score, time, nodes, nps, tbhits, hashfull);
+    printf("info depth %d seldepth %d score cp %d time %" PRId64 " nodes %" PRId64 " nps %" PRId64 " tbhits %" PRId64
+           " hashfull %d pv ",
+           depth, thread->data.seldepth, score, time, nodes, nps, tbhits, hashfull);
   }
 
   if (pv->count)

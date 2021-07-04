@@ -105,6 +105,7 @@ typedef struct {
   Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply
   Move counters[64 * 64];          // counter move butterfly table
   int hh[2][64 * 64];              // history heuristic butterfly table (side)
+  int ch[6][64][6][64];
 } SearchData;
 
 typedef struct {

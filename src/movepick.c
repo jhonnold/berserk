@@ -18,6 +18,7 @@
 
 #include "board.h"
 #include "eval.h"
+#include "history.h"
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
@@ -134,7 +135,7 @@ void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = data->hh[board->side][MoveStartEnd(m)];
+    moves->sQuiet[i] = GetHistory(data, m, board->side);
   }
 }
 
