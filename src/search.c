@@ -459,7 +459,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
           R++;
 
         // adjust reduction based on historical score
-        R -= hist / 16384;
+        R -= hist / 24576;
       } else {
         R--;
       }
