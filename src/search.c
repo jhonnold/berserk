@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "board.h"
 #include "eval.h"
 #include "history.h"
@@ -423,6 +422,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       if (score < sBeta)
         extension = 1 + (!isPV && score < sBeta - 50);
     }
+
+    if (!extension && !isRoot && depth >= 8 && ttHit && move == tt->move && hist >= 98304)
+      extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
