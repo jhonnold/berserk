@@ -423,6 +423,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         extension = 1 + (!isPV && score < sBeta - 50);
     }
 
+    // history extension - if the tt move has a really good history score, extend.
+    // thank you to Connor, author of Seer for this idea
     if (!extension && !isRoot && depth >= 8 && ttHit && move == tt->move && hist >= 98304)
       extension = 1;
 
