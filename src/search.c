@@ -392,8 +392,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       skipQuiets = 1;
 
     // counter move history pruning
-    if (bestScore > -MATE_BOUND && !Tactical(move) && !specialQuiet && depth <= 2 &&
-        counterHist <= -1024 * depth * (depth + improving))
+    if (bestScore > -MATE_BOUND && !tactical && !specialQuiet && depth <= 2 && counterHist <= -4096 * depth)
       continue;
 
     // Static evaluation pruning, this applies for both quiet and tactical moves
