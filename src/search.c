@@ -312,7 +312,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 6 && eval - RFP[depth] >= beta && eval < MATE_BOUND)
+    if (depth <= 6 && !skipMove && eval - RFP[depth] >= beta && eval < MATE_BOUND)
       return eval;
 
     // Null move pruning
