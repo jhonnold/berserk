@@ -290,7 +290,14 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     depth--;
 
   // pull previous static eval from tt - this is depth independent
-  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
+  int eval;
+  if (!skipMove) {
+    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
+  } else {
+    // after se, just used already determined eval
+    eval = data->evals[data->ply];
+  }
+
   if (!ttHit)
     TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 
