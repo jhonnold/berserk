@@ -87,3 +87,12 @@ int GetHistory(SearchData* data, Move move, int stm) {
 
   return history;
 }
+
+int GetCounterHistory(SearchData* data, Move move) {
+  if (Tactical(move))
+    return 0; // TODO: Capture history
+
+  Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
+  return parent ? data->ch[PIECE_TYPE[MovePiece(parent)]][MoveEnd(parent)][PIECE_TYPE[MovePiece(move)]][MoveEnd(move)]
+                : 0;
+}

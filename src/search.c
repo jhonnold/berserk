@@ -386,9 +386,15 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     int tactical = !!Tactical(move);
     int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
     int hist = !tactical ? GetHistory(data, move, board->side) : 0;
+    int counterHist = !tactical ? GetCounterHistory(data, move) : 0;
 
     if (bestScore > -MATE_BOUND && depth <= 8 && totalMoves >= LMP[improving][depth])
       skipQuiets = 1;
+
+    // counter move history pruning
+    if (bestScore > -MATE_BOUND && !Tactical(move) && !specialQuiet && depth <= 2 &&
+        counterHist <= -1024 * depth * (depth + improving))
+      continue;
 
     // Static evaluation pruning, this applies for both quiet and tactical moves
     // quiet moves use a quadratic scale upwards
