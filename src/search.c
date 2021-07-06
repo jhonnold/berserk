@@ -434,16 +434,16 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    if (!extension && !isRoot && depth >= 8 && ttHit && move == tt->move && hist >= 98304)
+    else if (!isRoot && depth >= 8 && ttHit && move == tt->move && hist >= 98304)
       extension = 1;
 
     // castle extensions
-    if (!extension && MoveCastle(move))
+    else if (MoveCastle(move))
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
-    if (!extension && isPV && !isRoot) {
+    else if (isPV && !isRoot) {
       Move parentMove = data->moves[data->ply - 1];
 
       if (!(MoveCapture(parentMove) ^ MoveCapture(move)) && MoveEnd(parentMove) == MoveEnd(move))
