@@ -947,7 +947,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   s += Imbalance(board, WHITE) - Imbalance(board, BLACK);
 
-  if (T || abs(scoreMG(s) + scoreEG(s)) / 2 < 640) {
+  if (T || abs(scoreMG(s) + scoreEG(s)) / 2 < 1024) {
     s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
     s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
     s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
