@@ -443,12 +443,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
-    else if (isPV && !isRoot) {
-      Move parentMove = data->moves[data->ply - 1];
-
-      if (!(MoveCapture(parentMove) ^ MoveCapture(move)) && MoveEnd(parentMove) == MoveEnd(move))
-        extension = 1;
-    }
+    else if (isPV && !isRoot && IsRecapture(data, move))
+      extension = 1;
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);
