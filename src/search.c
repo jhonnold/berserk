@@ -136,6 +136,7 @@ void* Search(void* arg) {
       // delta is our window for search. early depths get full searches
       // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
       // vary this slightly based on the previous depths window expansion count
+      int searchDepth = depth;
       int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW : CHECKMATE;
 
       expands = 0;
@@ -144,7 +145,7 @@ void* Search(void* arg) {
 
       while (!params->stopped) {
         // search!
-        score = Negamax(alpha, beta, depth, thread, pv);
+        score = Negamax(alpha, beta, searchDepth, thread, pv);
 
         if (mainThread && ((GetTimeMS() - 2500 >= params->startTime) || (score > alpha && score < beta)))
           PrintInfo(pv, score, depth, thread);
@@ -153,8 +154,13 @@ void* Search(void* arg) {
           // adjust beta downward when failing low
           beta = (alpha + beta) / 2;
           alpha = max(alpha - delta, -CHECKMATE);
+
+          searchDepth = depth;
         } else if (score >= beta) {
           beta = min(beta + delta, CHECKMATE);
+
+          if (abs(score) < TB_WIN_BOUND)
+            searchDepth--;
         } else
           break;
 
