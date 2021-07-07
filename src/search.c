@@ -389,7 +389,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     int counterHist = !tactical ? GetCounterHistory(data, move) : 0;
 
     if (bestScore > -MATE_BOUND) {
-      if (depth <= 8 && totalMoves >= LMP[improving][depth])
+      if (totalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
       if (!tactical && !specialQuiet && depth < 3 && counterHist <= -8192)
