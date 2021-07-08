@@ -83,7 +83,7 @@ const int NUM_BENCH_POSITIONS = 50;
 
 void Bench() {
   Board board;
-  SearchParams params = {.depth = 13, .timeset = 0, .stopped = 0, .quit = 0, .endTime = 0};
+  SearchParams params = {.depth = 13};
   ThreadData* threads = CreatePool(1);
 
   Move bestMoves[NUM_BENCH_POSITIONS];
@@ -96,13 +96,13 @@ void Bench() {
     TTClear();
     ResetThreadPool(&board, &params, threads);
 
-    params.startTime = GetTimeMS();
+    params.start = GetTimeMS();
 
     ParseFen(benchmarks[i], &board);
 
     BestMove(&board, &params, threads);
 
-    times[i] = GetTimeMS() - params.startTime;
+    times[i] = GetTimeMS() - params.start;
     bestMoves[i] = threads[0].data.bestMove;
     scores[i] = threads[0].data.score;
     nodes[i] = threads[0].data.nodes;

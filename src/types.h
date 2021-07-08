@@ -182,13 +182,12 @@ typedef struct {
 } EvalCoeffs;
 
 typedef struct {
-  long startTime;
-  long endTime;
-  long maxTime;
-  int timeToSpend;
+  long start;
+  int alloc;
+  int max;
 
-  int depth;
   int timeset;
+  int depth;
   int movesToGo;
   int stopped;
   int quit;
