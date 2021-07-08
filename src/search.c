@@ -35,7 +35,6 @@
 #include "see.h"
 #include "tb.h"
 #include "thread.h"
-#include "timeman.h"
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
@@ -126,7 +125,6 @@ void* Search(void* arg) {
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
   int score = 0;
-  int expands = 0;
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
@@ -139,7 +137,6 @@ void* Search(void* arg) {
       int searchDepth = depth;
       int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW : CHECKMATE;
 
-      expands = 0;
       alpha = max(score - delta, -CHECKMATE);
       beta = min(score + delta, CHECKMATE);
 
@@ -147,7 +144,7 @@ void* Search(void* arg) {
         // search!
         score = Negamax(alpha, beta, searchDepth, thread, pv);
 
-        if (mainThread && ((GetTimeMS() - 2500 >= params->startTime) || (score > alpha && score < beta)))
+        if (mainThread && ((GetTimeMS() - 2500 >= params->start) || (score > alpha && score < beta)))
           PrintInfo(pv, score, depth, thread);
 
         if (score <= alpha) {
@@ -166,11 +163,14 @@ void* Search(void* arg) {
 
         // delta x 1.5
         delta += delta / 2;
-        expands++;
       }
 
-      if (mainThread)
-        UpdateTimeParams(params, data->score, score, expands, depth);
+      if (mainThread && depth >= 5 && params->timeset && abs(data->score - score) > WINDOW) {
+        if (data->score > score)
+          params->alloc *= fmin(1.16, 1.04 * ((data->score - score) / WINDOW));
+        else
+          params->alloc *= fmin(1.04, 1.02 * ((score - data->score) / WINDOW));
+      }
 
       data->bestMove = pv->moves[0];
       data->score = score;
@@ -214,7 +214,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
   // 1Mnps ~1ms
-  if (params->stopped || (!(data->nodes & 1023) && params->timeset && GetTimeMS() > params->endTime))
+  if (params->stopped ||
+      (!(data->nodes & 1023) && params->timeset && GetTimeMS() - params->start > min(params->alloc, params->max)))
     longjmp(thread->exit, 1);
 
   if (!isRoot) {
@@ -410,7 +411,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     nonPrunedMoves++;
 
-    if (isRoot && !thread->idx && GetTimeMS() - 2500 >= params->startTime)
+    if (isRoot && !thread->idx && GetTimeMS() - params->start > 2500)
       printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move), nonPrunedMoves);
 
     if (!tactical)
@@ -555,7 +556,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
   // 1Mnps ~1ms
-  if (params->stopped || ((data->nodes & 1023) == 0 && params->timeset && GetTimeMS() > params->endTime))
+  if (params->stopped ||
+      (!(data->nodes & 1023) && params->timeset && GetTimeMS() - params->start > min(params->alloc, params->max)))
     longjmp(thread->exit, 1);
 
   // draw check
@@ -648,7 +650,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 inline void PrintInfo(PV* pv, int score, int depth, ThreadData* thread) {
   uint64_t nodes = NodesSearched(thread->threads);
   uint64_t tbhits = TBHits(thread->threads);
-  uint64_t time = GetTimeMS() - thread->params->startTime;
+  uint64_t time = GetTimeMS() - thread->params->start;
   uint64_t nps = 1000 * nodes / max(time, 1);
   int hashfull = TTFull();
 
