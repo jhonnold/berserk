@@ -97,7 +97,7 @@ extern const Score TEMPO;
 extern const Score PAWN_SHELTER[4][8];
 extern const Score PAWN_STORM[4][8];
 extern const Score BLOCKED_PAWN_STORM[8];
-extern const Score KS_KING_FILE[4];
+extern const Score CAN_CASTLE;
 
 extern const Score KS_ATTACKER_WEIGHTS[5];
 extern const Score KS_PINNED;

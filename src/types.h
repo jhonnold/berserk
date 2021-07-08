@@ -163,6 +163,7 @@ typedef struct {
   int8_t pawnShelter[4][8];
   int8_t pawnStorm[4][8];
   int8_t blockedPawnStorm[8];
+  int8_t castlingRights;
   
   int ks;
   int danger[2];
