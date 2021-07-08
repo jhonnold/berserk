@@ -87,7 +87,7 @@ typedef struct {
   Weight pawnPushThreat;
   Weight hangingThreat;
 
-  Weight space[17];
+  Weight space;
 
   Weight imbalance[5][5];
 
