@@ -108,7 +108,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   if (depth <= 0)
     params->depth = MAX_SEARCH_PLY - 1;
 
-  printf("time %d start %d alloc %d depth %d timeset %d\n", time, params->start, params->alloc, params->depth,
+  printf("time %d start %ld alloc %d depth %d timeset %d\n", time, params->start, params->alloc, params->depth,
          params->timeset);
 
   // this MUST be freed from within the search, or else massive leak

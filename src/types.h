@@ -182,7 +182,7 @@ typedef struct {
 } EvalCoeffs;
 
 typedef struct {
-  int start;
+  long start;
   int alloc;
   int max;
 
