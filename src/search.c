@@ -463,7 +463,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
 
       if (specialQuiet) {
-        R = min(2, R);
+        R = min(3, R);
       } else if (!tactical) {
         // increase reduction on non-pv
         if (!isPV)
