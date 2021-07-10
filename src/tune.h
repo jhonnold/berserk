@@ -24,7 +24,7 @@
 #include "types.h"
 
 #define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\lichess-big3-resolved.book"
-#define THREADS 4
+#define THREADS 24
 #define TUNE_KS 0
 
 typedef struct {
@@ -87,13 +87,14 @@ typedef struct {
   Weight pawnPushThreat;
   Weight hangingThreat;
 
-  Weight space[17];
+  Weight space;
 
   Weight imbalance[5][5];
 
   Weight pawnShelter[4][8];
   Weight pawnStorm[4][8];
   Weight blockedPawnStorm[8];
+  Weight castlingRights;
 
   Weight ksAttackerWeight[5];
   Weight ksWeakSqs;

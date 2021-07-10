@@ -18,6 +18,7 @@
 
 #include "board.h"
 #include "eval.h"
+#include "history.h"
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
@@ -36,7 +37,9 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->hashMove = hashMove;
   moves->killer1 = data->killers[data->ply][0];
   moves->killer2 = data->killers[data->ply][1];
-  moves->counter = data->ply ? data->counters[MoveStartEnd(data->moves[data->ply - 1])] : NULL_MOVE;
+
+  Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
+  moves->counter = parent ? data->counters[MoveStartEnd(parent)] : NULL_MOVE;
 
   moves->data = data;
 }
@@ -132,7 +135,7 @@ void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = data->hh[board->side][MoveStartEnd(m)];
+    moves->sQuiet[i] = GetHistory(data, m, board->side);
   }
 }
 

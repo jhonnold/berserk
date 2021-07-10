@@ -34,18 +34,18 @@
 #include "util.h"
 
 #define NAME "Berserk"
-#define VERSION "4.3.0"
+#define VERSION "4.4.0"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-#define MOVE_BUFFER 50
+int MOVE_OVERHEAD = 100;
 
 // uci "go" command
 void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
   in += 3;
 
   params->depth = MAX_SEARCH_PLY;
-  params->startTime = GetTimeMS();
+  params->start = GetTimeMS();
   params->timeset = 0;
   params->stopped = 0;
   params->quit = 0;
@@ -87,18 +87,20 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
     params->timeset = 1;
-    params->timeToSpend = moveTime - MOVE_BUFFER;
-    params->endTime = params->startTime + moveTime - MOVE_BUFFER;
-    params->maxTime = params->startTime + moveTime - MOVE_BUFFER;
+    params->alloc = moveTime;
+    params->max = moveTime;
   } else {
     if (time != -1) {
       params->timeset = 1;
-      params->maxTime = params->startTime + (time + inc) / 2 - MOVE_BUFFER;
-      int timeToSpend = time / movesToGo + inc - MOVE_BUFFER;
 
-      params->timeToSpend = timeToSpend;
-      params->endTime = min(params->maxTime, params->startTime + timeToSpend);
+      time = max(0, time - MOVE_OVERHEAD);
+      int spend = time / movesToGo + inc;
+      spend = max(1, spend);
+
+      params->max = min(4 * spend, time * 0.9);
+      params->alloc = min(spend, params->max / 3);
     } else {
+      // no time control
       params->timeset = 0;
     }
   }
@@ -106,7 +108,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   if (depth <= 0)
     params->depth = MAX_SEARCH_PLY - 1;
 
-  printf("time %d start %ld stop %ld depth %d timeset %d\n", time, params->startTime, params->endTime, params->depth,
+  printf("time %d start %ld alloc %d depth %d timeset %d\n", time, params->start, params->alloc, params->depth,
          params->timeset);
 
   // this MUST be freed from within the search, or else massive leak

@@ -68,3 +68,9 @@ char* MoveToStr(Move move) {
 
   return buffer;
 }
+
+inline int IsRecapture(SearchData* data, Move move) {
+  Move parent = data->moves[data->ply - 1];
+
+  return !(MoveCapture(parent) ^ MoveCapture(move)) && MoveEnd(parent) == MoveEnd(move);
+}

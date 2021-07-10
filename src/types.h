@@ -105,6 +105,8 @@ typedef struct {
   Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply
   Move counters[64 * 64];          // counter move butterfly table
   int hh[2][64 * 64];              // history heuristic butterfly table (side)
+  int ch[6][64][6][64];            // counter move history table
+  int fh[6][64][6][64];            // follow up history table
 } SearchData;
 
 typedef struct {
@@ -154,13 +156,14 @@ typedef struct {
   int8_t pawnPushThreat;
   int8_t hangingThreat;
 
-  int8_t space[15];
+  int16_t space;
 
   int16_t imbalance[5][5];
 
   int8_t pawnShelter[4][8];
   int8_t pawnStorm[4][8];
   int8_t blockedPawnStorm[8];
+  int8_t castlingRights;
   
   int ks;
   int danger[2];
@@ -180,13 +183,12 @@ typedef struct {
 } EvalCoeffs;
 
 typedef struct {
-  long startTime;
-  long endTime;
-  long maxTime;
-  int timeToSpend;
+  long start;
+  int alloc;
+  int max;
 
-  int depth;
   int timeset;
+  int depth;
   int movesToGo;
   int stopped;
   int quit;

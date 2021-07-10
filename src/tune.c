@@ -35,7 +35,7 @@ const int MAX_POSITIONS = 100000000;
 
 const int sideScalar[2] = {1, -1};
 
-double ALPHA = 0.0001;
+double ALPHA = 0.001;
 const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
@@ -241,8 +241,9 @@ void UpdateWeights(Weights* weights) {
   for (int r = 0; r < 8; r++)
     UpdateWeight(&weights->blockedPawnStorm[r]);
 
-  for (int s = 0; s < 15; s++)
-    UpdateWeight(&weights->space[s]);
+  UpdateWeight(&weights->castlingRights);
+
+  UpdateParam(&weights->space.mg);
 
   if (TUNE_KS) {
     for (int i = 0; i < 5; i++)
@@ -458,10 +459,10 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
       weights->blockedPawnStorm[r].eg.g += w->blockedPawnStorm[r].eg.g;
     }
 
-    for (int s = 0; s < 15; s++) {
-      weights->space[s].mg.g += w->space[s].mg.g;
-      weights->space[s].eg.g += w->space[s].eg.g;
-    }
+    weights->castlingRights.mg.g += w->castlingRights.mg.g;
+    weights->castlingRights.eg.g += w->castlingRights.eg.g;
+
+    weights->space.mg.g += w->space.mg.g;
 
     for (int i = 0; i < 5; i++)
       weights->ksAttackerWeight[i].mg.g += w->ksAttackerWeight[i].mg.g;
@@ -726,16 +727,16 @@ void UpdatePawnShelterGradients(Position* position, double loss, Weights* weight
     weights->blockedPawnStorm[f].mg.g += position->coeffs.blockedPawnStorm[f] * mgBase;
     weights->blockedPawnStorm[f].eg.g += position->coeffs.blockedPawnStorm[f] * egBase;
   }
+
+  weights->castlingRights.mg.g += position->coeffs.castlingRights * mgBase;
+  weights->castlingRights.eg.g += position->coeffs.castlingRights * egBase;
 }
 
 void UpdateSpaceGradients(Position* position, double loss, Weights* weights) {
   double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
   double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
 
-  for (int s = 0; s < 15; s++) {
-    weights->space[s].mg.g += position->coeffs.space[s] * mgBase;
-    weights->space[s].eg.g += position->coeffs.space[s] * egBase;
-  }
+  weights->space.mg.g += position->coeffs.space * mgBase / 1024.0;
 }
 
 void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights, KSGradient* ks) {
@@ -933,12 +934,12 @@ void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weigh
 
   for (int r = 0; r < 8; r++)
     ApplyCoeff(mg, eg, position->coeffs.blockedPawnStorm[r], &weights->blockedPawnStorm[r]);
+
+  ApplyCoeff(mg, eg, position->coeffs.castlingRights, &weights->castlingRights);
 }
 
 void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* weights) {
-  for (int s = 0; s < 15; s++) {
-    ApplyCoeff(mg, eg, position->coeffs.space[s], &weights->space[s]);
-  }
+  *mg += position->coeffs.space * weights->space.mg.value / 1024.0;
 }
 
 void EvaluateKingSafetyValues(double* mg, double* eg, Position* position, Weights* weights, KSGradient* ks) {
@@ -1044,7 +1045,7 @@ Position* LoadPositions(int* n, Weights* weights) {
       continue;
 
     double eval = EvaluateCoeffs(&positions[p], weights, &ks);
-    if (fabs(positions[p].staticEval - eval) > 3) {
+    if (floor(fabs(positions[p].staticEval - eval)) > 3) {
       printf("The coefficient based evaluation does NOT match the eval!\n");
       printf("FEN: %s\n", buffer);
       printf("Static: %d, Coeffs: %f\n", positions[p].staticEval, eval);
@@ -1259,14 +1260,12 @@ void InitPawnShelterWeights(Weights* weights) {
     weights->blockedPawnStorm[r].mg.value = scoreMG(BLOCKED_PAWN_STORM[r]);
     weights->blockedPawnStorm[r].eg.value = scoreEG(BLOCKED_PAWN_STORM[r]);
   }
+
+  weights->castlingRights.mg.value = scoreMG(CAN_CASTLE);
+  weights->castlingRights.eg.value = scoreEG(CAN_CASTLE);
 }
 
-void InitSpaceWeights(Weights* weights) {
-  for (int s = 0; s < 15; s++) {
-    weights->space[s].mg.value = scoreMG(SPACE[s]);
-    weights->space[s].eg.value = scoreEG(SPACE[s]);
-  }
-}
+void InitSpaceWeights(Weights* weights) { weights->space.mg.value = SPACE; }
 
 void InitKingSafetyWeights(Weights* weights) {
   for (int i = 1; i < 5; i++)
@@ -1459,9 +1458,7 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score HANGING_THREAT = ");
   PrintWeight(fp, &weights->hangingThreat);
 
-  fprintf(fp, "\nconst Score SPACE[15] = {\n");
-  PrintWeightArray(fp, weights->space, 15, 5);
-  fprintf(fp, "};\n");
+  fprintf(fp, "\nconst Score SPACE = %d;\n", (int)round(weights->space.mg.value));
 
   fprintf(fp, "\nconst Score IMBALANCE[5][5] = {\n");
   fprintf(fp, " {");
@@ -1504,6 +1501,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score BLOCKED_PAWN_STORM[8] = {\n");
   PrintWeightArray(fp, weights->blockedPawnStorm, 8, 0);
   fprintf(fp, "\n};\n");
+
+  fprintf(fp, "\nconst Score CAN_CASTLE = ");
+  PrintWeight(fp, &weights->castlingRights);
 
   fprintf(fp, "\nconst Score KS_ATTACKER_WEIGHTS[5] = {\n");
   fprintf(fp, " 0, %d, %d, %d, %d", (int)round(weights->ksAttackerWeight[1].mg.value),
