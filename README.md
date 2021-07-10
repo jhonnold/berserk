@@ -2,7 +2,7 @@
 
 <img src="resources/berserk.jpg" alt="Berserk" width="400" />
 
-A UCI chess engine written in C.
+A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://lichess.org/@/BerserkEngine)!
 
 ## Elo History
 
@@ -14,7 +14,10 @@ A UCI chess engine written in C.
 | 2.0.0       | 2546    | 2'+1"  |
 | 3.2.0       | 2896    | 2'+1"  |
 | 3.2.1       | 2933    | 40/15  |
-| 4.0.0       |         |        |
+| 4.1.0       | 3117    | 2'+1"  |
+| 4.2.0       | 3131    | 40/15  |
+| 4.2.0 (4CPU)| 3225    | 40/15  |
+| 4.3.0       |         |        |
 
 ### Lars No SMP
 
@@ -24,7 +27,9 @@ A UCI chess engine written in C.
 | 3.0.0       | 2818    | 15'    |
 | 3.2.0       | 2901    | 15'    |
 | 4.0.0       | 3027    | 15'    |
-| 4.1.0       |         | 15'    |
+| 4.1.0       | 3085    | 15'    |
+| 4.2.0       | 3143    | 15'    |
+| 4.3.0       | 3248    | 15'    |
 
 ## Features
 
