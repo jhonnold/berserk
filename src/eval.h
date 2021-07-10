@@ -92,8 +92,6 @@ extern const Score SPACE;
 
 extern const Score IMBALANCE[5][5];
 
-extern const Score TEMPO;
-
 extern const Score PAWN_SHELTER[4][8];
 extern const Score PAWN_STORM[4][8];
 extern const Score BLOCKED_PAWN_STORM[8];
@@ -109,6 +107,8 @@ extern const Score KS_QUEEN_CHECK;
 extern const Score KS_UNSAFE_CHECK;
 extern const Score KS_ENEMY_QUEEN;
 extern const Score KS_KNIGHT_DEFENSE;
+
+extern const Score TEMPO;
 
 extern Score PSQT[12][2][64];
 
