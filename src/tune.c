@@ -56,6 +56,7 @@ void Tune() {
   InitPawnShelterWeights(&weights);
   InitSpaceWeights(&weights);
   InitKingSafetyWeights(&weights);
+  InitTempoWeight(&weights);
 
   PrintWeights(&weights, 0, 0);
 
@@ -259,6 +260,8 @@ void UpdateWeights(Weights* weights) {
     UpdateParam(&weights->ksEnemyQueen.mg);
     UpdateParam(&weights->ksKnightDefense.mg);
   }
+
+  UpdateParam(&weights->tempo.mg);
 }
 
 void MergeWeightGradients(Weight* dest, Weight* src) {
@@ -476,9 +479,11 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
     weights->ksUnsafeCheck.mg.g += w->ksUnsafeCheck.mg.g;
     weights->ksEnemyQueen.mg.g += w->ksEnemyQueen.mg.g;
     weights->ksKnightDefense.mg.g += w->ksKnightDefense.mg.g;
+
+    weights->tempo.mg.g += w->tempo.mg.g;
   }
 
-  printf("Epoch: %5d, Error: %9.8f\n", epoch, error / n);
+  printf("Epoch: [#%d], Error: %1.8f\r", epoch, error / n);
 
   UpdateWeights(weights);
 
@@ -510,6 +515,7 @@ void* UpdateGradients(void* arg) {
     UpdatePawnShelterGradients(&positions[i], loss, weights);
     UpdateSpaceGradients(&positions[i], loss, weights);
     UpdateKingSafetyGradients(&positions[i], loss, weights, ks);
+    UpdateTempoGradient(&positions[i], loss, weights);
 
     job->error += pow(positions[i].result - sigmoid, 2);
   }
@@ -805,6 +811,10 @@ void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights
   weights->ksKnightDefense.mg.g -= (egBase / 32) * (ks->wDanger > 0) * position->coeffs.ksKnightDefense[WHITE];
 }
 
+void UpdateTempoGradient(Position* position, double loss, Weights* weights) {
+  weights->tempo.mg.g += (position->stm == WHITE ? 1 : -1) * loss;
+}
+
 void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w) {
   *mg += coeff * w->mg.value;
   *eg += coeff * w->eg.value;
@@ -827,7 +837,7 @@ double EvaluateCoeffs(Position* position, Weights* weights, KSGradient* ks) {
 
   double result = (mg * position->phase + eg * (128 - position->phase)) / 128;
   result = (result * position->scale) / MAX_SCALE;
-  return result + (position->stm == WHITE ? TEMPO : -TEMPO);
+  return result + (position->stm == WHITE ? weights->tempo.mg.value : -weights->tempo.mg.value);
 }
 
 void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -1282,6 +1292,8 @@ void InitKingSafetyWeights(Weights* weights) {
   weights->ksKnightDefense.mg.value = KS_KNIGHT_DEFENSE;
 }
 
+void InitTempoWeight(Weights* weights) { weights->tempo.mg.value = TEMPO; }
+
 double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 400.0)); }
 
 void PrintWeights(Weights* weights, int epoch, double error) {
@@ -1528,6 +1540,8 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   fprintf(fp, "\nconst Score KS_ENEMY_QUEEN = %d;\n", (int)round(weights->ksEnemyQueen.mg.value));
 
   fprintf(fp, "\nconst Score KS_KNIGHT_DEFENSE = %d;\n", (int)round(weights->ksKnightDefense.mg.value));
+
+  fprintf(fp, "\nconst Score TEMPO = %d;\n", (int)round(weights->tempo.mg.value));
 
   fprintf(fp, "\n");
   fclose(fp);

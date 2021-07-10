@@ -106,6 +106,8 @@ typedef struct {
   Weight ksUnsafeCheck;
   Weight ksEnemyQueen;
   Weight ksKnightDefense;
+
+  Weight tempo;
 } Weights;
 
 typedef struct {
@@ -155,6 +157,7 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
 void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights);
 void UpdateSpaceGradients(Position* position, double loss, Weights* weights);
 void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights, KSGradient* ks);
+void UpdateTempoGradient(Position* position, double loss, Weights* weights);
 
 void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w);
 double EvaluateCoeffs(Position* position, Weights* weights, KSGradient* ks);
@@ -182,6 +185,7 @@ void InitPasserBonusWeights(Weights* weights);
 void InitPawnShelterWeights(Weights* weights);
 void InitSpaceWeights(Weights* weights);
 void InitKingSafetyWeights(Weights* weights);
+void InitTempoWeight(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
 Position* LoadPositions(int* n, Weights* weights);
