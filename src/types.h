@@ -17,8 +17,9 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <setjmp.h>
 #include <inttypes.h>
+#include <setjmp.h>
+
 
 #ifdef TUNE
 #define MAX_SEARCH_PLY 16
@@ -43,9 +44,6 @@ typedef int Score;
 typedef uint64_t BitBoard;
 
 typedef uint32_t Move;
-
-
-
 
 typedef struct {
   BitBoard pieces[12];     // individual piece data
@@ -164,7 +162,7 @@ typedef struct {
   int8_t pawnStorm[4][8];
   int8_t blockedPawnStorm[8];
   int8_t castlingRights;
-  
+
   int ks;
   int danger[2];
   int8_t ksAttackerCount[2];
@@ -243,16 +241,16 @@ typedef struct {
 enum { ALL_MOVES, TACTICAL_MOVES };
 
 enum {
-    HASH_MOVE,
-    GEN_TACTICAL_MOVES,
-    PLAY_GOOD_TACTICAL,
-    PLAY_KILLER_1,
-    PLAY_KILLER_2,
-    PLAY_COUNTER,
-    GEN_QUIET_MOVES,
-    PLAY_QUIETS,
-    PLAY_BAD_TACTICAL,
-    NO_MORE_MOVES
+  HASH_MOVE,
+  GEN_TACTICAL_MOVES,
+  PLAY_GOOD_TACTICAL,
+  PLAY_KILLER_1,
+  PLAY_KILLER_2,
+  PLAY_COUNTER,
+  GEN_QUIET_MOVES,
+  PLAY_QUIETS,
+  PLAY_BAD_TACTICAL,
+  NO_MORE_MOVES
 };
 
 typedef struct {
@@ -266,6 +264,11 @@ typedef struct {
   int sTactical[MAX_MOVES];
   int sQuiet[MAX_MOVES];
 } MoveList;
+
+typedef struct {
+  int count;
+  Move moves[MAX_MOVES];
+} SimpleMoveList;
 
 enum { WHITE, BLACK, BOTH };
 

@@ -36,5 +36,6 @@ extern const int COUNTER_SCORE;
 void AppendMove(Move* arr, uint8_t* n, Move move);
 void GenerateQuietMoves(MoveList* moveList, Board* board);
 void GenerateTacticalMoves(MoveList* moveList, Board* board);
+void GenerateSimpleMoveList(SimpleMoveList* list, Board* board);
 
 #endif

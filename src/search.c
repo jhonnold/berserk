@@ -126,6 +126,9 @@ void* Search(void* arg) {
   int beta = CHECKMATE;
   int score = 0;
 
+  SimpleMoveList rootMoves;
+  GenerateSimpleMoveList(&rootMoves, &thread->board);
+
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
 
@@ -174,6 +177,9 @@ void* Search(void* arg) {
 
       data->bestMove = pv->moves[0];
       data->score = score;
+
+      if (depth >= 5 && rootMoves.count == 1)
+        break;
     }
   }
 

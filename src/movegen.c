@@ -23,6 +23,7 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
+#include "movepick.h"
 #include "search.h"
 #include "see.h"
 #include "transposition.h"
@@ -563,4 +564,18 @@ void GenerateQuietMoves(MoveList* moveList, Board* board) {
     else
       ++curr;
   }
+}
+
+// TODO: oof this is awful
+void GenerateSimpleMoveList(SimpleMoveList* list, Board* board) {
+  MoveList moveList = {0};
+  SearchData data = {0};
+  InitAllMoves(&moveList, NULL_MOVE, &data);
+
+  list->count = 0;
+
+  Move m;
+  while ((m = NextMove(&moveList, board, 0)))
+    list->moves[list->count++] = m;
+
 }
