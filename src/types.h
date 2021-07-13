@@ -134,6 +134,7 @@ typedef struct {
   int8_t rookOpenFile;
   int8_t rookSemiOpen;
   int8_t queenOppositeRook;
+  int8_t queenRookBattery;
 
   int8_t defendedPawns;
   int8_t doubledPawns;
