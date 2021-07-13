@@ -35,7 +35,7 @@ const int MAX_POSITIONS = 100000000;
 
 const int sideScalar[2] = {1, -1};
 
-double ALPHA = 0.001;
+double ALPHA = 0.000333;
 const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
@@ -64,11 +64,14 @@ void Tune() {
   Position* positions = LoadPositions(&n, &weights);
   ALPHA *= sqrt(n);
 
+  printf("Starting Error: %1.8f\n", TotalStaticError(n, positions));
   for (int epoch = 1; epoch <= 100000; epoch++) {
     double error = UpdateAndTrain(epoch, n, positions, &weights);
 
-    if (epoch % 10 == 0)
+    if (epoch % 10 == 0) {
       PrintWeights(&weights, epoch, error);
+      printf("\n");
+    }
   }
 
   free(positions);
@@ -198,6 +201,8 @@ void UpdateWeights(Weights* weights) {
   UpdateWeight(&weights->rookOpenFile);
 
   UpdateWeight(&weights->rookSemiOpen);
+
+  UpdateWeight(&weights->queenOppositeRook);
 
   UpdateWeight(&weights->defendedPawns);
 
@@ -396,6 +401,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->rookSemiOpen.mg.g += w->rookSemiOpen.mg.g;
     weights->rookSemiOpen.eg.g += w->rookSemiOpen.eg.g;
+
+    weights->queenOppositeRook.mg.g += w->queenOppositeRook.mg.g;
+    weights->queenOppositeRook.eg.g += w->queenOppositeRook.eg.g;
 
     weights->defendedPawns.mg.g += w->defendedPawns.mg.g;
     weights->defendedPawns.eg.g += w->defendedPawns.eg.g;
@@ -653,6 +661,9 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 
   weights->rookSemiOpen.mg.g += position->coeffs.rookSemiOpen * mgBase;
   weights->rookSemiOpen.eg.g += position->coeffs.rookSemiOpen * egBase;
+
+  weights->queenOppositeRook.mg.g += position->coeffs.queenOppositeRook * mgBase;
+  weights->queenOppositeRook.eg.g += position->coeffs.queenOppositeRook * egBase;
 }
 
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights) {
@@ -903,6 +914,7 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
   ApplyCoeff(mg, eg, position->coeffs.dragonBishop, &weights->dragonBishop);
   ApplyCoeff(mg, eg, position->coeffs.rookOpenFile, &weights->rookOpenFile);
   ApplyCoeff(mg, eg, position->coeffs.rookSemiOpen, &weights->rookSemiOpen);
+  ApplyCoeff(mg, eg, position->coeffs.queenOppositeRook, &weights->queenOppositeRook);
 }
 
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -1199,6 +1211,9 @@ void InitPieceBonusWeights(Weights* weights) {
 
   weights->rookSemiOpen.mg.value = scoreMG(ROOK_SEMI_OPEN);
   weights->rookSemiOpen.eg.value = scoreEG(ROOK_SEMI_OPEN);
+
+  weights->queenOppositeRook.mg.value = scoreMG(QUEEN_OPPOSITE_ROOK);
+  weights->queenOppositeRook.eg.value = scoreEG(QUEEN_OPPOSITE_ROOK);
 }
 
 void InitPawnBonusWeights(Weights* weights) {
@@ -1398,6 +1413,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score ROOK_SEMI_OPEN = ");
   PrintWeight(fp, &weights->rookSemiOpen);
+
+  fprintf(fp, "\nconst Score QUEEN_OPPOSITE_ROOK = ");
+  PrintWeight(fp, &weights->queenOppositeRook);
 
   fprintf(fp, "\nconst Score DEFENDED_PAWN = ");
   PrintWeight(fp, &weights->defendedPawns);
