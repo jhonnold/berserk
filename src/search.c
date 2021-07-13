@@ -43,7 +43,6 @@
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
 int STATIC_PRUNE[2][MAX_SEARCH_PLY];
-int RFP[MAX_SEARCH_PLY];
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
@@ -61,8 +60,6 @@ void InitPruningAndReductionTables() {
 
     STATIC_PRUNE[0][depth] = -SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
     STATIC_PRUNE[1][depth] = -SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
-
-    RFP[depth] = RFP_STEP_RISE * depth * depth / 2 - RFP_STEP_RISE * depth / 2 + RFP_BASE * depth;
   }
 }
 
@@ -326,7 +323,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 6 && !skipMove && eval - RFP[depth] >= beta && eval < MATE_BOUND)
+    if (depth <= 6 && !skipMove && eval - (3 * depth * depth + 61 * depth) >= beta && eval < MATE_BOUND)
       return eval;
 
     // Null move pruning

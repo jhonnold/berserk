@@ -25,11 +25,6 @@
 #define MATE_BOUND 30000
 #define TB_WIN_BOUND 20000
 
-// reverse futility pruning values
-// these 2 values go 65 -> 135 -> 210 -> 290 -> ...
-#define RFP_BASE 65
-#define RFP_STEP_RISE 5
-
 // static evaluation pruning
 // capture cutoff is linear 70x
 // quiet cutoff is quadratic 20x^2
