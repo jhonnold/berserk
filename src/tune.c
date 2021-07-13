@@ -35,7 +35,7 @@ const int MAX_POSITIONS = 100000000;
 
 const int sideScalar[2] = {1, -1};
 
-double ALPHA = 0.000333;
+double ALPHA = 0.0001;
 const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
