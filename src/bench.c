@@ -93,12 +93,11 @@ void Bench() {
 
   long startTime = GetTimeMS();
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
+    ParseFen(benchmarks[i], &board);
+
     TTClear();
     ResetThreadPool(&board, &params, threads);
-
     params.start = GetTimeMS();
-
-    ParseFen(benchmarks[i], &board);
 
     BestMove(&board, &params, threads);
 
@@ -111,15 +110,15 @@ void Bench() {
 
   printf("\n\n");
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
-    printf("Bench #%2d: bestmove %5s score %5d %12d nodes %8d nps\n", i + 1, MoveToStr(bestMoves[i]), scores[i],
-           nodes[i], (int)(1000.0 * nodes[i] / (times[i] + 1)));
+    printf("Bench [#%2d]: bestmove %5s score %5d %12d nodes %8d nps | %71s\n", i + 1, MoveToStr(bestMoves[i]), scores[i],
+           nodes[i], (int)(1000.0 * nodes[i] / (times[i] + 1)), benchmarks[i]);
   }
 
   int totalNodes = 0;
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++)
     totalNodes += nodes[i];
 
-  printf("\nResults: %41d nodes %8d nps\n\n", totalNodes, (int)(1000.0 * totalNodes / (totalTime + 1)));
+  printf("\nResults: %43d nodes %8d nps\n\n", totalNodes, (int)(1000.0 * totalNodes / (totalTime + 1)));
 
   free(threads);
 }
