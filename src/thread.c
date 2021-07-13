@@ -17,8 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "eval.h"
 #include "types.h"
 #include "util.h"
+
+extern int CONTEMPT;
 
 // initialize a pool of threads
 ThreadData* CreatePool(int count) {
@@ -44,6 +47,9 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads) {
     threads[i].data.ply = 0;
     threads[i].data.tbhits = 0;
 
+    threads[i].data.contempt =
+        board->side == WHITE ? makeScore(CONTEMPT, CONTEMPT / 2) : makeScore(-CONTEMPT, -CONTEMPT / 2);
+
     // empty unneeded data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
     memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
@@ -62,6 +68,9 @@ void ResetThreadPool(Board* board, SearchParams* params, ThreadData* threads) {
     threads[i].data.seldepth = 0;
     threads[i].data.ply = 0;
     threads[i].data.tbhits = 0;
+
+    threads[i].data.contempt =
+        board->side == WHITE ? makeScore(CONTEMPT, CONTEMPT / 2) : makeScore(-CONTEMPT, -CONTEMPT / 2);
 
     // empty ALL data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));

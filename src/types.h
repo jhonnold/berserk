@@ -87,6 +87,8 @@ typedef struct {
 
 // A general data object for use during search
 typedef struct {
+  Score contempt;
+
   int score;     // analysis score result, from perspective of stm
   Move bestMove; // best move from analysis
 

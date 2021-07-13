@@ -39,6 +39,7 @@
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 int MOVE_OVERHEAD = 100;
+int CONTEMPT = 24;
 
 // uci "go" command
 void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
@@ -167,6 +168,7 @@ void PrintUCIOptions() {
   printf("option name NoobBookLimit type spin default 8 min 0 max 32\n");
   printf("option name NoobBook type check default false\n");
   printf("option name SyzygyPath type string default <empty>\n");
+  printf("option name Contempt type spin default 24 min 0 max 100\n");
   printf("uciok\n");
 }
 
@@ -247,6 +249,10 @@ void UCILoop() {
 
       NOOB_BOOK = !strncmp(opt, "true", 4);
       printf("info string set NoobBook to value %s\n", NOOB_BOOK ? "true" : "false");
+    } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
+      int n = GetOptionIntValue(in);
+
+      CONTEMPT = max(0, min(100, n));
     }
   }
 }

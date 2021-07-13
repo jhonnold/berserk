@@ -964,6 +964,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
     s += Space(board, &data, WHITE) - Space(board, &data, BLACK);
   }
 
+  s += thread->data.contempt;
+
   // taper
   int phase = GetPhase(board);
   Score res = (phase * scoreMG(s) + (128 - phase) * scoreEG(s)) / 128;
