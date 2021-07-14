@@ -28,6 +28,7 @@
 #include "perft.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
+#include "see.h"
 #include "thread.h"
 #include "transposition.h"
 #include "uci.h"
@@ -109,7 +110,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   if (depth <= 0)
     params->depth = MAX_SEARCH_PLY - 1;
 
-  printf("time %d start %ld alloc %d depth %d timeset %d\n", time, params->start, params->alloc, params->depth,
+  printf("info string time %d start %ld alloc %d depth %d timeset %d\n", time, params->start, params->alloc, params->depth,
          params->timeset);
 
   // this MUST be freed from within the search, or else massive leak
@@ -221,9 +222,25 @@ void UCILoop() {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
       Score s = Evaluate(&board, &threads[0]);
-      printf("Score: %dcp\n", s);
+      if (board.side == BLACK)
+        s = -s;
+
+      printf("Score: %dcp (white)\n", s);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
+    } else if (!strncmp(in, "see ", 4)) {
+      Move m = ParseMove(in + 4, &board);
+      if (m)
+        printf("info string SEE result: %d\n", SEE(&board, m));
+      else
+        printf("info string Invalid move!\n");
+    } else if (!strncmp(in, "apply ", 6)) {
+      Move m = ParseMove(in + 6, &board);
+      if (m) {
+        MakeMove(m, &board);
+        PrintBoard(&board);
+      } else
+        printf("info string Invalid move!\n");
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
       mb = max(4, min(65536, mb));
