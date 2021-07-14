@@ -63,6 +63,7 @@ extern const Score BAD_BISHOP_PAWNS;
 extern const Score DRAGON_BISHOP;
 extern const Score ROOK_OPEN_FILE;
 extern const Score ROOK_SEMI_OPEN;
+extern const Score ROOK_TO_OPEN;
 extern const Score QUEEN_OPPOSITE_ROOK;
 extern const Score QUEEN_ROOK_BATTERY;
 
