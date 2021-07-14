@@ -182,6 +182,8 @@ void UpdateWeights(Weights* weights) {
 
   UpdateWeight(&weights->bishopCheckQueen);
 
+  UpdateWeight(&weights->rookCheckQueen);
+
   UpdateWeight(&weights->bishopPair);
 
   for (int i = 0; i < 5; i++)
@@ -379,6 +381,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->bishopCheckQueen.mg.g += w->bishopCheckQueen.mg.g;
     weights->bishopCheckQueen.eg.g += w->bishopCheckQueen.eg.g;
+
+    weights->rookCheckQueen.mg.g += w->rookCheckQueen.mg.g;
+    weights->rookCheckQueen.eg.g += w->rookCheckQueen.eg.g;
 
     for (int i = 0; i < 5; i++) {
       for (int j = 0; j < 5; j++) {
@@ -640,6 +645,9 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
 
   weights->bishopCheckQueen.mg.g += position->coeffs.bishopCheckQueen * mgBase;
   weights->bishopCheckQueen.eg.g += position->coeffs.bishopCheckQueen * egBase;
+
+  weights->rookCheckQueen.mg.g += position->coeffs.rookCheckQueen * mgBase;
+  weights->rookCheckQueen.eg.g += position->coeffs.rookCheckQueen * egBase;
 }
 
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights) {
@@ -922,6 +930,7 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
   ApplyCoeff(mg, eg, position->coeffs.hangingThreat, &weights->hangingThreat);
   ApplyCoeff(mg, eg, position->coeffs.knightCheckQueen, &weights->knightCheckQueen);
   ApplyCoeff(mg, eg, position->coeffs.bishopCheckQueen, &weights->bishopCheckQueen);
+  ApplyCoeff(mg, eg, position->coeffs.rookCheckQueen, &weights->rookCheckQueen);
 }
 
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -1205,6 +1214,9 @@ void InitThreatWeights(Weights* weights) {
 
   weights->bishopCheckQueen.mg.value = scoreMG(BISHOP_CHECK_QUEEN);
   weights->bishopCheckQueen.eg.value = scoreEG(BISHOP_CHECK_QUEEN);
+
+  weights->rookCheckQueen.mg.value = scoreMG(ROOK_CHECK_QUEEN);
+  weights->rookCheckQueen.eg.value = scoreEG(ROOK_CHECK_QUEEN);
 }
 
 void InitPieceBonusWeights(Weights* weights) {
@@ -1532,6 +1544,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score BISHOP_CHECK_QUEEN = ");
   PrintWeight(fp, &weights->bishopCheckQueen);
+
+  fprintf(fp, "\nconst Score ROOK_CHECK_QUEEN = ");
+  PrintWeight(fp, &weights->rookCheckQueen);
 
   fprintf(fp, "\nconst Score SPACE = %d;\n", (int)round(weights->space.mg.value));
 

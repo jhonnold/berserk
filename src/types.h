@@ -161,6 +161,7 @@ typedef struct {
   int8_t hangingThreat;
   int8_t knightCheckQueen;
   int8_t bishopCheckQueen;
+  int8_t rookCheckQueen;
 
   int16_t space;
 
