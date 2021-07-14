@@ -90,6 +90,7 @@ extern const Score PAWN_THREAT;
 extern const Score PAWN_PUSH_THREAT;
 extern const Score HANGING_THREAT;
 extern const Score KNIGHT_CHECK_QUEEN;
+extern const Score BISHOP_CHECK_QUEEN;
 
 extern const Score SPACE;
 
