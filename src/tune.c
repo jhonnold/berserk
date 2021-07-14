@@ -35,7 +35,7 @@ const int MAX_POSITIONS = 100000000;
 
 const int sideScalar[2] = {1, -1};
 
-double ALPHA = 0.000333;
+double ALPHA = 0.0001;
 const double BETA1 = 0.9;
 const double BETA2 = 0.999;
 const double EPSILON = 1e-8;
@@ -203,6 +203,8 @@ void UpdateWeights(Weights* weights) {
   UpdateWeight(&weights->rookSemiOpen);
 
   UpdateWeight(&weights->queenOppositeRook);
+
+  UpdateWeight(&weights->queenRookBattery);
 
   UpdateWeight(&weights->defendedPawns);
 
@@ -404,6 +406,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->queenOppositeRook.mg.g += w->queenOppositeRook.mg.g;
     weights->queenOppositeRook.eg.g += w->queenOppositeRook.eg.g;
+
+    weights->queenRookBattery.mg.g += w->queenRookBattery.mg.g;
+    weights->queenRookBattery.eg.g += w->queenRookBattery.eg.g;
 
     weights->defendedPawns.mg.g += w->defendedPawns.mg.g;
     weights->defendedPawns.eg.g += w->defendedPawns.eg.g;
@@ -664,6 +669,9 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
 
   weights->queenOppositeRook.mg.g += position->coeffs.queenOppositeRook * mgBase;
   weights->queenOppositeRook.eg.g += position->coeffs.queenOppositeRook * egBase;
+
+  weights->queenRookBattery.mg.g += position->coeffs.queenRookBattery * mgBase;
+  weights->queenRookBattery.eg.g += position->coeffs.queenRookBattery * egBase;
 }
 
 void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights) {
@@ -915,6 +923,7 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
   ApplyCoeff(mg, eg, position->coeffs.rookOpenFile, &weights->rookOpenFile);
   ApplyCoeff(mg, eg, position->coeffs.rookSemiOpen, &weights->rookSemiOpen);
   ApplyCoeff(mg, eg, position->coeffs.queenOppositeRook, &weights->queenOppositeRook);
+  ApplyCoeff(mg, eg, position->coeffs.queenRookBattery, &weights->queenRookBattery);
 }
 
 void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -1214,6 +1223,9 @@ void InitPieceBonusWeights(Weights* weights) {
 
   weights->queenOppositeRook.mg.value = scoreMG(QUEEN_OPPOSITE_ROOK);
   weights->queenOppositeRook.eg.value = scoreEG(QUEEN_OPPOSITE_ROOK);
+
+  weights->queenRookBattery.mg.value = scoreMG(QUEEN_ROOK_BATTERY);
+  weights->queenRookBattery.eg.value = scoreEG(QUEEN_ROOK_BATTERY);
 }
 
 void InitPawnBonusWeights(Weights* weights) {
@@ -1416,6 +1428,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score QUEEN_OPPOSITE_ROOK = ");
   PrintWeight(fp, &weights->queenOppositeRook);
+
+  fprintf(fp, "\nconst Score QUEEN_ROOK_BATTERY = ");
+  PrintWeight(fp, &weights->queenRookBattery);
 
   fprintf(fp, "\nconst Score DEFENDED_PAWN = ");
   PrintWeight(fp, &weights->defendedPawns);

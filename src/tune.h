@@ -63,6 +63,7 @@ typedef struct {
   Weight rookOpenFile;
   Weight rookSemiOpen;
   Weight queenOppositeRook;
+  Weight queenRookBattery;
 
   Weight defendedPawns;
   Weight doubledPawns;
