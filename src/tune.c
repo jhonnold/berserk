@@ -208,6 +208,8 @@ void UpdateWeights(Weights* weights) {
 
   UpdateWeight(&weights->rookSemiOpen);
 
+  UpdateWeight(&weights->rookToOpen);
+
   UpdateWeight(&weights->queenOppositeRook);
 
   UpdateWeight(&weights->queenRookBattery);
@@ -418,6 +420,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->rookSemiOpen.mg.g += w->rookSemiOpen.mg.g;
     weights->rookSemiOpen.eg.g += w->rookSemiOpen.eg.g;
+
+    weights->rookToOpen.mg.g += w->rookToOpen.mg.g;
+    weights->rookToOpen.eg.g += w->rookToOpen.eg.g;
 
     weights->queenOppositeRook.mg.g += w->queenOppositeRook.mg.g;
     weights->queenOppositeRook.eg.g += w->queenOppositeRook.eg.g;
@@ -691,6 +696,9 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
   weights->rookSemiOpen.mg.g += position->coeffs.rookSemiOpen * mgBase;
   weights->rookSemiOpen.eg.g += position->coeffs.rookSemiOpen * egBase;
 
+  weights->rookToOpen.mg.g += position->coeffs.rookToOpen * mgBase;
+  weights->rookToOpen.eg.g += position->coeffs.rookToOpen * egBase;
+
   weights->queenOppositeRook.mg.g += position->coeffs.queenOppositeRook * mgBase;
   weights->queenOppositeRook.eg.g += position->coeffs.queenOppositeRook * egBase;
 
@@ -949,6 +957,7 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
   ApplyCoeff(mg, eg, position->coeffs.dragonBishop, &weights->dragonBishop);
   ApplyCoeff(mg, eg, position->coeffs.rookOpenFile, &weights->rookOpenFile);
   ApplyCoeff(mg, eg, position->coeffs.rookSemiOpen, &weights->rookSemiOpen);
+  ApplyCoeff(mg, eg, position->coeffs.rookToOpen, &weights->rookToOpen);
   ApplyCoeff(mg, eg, position->coeffs.queenOppositeRook, &weights->queenOppositeRook);
   ApplyCoeff(mg, eg, position->coeffs.queenRookBattery, &weights->queenRookBattery);
 }
@@ -1257,6 +1266,9 @@ void InitPieceBonusWeights(Weights* weights) {
   weights->rookSemiOpen.mg.value = scoreMG(ROOK_SEMI_OPEN);
   weights->rookSemiOpen.eg.value = scoreEG(ROOK_SEMI_OPEN);
 
+  weights->rookToOpen.mg.value = scoreMG(ROOK_TO_OPEN);
+  weights->rookToOpen.eg.value = scoreEG(ROOK_TO_OPEN);
+
   weights->queenOppositeRook.mg.value = scoreMG(QUEEN_OPPOSITE_ROOK);
   weights->queenOppositeRook.eg.value = scoreEG(QUEEN_OPPOSITE_ROOK);
 
@@ -1461,6 +1473,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score ROOK_SEMI_OPEN = ");
   PrintWeight(fp, &weights->rookSemiOpen);
+
+  fprintf(fp, "\nconst Score ROOK_TO_OPEN = ");
+  PrintWeight(fp, &weights->rookToOpen);
 
   fprintf(fp, "\nconst Score QUEEN_OPPOSITE_ROOK = ");
   PrintWeight(fp, &weights->queenOppositeRook);

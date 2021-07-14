@@ -133,6 +133,7 @@ typedef struct {
   int8_t dragonBishop;
   int8_t rookOpenFile;
   int8_t rookSemiOpen;
+  int8_t rookToOpen;
   int8_t queenOppositeRook;
   int8_t queenRookBattery;
 
@@ -203,6 +204,7 @@ typedef struct {
 
 typedef struct {
   BitBoard passedPawns;
+  BitBoard openFiles;
 
   // these are general data objects, for buildup during eval
   int kingSq[2];
