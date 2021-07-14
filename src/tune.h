@@ -149,7 +149,7 @@ void UpdateParam(Param* p);
 void UpdateWeight(Weight* w);
 void UpdateWeights(Weights* weights);
 void MergeWeightGradients(Weight* dest, Weight* src);
-double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights);
+double UpdateAndTrain(int n, Position* positions, Weights* weights);
 
 void* UpdateGradients(void* arg);
 void UpdateMaterialGradients(Position* position, double loss, Weights* weights);

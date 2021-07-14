@@ -65,10 +65,17 @@ void Tune() {
   ALPHA *= sqrt(n);
 
   printf("Starting Error: %1.8f\n", TotalStaticError(n, positions));
-  for (int epoch = 1; epoch <= 100000; epoch++) {
-    double error = UpdateAndTrain(epoch, n, positions, &weights);
 
-    if (epoch % 10 == 0) {
+  long start = GetTimeMS();
+
+  for (int epoch = 1; epoch <= 100000; epoch++) {
+    double error = UpdateAndTrain(n, positions, &weights);
+
+    long now = GetTimeMS();
+
+    printf("Epoch: [#%4d], Error: %1.8f, Speed: %4.4fs\r", epoch, error / n, (now - start) / (1000.0 * epoch));
+
+    if (epoch % 25 == 0) {
       PrintWeights(&weights, epoch, error);
       printf("\n");
     }
@@ -284,7 +291,7 @@ void MergeWeightGradients(Weight* dest, Weight* src) {
   dest->eg.g += src->eg.g;
 }
 
-double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
+double UpdateAndTrain(int n, Position* positions, Weights* weights) {
   pthread_t threads[THREADS];
   GradientUpdate jobs[THREADS];
   Weights local[THREADS];
@@ -515,8 +522,6 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->tempo.mg.g += w->tempo.mg.g;
   }
-
-  printf("Epoch: [#%d], Error: %1.8f\r", epoch, error / n);
 
   UpdateWeights(weights);
 

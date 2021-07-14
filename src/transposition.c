@@ -69,7 +69,6 @@ inline int TTScore(TTEntry* e, int ply) {
 inline void TTPrefetch(uint64_t hash) { __builtin_prefetch(&TT.buckets[TT.mask & hash]); }
 
 inline TTEntry* TTProbe(int* hit, uint64_t hash) {
-#ifndef TUNE
   TTEntry* bucket = TT.buckets[TT.mask & hash].entries;
   uint32_t shortHash = hash >> 32;
 
@@ -79,16 +78,11 @@ inline TTEntry* TTProbe(int* hit, uint64_t hash) {
       bucket[i].age = TT.age;
       return &bucket[i];
     }
-#endif
 
-  return 0;
+  return NULL;
 }
 
 inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval) {
-#ifdef TUNE
-  return;
-#else
-
   TTBucket* bucket = &TT.buckets[TT.mask & hash];
   uint32_t shortHash = hash >> 32;
   TTEntry* toReplace = bucket->entries;
@@ -118,7 +112,6 @@ inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move
 
   *toReplace = (TTEntry){
       .flags = flag, .depth = depth, .eval = eval, .score = score, .hash = shortHash, .move = move, .age = TT.age};
-#endif
 }
 
 inline int TTFull() {
