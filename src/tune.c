@@ -178,6 +178,8 @@ void UpdateWeights(Weights* weights) {
 
   UpdateWeight(&weights->hangingThreat);
 
+  UpdateWeight(&weights->knightCheckQueen);
+
   UpdateWeight(&weights->bishopPair);
 
   for (int i = 0; i < 5; i++)
@@ -369,6 +371,9 @@ double UpdateAndTrain(int epoch, int n, Position* positions, Weights* weights) {
 
     weights->hangingThreat.mg.g += w->hangingThreat.mg.g;
     weights->hangingThreat.eg.g += w->hangingThreat.eg.g;
+
+    weights->knightCheckQueen.mg.g += w->knightCheckQueen.mg.g;
+    weights->knightCheckQueen.eg.g += w->knightCheckQueen.eg.g;
 
     for (int i = 0; i < 5; i++) {
       for (int j = 0; j < 5; j++) {
@@ -624,6 +629,9 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights) {
 
   weights->hangingThreat.mg.g += position->coeffs.hangingThreat * mgBase;
   weights->hangingThreat.eg.g += position->coeffs.hangingThreat * egBase;
+
+  weights->knightCheckQueen.mg.g += position->coeffs.knightCheckQueen * mgBase;
+  weights->knightCheckQueen.eg.g += position->coeffs.knightCheckQueen * egBase;
 }
 
 void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights) {
@@ -904,6 +912,7 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
   ApplyCoeff(mg, eg, position->coeffs.pawnThreat, &weights->pawnThreat);
   ApplyCoeff(mg, eg, position->coeffs.pawnPushThreat, &weights->pawnPushThreat);
   ApplyCoeff(mg, eg, position->coeffs.hangingThreat, &weights->hangingThreat);
+  ApplyCoeff(mg, eg, position->coeffs.knightCheckQueen, &weights->knightCheckQueen);
 }
 
 void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -1181,6 +1190,9 @@ void InitThreatWeights(Weights* weights) {
 
   weights->hangingThreat.mg.value = scoreMG(HANGING_THREAT);
   weights->hangingThreat.eg.value = scoreEG(HANGING_THREAT);
+
+  weights->knightCheckQueen.mg.value = scoreMG(KNIGHT_CHECK_QUEEN);
+  weights->knightCheckQueen.eg.value = scoreEG(KNIGHT_CHECK_QUEEN);
 }
 
 void InitPieceBonusWeights(Weights* weights) {
@@ -1502,6 +1514,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score HANGING_THREAT = ");
   PrintWeight(fp, &weights->hangingThreat);
+
+  fprintf(fp, "\nconst Score KNIGHT_CHECK_QUEEN = ");
+  PrintWeight(fp, &weights->knightCheckQueen);
 
   fprintf(fp, "\nconst Score SPACE = %d;\n", (int)round(weights->space.mg.value));
 
