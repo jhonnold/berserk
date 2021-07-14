@@ -159,6 +159,9 @@ typedef struct {
   int8_t pawnThreat;
   int8_t pawnPushThreat;
   int8_t hangingThreat;
+  int8_t knightCheckQueen;
+  int8_t bishopCheckQueen;
+  int8_t rookCheckQueen;
 
   int16_t space;
 

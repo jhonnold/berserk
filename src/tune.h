@@ -88,6 +88,9 @@ typedef struct {
   Weight pawnThreat;
   Weight pawnPushThreat;
   Weight hangingThreat;
+  Weight knightCheckQueen;
+  Weight bishopCheckQueen;
+  Weight rookCheckQueen;
 
   Weight space;
 
