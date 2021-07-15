@@ -56,9 +56,7 @@ void Tune() {
   InitPawnShelterWeights(&weights);
   InitSpaceWeights(&weights);
   InitTempoWeight(&weights);
-
-  if (TUNE_KS)
-    InitKingSafetyWeights(&weights);
+  InitKingSafetyWeights(&weights);
 
   PrintWeights(&weights, 0, 0);
 
@@ -214,6 +212,8 @@ void UpdateWeights(Weights* weights) {
   UpdateWeight(&weights->badBishopPawns);
 
   UpdateWeight(&weights->dragonBishop);
+
+  UpdateWeight(&weights->rookOpenFileOffset);
 
   UpdateWeight(&weights->rookOpenFile);
 
@@ -430,6 +430,9 @@ double UpdateAndTrain(int n, Position* positions, Weights* weights) {
 
     weights->dragonBishop.mg.g += w->dragonBishop.mg.g;
     weights->dragonBishop.eg.g += w->dragonBishop.eg.g;
+
+    weights->rookOpenFileOffset.mg.g += w->rookOpenFileOffset.mg.g;
+    weights->rookOpenFileOffset.eg.g += w->rookOpenFileOffset.eg.g;
 
     weights->rookOpenFile.mg.g += w->rookOpenFile.mg.g;
     weights->rookOpenFile.eg.g += w->rookOpenFile.eg.g;
@@ -714,6 +717,9 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
   weights->dragonBishop.mg.g += position->coeffs.dragonBishop * mgBase;
   weights->dragonBishop.eg.g += position->coeffs.dragonBishop * egBase;
 
+  weights->rookOpenFileOffset.mg.g += position->coeffs.rookOpenFileOffset * mgBase;
+  weights->rookOpenFileOffset.eg.g += position->coeffs.rookOpenFileOffset * egBase;
+
   weights->rookOpenFile.mg.g += position->coeffs.rookOpenFile * mgBase;
   weights->rookOpenFile.eg.g += position->coeffs.rookOpenFile * egBase;
 
@@ -989,6 +995,7 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
   ApplyCoeff(mg, eg, position->coeffs.rookTrapped, &weights->rookTrapped);
   ApplyCoeff(mg, eg, position->coeffs.badBishopPawns, &weights->badBishopPawns);
   ApplyCoeff(mg, eg, position->coeffs.dragonBishop, &weights->dragonBishop);
+  ApplyCoeff(mg, eg, position->coeffs.rookOpenFileOffset, &weights->rookOpenFileOffset);
   ApplyCoeff(mg, eg, position->coeffs.rookOpenFile, &weights->rookOpenFile);
   ApplyCoeff(mg, eg, position->coeffs.rookSemiOpen, &weights->rookSemiOpen);
   ApplyCoeff(mg, eg, position->coeffs.rookToOpen, &weights->rookToOpen);
@@ -1298,6 +1305,9 @@ void InitPieceBonusWeights(Weights* weights) {
   weights->dragonBishop.mg.value = scoreMG(DRAGON_BISHOP);
   weights->dragonBishop.eg.value = scoreEG(DRAGON_BISHOP);
 
+  weights->rookOpenFileOffset.mg.value = scoreMG(ROOK_OPEN_FILE_OFFSET);
+  weights->rookOpenFileOffset.eg.value = scoreEG(ROOK_OPEN_FILE_OFFSET);
+
   weights->rookOpenFile.mg.value = scoreMG(ROOK_OPEN_FILE);
   weights->rookOpenFile.eg.value = scoreEG(ROOK_OPEN_FILE);
 
@@ -1508,6 +1518,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score DRAGON_BISHOP = ");
   PrintWeight(fp, &weights->dragonBishop);
+
+  fprintf(fp, "\nconst Score ROOK_OPEN_FILE_OFFSET = ");
+  PrintWeight(fp, &weights->rookOpenFileOffset);
 
   fprintf(fp, "\nconst Score ROOK_OPEN_FILE = ");
   PrintWeight(fp, &weights->rookOpenFile);
