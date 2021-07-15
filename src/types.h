@@ -44,9 +44,6 @@ typedef uint64_t BitBoard;
 
 typedef uint32_t Move;
 
-
-
-
 typedef struct {
   BitBoard pieces[12];     // individual piece data
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
@@ -152,6 +149,7 @@ typedef struct {
   int8_t passedPawnAdvance[5];
   int8_t passedPawnEnemySliderBehind;
   int8_t passedPawnSqRule;
+  int8_t passedPawnUnsupported;
 
   int8_t knightThreats[6];
   int8_t bishopThreats[6];
