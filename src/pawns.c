@@ -136,6 +136,7 @@ Score PasserEval(Board* board, EvalData* data, int side) {
   BitBoard passers = data->passedPawns & board->pieces[PAWN[side]];
 
   while (passers) {
+    BitBoard bb = passers & -passers;
     int sq = lsb(passers);
     int file = file(sq);
     int rank = rank(sq);
@@ -160,6 +161,13 @@ Score PasserEval(Board* board, EvalData* data, int side) {
 
       if (T)
         C.passedPawnKingProximity += cs[side] * min(4, max(opponentDistance - myDistance, -4));
+
+      if (!(bb & data->allAttacks[side])) {
+        s += PASSED_PAWN_UNSUPPORTED;
+
+        if (T)
+          C.passedPawnUnsupported += cs[side];
+      }
 
       BitBoard behind =
           GetRookAttacks(sq, board->occupancies[BOTH]) & FILE_MASKS[file] & FORWARD_RANK_MASKS[xside][rank];
