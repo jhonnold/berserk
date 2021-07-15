@@ -468,10 +468,12 @@ Score NonPawnMaterialValue(Board* board) {
 // Berserk uses reflected PSQTs in 2 states (same side as enemy king or not)
 // A similar idea has been implemented in koi and is the inspiration for this
 // simpler implementation
-Score MaterialValue(Board* board, int side) {
+inline Score MaterialValue(Board* board, const int side) {
   Score s = S(0, 0);
 
-  uint8_t eks = SQ_SIDE[lsb(board->pieces[KING[side ^ 1]])];
+  const int xside = side ^ 1;
+
+  uint8_t eks = SQ_SIDE[lsb(board->pieces[KING[xside]])];
 
   for (int pc = PAWN[side]; pc <= KING[side]; pc += 2) {
     BitBoard pieces = board->pieces[pc];
@@ -494,234 +496,222 @@ Score MaterialValue(Board* board, int side) {
   return s;
 }
 
-// Mobility + various piece specific mobility bonus
-// Note: This method also builds up attack data critical for
-// threat and king safety calculations
-Score PieceEval(Board* board, EvalData* data, int side) {
+INLINE Score PieceEval(Board* board, EvalData* data, const int piece) {
   Score s = S(0, 0);
 
-  int xside = side ^ 1;
-  BitBoard enemyKingArea = data->kingArea[xside];
-  BitBoard mob = data->mobilitySquares[side];
-  BitBoard outposts = data->outposts[side];
-  BitBoard myPawns = board->pieces[PAWN[side]];
-  BitBoard opponentPawns = board->pieces[PAWN[xside]];
-  BitBoard allPawns = myPawns | opponentPawns;
+  const int side = piece & 1;
+  const int xside = side ^ 1;
+  const int pieceType = PIECE_TYPE[piece];
+  const BitBoard enemyKingArea = data->kingArea[xside];
+  const BitBoard mob = data->mobilitySquares[side];
+  const BitBoard outposts = data->outposts[side];
+  const BitBoard myPawns = board->pieces[PAWN[side]];
+  const BitBoard opponentPawns = board->pieces[PAWN[xside]];
+  const BitBoard allPawns = myPawns | opponentPawns;
 
-  // bishop pair bonus first
-  if (bits(board->pieces[BISHOP[side]]) > 1) {
-    s += BISHOP_PAIR;
+  if (pieceType == BISHOP_TYPE) {
+    // bishop pair bonus first
+    if (bits(board->pieces[BISHOP[side]]) > 1) {
+      s += BISHOP_PAIR;
+
+      if (T)
+        C.bishopPair += cs[side];
+    }
+
+    BitBoard minorsBehindPawns = (board->pieces[KNIGHT[side]] | board->pieces[BISHOP[side]]) &
+                                 (side == WHITE ? ShiftS(allPawns) : ShiftN(allPawns));
+    s += bits(minorsBehindPawns) * MINOR_BEHIND_PAWN;
 
     if (T)
-      C.bishopPair += cs[side];
+      C.minorBehindPawn += bits(minorsBehindPawns) * cs[side];
   }
 
-  BitBoard minorsBehindPawns = (board->pieces[KNIGHT[side]] | board->pieces[BISHOP[side]]) &
-                               (side == WHITE ? ShiftS(allPawns) : ShiftN(allPawns));
-  s += bits(minorsBehindPawns) * MINOR_BEHIND_PAWN;
+  BitBoard pieces = board->pieces[piece];
+  while (pieces) {
+    BitBoard bb = pieces & -pieces;
+    int sq = lsb(pieces);
 
-  if (T)
-    C.minorBehindPawn += bits(minorsBehindPawns) * cs[side];
+    BitBoard movement = EMPTY;
+    if (pieceType == KNIGHT_TYPE) {
+      movement = GetKnightAttacks(sq);
+      s += KNIGHT_MOBILITIES[bits(movement & mob)];
 
-  for (int p = KNIGHT[side]; p <= KING[side]; p += 2) {
-    BitBoard pieces = board->pieces[p];
-    int pieceType = PIECE_TYPE[p];
+      if (T)
+        C.knightMobilities[bits(movement & mob)] += cs[side];
+    } else if (pieceType == BISHOP_TYPE) {
+      movement = GetBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
+      s += BISHOP_MOBILITIES[bits(movement & mob)];
 
-    while (pieces) {
-      BitBoard bb = pieces & -pieces;
-      int sq = lsb(pieces);
+      if (T)
+        C.bishopMobilities[bits(movement & mob)] += cs[side];
+    } else if (pieceType == ROOK_TYPE) {
+      movement = GetRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[ROOK[side]] ^ board->pieces[QUEEN[side]]);
+      s += ROOK_MOBILITIES[bits(movement & mob)];
 
-      // Calculate a mobility bonus - bishops/rooks can see through queen/rook
-      // because batteries shouldn't "limit" mobility
-      // TODO: Consider queen behind rook acceptable?
-      BitBoard movement = EMPTY;
-      switch (pieceType) {
-      case KNIGHT_TYPE:
-        movement = GetKnightAttacks(sq);
-        s += KNIGHT_MOBILITIES[bits(movement & mob)];
+      if (T)
+        C.rookMobilities[bits(movement & mob)] += cs[side];
+    } else if (pieceType == QUEEN_TYPE) {
+      movement = GetQueenAttacks(sq, board->occupancies[BOTH]);
+      s += QUEEN_MOBILITIES[bits(movement & mob)];
 
-        if (T)
-          C.knightMobilities[bits(movement & mob)] += cs[side];
-        break;
-      case BISHOP_TYPE:
-        movement = GetBishopAttacks(sq, board->occupancies[BOTH] ^ board->pieces[QUEEN[side]]);
-        s += BISHOP_MOBILITIES[bits(movement & mob)];
-
-        if (T)
-          C.bishopMobilities[bits(movement & mob)] += cs[side];
-        break;
-      case ROOK_TYPE:
-        movement =
-            GetRookAttacks(sq, board->occupancies[BOTH] ^ board->pieces[ROOK[side]] ^ board->pieces[QUEEN[side]]);
-        s += ROOK_MOBILITIES[bits(movement & mob)];
-
-        if (T)
-          C.rookMobilities[bits(movement & mob)] += cs[side];
-        break;
-      case QUEEN_TYPE:
-        movement = GetQueenAttacks(sq, board->occupancies[BOTH]);
-        s += QUEEN_MOBILITIES[bits(movement & mob)];
-
-        if (T)
-          C.queenMobilities[bits(movement & mob)] += cs[side];
-        break;
-      case KING_TYPE:
-        movement = GetKingAttacks(sq) & ~enemyKingArea;
-      }
-
-      // Update attack/king safety data
-      data->twoAttacks[side] |= (movement & data->allAttacks[side]);
-      data->attacks[side][pieceType] |= movement;
-      data->allAttacks[side] |= movement;
-
-      if (movement & enemyKingArea) {
-        data->ksAttackWeight[side] += KS_ATTACKER_WEIGHTS[pieceType];
-        data->ksAttackerCount[side]++;
-
-        if (T) {
-          C.ksAttackerCount[xside]++;
-          C.ksAttackerWeights[xside][pieceType]++;
-        }
-      }
-
-      // Piece specific bonus'
-      if (pieceType == KNIGHT_TYPE) {
-        if (outposts & bb) {
-          s += KNIGHT_POSTS[side][sq];
-
-          if (T)
-            C.knightPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq]) - 8] += cs[side];
-        } else if (movement & outposts) {
-          s += KNIGHT_OUTPOST_REACHABLE;
-
-          if (T)
-            C.knightPostReachable += cs[side];
-        }
-      } else if (pieceType == BISHOP_TYPE) {
-        BitBoard bishopSquares = (bb & DARK_SQS) ? DARK_SQS : ~DARK_SQS;
-        BitBoard inTheWayPawns = board->pieces[PAWN[side]] & bishopSquares;
-        BitBoard blockedInTheWayPawns =
-            (side == WHITE ? ShiftS(board->occupancies[BOTH]) : ShiftN(board->occupancies[BOTH])) &
-            board->pieces[PAWN[side]] & ~(A_FILE | B_FILE | G_FILE | H_FILE);
-
-        int scalar = bits(inTheWayPawns) * bits(blockedInTheWayPawns);
-        s += BAD_BISHOP_PAWNS * scalar;
-
-        if (T)
-          C.badBishopPawns += cs[side] * scalar;
-
-        if (!(CENTER_SQS & bb) && bits(CENTER_SQS & GetBishopAttacks(sq, (myPawns | opponentPawns))) > 1) {
-          s += DRAGON_BISHOP;
-
-          if (T)
-            C.dragonBishop += cs[side];
-        }
-
-        if (outposts & bb) {
-          s += BISHOP_POSTS[side][sq];
-
-          if (T)
-            C.bishopPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq]) - 8] += cs[side];
-        } else if (movement & outposts) {
-          s += BISHOP_OUTPOST_REACHABLE;
-
-          if (T)
-            C.bishopPostReachable += cs[side];
-        }
-
-        if (side == WHITE) {
-          if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7)) {
-            s += BISHOP_TRAPPED;
-
-            if (T)
-              C.bishopTrapped += cs[side];
-          } else if ((sq == H7 || sq == G8) && getBit(opponentPawns, F7) && getBit(opponentPawns, G6)) {
-            s += BISHOP_TRAPPED;
-
-            if (T)
-              C.bishopTrapped += cs[side];
-          }
-        } else {
-          if ((sq == A2 || sq == B1) && getBit(opponentPawns, B3) && getBit(opponentPawns, C2)) {
-            s += BISHOP_TRAPPED;
-
-            if (T)
-              C.bishopTrapped += cs[side];
-          } else if ((sq == H2 || sq == G1) && getBit(opponentPawns, G3) && getBit(opponentPawns, F2)) {
-            s += BISHOP_TRAPPED;
-
-            if (T)
-              C.bishopTrapped += cs[side];
-          }
-        }
-      } else if (pieceType == ROOK_TYPE) {
-        if (!(FILE_MASKS[file(sq)] & myPawns)) {
-          if (!(FILE_MASKS[file(sq)] & opponentPawns)) {
-            s += ROOK_OPEN_FILE;
-
-            if (T)
-              C.rookOpenFile += cs[side];
-          } else {
-            if (!(movement & FORWARD_RANK_MASKS[side][rank(sq)] & opponentPawns & data->attacks[xside][PAWN_TYPE])) {
-              s += ROOK_SEMI_OPEN;
-
-              if (T)
-                C.rookSemiOpen += cs[side];
-            }
-          }
-        }
-
-        if (movement & data->openFiles) {
-          s += ROOK_TO_OPEN;
-
-          if (T)
-            C.rookToOpen += cs[side];
-        }
-
-        if (side == WHITE) {
-          if ((sq == A1 || sq == A2 || sq == B1) && (data->kingSq[side] == C1 || data->kingSq[side] == B1)) {
-            s += ROOK_TRAPPED;
-
-            if (T)
-              C.rookTrapped += cs[side];
-          } else if ((sq == H1 || sq == H2 || sq == G1) && (data->kingSq[side] == F1 || data->kingSq[side] == G1)) {
-            s += ROOK_TRAPPED;
-
-            if (T)
-              C.rookTrapped += cs[side];
-          }
-        } else {
-          if ((sq == A8 || sq == A7 || sq == B8) && (data->kingSq[side] == B8 || data->kingSq[side] == C8)) {
-            s += ROOK_TRAPPED;
-
-            if (T)
-              C.rookTrapped += cs[side];
-          } else if ((sq == H8 || sq == H7 || sq == G8) && (data->kingSq[side] == F8 || data->kingSq[side] == G8)) {
-            s += ROOK_TRAPPED;
-
-            if (T)
-              C.rookTrapped += cs[side];
-          }
-        }
-      } else if (pieceType == QUEEN_TYPE) {
-        if (FILE_MASKS[file(sq)] & board->pieces[ROOK[xside]]) {
-          s += QUEEN_OPPOSITE_ROOK;
-
-          if (T)
-            C.queenOppositeRook += cs[side];
-        }
-
-        if ((FILE_MASKS[file(sq)] & FORWARD_RANK_MASKS[side][rank(sq)] & board->pieces[ROOK[side]]) &&
-            !(FILE_MASKS[file(sq)] & myPawns)) {
-          s += QUEEN_ROOK_BATTERY;
-
-          if (T)
-            C.queenRookBattery += cs[side];
-        }
-      }
-
-      popLsb(pieces);
+      if (T)
+        C.queenMobilities[bits(movement & mob)] += cs[side];
+    } else if (pieceType == KING_TYPE) {
+      movement = GetKingAttacks(sq) & ~enemyKingArea;
     }
+
+    // Update attack/king safety data
+    data->twoAttacks[side] |= (movement & data->allAttacks[side]);
+    data->attacks[side][pieceType] |= movement;
+    data->allAttacks[side] |= movement;
+
+    if (movement & enemyKingArea) {
+      data->ksAttackWeight[side] += KS_ATTACKER_WEIGHTS[pieceType];
+      data->ksAttackerCount[side]++;
+
+      if (T) {
+        C.ksAttackerCount[xside]++;
+        C.ksAttackerWeights[xside][pieceType]++;
+      }
+    }
+
+    // Piece specific bonus'
+    if (pieceType == KNIGHT_TYPE) {
+      if (outposts & bb) {
+        s += KNIGHT_POSTS[side][sq];
+
+        if (T)
+          C.knightPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq]) - 8] += cs[side];
+      } else if (movement & outposts) {
+        s += KNIGHT_OUTPOST_REACHABLE;
+
+        if (T)
+          C.knightPostReachable += cs[side];
+      }
+    } else if (pieceType == BISHOP_TYPE) {
+      BitBoard bishopSquares = (bb & DARK_SQS) ? DARK_SQS : ~DARK_SQS;
+      BitBoard inTheWayPawns = board->pieces[PAWN[side]] & bishopSquares;
+      BitBoard blockedInTheWayPawns =
+          (side == WHITE ? ShiftS(board->occupancies[BOTH]) : ShiftN(board->occupancies[BOTH])) &
+          board->pieces[PAWN[side]] & ~(A_FILE | B_FILE | G_FILE | H_FILE);
+
+      int scalar = bits(inTheWayPawns) * bits(blockedInTheWayPawns);
+      s += BAD_BISHOP_PAWNS * scalar;
+
+      if (T)
+        C.badBishopPawns += cs[side] * scalar;
+
+      if (!(CENTER_SQS & bb) && bits(CENTER_SQS & GetBishopAttacks(sq, (myPawns | opponentPawns))) > 1) {
+        s += DRAGON_BISHOP;
+
+        if (T)
+          C.dragonBishop += cs[side];
+      }
+
+      if (outposts & bb) {
+        s += BISHOP_POSTS[side][sq];
+
+        if (T)
+          C.bishopPostPsqt[psqtIdx(side == WHITE ? sq : MIRROR[sq]) - 8] += cs[side];
+      } else if (movement & outposts) {
+        s += BISHOP_OUTPOST_REACHABLE;
+
+        if (T)
+          C.bishopPostReachable += cs[side];
+      }
+
+      if (side == WHITE) {
+        if ((sq == A7 || sq == B8) && getBit(opponentPawns, B6) && getBit(opponentPawns, C7)) {
+          s += BISHOP_TRAPPED;
+
+          if (T)
+            C.bishopTrapped += cs[side];
+        } else if ((sq == H7 || sq == G8) && getBit(opponentPawns, F7) && getBit(opponentPawns, G6)) {
+          s += BISHOP_TRAPPED;
+
+          if (T)
+            C.bishopTrapped += cs[side];
+        }
+      } else {
+        if ((sq == A2 || sq == B1) && getBit(opponentPawns, B3) && getBit(opponentPawns, C2)) {
+          s += BISHOP_TRAPPED;
+
+          if (T)
+            C.bishopTrapped += cs[side];
+        } else if ((sq == H2 || sq == G1) && getBit(opponentPawns, G3) && getBit(opponentPawns, F2)) {
+          s += BISHOP_TRAPPED;
+
+          if (T)
+            C.bishopTrapped += cs[side];
+        }
+      }
+    } else if (pieceType == ROOK_TYPE) {
+      if (!(FILE_MASKS[file(sq)] & myPawns)) {
+        if (!(FILE_MASKS[file(sq)] & opponentPawns)) {
+          s += ROOK_OPEN_FILE;
+
+          if (T)
+            C.rookOpenFile += cs[side];
+        } else {
+          if (!(movement & FORWARD_RANK_MASKS[side][rank(sq)] & opponentPawns & data->attacks[xside][PAWN_TYPE])) {
+            s += ROOK_SEMI_OPEN;
+
+            if (T)
+              C.rookSemiOpen += cs[side];
+          }
+        }
+      }
+
+      if (movement & data->openFiles) {
+        s += ROOK_TO_OPEN;
+
+        if (T)
+          C.rookToOpen += cs[side];
+      }
+
+      if (side == WHITE) {
+        if ((sq == A1 || sq == A2 || sq == B1) && (data->kingSq[side] == C1 || data->kingSq[side] == B1)) {
+          s += ROOK_TRAPPED;
+
+          if (T)
+            C.rookTrapped += cs[side];
+        } else if ((sq == H1 || sq == H2 || sq == G1) && (data->kingSq[side] == F1 || data->kingSq[side] == G1)) {
+          s += ROOK_TRAPPED;
+
+          if (T)
+            C.rookTrapped += cs[side];
+        }
+      } else {
+        if ((sq == A8 || sq == A7 || sq == B8) && (data->kingSq[side] == B8 || data->kingSq[side] == C8)) {
+          s += ROOK_TRAPPED;
+
+          if (T)
+            C.rookTrapped += cs[side];
+        } else if ((sq == H8 || sq == H7 || sq == G8) && (data->kingSq[side] == F8 || data->kingSq[side] == G8)) {
+          s += ROOK_TRAPPED;
+
+          if (T)
+            C.rookTrapped += cs[side];
+        }
+      }
+    } else if (pieceType == QUEEN_TYPE) {
+      if (FILE_MASKS[file(sq)] & board->pieces[ROOK[xside]]) {
+        s += QUEEN_OPPOSITE_ROOK;
+
+        if (T)
+          C.queenOppositeRook += cs[side];
+      }
+
+      if ((FILE_MASKS[file(sq)] & FORWARD_RANK_MASKS[side][rank(sq)] & board->pieces[ROOK[side]]) &&
+          !(FILE_MASKS[file(sq)] & myPawns)) {
+        s += QUEEN_ROOK_BATTERY;
+
+        if (T)
+          C.queenRookBattery += cs[side];
+      }
+    }
+
+    popLsb(pieces);
   }
 
   return s;
@@ -729,14 +719,14 @@ Score PieceEval(Board* board, EvalData* data, int side) {
 
 // Threats bonus (piece attacks piece)
 // TODO: Make this vary more based on piece type
-Score Threats(Board* board, EvalData* data, int side) {
+INLINE Score Threats(Board* board, EvalData* data, const int side) {
   Score s = S(0, 0);
 
-  int xside = side ^ 1;
+  const int xside = side ^ 1;
 
-  BitBoard covered = data->attacks[xside][PAWN_TYPE] | (data->twoAttacks[xside] & ~data->twoAttacks[side]);
-  BitBoard nonPawnEnemies = board->occupancies[xside] & ~board->pieces[PAWN[xside]];
-  BitBoard weak = ~covered & data->allAttacks[side];
+  const BitBoard covered = data->attacks[xside][PAWN_TYPE] | (data->twoAttacks[xside] & ~data->twoAttacks[side]);
+  const BitBoard nonPawnEnemies = board->occupancies[xside] & ~board->pieces[PAWN[xside]];
+  const BitBoard weak = ~covered & data->allAttacks[side];
 
   for (int piece = KNIGHT_TYPE; piece <= ROOK_TYPE; piece++) {
     BitBoard threats = board->occupancies[xside] & data->attacks[side][piece];
@@ -835,15 +825,15 @@ Score Threats(Board* board, EvalData* data, int side) {
 // This fit for KS is strong as it can ignore a single piece attacking, but will
 // spike on a secondary piece joining.
 // It is heavily influenced by Toga, Rebel, SF, and Ethereal
-Score KingSafety(Board* board, EvalData* data, int side) {
+INLINE Score KingSafety(Board* board, EvalData* data, const int side) {
   Score s = S(0, 0);
   Score shelter = S(0, 0);
 
-  int xside = side ^ 1;
+  const int xside = side ^ 1;
 
-  BitBoard ourPawns = board->pieces[PAWN[side]] & ~data->attacks[xside][PAWN_TYPE] &
-                      ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
-  BitBoard opponentPawns = board->pieces[PAWN[xside]] & ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
+  const BitBoard ourPawns = board->pieces[PAWN[side]] & ~data->attacks[xside][PAWN_TYPE] &
+                            ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
+  const BitBoard opponentPawns = board->pieces[PAWN[xside]] & ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
 
   // pawn shelter includes, pawns in front of king/enemy pawn storm (blocked/moving)
   for (int file = SHELTER_STORM_FILES[file(data->kingSq[side])][0];
@@ -933,11 +923,11 @@ Score KingSafety(Board* board, EvalData* data, int side) {
 // that are behind pawns and not occupied by allied pawns or attacked by enemy
 // pawns.
 // https://www.chessprogramming.org/Space, Laser, Chess22k, and SF as references
-Score Space(Board* board, EvalData* data, int side) {
+INLINE Score Space(Board* board, EvalData* data, const int side) {
   static const BitBoard CENTER_FILES = (C_FILE | D_FILE | E_FILE | F_FILE) & ~(RANK_1 | RANK_8);
 
   Score s = S(0, 0);
-  int xside = side ^ 1;
+  const int xside = side ^ 1;
 
   BitBoard space = side == WHITE ? ShiftS(board->pieces[PAWN[side]]) : ShiftN(board->pieces[PAWN[side]]);
   space |= side == WHITE ? (ShiftS(space) | ShiftSS(space)) : (ShiftN(space) | ShiftNN(space));
@@ -957,9 +947,9 @@ Score Space(Board* board, EvalData* data, int side) {
   return s;
 }
 
-Score Imbalance(Board* board, int side) {
+INLINE Score Imbalance(Board* board, const int side) {
   Score s = S(0, 0);
-  int xside = side ^ 1;
+  const int xside = side ^ 1;
 
   for (int i = KNIGHT_TYPE; i < KING_TYPE; i++) {
     for (int j = PAWN_TYPE; j < i; j++) {
@@ -1016,7 +1006,12 @@ Score Evaluate(Board* board, ThreadData* thread) {
   s += Imbalance(board, WHITE) - Imbalance(board, BLACK);
 
   if (T || abs(scoreMG(s) + scoreEG(s)) / 2 < 1024) {
-    s += PieceEval(board, &data, WHITE) - PieceEval(board, &data, BLACK);
+    s += PieceEval(board, &data, KNIGHT_WHITE) - PieceEval(board, &data, KNIGHT_BLACK);
+    s += PieceEval(board, &data, BISHOP_WHITE) - PieceEval(board, &data, BISHOP_BLACK);
+    s += PieceEval(board, &data, ROOK_WHITE) - PieceEval(board, &data, ROOK_BLACK);
+    s += PieceEval(board, &data, QUEEN_WHITE) - PieceEval(board, &data, QUEEN_BLACK);
+    s += PieceEval(board, &data, KING_WHITE) - PieceEval(board, &data, KING_BLACK);
+
     s += PasserEval(board, &data, WHITE) - PasserEval(board, &data, BLACK);
     s += Threats(board, &data, WHITE) - Threats(board, &data, BLACK);
     s += KingSafety(board, &data, WHITE) - KingSafety(board, &data, BLACK);
