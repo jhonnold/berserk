@@ -432,6 +432,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       // no score failed above sBeta, so this is singular
       if (score < sBeta)
         extension = 1 + (!isPV && score < sBeta - 50);
+      else if (sBeta >= beta)
+        return sBeta;
     }
 
     // history extension - if the tt move has a really good history score, extend.
