@@ -55,8 +55,10 @@ void Tune() {
   InitPasserBonusWeights(&weights);
   InitPawnShelterWeights(&weights);
   InitSpaceWeights(&weights);
-  InitKingSafetyWeights(&weights);
   InitTempoWeight(&weights);
+
+  if (TUNE_KS)
+    InitKingSafetyWeights(&weights);
 
   PrintWeights(&weights, 0, 0);
 
@@ -272,6 +274,8 @@ void UpdateWeights(Weights* weights) {
 
   UpdateParam(&weights->space.mg);
 
+  UpdateParam(&weights->tempo.mg);
+
   if (TUNE_KS) {
     for (int i = 0; i < 5; i++)
       UpdateParam(&weights->ksAttackerWeight[i].mg);
@@ -286,8 +290,6 @@ void UpdateWeights(Weights* weights) {
     UpdateParam(&weights->ksEnemyQueen.mg);
     UpdateParam(&weights->ksKnightDefense.mg);
   }
-
-  UpdateParam(&weights->tempo.mg);
 }
 
 void MergeWeightGradients(Weight* dest, Weight* src) {
@@ -517,20 +519,22 @@ double UpdateAndTrain(int n, Position* positions, Weights* weights) {
 
     weights->space.mg.g += w->space.mg.g;
 
-    for (int i = 0; i < 5; i++)
-      weights->ksAttackerWeight[i].mg.g += w->ksAttackerWeight[i].mg.g;
-
-    weights->ksWeakSqs.mg.g += w->ksWeakSqs.mg.g;
-    weights->ksPinned.mg.g += w->ksPinned.mg.g;
-    weights->ksKnightCheck.mg.g += w->ksKnightCheck.mg.g;
-    weights->ksBishopCheck.mg.g += w->ksBishopCheck.mg.g;
-    weights->ksRookCheck.mg.g += w->ksRookCheck.mg.g;
-    weights->ksQueenCheck.mg.g += w->ksQueenCheck.mg.g;
-    weights->ksUnsafeCheck.mg.g += w->ksUnsafeCheck.mg.g;
-    weights->ksEnemyQueen.mg.g += w->ksEnemyQueen.mg.g;
-    weights->ksKnightDefense.mg.g += w->ksKnightDefense.mg.g;
-
     weights->tempo.mg.g += w->tempo.mg.g;
+
+    if (TUNE_KS) {
+      for (int i = 0; i < 5; i++)
+        weights->ksAttackerWeight[i].mg.g += w->ksAttackerWeight[i].mg.g;
+
+      weights->ksWeakSqs.mg.g += w->ksWeakSqs.mg.g;
+      weights->ksPinned.mg.g += w->ksPinned.mg.g;
+      weights->ksKnightCheck.mg.g += w->ksKnightCheck.mg.g;
+      weights->ksBishopCheck.mg.g += w->ksBishopCheck.mg.g;
+      weights->ksRookCheck.mg.g += w->ksRookCheck.mg.g;
+      weights->ksQueenCheck.mg.g += w->ksQueenCheck.mg.g;
+      weights->ksUnsafeCheck.mg.g += w->ksUnsafeCheck.mg.g;
+      weights->ksEnemyQueen.mg.g += w->ksEnemyQueen.mg.g;
+      weights->ksKnightDefense.mg.g += w->ksKnightDefense.mg.g;
+    }
   }
 
   UpdateWeights(weights);
@@ -562,8 +566,10 @@ void* UpdateGradients(void* arg) {
     UpdatePasserBonusGradients(&positions[i], loss, weights);
     UpdatePawnShelterGradients(&positions[i], loss, weights);
     UpdateSpaceGradients(&positions[i], loss, weights);
-    UpdateKingSafetyGradients(&positions[i], loss, weights, ks);
     UpdateTempoGradient(&positions[i], loss, weights);
+
+    if (TUNE_KS)
+      UpdateKingSafetyGradients(&positions[i], loss, weights, ks);
 
     job->error += pow(positions[i].result - sigmoid, 2);
   }
@@ -905,7 +911,13 @@ double EvaluateCoeffs(Position* position, Weights* weights, KSGradient* ks) {
   EvaluatePasserBonusValues(&mg, &eg, position, weights);
   EvaluatePawnShelterValues(&mg, &eg, position, weights);
   EvaluateSpaceValues(&mg, &eg, position, weights);
-  EvaluateKingSafetyValues(&mg, &eg, position, weights, ks);
+
+  if (TUNE_KS)
+    EvaluateKingSafetyValues(&mg, &eg, position, weights, ks);
+  else {
+    mg += scoreMG(position->coeffs.ks);
+    eg += scoreEG(position->coeffs.ks);
+  }
 
   double result = (mg * position->phase + eg * (128 - position->phase)) / 128;
   result = (result * position->scale) / MAX_SCALE;
@@ -1135,7 +1147,7 @@ Position* LoadPositions(int* n, Weights* weights) {
       continue;
 
     double eval = EvaluateCoeffs(&positions[p], weights, &ks);
-    if (floor(fabs(positions[p].staticEval - eval)) > 3) {
+    if (fabs(positions[p].staticEval - eval) > 3) {
       printf("The coefficient based evaluation does NOT match the eval!\n");
       printf("FEN: %s\n", buffer);
       printf("Static: %d, Coeffs: %f\n", positions[p].staticEval, eval);
