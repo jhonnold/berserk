@@ -128,6 +128,7 @@ typedef struct {
   int8_t rookTrapped;
   int8_t badBishopPawns;
   int8_t dragonBishop;
+  int8_t rookOpenFileOffset;
   int8_t rookOpenFile;
   int8_t rookSemiOpen;
   int8_t rookToOpen;
