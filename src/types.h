@@ -225,6 +225,11 @@ typedef struct {
   BitBoard passedPawns;
 } PawnHashEntry;
 
+typedef struct {
+  int count;
+  Move moves[MAX_MOVES];
+} SimpleMoveList;
+
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
@@ -239,6 +244,7 @@ struct ThreadData {
 
   Board board;
   PV pv;
+  SimpleMoveList rootMoves;
 };
 
 typedef struct {
