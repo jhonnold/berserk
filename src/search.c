@@ -149,7 +149,8 @@ void* Search(void* arg) {
           // search!
           score = Negamax(alpha, beta, searchDepth, thread, pv);
 
-          if (mainThread && ((GetTimeMS() - 2500 >= params->start) || (score > alpha && score < beta)))
+          if (mainThread && (score <= alpha || score >= beta) && thread->multiPV == 0 &&
+              GetTimeMS() - params->start >= 2500)
             PrintInfo(pv, score, thread, alpha, beta);
 
           if (score <= alpha) {
@@ -172,6 +173,9 @@ void* Search(void* arg) {
           // delta x 1.5
           delta += delta / 2;
         }
+
+        if (mainThread)
+          PrintInfo(pv, score, thread, alpha, beta);
       }
 
       results->depth = depth;
