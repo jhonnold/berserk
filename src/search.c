@@ -97,6 +97,8 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     if (threads->rootMoves.count == 1 && params->timeset)
       params->max = min(250, params->max);
 
+    params->multiPV = min(params->multiPV, threads->rootMoves.count);
+
     params->stopped = 0;
     TTUpdate();
 
