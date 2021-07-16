@@ -91,6 +91,16 @@ int BestMove(Board* board, SearchParams* params, ThreadData* threads) {
   pthread_t pthreads[threads->count];
   InitPool(board, params, threads);
 
+  MoveList moves;
+  InitAllMoves(&moves, NULL_MOVE, &threads->data);
+  while ((threads->rootMoves.moves[threads->rootMoves.count++] = NextMove(&moves, board, 0)))
+    ;
+  threads->rootMoves.count--; // strip the null move
+
+  // if there is only 1 move, max it to 250ms
+  if (threads->rootMoves.count == 1 && params->timeset)
+    params->max = min(250, params->max);
+
   params->stopped = 0;
   TTUpdate();
 
