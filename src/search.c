@@ -464,7 +464,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     MakeMove(move, board);
 
     // apply extensions
-    int newDepth = depth + max(extension, !!board->checkers);
+    int newDepth = depth + max(extension, (board->checkers && depth < 8));
 
     // Late move reductions
     int R = 1;
