@@ -21,8 +21,6 @@
 #include "types.h"
 #include "util.h"
 
-extern int CONTEMPT;
-
 // initialize a pool of threads
 ThreadData* CreatePool(int count) {
   ThreadData* threads = malloc(count * sizeof(ThreadData));
@@ -48,9 +46,6 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     threads[i].data.seldepth = 0;
     threads[i].data.ply = 0;
     threads[i].data.tbhits = 0;
-
-    threads[i].data.contempt =
-        board->side == WHITE ? makeScore(CONTEMPT, CONTEMPT / 2) : makeScore(-CONTEMPT, -CONTEMPT / 2);
 
     // empty unneeded data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));

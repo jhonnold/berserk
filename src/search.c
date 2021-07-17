@@ -119,7 +119,9 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
 void* Search(void* arg) {
   ThreadData* thread = (ThreadData*)arg;
   SearchParams* params = thread->params;
+  SearchData* data = &thread->data;
   SearchResults* results = thread->results;
+  Board* board = &thread->board;
   PV* pv = &thread->pv;
   int mainThread = !thread->idx;
 
@@ -136,13 +138,25 @@ void* Search(void* arg) {
         // delta is our window for search. early depths get full searches
         // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
         // vary this slightly based on the previous depths window expansion count
+        int delta;
         int searchDepth = depth;
         thread->depth = searchDepth;
 
-        int delta = depth >= 5 && abs(score) <= 1000 ? WINDOW : CHECKMATE;
+        if (depth >= 5 && abs(score) <= 1000) {
+          alpha = max(score - WINDOW, -CHECKMATE);
+          beta = min(score + WINDOW, CHECKMATE);
+          delta = WINDOW;
 
-        alpha = max(score - delta, -CHECKMATE);
-        beta = min(score + delta, CHECKMATE);
+          int contempt =
+              (abs(score) <= 100) * score / 4 + (score > 100) * (20 + score / 20) + (score < -100) * (-20 + score / 20);
+          contempt = max(-40, min(40, contempt));
+          data->contempt =
+              board->side == WHITE ? makeScore(contempt, contempt / 2) : -makeScore(contempt, contempt / 2);
+        } else {
+          alpha = -CHECKMATE;
+          beta = CHECKMATE;
+          delta = CHECKMATE;
+        }
 
         while (!params->stopped) {
           // search!
