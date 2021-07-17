@@ -149,7 +149,9 @@ void* Search(void* arg) {
         alpha = max(score - WINDOW, -CHECKMATE);
         beta = min(score + WINDOW, CHECKMATE);
 
-        int contempt = max(-40, min(40, score / 4));
+        int contempt =
+            (abs(score) <= 100) * score / 4 + (score > 100) * (20 + score / 20) + (score < -100) * (-20 + score / 20);
+        contempt = max(-40, min(40, contempt));
         data->contempt = board->side == WHITE ? makeScore(contempt, contempt / 2) : -makeScore(contempt, contempt / 2);
       } else {
         alpha = -CHECKMATE;
