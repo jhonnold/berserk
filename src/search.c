@@ -132,7 +132,6 @@ void* Search(void* arg) {
 
     // Iterative deepening
     for (int depth = 1; depth <= params->depth; depth++) {
-
       for (thread->multiPV = 0; thread->multiPV < params->multiPV; thread->multiPV++) {
         // delta is our window for search. early depths get full searches
         // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
@@ -191,7 +190,7 @@ void* Search(void* arg) {
         continue;
 
       if (diff < 0)
-        params->alloc *= fmin(1.16, 1.04 * (diff / WINDOW));
+        params->alloc *= fmin(1.16, 1.04 * (-diff / WINDOW));
       else
         params->alloc *= fmin(1.04, 1.02 * (diff / WINDOW));
     }
