@@ -15,8 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bench.h"
 #include "board.h"
@@ -83,7 +83,7 @@ const int NUM_BENCH_POSITIONS = 50;
 
 void Bench() {
   Board board;
-  SearchParams params = {.depth = 13};
+  SearchParams params = {.depth = 13, .multiPV = 1};
   ThreadData* threads = CreatePool(1);
 
   Move bestMoves[NUM_BENCH_POSITIONS];
@@ -95,23 +95,25 @@ void Bench() {
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
     ParseFen(benchmarks[i], &board);
 
+    SearchResults results = {0};
     TTClear();
-    ResetThreadPool(&board, &params, threads);
+    ResetThreadPool(threads);
+    InitPool(&board, &params, threads, &results);
+
     params.start = GetTimeMS();
-
-    BestMove(&board, &params, threads);
-
+    BestMove(&board, &params, threads, &results);
     times[i] = GetTimeMS() - params.start;
-    bestMoves[i] = threads[0].data.bestMove;
-    scores[i] = threads[0].data.score;
+
+    bestMoves[i] = results.bestMoves[results.depth];
+    scores[i] = results.scores[results.depth];
     nodes[i] = threads[0].data.nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 
   printf("\n\n");
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
-    printf("Bench [#%2d]: bestmove %5s score %5d %12d nodes %8d nps | %71s\n", i + 1, MoveToStr(bestMoves[i]), scores[i],
-           nodes[i], (int)(1000.0 * nodes[i] / (times[i] + 1)), benchmarks[i]);
+    printf("Bench [#%2d]: bestmove %5s score %5d %12d nodes %8d nps | %71s\n", i + 1, MoveToStr(bestMoves[i]),
+           scores[i], nodes[i], (int)(1000.0 * nodes[i] / (times[i] + 1)), benchmarks[i]);
   }
 
   int totalNodes = 0;

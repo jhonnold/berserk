@@ -85,10 +85,7 @@ typedef struct {
 // A general data object for use during search
 typedef struct {
   Score contempt;
-
-  int score;     // analysis score result, from perspective of stm
-  Move bestMove; // best move from analysis
-
+  
   Board* board; // reference to board
   int ply;      // ply depth of active search
 
@@ -200,7 +197,14 @@ typedef struct {
   int movesToGo;
   int stopped;
   int quit;
+  int multiPV;
 } SearchParams;
+
+typedef struct {
+  int depth;
+  Score scores[MAX_SEARCH_PLY];
+  Move bestMoves[MAX_SEARCH_PLY];
+} SearchResults;
 
 typedef struct {
   BitBoard passedPawns;
@@ -233,11 +237,16 @@ typedef struct {
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int count, idx;
+  int count, idx, multiPV, depth;
+
+  Score scores[MAX_MOVES];
+  Move bestMoves[MAX_MOVES];
+
   ThreadData* threads;
   jmp_buf exit;
 
   SearchParams* params;
+  SearchResults* results;
   SearchData data;
 
   PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
