@@ -41,6 +41,7 @@
 
 int MOVE_OVERHEAD = 100;
 int CONTEMPT = 24;
+int MULTI_PV = 1;
 
 // uci "go" command
 void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
@@ -51,6 +52,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   params->timeset = 0;
   params->stopped = 0;
   params->quit = 0;
+  params->multiPV = MULTI_PV;
 
   char* ptrChar = in;
   int perft = 0, movesToGo = 30, moveTime = -1, time = -1, inc = 0, depth = -1;
@@ -170,6 +172,7 @@ void PrintUCIOptions() {
   printf("option name NoobBook type check default false\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name Contempt type spin default 24 min 0 max 100\n");
+  printf("option name MultiPV type spin default 1 min 1 max 256\n");
   printf("uciok\n");
 }
 
@@ -207,7 +210,7 @@ void UCILoop() {
     } else if (!strncmp(in, "ucinewgame", 10)) {
       ParsePosition("position startpos\n", &board);
       TTClear();
-      ResetThreadPool(&board, &searchParameters, threads);
+      ResetThreadPool(threads);
       failedQueries = 0;
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
@@ -270,6 +273,10 @@ void UCILoop() {
       int n = GetOptionIntValue(in);
 
       CONTEMPT = max(0, min(100, n));
+    } else if (!strncmp(in, "setoption name MultiPV value ", 29)) {
+      int n = GetOptionIntValue(in);
+
+      MULTI_PV = max(1, min(256, n));
     }
   }
 }

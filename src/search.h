@@ -40,12 +40,14 @@
 void InitPruningAndReductionTables();
 
 void* UCISearch(void* arg);
-int BestMove(Board* board, SearchParams* params, ThreadData* threads);
+void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results);
 void* Search(void* arg);
 int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv);
 int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv);
 
-void PrintInfo(PV* pv, int score, int depth, ThreadData* thread);
+void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta);
 void PrintPV(PV* pv);
+
+int MoveSearchedByMultiPV(ThreadData* thread, Move move);
 
 #endif
