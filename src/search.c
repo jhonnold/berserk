@@ -80,8 +80,14 @@ void* UCISearch(void* arg) {
 void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results) {
   Move bestMove;
   if ((bestMove = TBRootProbe(board))) {
+    while (params->pondering)
+      asm("");
+
     printf("bestmove %s\n", MoveToStr(bestMove));
   } else if ((bestMove = ProbeNoob(board))) {
+    while (params->pondering)
+      asm("");
+
     printf("bestmove %s\n", MoveToStr(bestMove));
   } else {
     pthread_t pthreads[threads->count];
@@ -100,7 +106,14 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     for (int i = 1; i < threads->count; i++)
       pthread_join(pthreads[i], NULL);
 
-    printf("bestmove %s\n", MoveToStr(results->bestMoves[results->depth]));
+    while (params->pondering)
+      asm("");
+
+    printf("bestmove %s", MoveToStr(results->bestMoves[results->depth]));
+    if (results->ponderMoves[results->depth])
+      printf(" ponder %s", MoveToStr(results->ponderMoves[results->depth]));
+
+    printf("\n");
   }
 }
 
@@ -204,6 +217,7 @@ void* Search(void* arg) {
       results->depth = depth;
       results->scores[depth] = thread->scores[0];
       results->bestMoves[depth] = thread->bestMoves[0];
+      results->ponderMoves[depth] = thread->pvs[0].count ? thread->pvs[0].moves[0] : NULL_MOVE;
 
       if (!mainThread || depth < 5 || !params->timeset)
         continue;
@@ -257,8 +271,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
   // 1Mnps ~1ms
-  if (params->stopped ||
-      (!(data->nodes & 1023) && params->timeset && GetTimeMS() - params->start > min(params->alloc, params->max)))
+  if (params->stopped || (!(data->nodes & 1023) && StopSearch(params)))
     longjmp(thread->exit, 1);
 
   if (!isRoot) {
@@ -610,8 +623,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
   // 1Mnps ~1ms
-  if (params->stopped ||
-      (!(data->nodes & 1023) && params->timeset && GetTimeMS() - params->start > min(params->alloc, params->max)))
+  if (params->stopped || (!(data->nodes & 1023) && StopSearch(params)))
     longjmp(thread->exit, 1);
 
   // draw check
@@ -733,6 +745,10 @@ void PrintPV(PV* pv) {
   for (int i = 0; i < pv->count; i++)
     printf("%s ", MoveToStr(pv->moves[i]));
   printf("\n");
+}
+
+inline int StopSearch(SearchParams* params) {
+  return params->timeset && !params->pondering && GetTimeMS() - params->start > min(params->alloc, params->max);
 }
 
 int MoveSearchedByMultiPV(ThreadData* thread, Move move) {
