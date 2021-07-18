@@ -63,6 +63,10 @@ void InitPruningAndReductionTables() {
   }
 }
 
+INLINE int StopSearch(SearchParams* params) {
+  return params->timeset && GetTimeMS() - params->start > min(params->alloc, params->max) && !params->pondering;
+}
+
 void* UCISearch(void* arg) {
   SearchArgs* args = (SearchArgs*)arg;
 
@@ -745,10 +749,6 @@ void PrintPV(PV* pv) {
   for (int i = 0; i < pv->count; i++)
     printf("%s ", MoveToStr(pv->moves[i]));
   printf("\n");
-}
-
-inline int StopSearch(SearchParams* params) {
-  return params->timeset && !params->pondering && GetTimeMS() - params->start > min(params->alloc, params->max);
 }
 
 int MoveSearchedByMultiPV(ThreadData* thread, Move move) {
