@@ -42,6 +42,18 @@
 int MOVE_OVERHEAD = 100;
 int MULTI_PV = 1;
 
+void RootMoves(SimpleMoveList* moves, Board* board) {
+  moves->count = 0;
+
+  MoveList m;
+  SearchData d = {0};
+  InitAllMoves(&m, NULL_MOVE, &d);
+
+  Move mv;
+  while ((mv = NextMove(&m, board, 0)))
+    moves->moves[moves->count++] = mv;
+}
+
 // uci "go" command
 void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
   in += 3;
@@ -52,9 +64,14 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   params->stopped = 0;
   params->quit = 0;
   params->multiPV = MULTI_PV;
+  params->searchMoves = 0;
+  params->searchable.count = 0;
 
   char* ptrChar = in;
   int perft = 0, movesToGo = 30, moveTime = -1, time = -1, inc = 0, depth = -1;
+
+  SimpleMoveList rootMoves;
+  RootMoves(&rootMoves, board);
 
   if ((ptrChar = strstr(in, "perft")))
     perft = atoi(ptrChar + 6);
@@ -79,6 +96,15 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 
   if ((ptrChar = strstr(in, "depth")))
     depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+
+  if ((ptrChar = strstr(in, "searchmoves"))) {
+    params->searchMoves = 1;
+
+    for (char* moves = strtok(ptrChar + 12, " "); moves != NULL; moves = strtok(NULL, " "))
+      for (int i = 0; i < rootMoves.count; i++)
+        if (!strcmp(MoveToStr(rootMoves.moves[i]), moves))
+          params->searchable.moves[params->searchable.count++] = rootMoves.moves[i];
+  }
 
   if (perft) {
     PerftTest(perft, board);
@@ -108,11 +134,15 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     }
   }
 
+  params->multiPV = min(params->multiPV, params->searchMoves ? params->searchable.count : rootMoves.count);
+  if (rootMoves.count == 1 && params->timeset)
+    params->max = min(250, params->max);
+
   if (depth <= 0)
     params->depth = MAX_SEARCH_PLY - 1;
 
-  printf("info string time %d start %ld alloc %d max %d depth %d timeset %d\n", time, params->start, params->alloc,
-         params->max, params->depth, params->timeset);
+  printf("info string time %d start %ld alloc %d max %d depth %d timeset %d searchmoves %d\n", time, params->start,
+         params->alloc, params->max, params->depth, params->timeset, params->searchable.count);
 
   // this MUST be freed from within the search, or else massive leak
   SearchArgs* args = malloc(sizeof(SearchArgs));

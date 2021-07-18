@@ -45,9 +45,10 @@ void* Search(void* arg);
 int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv);
 int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv);
 
-void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta);
+void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV);
 void PrintPV(PV* pv);
 
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);
+int MoveSearchable(SearchParams* params, Move move);
 
 #endif

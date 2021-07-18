@@ -87,18 +87,6 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     pthread_t pthreads[threads->count];
     InitPool(board, params, threads, results);
 
-    MoveList moves;
-    InitAllMoves(&moves, NULL_MOVE, &threads->data);
-    while ((threads->rootMoves.moves[threads->rootMoves.count++] = NextMove(&moves, board, 0)))
-      ;
-    threads->rootMoves.count--; // strip the null move
-
-    // if there is only 1 move, max it to 250ms
-    if (threads->rootMoves.count == 1 && params->timeset)
-      params->max = min(250, params->max);
-
-    params->multiPV = min(params->multiPV, threads->rootMoves.count);
-
     params->stopped = 0;
     TTUpdate();
 
@@ -122,7 +110,6 @@ void* Search(void* arg) {
   SearchData* data = &thread->data;
   SearchResults* results = thread->results;
   Board* board = &thread->board;
-  PV* pv = &thread->pv;
   int mainThread = !thread->idx;
 
   int alpha = -CHECKMATE;
@@ -135,6 +122,8 @@ void* Search(void* arg) {
     // Iterative deepening
     for (int depth = 1; depth <= params->depth; depth++) {
       for (thread->multiPV = 0; thread->multiPV < params->multiPV; thread->multiPV++) {
+        PV* pv = &thread->pvs[thread->multiPV];
+
         // delta is our window for search. early depths get full searches
         // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
         // vary this slightly based on the previous depths window expansion count
@@ -164,7 +153,7 @@ void* Search(void* arg) {
 
           if (mainThread && (score <= alpha || score >= beta) && thread->multiPV == 0 &&
               GetTimeMS() - params->start >= 2500)
-            PrintInfo(pv, score, thread, alpha, beta);
+            PrintInfo(pv, score, thread, alpha, beta, 1);
 
           if (score <= alpha) {
             // adjust beta downward when failing low
@@ -186,10 +175,31 @@ void* Search(void* arg) {
           // delta x 1.5
           delta += delta / 2;
         }
-
-        if (mainThread)
-          PrintInfo(pv, score, thread, alpha, beta);
       }
+
+      // sort multi pv
+      for (int i = 0; i < params->multiPV; i++) {
+        int best = i;
+
+        for (int j = i + 1; j < params->multiPV; j++)
+          if (thread->scores[j] > thread->scores[best])
+            best = j;
+
+        if (best != i) {
+          Score tempS = thread->scores[best];
+          Move tempM = thread->bestMoves[best];
+
+          thread->scores[best] = thread->scores[i];
+          thread->bestMoves[best] = thread->bestMoves[i];
+
+          thread->scores[i] = tempS;
+          thread->bestMoves[i] = tempM;
+        }
+      }
+
+      if (mainThread)
+        for (int i = 0; i < params->multiPV; i++)
+          PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1);
 
       results->depth = depth;
       results->scores[depth] = thread->scores[0];
@@ -418,6 +428,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
     if (isRoot && MoveSearchedByMultiPV(thread, move))
+      continue;
+    if (isRoot && !MoveSearchable(params, move))
       continue;
 
     // don't search this during singular
@@ -691,10 +703,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   return bestScore;
 }
 
-inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta) {
+inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV) {
   int depth = thread->depth;
   int seldepth = Seldepth(thread);
-  int multiPV = thread->multiPV + 1;
   uint64_t nodes = NodesSearched(thread->threads);
   uint64_t tbhits = TBHits(thread->threads);
   uint64_t time = GetTimeMS() - thread->params->start;
@@ -727,6 +738,17 @@ void PrintPV(PV* pv) {
 int MoveSearchedByMultiPV(ThreadData* thread, Move move) {
   for (int i = 0; i < thread->multiPV; i++)
     if (thread->bestMoves[i] == move)
+      return 1;
+
+  return 0;
+}
+
+int MoveSearchable(SearchParams* params, Move move) {
+  if (!params->searchMoves)
+    return 1;
+
+  for (int i = 0; i < params->searchable.count; i++)
+    if (move == params->searchable.moves[i])
       return 1;
 
   return 0;

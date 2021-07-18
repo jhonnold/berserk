@@ -17,8 +17,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <setjmp.h>
 #include <inttypes.h>
+#include <setjmp.h>
 
 #ifdef TUNE
 #define MAX_SEARCH_PLY 16
@@ -76,6 +76,11 @@ typedef struct {
   BitBoard pinnedHistory[MAX_GAME_PLY];
 } Board;
 
+typedef struct {
+  int count;
+  Move moves[MAX_MOVES];
+} SimpleMoveList;
+
 // Tracking the principal variation
 typedef struct {
   int count;
@@ -85,7 +90,7 @@ typedef struct {
 // A general data object for use during search
 typedef struct {
   Score contempt;
-  
+
   Board* board; // reference to board
   int ply;      // ply depth of active search
 
@@ -169,7 +174,7 @@ typedef struct {
   int8_t pawnStorm[4][8];
   int8_t blockedPawnStorm[8];
   int8_t castlingRights;
-  
+
   int ks;
   int danger[2];
   int8_t ksAttackerCount[2];
@@ -198,6 +203,8 @@ typedef struct {
   int stopped;
   int quit;
   int multiPV;
+  int searchMoves;
+  SimpleMoveList searchable;
 } SearchParams;
 
 typedef struct {
@@ -229,11 +236,6 @@ typedef struct {
   BitBoard passedPawns;
 } PawnHashEntry;
 
-typedef struct {
-  int count;
-  Move moves[MAX_MOVES];
-} SimpleMoveList;
-
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
@@ -241,6 +243,7 @@ struct ThreadData {
 
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];
+  PV pvs[MAX_MOVES];
 
   ThreadData* threads;
   jmp_buf exit;
@@ -252,8 +255,6 @@ struct ThreadData {
   PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
 
   Board board;
-  PV pv;
-  SimpleMoveList rootMoves;
 };
 
 typedef struct {
@@ -267,16 +268,16 @@ typedef struct {
 enum { ALL_MOVES, TACTICAL_MOVES };
 
 enum {
-    HASH_MOVE,
-    GEN_TACTICAL_MOVES,
-    PLAY_GOOD_TACTICAL,
-    PLAY_KILLER_1,
-    PLAY_KILLER_2,
-    PLAY_COUNTER,
-    GEN_QUIET_MOVES,
-    PLAY_QUIETS,
-    PLAY_BAD_TACTICAL,
-    NO_MORE_MOVES
+  HASH_MOVE,
+  GEN_TACTICAL_MOVES,
+  PLAY_GOOD_TACTICAL,
+  PLAY_KILLER_1,
+  PLAY_KILLER_2,
+  PLAY_COUNTER,
+  GEN_QUIET_MOVES,
+  PLAY_QUIETS,
+  PLAY_BAD_TACTICAL,
+  NO_MORE_MOVES
 };
 
 typedef struct {

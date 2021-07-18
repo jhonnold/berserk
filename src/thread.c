@@ -38,7 +38,6 @@ ThreadData* CreatePool(int count) {
 // initialize a pool prepping to start a search
 void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results) {
   for (int i = 0; i < threads->count; i++) {
-    threads[i].rootMoves.count = 0;
     threads[i].params = params;
     threads[i].results = results;
 
