@@ -202,6 +202,7 @@ typedef struct {
   int movesToGo;
   int stopped;
   int quit;
+  int pondering;
   int multiPV;
   int searchMoves;
   SimpleMoveList searchable;
@@ -211,6 +212,7 @@ typedef struct {
   int depth;
   Score scores[MAX_SEARCH_PLY];
   Move bestMoves[MAX_SEARCH_PLY];
+  Move ponderMoves[MAX_SEARCH_PLY];
 } SearchResults;
 
 typedef struct {

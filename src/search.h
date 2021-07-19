@@ -47,7 +47,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv);
 
 void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV);
 void PrintPV(PV* pv);
-
+ 
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);
 int MoveSearchable(SearchParams* params, Move move);
 

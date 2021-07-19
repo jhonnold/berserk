@@ -64,6 +64,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   params->stopped = 0;
   params->quit = 0;
   params->multiPV = MULTI_PV;
+  params->pondering = 0;
   params->searchMoves = 0;
   params->searchable.count = 0;
 
@@ -96,6 +97,9 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 
   if ((ptrChar = strstr(in, "depth")))
     depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+
+  if ((ptrChar = strstr(in, "ponder")))
+    params->pondering = 1;
 
   if ((ptrChar = strstr(in, "searchmoves"))) {
     params->searchMoves = 1;
@@ -243,12 +247,16 @@ void UCILoop() {
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
     } else if (!strncmp(in, "stop", 4)) {
+      searchParameters.pondering = 0;
       searchParameters.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
+      searchParameters.pondering = 0;
       searchParameters.quit = 1;
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
+    } else if (!strncmp(in, "ponderhit", 9)) {
+      searchParameters.pondering = 0;
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
