@@ -1065,8 +1065,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
     s += Space(board, &data, WHITE) - Space(board, &data, BLACK);
   }
 
-  s += thread->data.contempt;
   s += Complexity(board, &data, scoreEG(s));
+  s += thread->data.contempt;
 
   // taper
   int phase = GetPhase(board);
