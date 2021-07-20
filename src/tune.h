@@ -106,6 +106,7 @@ typedef struct {
   Weight castlingRights;
 
   Weight complexPawns;
+  Weight complexPawnsOffset;
   Weight complexOffset;
 
   Weight ksAttackerWeight[5];
