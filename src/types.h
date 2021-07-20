@@ -142,7 +142,7 @@ typedef struct {
   int8_t isolatedPawns[4];
   int8_t openIsolatedPawns;
   int8_t backwardsPawns;
-  int8_t connectedPawn[8];
+  int8_t connectedPawn[4][8];
   int8_t candidatePasser[8];
   int8_t candidateEdgeDistance;
 
