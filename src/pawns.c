@@ -99,10 +99,10 @@ Score PawnEval(Board* board, EvalData* data, int side) {
         C.backwardsPawns += cs[side];
     } else if (defenders | connected) {
       int scalar = 2 + !!connected - !!opposed;
-      s += CONNECTED_PAWN[adjustedRank] * scalar;
+      s += CONNECTED_PAWN[adjustedFile][adjustedRank] * scalar;
 
       if (T)
-        C.connectedPawn[adjustedRank] += cs[side] * scalar;
+        C.connectedPawn[adjustedFile][adjustedRank] += cs[side] * scalar;
 
       // candidate passers are either in tension right now (and a push is all they need)
       // or a pawn 2 ranks down is stopping them, but our pawns can support it through

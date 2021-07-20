@@ -72,7 +72,7 @@ typedef struct {
   Weight isolatedPawns[4];
   Weight openIsolatedPawns;
   Weight backwardsPawns;
-  Weight connectedPawn[8];
+  Weight connectedPawn[4][8];
   Weight candidatePasser[8];
   Weight candidateEdgeDistance;
 

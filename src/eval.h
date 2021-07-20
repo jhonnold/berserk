@@ -73,7 +73,7 @@ extern const Score DOUBLED_PAWN;
 extern const Score ISOLATED_PAWN[4];
 extern const Score OPEN_ISOLATED_PAWN;
 extern const Score BACKWARDS_PAWN;
-extern const Score CONNECTED_PAWN[8];
+extern const Score CONNECTED_PAWN[4][8];
 extern const Score CANDIDATE_PASSER[8];
 extern const Score CANDIDATE_EDGE_DISTANCE;
 
