@@ -176,8 +176,6 @@ typedef struct {
   int8_t castlingRights;
 
   int8_t complexPawns;
-  int8_t complexKingDistance;
-  int8_t complexPawnImbalance;
   int8_t complexOffset;
 
   int ks;

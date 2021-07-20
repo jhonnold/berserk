@@ -281,10 +281,6 @@ void UpdateWeights(Weights* weights) {
 
   UpdateParam(&weights->complexPawns.mg);
 
-  UpdateParam(&weights->complexKingDistance.mg);
-
-  UpdateParam(&weights->complexPawnImbalance.mg);
-
   UpdateParam(&weights->complexOffset.mg);
 
   if (TUNE_KS) {
@@ -538,8 +534,6 @@ double UpdateAndTrain(int n, Position* positions, Weights* weights) {
     weights->tempo.mg.g += w->tempo.mg.g;
 
     weights->complexPawns.mg.g += w->complexPawns.mg.g;
-    weights->complexKingDistance.mg.g += w->complexKingDistance.mg.g;
-    weights->complexPawnImbalance.mg.g += w->complexPawnImbalance.mg.g;
     weights->complexOffset.mg.g += w->complexOffset.mg.g;
 
     if (TUNE_KS) {
@@ -862,11 +856,9 @@ void UpdateSpaceGradients(Position* position, double loss, Weights* weights, Eva
 void UpdateComplexityGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
   int sign = (gd->eg > 0) - (gd->eg < 0);
   double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
-  egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
+  egBase *= (gd->complexity >= -fabs(gd->eg));
 
   weights->complexPawns.mg.g += position->coeffs.complexPawns * egBase * sign;
-  weights->complexKingDistance.mg.g += position->coeffs.complexKingDistance * egBase * sign;
-  weights->complexPawnImbalance.mg.g += position->coeffs.complexPawnImbalance * egBase * sign;
   weights->complexOffset.mg.g += position->coeffs.complexOffset * egBase * sign;
 }
 
@@ -1099,8 +1091,6 @@ void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* we
 void EvaluateComplexityValues(double* mg, double* eg, Position* position, Weights* weights, EvalGradientData* gd) {
   double complexity = 0.0;
   complexity += position->coeffs.complexPawns * weights->complexPawns.mg.value;
-  complexity += position->coeffs.complexKingDistance * weights->complexKingDistance.mg.value;
-  complexity += position->coeffs.complexPawnImbalance * weights->complexPawnImbalance.mg.value;
   complexity += position->coeffs.complexOffset * weights->complexOffset.mg.value;
 
   gd->eg = *eg;
@@ -1469,8 +1459,6 @@ void InitSpaceWeights(Weights* weights) { weights->space.mg.value = SPACE; }
 
 void InitComplexityWeights(Weights* weights) {
   weights->complexPawns.mg.value = COMPLEXITY_PAWNS;
-  weights->complexKingDistance.mg.value = COMPLEXITY_KING_DISTANCE;
-  weights->complexPawnImbalance.mg.value = COMPLEXITY_PAWN_DIFF;
   weights->complexOffset.mg.value = COMPLEXITY_OFFSET;
 }
 
@@ -1750,10 +1738,6 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   PrintWeight(fp, &weights->castlingRights);
 
   fprintf(fp, "\nconst Score COMPLEXITY_PAWNS = %d;\n", (int)round(weights->complexPawns.mg.value));
-
-  fprintf(fp, "\nconst Score COMPLEXITY_KING_DISTANCE = %d;\n", (int)round(weights->complexKingDistance.mg.value));
-
-  fprintf(fp, "\nconst Score COMPLEXITY_PAWN_DIFF = %d;\n", (int)round(weights->complexPawnImbalance.mg.value));
 
   fprintf(fp, "\nconst Score COMPLEXITY_OFFSET = %d;\n", (int)round(weights->complexOffset.mg.value));
 
