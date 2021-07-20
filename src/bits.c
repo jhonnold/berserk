@@ -96,6 +96,10 @@ inline BitBoard Fill(BitBoard initial, int direction) {
   }
 }
 
+inline BitBoard FileFill(BitBoard initial) {
+  return Fill(initial, N) | Fill(initial, S);
+}
+
 void PrintBB(BitBoard bitboard) {
   for (int i = 0; i < 64; i++) {
     if (file(i) == 0)
