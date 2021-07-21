@@ -106,6 +106,10 @@ extern const Score PAWN_STORM[4][8];
 extern const Score BLOCKED_PAWN_STORM[8];
 extern const Score CAN_CASTLE;
 
+extern const Score COMPLEXITY_PAWNS;
+extern const Score COMPLEXITY_PAWNS_OFFSET;
+extern const Score COMPLEXITY_OFFSET;
+
 extern const Score KS_ATTACKER_WEIGHTS[5];
 extern const Score KS_PINNED;
 extern const Score KS_WEAK_SQS;
