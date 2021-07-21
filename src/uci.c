@@ -41,6 +41,7 @@
 
 int MOVE_OVERHEAD = 100;
 int MULTI_PV = 1;
+int PONDER_ENABLED = 1;
 
 void RootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
@@ -205,6 +206,7 @@ void PrintUCIOptions() {
   printf("option name NoobBook type check default false\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
+  printf("option name Ponder type check default true\n");
   printf("uciok\n");
 }
 
@@ -309,6 +311,13 @@ void UCILoop() {
       int n = GetOptionIntValue(in);
 
       MULTI_PV = max(1, min(256, n));
+      printf("info string set MultiPV to value %d\n", MULTI_PV);
+    } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
+      char opt[5];
+      sscanf(in, "%*s %*s %*s %*s %5s", opt);
+
+      PONDER_ENABLED = !strncmp(opt, "true", 4);
+      printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
     }
   }
 }
