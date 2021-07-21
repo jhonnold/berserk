@@ -35,7 +35,7 @@
 #include "util.h"
 
 #define NAME "Berserk"
-#define VERSION "4.5.0-dev"
+#define VERSION "4.5.0"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
