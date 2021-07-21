@@ -530,9 +530,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     if (depth > 2 && nonPrunedMoves > 1) {
       R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
 
-      if (specialQuiet) {
-        R = min(3, R);
-      } else if (!tactical) {
+      if (!tactical) {
         // increase reduction on non-pv
         if (!isPV)
           R++;
@@ -540,6 +538,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         // increase reduction if our eval is declining
         if (!improving)
           R++;
+
+        if (specialQuiet)
+          R -= 2;
 
         if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
           R++;
