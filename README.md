@@ -18,6 +18,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.2.0       | 3131    | 40/15  |
 | 4.2.0 (4CPU)| 3225    | 40/15  |
 | 4.3.0       |         |        |
+| 4.4.0       |         |        |
+| 4.5.0       |         |        |
 
 ### Lars No SMP
 
@@ -30,6 +32,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.1.0       | 3085    | 15'    |
 | 4.2.0       | 3143    | 15'    |
 | 4.3.0       | 3248    | 15'    |
+| 4.4.0       | 3317    | 15'    |
+| 4.5.0       |         | 15'    |
 
 ## Features
 
