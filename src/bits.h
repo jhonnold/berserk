@@ -80,6 +80,7 @@ int bits(BitBoard bb);
 
 int popAndGetLsb(BitBoard* bb);
 BitBoard Fill(BitBoard initial, int direction);
+BitBoard FileFill(BitBoard initial);
 void PrintBB(BitBoard bb);
 
 #endif

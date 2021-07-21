@@ -25,6 +25,8 @@
 #define stringize_(x) #x
 #define stringize(x) stringize_(x)
 
+#define INLINE static inline __attribute__((always_inline))
+
 long GetTimeMS();
 
 #endif

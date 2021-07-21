@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "eval.h"
 #include "types.h"
 #include "util.h"
 
@@ -35,9 +36,10 @@ ThreadData* CreatePool(int count) {
 }
 
 // initialize a pool prepping to start a search
-void InitPool(Board* board, SearchParams* params, ThreadData* threads) {
+void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results) {
   for (int i = 0; i < threads->count; i++) {
     threads[i].params = params;
+    threads[i].results = results;
 
     threads[i].data.nodes = 0;
     threads[i].data.seldepth = 0;
@@ -54,9 +56,9 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads) {
   }
 }
 
-void ResetThreadPool(Board* board, SearchParams* params, ThreadData* threads) {
+void ResetThreadPool(ThreadData* threads) {
   for (int i = 0; i < threads->count; i++) {
-    threads[i].params = params;
+    threads[i].results = NULL;
 
     threads[i].data.nodes = 0;
     threads[i].data.seldepth = 0;
@@ -71,9 +73,7 @@ void ResetThreadPool(Board* board, SearchParams* params, ThreadData* threads) {
     memset(&threads[i].data.counters, 0, sizeof(threads[i].data.counters));
     memset(&threads[i].data.hh, 0, sizeof(threads[i].data.hh));
     memset(&threads[i].pawnHashTable, 0, PAWN_TABLE_SIZE * sizeof(PawnHashEntry));
-
-    // need full copies of the board
-    memcpy(&threads[i].board, board, sizeof(Board));
+    memset(&threads[i].board, 0, sizeof(Board));
   }
 }
 
@@ -94,7 +94,7 @@ uint64_t TBHits(ThreadData* threads) {
   return tbhits;
 }
 
-uint64_t Seldepth(ThreadData* threads) {
+int Seldepth(ThreadData* threads) {
   int seldepth = threads[0].data.seldepth;
   for (int i = 1; i < threads->count; i++)
     seldepth = max(seldepth, threads[i].data.seldepth);

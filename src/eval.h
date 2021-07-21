@@ -61,15 +61,19 @@ extern const Score BISHOP_TRAPPED;
 extern const Score ROOK_TRAPPED;
 extern const Score BAD_BISHOP_PAWNS;
 extern const Score DRAGON_BISHOP;
+extern const Score ROOK_OPEN_FILE_OFFSET;
 extern const Score ROOK_OPEN_FILE;
 extern const Score ROOK_SEMI_OPEN;
+extern const Score ROOK_TO_OPEN;
+extern const Score QUEEN_OPPOSITE_ROOK;
+extern const Score QUEEN_ROOK_BATTERY;
 
 extern const Score DEFENDED_PAWN;
 extern const Score DOUBLED_PAWN;
 extern const Score ISOLATED_PAWN[4];
 extern const Score OPEN_ISOLATED_PAWN;
 extern const Score BACKWARDS_PAWN;
-extern const Score CONNECTED_PAWN[8];
+extern const Score CONNECTED_PAWN[4][8];
 extern const Score CANDIDATE_PASSER[8];
 extern const Score CANDIDATE_EDGE_DISTANCE;
 
@@ -79,6 +83,7 @@ extern const Score PASSED_PAWN_EDGE_DISTANCE;
 extern const Score PASSED_PAWN_KING_PROXIMITY;
 extern const Score PASSED_PAWN_ENEMY_SLIDER_BEHIND;
 extern const Score PASSED_PAWN_SQ_RULE;
+extern const Score PASSED_PAWN_UNSUPPORTED;
 
 extern const Score KNIGHT_THREATS[6];
 extern const Score BISHOP_THREATS[6];
@@ -86,18 +91,24 @@ extern const Score ROOK_THREATS[6];
 extern const Score KING_THREAT;
 extern const Score PAWN_THREAT;
 extern const Score PAWN_PUSH_THREAT;
+extern const Score PAWN_PUSH_THREAT_PINNED;
 extern const Score HANGING_THREAT;
+extern const Score KNIGHT_CHECK_QUEEN;
+extern const Score BISHOP_CHECK_QUEEN;
+extern const Score ROOK_CHECK_QUEEN;
 
 extern const Score SPACE;
 
 extern const Score IMBALANCE[5][5];
 
-extern const Score TEMPO;
-
 extern const Score PAWN_SHELTER[4][8];
 extern const Score PAWN_STORM[4][8];
 extern const Score BLOCKED_PAWN_STORM[8];
 extern const Score CAN_CASTLE;
+
+extern const Score COMPLEXITY_PAWNS;
+extern const Score COMPLEXITY_PAWNS_OFFSET;
+extern const Score COMPLEXITY_OFFSET;
 
 extern const Score KS_ATTACKER_WEIGHTS[5];
 extern const Score KS_PINNED;
@@ -109,6 +120,8 @@ extern const Score KS_QUEEN_CHECK;
 extern const Score KS_UNSAFE_CHECK;
 extern const Score KS_ENEMY_QUEEN;
 extern const Score KS_KNIGHT_DEFENSE;
+
+extern const Score TEMPO;
 
 extern Score PSQT[12][2][64];
 

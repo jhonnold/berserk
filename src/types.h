@@ -17,8 +17,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <setjmp.h>
 #include <inttypes.h>
+#include <setjmp.h>
 
 #ifdef TUNE
 #define MAX_SEARCH_PLY 16
@@ -43,9 +43,6 @@ typedef int Score;
 typedef uint64_t BitBoard;
 
 typedef uint32_t Move;
-
-
-
 
 typedef struct {
   BitBoard pieces[12];     // individual piece data
@@ -79,6 +76,11 @@ typedef struct {
   BitBoard pinnedHistory[MAX_GAME_PLY];
 } Board;
 
+typedef struct {
+  int count;
+  Move moves[MAX_MOVES];
+} SimpleMoveList;
+
 // Tracking the principal variation
 typedef struct {
   int count;
@@ -87,8 +89,7 @@ typedef struct {
 
 // A general data object for use during search
 typedef struct {
-  int score;     // analysis score result, from perspective of stm
-  Move bestMove; // best move from analysis
+  Score contempt;
 
   Board* board; // reference to board
   int ply;      // ply depth of active search
@@ -129,15 +130,19 @@ typedef struct {
   int8_t rookTrapped;
   int8_t badBishopPawns;
   int8_t dragonBishop;
+  int8_t rookOpenFileOffset;
   int8_t rookOpenFile;
   int8_t rookSemiOpen;
+  int8_t rookToOpen;
+  int8_t queenOppositeRook;
+  int8_t queenRookBattery;
 
   int8_t defendedPawns;
   int8_t doubledPawns;
   int8_t isolatedPawns[4];
   int8_t openIsolatedPawns;
   int8_t backwardsPawns;
-  int8_t connectedPawn[8];
+  int8_t connectedPawn[4][8];
   int8_t candidatePasser[8];
   int8_t candidateEdgeDistance;
 
@@ -147,6 +152,7 @@ typedef struct {
   int8_t passedPawnAdvance[5];
   int8_t passedPawnEnemySliderBehind;
   int8_t passedPawnSqRule;
+  int8_t passedPawnUnsupported;
 
   int8_t knightThreats[6];
   int8_t bishopThreats[6];
@@ -154,7 +160,11 @@ typedef struct {
   int8_t kingThreat;
   int8_t pawnThreat;
   int8_t pawnPushThreat;
+  int8_t pawnPushThreatPinned;
   int8_t hangingThreat;
+  int8_t knightCheckQueen;
+  int8_t bishopCheckQueen;
+  int8_t rookCheckQueen;
 
   int16_t space;
 
@@ -164,7 +174,11 @@ typedef struct {
   int8_t pawnStorm[4][8];
   int8_t blockedPawnStorm[8];
   int8_t castlingRights;
-  
+
+  int8_t complexPawns;
+  int8_t complexPawnsOffset;
+  int8_t complexOffset;
+
   int ks;
   int danger[2];
   int8_t ksAttackerCount[2];
@@ -192,10 +206,22 @@ typedef struct {
   int movesToGo;
   int stopped;
   int quit;
+  int pondering;
+  int multiPV;
+  int searchMoves;
+  SimpleMoveList searchable;
 } SearchParams;
 
 typedef struct {
+  int depth;
+  Score scores[MAX_SEARCH_PLY];
+  Move bestMoves[MAX_SEARCH_PLY];
+  Move ponderMoves[MAX_SEARCH_PLY];
+} SearchResults;
+
+typedef struct {
   BitBoard passedPawns;
+  BitBoard openFiles;
 
   // these are general data objects, for buildup during eval
   int kingSq[2];
@@ -219,17 +245,22 @@ typedef struct {
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int count, idx;
+  int count, idx, multiPV, depth;
+
+  Score scores[MAX_MOVES];
+  Move bestMoves[MAX_MOVES];
+  PV pvs[MAX_MOVES];
+
   ThreadData* threads;
   jmp_buf exit;
 
   SearchParams* params;
+  SearchResults* results;
   SearchData data;
 
   PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
 
   Board board;
-  PV pv;
 };
 
 typedef struct {
@@ -243,16 +274,16 @@ typedef struct {
 enum { ALL_MOVES, TACTICAL_MOVES };
 
 enum {
-    HASH_MOVE,
-    GEN_TACTICAL_MOVES,
-    PLAY_GOOD_TACTICAL,
-    PLAY_KILLER_1,
-    PLAY_KILLER_2,
-    PLAY_COUNTER,
-    GEN_QUIET_MOVES,
-    PLAY_QUIETS,
-    PLAY_BAD_TACTICAL,
-    NO_MORE_MOVES
+  HASH_MOVE,
+  GEN_TACTICAL_MOVES,
+  PLAY_GOOD_TACTICAL,
+  PLAY_KILLER_1,
+  PLAY_KILLER_2,
+  PLAY_COUNTER,
+  GEN_QUIET_MOVES,
+  PLAY_QUIETS,
+  PLAY_BAD_TACTICAL,
+  NO_MORE_MOVES
 };
 
 typedef struct {

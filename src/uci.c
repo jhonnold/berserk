@@ -28,17 +28,32 @@
 #include "perft.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
+#include "see.h"
 #include "thread.h"
 #include "transposition.h"
 #include "uci.h"
 #include "util.h"
 
 #define NAME "Berserk"
-#define VERSION "4.4.0"
+#define VERSION "4.5.0"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 int MOVE_OVERHEAD = 100;
+int MULTI_PV = 1;
+int PONDER_ENABLED = 1;
+
+void RootMoves(SimpleMoveList* moves, Board* board) {
+  moves->count = 0;
+
+  MoveList m;
+  SearchData d = {0};
+  InitAllMoves(&m, NULL_MOVE, &d);
+
+  Move mv;
+  while ((mv = NextMove(&m, board, 0)))
+    moves->moves[moves->count++] = mv;
+}
 
 // uci "go" command
 void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
@@ -49,9 +64,16 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   params->timeset = 0;
   params->stopped = 0;
   params->quit = 0;
+  params->multiPV = MULTI_PV;
+  params->pondering = 0;
+  params->searchMoves = 0;
+  params->searchable.count = 0;
 
   char* ptrChar = in;
   int perft = 0, movesToGo = 30, moveTime = -1, time = -1, inc = 0, depth = -1;
+
+  SimpleMoveList rootMoves;
+  RootMoves(&rootMoves, board);
 
   if ((ptrChar = strstr(in, "perft")))
     perft = atoi(ptrChar + 6);
@@ -76,6 +98,18 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 
   if ((ptrChar = strstr(in, "depth")))
     depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+
+  if ((ptrChar = strstr(in, "ponder")))
+    params->pondering = 1;
+
+  if ((ptrChar = strstr(in, "searchmoves"))) {
+    params->searchMoves = 1;
+
+    for (char* moves = strtok(ptrChar + 12, " "); moves != NULL; moves = strtok(NULL, " "))
+      for (int i = 0; i < rootMoves.count; i++)
+        if (!strcmp(MoveToStr(rootMoves.moves[i]), moves))
+          params->searchable.moves[params->searchable.count++] = rootMoves.moves[i];
+  }
 
   if (perft) {
     PerftTest(perft, board);
@@ -105,11 +139,15 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     }
   }
 
+  params->multiPV = min(params->multiPV, params->searchMoves ? params->searchable.count : rootMoves.count);
+  if (rootMoves.count == 1 && params->timeset)
+    params->max = min(250, params->max);
+
   if (depth <= 0)
     params->depth = MAX_SEARCH_PLY - 1;
 
-  printf("time %d start %ld alloc %d depth %d timeset %d\n", time, params->start, params->alloc, params->depth,
-         params->timeset);
+  printf("info string time %d start %ld alloc %d max %d depth %d timeset %d searchmoves %d\n", time, params->start,
+         params->alloc, params->max, params->depth, params->timeset, params->searchable.count);
 
   // this MUST be freed from within the search, or else massive leak
   SearchArgs* args = malloc(sizeof(SearchArgs));
@@ -167,6 +205,8 @@ void PrintUCIOptions() {
   printf("option name NoobBookLimit type spin default 8 min 0 max 32\n");
   printf("option name NoobBook type check default false\n");
   printf("option name SyzygyPath type string default <empty>\n");
+  printf("option name MultiPV type spin default 1 min 1 max 256\n");
+  printf("option name Ponder type check default true\n");
   printf("uciok\n");
 }
 
@@ -204,24 +244,44 @@ void UCILoop() {
     } else if (!strncmp(in, "ucinewgame", 10)) {
       ParsePosition("position startpos\n", &board);
       TTClear();
-      ResetThreadPool(&board, &searchParameters, threads);
+      ResetThreadPool(threads);
       failedQueries = 0;
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
     } else if (!strncmp(in, "stop", 4)) {
+      searchParameters.pondering = 0;
       searchParameters.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
+      searchParameters.pondering = 0;
       searchParameters.quit = 1;
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
+    } else if (!strncmp(in, "ponderhit", 9)) {
+      searchParameters.pondering = 0;
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
       Score s = Evaluate(&board, &threads[0]);
-      printf("Score: %dcp\n", s);
+      if (board.side == BLACK)
+        s = -s;
+
+      printf("Score: %dcp (white)\n", s);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
+    } else if (!strncmp(in, "see ", 4)) {
+      Move m = ParseMove(in + 4, &board);
+      if (m)
+        printf("info string SEE result: %d\n", SEE(&board, m));
+      else
+        printf("info string Invalid move!\n");
+    } else if (!strncmp(in, "apply ", 6)) {
+      Move m = ParseMove(in + 6, &board);
+      if (m) {
+        MakeMove(m, &board);
+        PrintBoard(&board);
+      } else
+        printf("info string Invalid move!\n");
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
       mb = max(4, min(65536, mb));
@@ -247,6 +307,17 @@ void UCILoop() {
 
       NOOB_BOOK = !strncmp(opt, "true", 4);
       printf("info string set NoobBook to value %s\n", NOOB_BOOK ? "true" : "false");
+    } else if (!strncmp(in, "setoption name MultiPV value ", 29)) {
+      int n = GetOptionIntValue(in);
+
+      MULTI_PV = max(1, min(256, n));
+      printf("info string set MultiPV to value %d\n", MULTI_PV);
+    } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
+      char opt[5];
+      sscanf(in, "%*s %*s %*s %*s %5s", opt);
+
+      PONDER_ENABLED = !strncmp(opt, "true", 4);
+      printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
     }
   }
 }

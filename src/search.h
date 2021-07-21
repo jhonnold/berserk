@@ -25,11 +25,6 @@
 #define MATE_BOUND 30000
 #define TB_WIN_BOUND 20000
 
-// reverse futility pruning values
-// these 2 values go 65 -> 135 -> 210 -> 290 -> ...
-#define RFP_BASE 65
-#define RFP_STEP_RISE 5
-
 // static evaluation pruning
 // capture cutoff is linear 70x
 // quiet cutoff is quadratic 20x^2
@@ -45,12 +40,15 @@
 void InitPruningAndReductionTables();
 
 void* UCISearch(void* arg);
-int BestMove(Board* board, SearchParams* params, ThreadData* threads);
+void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results);
 void* Search(void* arg);
 int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv);
 int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv);
 
-void PrintInfo(PV* pv, int score, int depth, ThreadData* thread);
+void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV);
 void PrintPV(PV* pv);
+ 
+int MoveSearchedByMultiPV(ThreadData* thread, Move move);
+int MoveSearchable(SearchParams* params, Move move);
 
 #endif
