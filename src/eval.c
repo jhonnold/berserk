@@ -986,7 +986,7 @@ INLINE Score Imbalance(Board* board, const int side) {
   return s;
 }
 
-INLINE Score Complexity(Board* board, EvalData* data, Score eg) {
+INLINE Score Complexity(Board* board, Score eg) {
   int sign = (eg > 0) - (eg < 0);
   if (!sign)
     return S(0, 0);
@@ -1065,7 +1065,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   }
 
   s += thread->data.contempt;
-  s += Complexity(board, &data, scoreEG(s));
+  s += Complexity(board, scoreEG(s));
 
   // taper
   int phase = GetPhase(board);
