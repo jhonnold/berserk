@@ -35,13 +35,14 @@
 #include "util.h"
 
 #define NAME "Berserk"
-#define VERSION "4.5.0"
+#define VERSION "4.5.1"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 int MOVE_OVERHEAD = 100;
 int MULTI_PV = 1;
 int PONDER_ENABLED = 1;
+volatile int PONDERING = 0;
 
 void RootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
@@ -65,9 +66,10 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   params->stopped = 0;
   params->quit = 0;
   params->multiPV = MULTI_PV;
-  params->pondering = 0;
   params->searchMoves = 0;
   params->searchable.count = 0;
+
+  PONDERING = 0;
 
   char* ptrChar = in;
   int perft = 0, movesToGo = 30, moveTime = -1, time = -1, inc = 0, depth = -1;
@@ -100,7 +102,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
 
   if ((ptrChar = strstr(in, "ponder")))
-    params->pondering = 1;
+    PONDERING = 1;
 
   if ((ptrChar = strstr(in, "searchmoves"))) {
     params->searchMoves = 1;
@@ -249,16 +251,16 @@ void UCILoop() {
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
     } else if (!strncmp(in, "stop", 4)) {
-      searchParameters.pondering = 0;
+      PONDERING = 0;
       searchParameters.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
-      searchParameters.pondering = 0;
+      PONDERING = 0;
       searchParameters.quit = 1;
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
     } else if (!strncmp(in, "ponderhit", 9)) {
-      searchParameters.pondering = 0;
+      PONDERING = 0;
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {

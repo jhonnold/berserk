@@ -206,7 +206,6 @@ typedef struct {
   int movesToGo;
   int stopped;
   int quit;
-  int pondering;
   int multiPV;
   int searchMoves;
   SimpleMoveList searchable;

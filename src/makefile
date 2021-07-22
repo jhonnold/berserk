@@ -1,7 +1,7 @@
 CC = gcc
 SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
 EXE = berserk
-VERSION = 4.5.0
+VERSION = 4.5.1
 
 LIBS = -lm -lpthread
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow

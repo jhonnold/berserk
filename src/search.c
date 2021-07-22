@@ -43,6 +43,7 @@
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
 int STATIC_PRUNE[2][MAX_SEARCH_PLY];
+extern volatile int PONDERING;
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
@@ -64,7 +65,7 @@ void InitPruningAndReductionTables() {
 }
 
 INLINE int StopSearch(SearchParams* params) {
-  return params->timeset && GetTimeMS() - params->start > min(params->alloc, params->max) && !params->pondering;
+  return params->timeset && GetTimeMS() - params->start > min(params->alloc, params->max) && !PONDERING;
 }
 
 void* UCISearch(void* arg) {
@@ -84,13 +85,13 @@ void* UCISearch(void* arg) {
 void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results) {
   Move bestMove;
   if ((bestMove = TBRootProbe(board))) {
-    while (params->pondering)
-      asm("");
+    while (PONDERING)
+      ;
 
     printf("bestmove %s\n", MoveToStr(bestMove));
   } else if ((bestMove = ProbeNoob(board))) {
-    while (params->pondering)
-      asm("");
+    while (PONDERING)
+      ;
 
     printf("bestmove %s\n", MoveToStr(bestMove));
   } else {
@@ -110,8 +111,8 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     for (int i = 1; i < threads->count; i++)
       pthread_join(pthreads[i], NULL);
 
-    while (params->pondering)
-      asm("");
+    while (PONDERING)
+      ;
 
     printf("bestmove %s", MoveToStr(results->bestMoves[results->depth]));
     if (results->ponderMoves[results->depth])
