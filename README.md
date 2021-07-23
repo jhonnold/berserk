@@ -32,8 +32,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.1.0       | 3085    | 15'    |
 | 4.2.0       | 3143    | 15'    |
 | 4.3.0       | 3248    | 15'    |
-| 4.4.0       | 3317    | 15'    |
-| 4.5.0       |         | 15'    |
+| 4.4.0       | 3314    | 15'    |
+| 4.5.0       | 3344    | 15'    |
 
 ## Features
 
