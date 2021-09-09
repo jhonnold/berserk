@@ -6,22 +6,33 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 
 ## Elo History
 
-### CCRL
+### CCRL (40/15)
+
+#### Rank [#13](https://ccrl.chessdom.com/ccrl/4040/rating_list_pure_single_cpu.html)
+
+| **Version** | **Elo** | **TC** |
+| ----------- | ------- | ------ |
+| 3.2.1       | 2935    | 40/15  |
+| 4.2.0       | 3131    | 40/15  |
+| 4.2.0 (4CPU)| 3224    | 40/15  |
+| 4.5.1       | 3294    | 40/15  |
+
+### CCRL (Blitz)
+
+#### Rank [#16](https://ccrl.chessdom.com/ccrl/404/)
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
 | 1.2.2       | 2160    | 2'+1"  |
 | 2.0.0       | 2546    | 2'+1"  |
 | 3.2.0       | 2896    | 2'+1"  |
-| 3.2.1       | 2933    | 40/15  |
 | 4.1.0       | 3117    | 2'+1"  |
-| 4.2.0       | 3131    | 40/15  |
-| 4.2.0 (4CPU)| 3225    | 40/15  |
-| 4.3.0       |         |        |
-| 4.4.0       |         |        |
-| 4.5.0       |         |        |
+| 4.4.0       | 3316    | 2'+1"  |
+| 4.4.0 (8CPU)| 3467    | 2'+1"  |
 
 ### Lars No SMP
+
+#### Rank #10
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -37,11 +48,12 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 
 ## Features
 
-### Board Representation
+### Board Representation and Move Generation
 
-Utilizes bitboards for piece representation and magic bitboards for move generation. Uses a pinning concept (from chess22k) to generate mostly legal moves, removes illegal king and EP moves after the fact (like stockfish).
-
-- [Bitboards](https://www.chessprogramming.org/Bitboards) with [Magic bitboards](https://www.chessprogramming.org/Magic_Bitboards) for move generation
+- [Bitboards](https://www.chessprogramming.org/Bitboards)
+  - In combiniation with [Magic bitboards](https://www.chessprogramming.org/Magic_Bitboards)
+- [Legal Move Gen](https://www.chessprogramming.org/Move_Generation)
+  - It is [Staged](https://www.chessprogramming.org/Move_Generation#Staged_move_generation)
 
 ### Search
 
@@ -58,10 +70,14 @@ Utilizes bitboards for piece representation and magic bitboards for move generat
 - [SEE](https://www.chessprogramming.org/Static_Exchange_Evaluation)
 - [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
 - [Countermove Heuristic](https://www.chessprogramming.org/Countermove_Heuristic)
+- [Extensions](https://www.chessprogramming.org/Extensions)
+  - [Singular](https://www.chessprogramming.org/Singular_Extensions)
+  - [Check](https://www.chessprogramming.org/Check_Extensions)
+  - [Recapture](https://www.chessprogramming.org/Recapture_Extensions)
+  - History
+  - Castle
 
 ### Evaluation
-
-Evaluation is tapered.
 
 - [Tapered](https://www.chessprogramming.org/Tapered_Eval)
 - [Material](https://www.chessprogramming.org/Material)
@@ -69,17 +85,16 @@ Evaluation is tapered.
 - [Mobility](https://www.chessprogramming.org/Mobility)
 - [Pawn Structure](https://www.chessprogramming.org/Pawn_Structure)
 - [King Safety](https://www.chessprogramming.org/King_Safety)
+- [Space](https://www.chessprogramming.org/Space)
+- [Piece Imbalance](https://www.chessprogramming.org/Material_Tables)
 - [Texel Tuned](https://www.chessprogramming.org/Texel's_Tuning_Method)
 
 ### Future Improvements
 
-- Phased move generated
-  - As well as other general speed improvements
-- Candidate passed pawns
-- Space evaluation
-- Improved king and pawn endgame evaluation
-- Tune KS with Texel tuning
-- Other things...
+- Small Pawn NN
+- Piece specific EG evaluation methods
+  - Potentially small NNs for these
+- Proper KS Tuning
 
 ## Building
 
@@ -104,6 +119,7 @@ This engine could not be written without some influence and they are...
 - [Martin Sedlak](https://www.chessprogramming.org/Cheng)
   - Very nice and helpful in later development of Berserk
 - [Vice](https://github.com/bluefeversoft/Vice_Chess_Engine)
+- [Weiss](https://github.com/TerjeKir/weiss)
 - [Stockfish](https://github.com/official-stockfish/Stockfish)
 - [Ethereal](https://github.com/AndyGrant/Ethereal)
   - This has been especially helpful as it introduced me to [OpenBench](https://github.com/AndyGrant/OpenBench)
