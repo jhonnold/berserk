@@ -91,6 +91,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 
 ### Future Improvements
 
+- ~~FRC Support~~
 - Small Pawn NN
 - Piece specific EG evaluation methods
   - Potentially small NNs for these
