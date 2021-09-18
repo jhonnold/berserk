@@ -112,7 +112,7 @@ void Bench() {
 
   printf("\n\n");
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
-    printf("Bench [#%2d]: bestmove %5s score %5d %12d nodes %8d nps | %71s\n", i + 1, MoveToStr(bestMoves[i]),
+    printf("Bench [#%2d]: bestmove %5s score %5d %12d nodes %8d nps | %71s\n", i + 1, MoveToStr(bestMoves[i], &board),
            scores[i], nodes[i], (int)(1000.0 * nodes[i] / (times[i] + 1)), benchmarks[i]);
   }
 

@@ -35,7 +35,6 @@ extern const int QUEEN[];
 extern const int KING[];
 extern const int PIECE_TYPE[];
 
-extern const int casltingRights[];
 extern const int MIRROR[];
 
 extern const uint64_t PIECE_COUNT_IDX[];

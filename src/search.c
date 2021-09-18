@@ -88,12 +88,12 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     while (PONDERING)
       ;
 
-    printf("bestmove %s\n", MoveToStr(bestMove));
+    printf("bestmove %s\n", MoveToStr(bestMove, board));
   } else if ((bestMove = ProbeNoob(board))) {
     while (PONDERING)
       ;
 
-    printf("bestmove %s\n", MoveToStr(bestMove));
+    printf("bestmove %s\n", MoveToStr(bestMove, board));
   } else {
     pthread_t pthreads[threads->count];
     InitPool(board, params, threads, results);
@@ -114,9 +114,9 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     while (PONDERING)
       ;
 
-    printf("bestmove %s", MoveToStr(results->bestMoves[results->depth]));
+    printf("bestmove %s", MoveToStr(results->bestMoves[results->depth], board));
     if (results->ponderMoves[results->depth])
-      printf(" ponder %s", MoveToStr(results->ponderMoves[results->depth]));
+      printf(" ponder %s", MoveToStr(results->ponderMoves[results->depth], board));
 
     printf("\n");
   }
@@ -171,7 +171,7 @@ void* Search(void* arg) {
 
           if (mainThread && (score <= alpha || score >= beta) && thread->multiPV == 0 &&
               GetTimeMS() - params->start >= 2500)
-            PrintInfo(pv, score, thread, alpha, beta, 1);
+            PrintInfo(pv, score, thread, alpha, beta, 1, board);
 
           if (score <= alpha) {
             // adjust beta downward when failing low
@@ -217,7 +217,7 @@ void* Search(void* arg) {
 
       if (mainThread)
         for (int i = 0; i < params->multiPV; i++)
-          PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1);
+          PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
 
       results->depth = depth;
       results->scores[depth] = thread->scores[0];
@@ -478,7 +478,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     nonPrunedMoves++;
 
     if (isRoot && !thread->idx && GetTimeMS() - params->start > 2500)
-      printf("info depth %d currmove %s currmovenumber %d\n", thread->depth, MoveToStr(move),
+      printf("info depth %d currmove %s currmovenumber %d\n", thread->depth, MoveToStr(move, board),
              nonPrunedMoves + thread->multiPV);
 
     if (!tactical)
@@ -721,7 +721,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   return bestScore;
 }
 
-inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV) {
+inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board) {
   int depth = thread->depth;
   int seldepth = Seldepth(thread);
   uint64_t nodes = NodesSearched(thread->threads);
@@ -742,14 +742,14 @@ inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta
          depth, seldepth, multiPV, type, printable, bound, time, nodes, nps, tbhits, hashfull);
 
   if (pv->count)
-    PrintPV(pv);
+    PrintPV(pv, board);
   else
-    printf("%s\n", MoveToStr(pv->moves[0]));
+    printf("%s\n", MoveToStr(pv->moves[0], board));
 }
 
-void PrintPV(PV* pv) {
+void PrintPV(PV* pv, Board* board) {
   for (int i = 0; i < pv->count; i++)
-    printf("%s ", MoveToStr(pv->moves[i]));
+    printf("%s ", MoveToStr(pv->moves[i], board));
   printf("\n");
 }
 

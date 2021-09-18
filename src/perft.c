@@ -25,18 +25,18 @@
 #include "util.h"
 
 
-SearchData PERFT_DUMMY_DATA = {0};
-
 int Perft(int depth, Board* board) {
   if (depth == 0)
     return 1;
 
   Move move;
   MoveList moves;
-  InitAllMoves(&moves, NULL_MOVE, &PERFT_DUMMY_DATA);
+  InitPerftMoves(&moves, board);
+
+  if (depth == 1)
+    return moves.nTactical + moves.nQuiets;
 
   int nodes = 0;
-
   while ((move = NextMove(&moves, board, 0))) {
     MakeMove(move, board);
     nodes += Perft(depth - 1, board);
@@ -55,14 +55,14 @@ void PerftTest(int depth, Board* board) {
 
   Move move;
   MoveList moves;
-  InitAllMoves(&moves, NULL_MOVE, &PERFT_DUMMY_DATA);
+  InitPerftMoves(&moves, board);
 
   while ((move = NextMove(&moves, board, 0))) {
     MakeMove(move, board);
     int nodes = Perft(depth - 1, board);
     UndoMove(move, board);
 
-    printf("%s: %d\n", MoveToStr(move), nodes);
+    printf("%-5s: %d\n", MoveToStr(move, board), nodes);
     total += nodes;
   }
 

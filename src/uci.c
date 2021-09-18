@@ -42,14 +42,14 @@
 int MOVE_OVERHEAD = 100;
 int MULTI_PV = 1;
 int PONDER_ENABLED = 1;
+int CHESS_960 = 0;
 volatile int PONDERING = 0;
 
 void RootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
 
   MoveList m;
-  SearchData d = {0};
-  InitAllMoves(&m, NULL_MOVE, &d);
+  InitPerftMoves(&m, board);
 
   Move mv;
   while ((mv = NextMove(&m, board, 0)))
@@ -109,7 +109,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 
     for (char* moves = strtok(ptrChar + 12, " "); moves != NULL; moves = strtok(NULL, " "))
       for (int i = 0; i < rootMoves.count; i++)
-        if (!strcmp(MoveToStr(rootMoves.moves[i]), moves))
+        if (!strcmp(MoveToStr(rootMoves.moves[i], board), moves))
           params->searchable.moves[params->searchable.count++] = rootMoves.moves[i];
   }
 
@@ -181,21 +181,18 @@ void ParsePosition(char* in, Board* board) {
   }
 
   ptrChar = strstr(in, "moves");
-  Move enteredMove;
 
   if (ptrChar == NULL)
     return;
 
   ptrChar += 6;
-  while (*ptrChar) {
-    enteredMove = ParseMove(ptrChar, board);
+
+  for (char* moves = strtok(ptrChar, " "); moves != NULL; moves = strtok(NULL, " ")) {
+    Move enteredMove = ParseMove(moves, board);
     if (!enteredMove)
       break;
 
     MakeMove(enteredMove, board);
-    while (*ptrChar && *ptrChar != ' ')
-      ptrChar++;
-    ptrChar++;
   }
 }
 
@@ -209,6 +206,7 @@ void PrintUCIOptions() {
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
   printf("option name Ponder type check default true\n");
+  printf("option name UCI_Chess960 type check default false\n");
   printf("uciok\n");
 }
 
@@ -320,6 +318,12 @@ void UCILoop() {
 
       PONDER_ENABLED = !strncmp(opt, "true", 4);
       printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
+    } else if (!strncmp(in, "setoption name UCI_Chess960 value ", 34)) {
+      char opt[5];
+      sscanf(in, "%*s %*s %*s %*s %5s", opt);
+
+      CHESS_960 = !strncmp(opt, "true", 4);
+      printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
     }
   }
 }

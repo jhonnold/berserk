@@ -34,6 +34,7 @@ extern const int KILLER2_SCORE;
 extern const int COUNTER_SCORE;
 
 void AppendMove(Move* arr, uint8_t* n, Move move);
+void GenerateAllMoves(MoveList* moveList, Board* board);
 void GenerateQuietMoves(MoveList* moveList, Board* board);
 void GenerateTacticalMoves(MoveList* moveList, Board* board);
 

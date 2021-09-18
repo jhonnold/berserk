@@ -60,6 +60,15 @@ void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
   moves->data = data;
 }
 
+void InitPerftMoves(MoveList* moves, Board* board) {
+  moves->type = ALL_MOVES;
+  moves->phase = PERFT_MOVES;
+  moves->nTactical = 0;
+  moves->nQuiets = 0;
+  
+  GenerateAllMoves(moves, board);
+}
+
 int GetTopIdx(int* arr, int n) {
   int m = 0;
   for (int i = m + 1; i < n; i++)
@@ -235,7 +244,22 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
     }
 
     moves->phase = NO_MORE_MOVES;
-    // fallthrough
+    return NULL_MOVE;
+  case PERFT_MOVES:
+    if (moves->nTactical > 0) {
+      Move m = PopGoodCapture(moves, 0);
+
+      return m;
+    }
+
+    if (moves->nQuiets > 0) {
+      Move m = PopQuiet(moves, 0);
+
+      return m;
+    }
+
+    moves->phase = NO_MORE_MOVES;
+    return NULL_MOVE;
   case NO_MORE_MOVES:
     return NULL_MOVE;
   }
@@ -268,13 +292,13 @@ void PrintMoves(Board* board, ThreadData* thread) {
   int hit = 0;
   TTEntry* tt = TTProbe(&hit, board->zobrist);
 
-  printf("#HM: %5s\n", hit ? MoveToStr(tt->move) : "N/A");
+  printf("#HM: %5s\n", hit ? MoveToStr(tt->move, board) : "N/A");
 
   Move k1 = thread->data.killers[0][0];
   Move k2 = thread->data.killers[0][1];
 
-  printf("#K1: %5s\n", k1 ? MoveToStr(k1) : "N/A");
-  printf("#K2: %5s\n\n", k2 ? MoveToStr(k2) : "N/A");
+  printf("#K1: %5s\n", k1 ? MoveToStr(k1, board) : "N/A");
+  printf("#K2: %5s\n\n", k2 ? MoveToStr(k2, board) : "N/A");
 
   thread->data.ply = 0;
   MoveList list = {0};
@@ -283,5 +307,5 @@ void PrintMoves(Board* board, ThreadData* thread) {
   int i = 1;
   Move move;
   while ((move = NextMove(&list, board, 0)))
-    printf("#%2d: %5s - %24s\n", i++, MoveToStr(move), PhaseName(&list));
+    printf("#%2d: %5s - %24s\n", i++, MoveToStr(move, board), PhaseName(&list));
 }
