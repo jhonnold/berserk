@@ -43,7 +43,7 @@ extern const char* SQ_TO_COORD[];
 #define Tactical(move) (((int)(move)&0x1f0000) >> 16)
 
 Move ParseMove(char* moveStr, Board* board);
-char* MoveToStr(Move move);
+char* MoveToStr(Move move, Board* board);
 int IsRecapture(SearchData* data, Move move);
 
 #endif

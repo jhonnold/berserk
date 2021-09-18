@@ -15,11 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
+#include <string.h>
 
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
 #include "types.h"
+#include "uci.h"
 
 const int CHAR_TO_PIECE[] = {['P'] = 0, ['N'] = 2, ['B'] = 4, ['R'] = 6, ['Q'] = 8, ['K'] = 10,
                              ['p'] = 1, ['n'] = 3, ['b'] = 5, ['r'] = 7, ['q'] = 9, ['k'] = 11};
@@ -33,37 +35,45 @@ const char* SQ_TO_COORD[] = {
 };
 
 Move ParseMove(char* moveStr, Board* board) {
-  MoveList moveList = {0};
-  SearchData data = {0};
-  InitAllMoves(&moveList, NULL_MOVE, &data);
+  SimpleMoveList rootMoves;
+  RootMoves(&rootMoves, board);
 
-  int start = (moveStr[0] - 'a') + (8 - (moveStr[1] - '0')) * 8;
-  int end = (moveStr[2] - 'a') + (8 - (moveStr[3] - '0')) * 8;
+  for (int i = 0; i < rootMoves.count; i++)
+    if (!strcmp(MoveToStr(rootMoves.moves[i], board), moveStr))
+      return rootMoves.moves[i];
 
-  Move match;
-  while ((match = NextMove(&moveList, board, 0))) {
-    if (start != MoveStart(match) || end != MoveEnd(match))
-      continue;
-
-    int promotedPiece = MovePromo(match);
-    if (!promotedPiece)
-      return match;
-
-    if (PROMOTION_TO_CHAR[promotedPiece] == moveStr[4])
-      return match;
-  }
-
-  return 0;
+  return NULL_MOVE;
 }
 
-char* MoveToStr(Move move) {
+char* MoveToStr(Move move, Board* board) {
   static char buffer[6];
 
+  int start = MoveStart(move);
+  int end = MoveEnd(move);
+
+  if (CHESS_960 && MoveCastle(move)) {
+    switch (end) {
+    case G1:
+      end = board->castleRooks[0];
+      break;
+    case C1:
+      end = board->castleRooks[1];
+      break;
+    case G8:
+      end = board->castleRooks[2];
+      break;
+    case C8:
+      end = board->castleRooks[3];
+      break;
+    default:
+      break;
+    }
+  }
+
   if (MovePromo(move)) {
-    sprintf(buffer, "%s%s%c", SQ_TO_COORD[MoveStart(move)], SQ_TO_COORD[MoveEnd(move)],
-            PROMOTION_TO_CHAR[MovePromo(move)]);
+    sprintf(buffer, "%s%s%c", SQ_TO_COORD[start], SQ_TO_COORD[end], PROMOTION_TO_CHAR[MovePromo(move)]);
   } else {
-    sprintf(buffer, "%s%s", SQ_TO_COORD[MoveStart(move)], SQ_TO_COORD[MoveEnd(move)]);
+    sprintf(buffer, "%s%s", SQ_TO_COORD[start], SQ_TO_COORD[end]);
   }
 
   return buffer;

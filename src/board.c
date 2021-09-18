@@ -27,6 +27,7 @@
 #include "movegen.h"
 #include "transposition.h"
 #include "types.h"
+#include "uci.h"
 #include "zobrist.h"
 
 const BitBoard EMPTY = 0ULL;
@@ -43,18 +44,6 @@ const int PIECE_TYPE[13] = {PAWN_TYPE, PAWN_TYPE,  KNIGHT_TYPE, KNIGHT_TYPE, BIS
                             ROOK_TYPE, QUEEN_TYPE, QUEEN_TYPE,  KING_TYPE,   KING_TYPE,   NO_PIECE / 2};
 
 // clang-format off
-// castling rights mask for start/end squares
-const int CASTLING_RIGHTS[] = {
-  14, 15, 15, 15, 12, 15, 15, 13, 
-  15, 15, 15, 15, 15, 15, 15, 15, 
-  15, 15, 15, 15, 15, 15, 15, 15, 
-  15, 15, 15, 15, 15, 15, 15, 15, 
-  15, 15, 15, 15, 15, 15, 15, 15, 
-  15, 15, 15, 15, 15, 15, 15, 15, 
-  15, 15, 15, 15, 15, 15, 15, 15, 
-  11, 15, 15, 15, 3,  15, 15,  7
-};
-
 // square reflection table
 const int MIRROR[] = {
   56, 57, 58, 59, 60, 61, 62, 63, 
@@ -133,18 +122,60 @@ void ParseFen(char* fen, Board* board) {
 
   fen++;
 
+  int whiteKing = lsb(board->pieces[KING_WHITE] & RANK_1);
+  int whiteKingFile = file(whiteKing);
+  int blackKing = lsb(board->pieces[KING_BLACK] & RANK_8);
+  int blackKingFile = file(blackKing);
+
   while (*fen != ' ') {
     if (*fen == 'K') {
       board->castling |= 8;
+      board->castleRooks[0] = msb(board->pieces[ROOK_WHITE] & RANK_1);
     } else if (*fen == 'Q') {
       board->castling |= 4;
+      board->castleRooks[1] = lsb(board->pieces[ROOK_WHITE] & RANK_1);
+    } else if (*fen >= 'A' && *fen <= 'H') {
+      int file = *fen - 'A';
+      board->castling |= (file > whiteKingFile ? 8 : 4);
+      board->castleRooks[file > whiteKingFile ? 0 : 1] = A1 + file;
     } else if (*fen == 'k') {
       board->castling |= 2;
+      board->castleRooks[2] = msb(board->pieces[ROOK_BLACK] & RANK_8);
     } else if (*fen == 'q') {
       board->castling |= 1;
+      board->castleRooks[3] = lsb(board->pieces[ROOK_BLACK] & RANK_8);
+    } else if (*fen >= 'a' && *fen <= 'h') {
+      int file = *fen - 'a';
+      board->castling |= (file > blackKingFile ? 2 : 1);
+      board->castleRooks[file > blackKingFile ? 2 : 3] = A8 + file;
     }
 
     fen++;
+  }
+
+  if (board->castleRooks[0] != H1 || board->castleRooks[1] != A1 || board->castleRooks[2] != H8 ||
+      board->castleRooks[3] != A8) {
+    if (!CHESS_960) {
+      CHESS_960 = 1;
+      printf("info string set UCI_Chess960 to value true\n");
+    }
+  }
+
+  for (int i = 0; i < 64; i++) {
+    board->castlingRights[i] = board->castling;
+
+    if (i == whiteKing)
+      board->castlingRights[i] &= 3;
+    else if (i == blackKing)
+      board->castlingRights[i] &= 12;
+    else if (i == board->castleRooks[0] && (board->castling & 8))
+      board->castlingRights[i] ^= 8;
+    else if (i == board->castleRooks[1] && (board->castling & 4))
+      board->castlingRights[i] ^= 4;
+    else if (i == board->castleRooks[2] && (board->castling & 2))
+      board->castlingRights[i] ^= 2;
+    else if (i == board->castleRooks[3] && (board->castling & 1))
+      board->castlingRights[i] ^= 1;
   }
 
   fen++;
@@ -199,13 +230,13 @@ void BoardToFen(char* fen, Board* board) {
 
   if (board->castling) {
     if (board->castling & 0x8)
-      *fen++ = 'K';
+      *fen++ = CHESS_960 ? 'A' + file(board->castleRooks[0]) : 'K';
     if (board->castling & 0x4)
-      *fen++ = 'Q';
+      *fen++ = CHESS_960 ? 'A' + file(board->castleRooks[1]) : 'Q';
     if (board->castling & 0x2)
-      *fen++ = 'k';
+      *fen++ = CHESS_960 ? 'a' + file(board->castleRooks[2]) : 'k';
     if (board->castling & 0x1)
-      *fen++ = 'q';
+      *fen++ = CHESS_960 ? 'a' + file(board->castleRooks[3]) : 'q';
   } else {
     *fen++ = '-';
   }
@@ -423,55 +454,59 @@ void MakeMove(Move move, Board* board) {
   if (castle) {
     // move the rook during a castle, the king encoding is handled automatically
     if (end == G1) {
-      popBit(board->pieces[ROOK[WHITE]], H1);
+      popBit(board->pieces[ROOK[WHITE]], board->castleRooks[0]);
       setBit(board->pieces[ROOK[WHITE]], F1);
 
-      board->squares[H1] = NO_PIECE;
+      if (board->castleRooks[0] != end)
+        board->squares[board->castleRooks[0]] = NO_PIECE;
       board->squares[F1] = ROOK[WHITE];
 
-      board->mat += PSQT[ROOK_WHITE][endSameSideKing][F1] - PSQT[ROOK_WHITE][endSameSideKing][H1];
+      board->mat += PSQT[ROOK_WHITE][endSameSideKing][F1] - PSQT[ROOK_WHITE][endSameSideKing][board->castleRooks[0]];
 
-      board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][H1];
+      board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][board->castleRooks[0]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][F1];
     } else if (end == C1) {
-      popBit(board->pieces[ROOK[WHITE]], A1);
+      popBit(board->pieces[ROOK[WHITE]], board->castleRooks[1]);
       setBit(board->pieces[ROOK[WHITE]], D1);
 
-      board->squares[A1] = NO_PIECE;
+      if (board->castleRooks[1] != end)
+        board->squares[board->castleRooks[1]] = NO_PIECE;
       board->squares[D1] = ROOK[WHITE];
 
-      board->mat += PSQT[ROOK_WHITE][endSameSideKing][D1] - PSQT[ROOK_WHITE][endSameSideKing][A1];
+      board->mat += PSQT[ROOK_WHITE][endSameSideKing][D1] - PSQT[ROOK_WHITE][endSameSideKing][board->castleRooks[1]];
 
-      board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][A1];
+      board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][board->castleRooks[1]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][D1];
     } else if (end == G8) {
-      popBit(board->pieces[ROOK[BLACK]], H8);
+      popBit(board->pieces[ROOK[BLACK]], board->castleRooks[2]);
       setBit(board->pieces[ROOK[BLACK]], F8);
 
-      board->mat += PSQT[ROOK_BLACK][endSameSideKing][F8] - PSQT[ROOK_BLACK][endSameSideKing][H8];
+      board->mat += PSQT[ROOK_BLACK][endSameSideKing][F8] - PSQT[ROOK_BLACK][endSameSideKing][board->castleRooks[2]];
 
-      board->squares[H8] = NO_PIECE;
+      if (board->castleRooks[2] != end)
+        board->squares[board->castleRooks[2]] = NO_PIECE;
       board->squares[F8] = ROOK[BLACK];
 
-      board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][H8];
+      board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][board->castleRooks[2]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][F8];
     } else if (end == C8) {
-      popBit(board->pieces[ROOK[BLACK]], A8);
+      popBit(board->pieces[ROOK[BLACK]], board->castleRooks[3]);
       setBit(board->pieces[ROOK[BLACK]], D8);
 
-      board->squares[A8] = NO_PIECE;
+      if (board->castleRooks[3] != end)
+        board->squares[board->castleRooks[3]] = NO_PIECE;
       board->squares[D8] = ROOK[BLACK];
 
-      board->mat += PSQT[ROOK_BLACK][endSameSideKing][D8] - PSQT[ROOK_BLACK][endSameSideKing][A8];
+      board->mat += PSQT[ROOK_BLACK][endSameSideKing][D8] - PSQT[ROOK_BLACK][endSameSideKing][board->castleRooks[3]];
 
-      board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][A8];
+      board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][board->castleRooks[3]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][D8];
     }
   }
 
   board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
-  board->castling &= CASTLING_RIGHTS[start];
-  board->castling &= CASTLING_RIGHTS[end];
+  board->castling &= board->castlingRights[start];
+  board->castling &= board->castlingRights[end];
   board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
 
   SetOccupancies(board);
@@ -552,28 +587,33 @@ void UndoMove(Move move, Board* board) {
     // put the rook back
     if (end == G1) {
       popBit(board->pieces[ROOK[WHITE]], F1);
-      setBit(board->pieces[ROOK[WHITE]], H1);
+      setBit(board->pieces[ROOK[WHITE]], board->castleRooks[0]);
 
-      board->squares[F1] = NO_PIECE;
-      board->squares[H1] = ROOK[WHITE];
+      if (start != F1)
+        board->squares[F1] = NO_PIECE;
+
+      board->squares[board->castleRooks[0]] = ROOK[WHITE];
     } else if (end == C1) {
       popBit(board->pieces[ROOK[WHITE]], D1);
-      setBit(board->pieces[ROOK[WHITE]], A1);
+      setBit(board->pieces[ROOK[WHITE]], board->castleRooks[1]);
 
-      board->squares[D1] = NO_PIECE;
-      board->squares[A1] = ROOK[WHITE];
+      if (start != D1)
+        board->squares[D1] = NO_PIECE;
+      board->squares[board->castleRooks[1]] = ROOK[WHITE];
     } else if (end == G8) {
       popBit(board->pieces[ROOK[BLACK]], F8);
-      setBit(board->pieces[ROOK[BLACK]], H8);
+      setBit(board->pieces[ROOK[BLACK]], board->castleRooks[2]);
 
-      board->squares[F8] = NO_PIECE;
-      board->squares[H8] = ROOK[BLACK];
+      if (start != F8)
+        board->squares[F8] = NO_PIECE;
+      board->squares[board->castleRooks[2]] = ROOK[BLACK];
     } else if (end == C8) {
       popBit(board->pieces[ROOK[BLACK]], D8);
-      setBit(board->pieces[ROOK[BLACK]], A8);
+      setBit(board->pieces[ROOK[BLACK]], board->castleRooks[3]);
 
-      board->squares[D8] = NO_PIECE;
-      board->squares[A8] = ROOK[BLACK];
+      if (start != D8)
+        board->squares[D8] = NO_PIECE;
+      board->squares[board->castleRooks[3]] = ROOK[BLACK];
     }
   }
 
@@ -737,8 +777,9 @@ int MoveIsLegal(Move move, Board* board) {
   if (!move || piece > KING_BLACK || (piece & 1) != board->side || piece != board->squares[start])
     return 0;
 
-  // can't capture our own piece
-  if (board->squares[end] != NO_PIECE && (!MoveCapture(move) || (board->squares[end] & 1) == board->side))
+  // can't capture our own piece unless castling
+  if (board->squares[end] != NO_PIECE && !MoveCastle(move) &&
+      (!MoveCapture(move) || (board->squares[end] & 1) == board->side))
     return 0;
 
   // can't capture air
@@ -750,7 +791,7 @@ int MoveIsLegal(Move move, Board* board) {
     return 0;
 
   // non-kings can't castle
-  if (MoveCastle(move) && PIECE_TYPE[piece] != KING_TYPE)
+  if (MoveCastle(move) && (PIECE_TYPE[piece] != KING_TYPE || MoveCapture(move)))
     return 0;
 
   BitBoard possible = -1ULL;
@@ -810,23 +851,65 @@ int MoveIsLegal(Move move, Board* board) {
     if (board->checkers)
       return 0;
 
-    if (start != (board->side == WHITE ? E1 : E8))
+    int kingSq = lsb(board->pieces[KING[board->side]]);
+
+    if (start != kingSq)
       return 0;
 
     if ((board->side == WHITE && end != G1 && end != C1) || (board->side == BLACK && end != G8 && end != C8))
       return 0;
 
-    if (end == G1 && ((board->occupancies[BOTH] & GetInBetweenSquares(E1, H1)) || !(board->castling & 0x8)))
-      return 0;
+    if (end == G1) {
+      if (!(board->castling & 0x8))
+        return 0;
 
-    if (end == C1 && ((board->occupancies[BOTH] & GetInBetweenSquares(E1, A1)) || !(board->castling & 0x4)))
-      return 0;
+      if (getBit(board->pinned, board->castleRooks[0]))
+        return 0;
 
-    if (end == G8 && ((board->occupancies[BOTH] & GetInBetweenSquares(E8, H8)) || !(board->castling & 0x2)))
-      return 0;
+      BitBoard between =
+          GetInBetweenSquares(kingSq, G1) | GetInBetweenSquares(board->castleRooks[0], F1) | bit(G1) | bit(F1);
+      if ((board->occupancies[BOTH] ^ board->pieces[KING_WHITE] ^ bit(board->castleRooks[0])) & between)
+        return 0;
+    }
 
-    if (end == C8 && ((board->occupancies[BOTH] & GetInBetweenSquares(E8, A8)) || !(board->castling & 0x1)))
-      return 0;
+    if (end == C1) {
+      if (!(board->castling & 0x4))
+        return 0;
+
+      if (getBit(board->pinned, board->castleRooks[1]))
+        return 0;
+
+      BitBoard between =
+          GetInBetweenSquares(kingSq, C1) | GetInBetweenSquares(board->castleRooks[1], D1) | bit(C1) | bit(D1);
+      if ((board->occupancies[BOTH] ^ board->pieces[KING_WHITE] ^ bit(board->castleRooks[1])) & between)
+        return 0;
+    }
+
+    if (end == G8) {
+      if (!(board->castling & 0x2))
+        return 0;
+
+      if (getBit(board->pinned, board->castleRooks[2]))
+        return 0;
+
+      BitBoard between =
+          GetInBetweenSquares(kingSq, G8) | GetInBetweenSquares(board->castleRooks[2], F8) | bit(G8) | bit(F8);
+      if ((board->occupancies[BOTH] ^ board->pieces[KING_BLACK] ^ bit(board->castleRooks[2])) & between)
+        return 0;
+    }
+
+    if (end == C8) {
+      if (!(board->castling & 0x1))
+        return 0;
+
+      if (getBit(board->pinned, board->castleRooks[3]))
+        return 0;
+
+      BitBoard between =
+          GetInBetweenSquares(kingSq, C8) | GetInBetweenSquares(board->castleRooks[3], D8) | bit(C8) | bit(D8);
+      if ((board->occupancies[BOTH] ^ board->pieces[KING_BLACK] ^ bit(board->castleRooks[3])) & between)
+        return 0;
+    }
   }
 
   // this is a legality checker for ep/king/castles (used by movegen)

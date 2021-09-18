@@ -64,6 +64,9 @@ typedef struct {
   uint64_t zobrist; // zobrist hash of the position
   uint64_t pawnHash;
 
+  int castlingRights[64];
+  int castleRooks[4];
+  
   // data that is hard to track, so it is "remembered" when search undoes moves
   int castlingHistory[MAX_GAME_PLY];
   int epSquareHistory[MAX_GAME_PLY];
@@ -282,7 +285,8 @@ enum {
   GEN_QUIET_MOVES,
   PLAY_QUIETS,
   PLAY_BAD_TACTICAL,
-  NO_MORE_MOVES
+  NO_MORE_MOVES,
+  PERFT_MOVES,
 };
 
 typedef struct {
