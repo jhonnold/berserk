@@ -285,8 +285,6 @@ void UpdateWeights(Weights* weights) {
 
   UpdateParam(&weights->complexPawnsBothSides.mg);
 
-  UpdateParam(&weights->complexPawnsOffset.mg);
-
   if (TUNE_KS) {
     for (int i = 0; i < 5; i++)
       UpdateParam(&weights->ksAttackerWeight[i].mg);
@@ -538,7 +536,6 @@ double UpdateAndTrain(int n, Position* positions, Weights* weights) {
     weights->tempo.mg.g += w->tempo.mg.g;
 
     weights->complexPawns.mg.g += w->complexPawns.mg.g;
-    weights->complexPawnsOffset.mg.g += w->complexPawnsOffset.mg.g;
     weights->complexPawnsBothSides.mg.g += w->complexPawnsBothSides.mg.g;
     weights->complexOffset.mg.g += w->complexOffset.mg.g;
 
@@ -865,7 +862,6 @@ void UpdateComplexityGradients(Position* position, double loss, Weights* weights
   egBase *= (gd->complexity >= -fabs(gd->eg));
 
   weights->complexPawns.mg.g += position->coeffs.complexPawns * egBase * sign;
-  weights->complexPawnsOffset.mg.g += position->coeffs.complexPawnsOffset * egBase * sign;
   weights->complexPawnsBothSides.mg.g += position->coeffs.complexPawnsBothSides * egBase * sign;
   weights->complexOffset.mg.g += position->coeffs.complexOffset * egBase * sign;
 }
@@ -1099,7 +1095,6 @@ void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* we
 void EvaluateComplexityValues(double* mg, double* eg, Position* position, Weights* weights, EvalGradientData* gd) {
   double complexity = 0.0;
   complexity += position->coeffs.complexPawns * weights->complexPawns.mg.value;
-  complexity += position->coeffs.complexPawnsOffset * weights->complexPawnsOffset.mg.value;
   complexity += position->coeffs.complexPawnsBothSides * weights->complexPawnsBothSides.mg.value;
   complexity += position->coeffs.complexOffset * weights->complexOffset.mg.value;
 
@@ -1469,7 +1464,6 @@ void InitSpaceWeights(Weights* weights) { weights->space.mg.value = SPACE; }
 
 void InitComplexityWeights(Weights* weights) {
   weights->complexPawns.mg.value = COMPLEXITY_PAWNS;
-  weights->complexPawnsOffset.mg.value = COMPLEXITY_PAWNS_OFFSET;
   weights->complexPawnsBothSides.mg.value = COMPLEXITY_PAWNS_BOTH_SIDES;
   weights->complexOffset.mg.value = COMPLEXITY_OFFSET;
 }
@@ -1750,8 +1744,6 @@ void PrintWeights(Weights* weights, int epoch, double error) {
   PrintWeight(fp, &weights->castlingRights);
 
   fprintf(fp, "\nconst Score COMPLEXITY_PAWNS = %d;\n", (int)round(weights->complexPawns.mg.value));
-
-  fprintf(fp, "\nconst Score COMPLEXITY_PAWNS_OFFSET = %d;\n", (int)round(weights->complexPawnsOffset.mg.value));
 
   fprintf(fp, "\nconst Score COMPLEXITY_PAWNS_BOTH_SIDES = %d;\n", (int)round(weights->complexPawnsBothSides.mg.value));
 
