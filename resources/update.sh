@@ -1,7 +1,7 @@
 #!/bin/bash
 
 REPO_URL=https://github.com/jhonnold/berserk.git
-VERSION=4.6.0
+VERSION=5.0.0-dev
 
 echo "Downloading Berserk version $VERSION"
 git clone --depth 1 --branch main
