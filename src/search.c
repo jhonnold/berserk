@@ -169,7 +169,7 @@ void* Search(void* arg) {
           // search!
           score = Negamax(alpha, beta, searchDepth, thread, pv);
 
-          if (mainThread && (score <= alpha || score >= beta) && thread->multiPV == 0 &&
+          if (mainThread && (score <= alpha || score >= beta) && params->multiPV == 1 &&
               GetTimeMS() - params->start >= 2500)
             PrintInfo(pv, score, thread, alpha, beta, 1, board);
 
@@ -476,11 +476,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     }
 
     nonPrunedMoves++;
-
-    if (isRoot && !thread->idx && GetTimeMS() - params->start > 2500)
-      printf("info depth %d currmove %s currmovenumber %d\n", thread->depth, MoveToStr(move, board),
-             nonPrunedMoves + thread->multiPV);
-
     if (!tactical)
       quiets[numQuiets++] = move;
 
@@ -624,7 +619,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   pv->count = 0;
 
   data->nodes++;
-  data->seldepth = max(data->ply, data->seldepth);
 
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
