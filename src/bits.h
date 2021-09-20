@@ -52,6 +52,9 @@ extern const uint8_t SQ_SIDE[64];
 #define RANK_7 0x000000000000FF00ULL
 #define RANK_8 0x00000000000000FFULL
 
+#define K_SIDE 0x0F0F0F0F0F0F0F0FULL
+#define Q_SIDE 0xF0F0F0F0F0F0F0F0ULL
+
 #define bit(sq) (1ULL << (sq))
 #define setBit(bb, sq) ((bb) |= bit(sq))
 #define getBit(bb, sq) ((bb) & bit(sq))
