@@ -129,6 +129,8 @@ void* Search(void* arg) {
   SearchResults* results = thread->results;
   Board* board = &thread->board;
   int mainThread = !thread->idx;
+  
+  int stability = 0;
 
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
@@ -228,6 +230,11 @@ void* Search(void* arg) {
         continue;
 
       int diff = results->scores[depth] - results->scores[depth - 1];
+      
+      if (results->bestMoves[depth] == results->bestMoves[depth - 1])
+        stability = min(64, stability + 6);
+      else
+        stability = 0;
 
       if (abs(diff) <= WINDOW)
         continue;
@@ -236,6 +243,11 @@ void* Search(void* arg) {
         params->alloc *= fmin(1.16, 1.04 * (-diff / WINDOW));
       else
         params->alloc *= fmin(1.04, 1.02 * (diff / WINDOW));
+      
+      if (GetTimeMS() - params->start > (128 - stability) * params->alloc / 128) {
+        params->stopped = 1;
+        break;
+      }
     }
   }
 
