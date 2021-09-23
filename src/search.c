@@ -556,6 +556,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
           R++;
 
+        R += !!MoveCapture(hashMove);
+
         // adjust reduction based on historical score
         R -= hist / 24576;
       } else {
