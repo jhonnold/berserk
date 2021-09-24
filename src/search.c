@@ -693,11 +693,19 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   MoveList moves;
 
   int seeThreshold = max(0, alpha - eval - DELTA_CUTOFF);
-  InitTacticalMoves(&moves, data, seeThreshold);
+  if (board->checkers)
+    InitAllMoves(&moves, ttHit ? tt->move : NULL_MOVE, data);
+  else
+    InitTacticalMoves(&moves, data, seeThreshold);
 
-  while ((move = NextMove(&moves, board, 1))) {
-    if (moves.phase > PLAY_GOOD_TACTICAL)
-      break;
+  while ((move = NextMove(&moves, board, !board->checkers))) {
+    if (bestScore > -MATE_BOUND) {
+      if (moves.phase == PLAY_BAD_TACTICAL)
+        break;
+
+      if (!Tactical(move) && SEE(board, move) < 0)
+        continue;
+    }
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);
