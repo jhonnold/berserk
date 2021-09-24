@@ -298,7 +298,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Prevent overflows
     if (data->ply > MAX_SEARCH_PLY - 1)
-      return Evaluate(board, thread);
+      return Evaluate(board, thread) / 2;
 
     // Mate distance pruning
     alpha = max(alpha, -CHECKMATE + data->ply);
@@ -372,7 +372,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   // pull previous static eval from tt - this is depth independent
   int eval;
   if (!skipMove) {
-    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
+    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread) / 2);
   } else {
     // after se, just used already determined eval
     eval = data->evals[data->ply];
@@ -649,7 +649,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   // prevent overflows
   if (data->ply > MAX_SEARCH_PLY - 1)
-    return Evaluate(board, thread);
+    return Evaluate(board, thread) / 2;
 
   // check the transposition table for previous info
   int ttHit = 0, ttScore = UNKNOWN;
@@ -668,7 +668,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   int bestScore = -CHECKMATE + data->ply;
 
   // pull cached eval if it exists
-  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
+  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread) / 2);
   if (!ttHit)
     TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 

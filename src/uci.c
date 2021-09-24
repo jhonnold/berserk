@@ -262,7 +262,7 @@ void UCILoop() {
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
-      Score s = Evaluate(&board, &threads[0]);
+      Score s = Evaluate(&board, &threads[0]) / 2;
       if (board.side == BLACK)
         s = -s;
 

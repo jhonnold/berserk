@@ -1207,10 +1207,13 @@ Position* LoadPositions(int* n, Weights* weights) {
       continue;
 
     LoadPosition(&board, &positions[p], threads);
-    if (abs(positions[p].staticEval) > 3000)
+    if (abs(positions[p].staticEval) > 6000)
       continue;
 
     double eval = EvaluateCoeffs(&positions[p], weights, &ks);
+    if (fabs(eval) > 6000)
+      continue;
+
     if (fabs(positions[p].staticEval - eval) > 3) {
       printf("The coefficient based evaluation does NOT match the eval!\n");
       printf("FEN: %s\n", buffer);
@@ -1485,7 +1488,7 @@ void InitKingSafetyWeights(Weights* weights) {
 
 void InitTempoWeight(Weights* weights) { weights->tempo.mg.value = TEMPO; }
 
-double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 400.0)); }
+double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 800.0)); }
 
 void PrintWeights(Weights* weights, int epoch, double error) {
   FILE* fp;
