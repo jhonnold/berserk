@@ -561,7 +561,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         // adjust reduction based on historical score
         R -= hist / 24576;
       } else {
-        R--;
+        R -= (depth > 5 || moves.phase != PLAY_BAD_TACTICAL);
 
         if (isPV)
           R--;
