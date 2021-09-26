@@ -229,12 +229,12 @@ void* Search(void* arg) {
         continue;
 
       int diff = results->scores[depth] - results->scores[depth - 1];
-      
+
       // increment search stability if best move remains the same, otherwise reset
-      if (results->bestMoves[depth] == results->bestMoves[depth - 1]) 
-        searchStability = min(64, searchStability + 6); 
-      else 
-        searchStability = 0; 
+      if (results->bestMoves[depth] == results->bestMoves[depth - 1])
+        searchStability = min(64, searchStability + 6);
+      else
+        searchStability = 0;
 
       if (abs(diff) <= WINDOW)
         continue;
@@ -244,10 +244,10 @@ void* Search(void* arg) {
       else
         params->alloc *= fmin(1.04, 1.02 * (diff / WINDOW));
 
-      if (GetTimeMS() - params->start > (128 - searchStability) * min(params->alloc, params->max) / 128) { 
-        params->stopped = 1; 
-        break; 
-      } 
+      if (GetTimeMS() - params->start > (128 - searchStability) * params->alloc / 128) {
+        params->stopped = 1;
+        break;
+      }
     }
   }
 
