@@ -468,6 +468,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       if (!tactical && !specialQuiet && depth < 3 && counterHist <= -8192)
         continue;
 
+      if (!tactical && !board->checkers && eval + 100 * depth <= alpha && depth <= 8 && hist < 50000 / (1 + improving))
+        skipQuiets = 1;
+
       if (tactical && moves.phase > PLAY_GOOD_TACTICAL && SEE(board, move) < STATIC_PRUNE[1][depth])
         continue;
 
