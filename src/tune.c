@@ -262,6 +262,8 @@ void UpdateWeights(Weights* weights) {
 
   UpdateWeight(&weights->passedPawnUnsupported);
 
+  UpdateWeight(&weights->passedPawnOutsideVKnight);
+
   for (int f = 0; f < 4; f++) {
     for (int r = 0; r < 8; r++) {
       UpdateWeight(&weights->pawnShelter[f][r]);
@@ -512,6 +514,9 @@ double UpdateAndTrain(int n, Position* positions, Weights* weights) {
 
     weights->passedPawnUnsupported.mg.g += w->passedPawnUnsupported.mg.g;
     weights->passedPawnUnsupported.eg.g += w->passedPawnUnsupported.eg.g;
+
+    weights->passedPawnOutsideVKnight.mg.g += w->passedPawnOutsideVKnight.mg.g;
+    weights->passedPawnOutsideVKnight.eg.g += w->passedPawnOutsideVKnight.eg.g;
 
     for (int f = 0; f < 4; f++) {
       for (int r = 0; r < 8; r++) {
@@ -824,6 +829,9 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
 
   weights->passedPawnUnsupported.mg.g += position->coeffs.passedPawnUnsupported * mgBase;
   weights->passedPawnUnsupported.eg.g += position->coeffs.passedPawnUnsupported * egBase;
+  
+  weights->passedPawnOutsideVKnight.mg.g += position->coeffs.passedPawnOutsideVKnight * mgBase;
+  weights->passedPawnOutsideVKnight.eg.g += position->coeffs.passedPawnOutsideVKnight * egBase;
 }
 
 void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
@@ -1069,6 +1077,7 @@ void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weigh
   ApplyCoeff(mg, eg, position->coeffs.passedPawnEnemySliderBehind, &weights->passedPawnEnemySliderBehind);
   ApplyCoeff(mg, eg, position->coeffs.passedPawnSqRule, &weights->passedPawnSqRule);
   ApplyCoeff(mg, eg, position->coeffs.passedPawnUnsupported, &weights->passedPawnUnsupported);
+  ApplyCoeff(mg, eg, position->coeffs.passedPawnOutsideVKnight, &weights->passedPawnOutsideVKnight);
 
   for (int r = 0; r < 5; r++)
     ApplyCoeff(mg, eg, position->coeffs.passedPawnAdvance[r], &weights->passedPawnAdvance[r]);
@@ -1441,6 +1450,9 @@ void InitPasserBonusWeights(Weights* weights) {
 
   weights->passedPawnUnsupported.mg.value = scoreMG(PASSED_PAWN_UNSUPPORTED);
   weights->passedPawnUnsupported.eg.value = scoreEG(PASSED_PAWN_UNSUPPORTED);
+  
+  weights->passedPawnOutsideVKnight.mg.value = scoreMG(PASSED_PAWN_OUTSIDE_V_KNIGHT);
+  weights->passedPawnOutsideVKnight.eg.value = scoreEG(PASSED_PAWN_OUTSIDE_V_KNIGHT);
 }
 
 void InitPawnShelterWeights(Weights* weights) {
@@ -1662,6 +1674,9 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score PASSED_PAWN_UNSUPPORTED = ");
   PrintWeight(fp, &weights->passedPawnUnsupported);
+
+  fprintf(fp, "\nconst Score PASSED_PAWN_OUTSIDE_V_KNIGHT = ");
+  PrintWeight(fp, &weights->passedPawnOutsideVKnight);
 
   fprintf(fp, "\nconst Score KNIGHT_THREATS[6] = {");
   PrintWeightArray(fp, weights->knightThreats, 6, 0);

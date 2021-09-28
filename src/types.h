@@ -156,6 +156,7 @@ typedef struct {
   int8_t passedPawnEnemySliderBehind;
   int8_t passedPawnSqRule;
   int8_t passedPawnUnsupported;
+  int8_t passedPawnOutsideVKnight;
 
   int8_t knightThreats[6];
   int8_t bishopThreats[6];

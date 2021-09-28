@@ -84,6 +84,7 @@ extern const Score PASSED_PAWN_KING_PROXIMITY;
 extern const Score PASSED_PAWN_ENEMY_SLIDER_BEHIND;
 extern const Score PASSED_PAWN_SQ_RULE;
 extern const Score PASSED_PAWN_UNSUPPORTED;
+extern const Score PASSED_PAWN_OUTSIDE_V_KNIGHT;
 
 extern const Score KNIGHT_THREATS[6];
 extern const Score BISHOP_THREATS[6];
