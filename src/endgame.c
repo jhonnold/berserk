@@ -53,7 +53,7 @@ int Push(Board* board, int ss) {
 int StaticMaterialScore(int side, Board* board) {
   int s = 0;
   for (int p = PAWN[side]; p <= QUEEN[side]; p += 2)
-    s += bits(board->pieces[p]) * STATIC_MATERIAL_VALUE[PIECE_TYPE[p]];
+    s += bits(board->pieces[p]) * scoreEG(MATERIAL_VALUES[PIECE_TYPE[p]]);
 
   return s;
 }
@@ -104,8 +104,8 @@ int EvaluateMaterialOnlyEndgame(Board* board) {
     int materialDiff = ssMaterial - wsMaterial;
     int eval = materialDiff + Push(board, ss);
 
-    if (ssPieceCount <= wsPieceCount + 1 && materialDiff <= STATIC_MATERIAL_VALUE[BISHOP_TYPE]) {
-      if (ssMaterial >= STATIC_MATERIAL_VALUE[ROOK_TYPE] + STATIC_MATERIAL_VALUE[BISHOP_TYPE])
+    if (ssPieceCount <= wsPieceCount + 1 && materialDiff <= scoreEG(MATERIAL_VALUES[BISHOP_TYPE])) {
+      if (ssMaterial >= scoreEG(MATERIAL_VALUES[ROOK_TYPE] + MATERIAL_VALUES[BISHOP_TYPE]))
         eval /= 4;
       else
         eval /= 8;
