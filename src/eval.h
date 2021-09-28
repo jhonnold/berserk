@@ -132,5 +132,6 @@ Score GetPhase(Board* board);
 
 Score MaterialValue(Board* board, int side);
 Score Evaluate(Board* board, ThreadData* thread);
+Score EvaluateScaled(Board* board, ThreadData* thread);
 
 #endif
