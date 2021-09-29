@@ -111,6 +111,8 @@ typedef struct {
   int hh[2][64 * 64];              // history heuristic butterfly table (side)
   int ch[6][64][6][64];            // counter move history table
   int fh[6][64][6][64];            // follow up history table
+
+  int th[6][64][6];                // tactical (capture) history
 } SearchData;
 
 typedef struct {

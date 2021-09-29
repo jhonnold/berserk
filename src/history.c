@@ -32,7 +32,8 @@ void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[M
 
 void AddHistoryHeuristic(int* entry, int inc) { *entry += 64 * inc - *entry * abs(inc) / 1024; }
 
-void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ) {
+void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ,
+                     Move tacticals[], int nT) {
   int inc = min(depth * depth, 576);
 
   Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
@@ -53,8 +54,15 @@ void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move q
       AddHistoryHeuristic(&data->fh[PIECE_TYPE[MovePiece(grandParent)]][MoveEnd(grandParent)]
                                    [PIECE_TYPE[MovePiece(bestMove)]][MoveEnd(bestMove)],
                           inc);
+  } else {
+    int piece = PIECE_TYPE[MovePiece(bestMove)];
+    int end = MoveEnd(bestMove);
+    int captured = (MoveEP(bestMove) || MovePromo(bestMove)) ? PAWN_TYPE : PIECE_TYPE[board->squares[end]];
+
+    AddHistoryHeuristic(&data->th[piece][end][captured], inc);
   }
 
+  // Update quiets
   for (int i = 0; i < nQ; i++) {
     Move m = quiets[i];
     if (m != bestMove) {
@@ -68,12 +76,22 @@ void UpdateHistories(SearchData* data, Move bestMove, int depth, int stm, Move q
             -inc);
     }
   }
+
+  // Update tacticals
+  for (int i = 0; i < nT; i++) {
+    Move m = tacticals[i];
+
+    if (m != bestMove) {
+      int piece = PIECE_TYPE[MovePiece(m)];
+      int end = MoveEnd(m);
+      int captured = (MoveEP(m) || MovePromo(m)) ? PAWN_TYPE : PIECE_TYPE[board->squares[end]];
+
+      AddHistoryHeuristic(&data->th[piece][end][captured], -inc);
+    }
+  }
 }
 
-int GetHistory(SearchData* data, Move move, int stm) {
-  if (Tactical(move))
-    return 0; // TODO: Capture history
-
+int GetQuietHistory(SearchData* data, Move move, int stm) {
   int history = data->hh[stm][MoveStartEnd(move)];
 
   Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
@@ -89,10 +107,15 @@ int GetHistory(SearchData* data, Move move, int stm) {
 }
 
 int GetCounterHistory(SearchData* data, Move move) {
-  if (Tactical(move))
-    return 0; // TODO: Capture history
-
   Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
   return parent ? data->ch[PIECE_TYPE[MovePiece(parent)]][MoveEnd(parent)][PIECE_TYPE[MovePiece(move)]][MoveEnd(move)]
                 : 0;
+}
+
+int GetTacticalHistory(SearchData* data, Board* board, Move m) {
+  int piece = PIECE_TYPE[MovePiece(m)];
+  int end = MoveEnd(m);
+  int captured = (MoveEP(m) || MovePromo(m)) ? PAWN_TYPE : PIECE_TYPE[board->squares[end]];
+
+  return data->th[piece][end][captured];
 }

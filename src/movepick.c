@@ -65,7 +65,7 @@ void InitPerftMoves(MoveList* moves, Board* board) {
   moves->phase = PERFT_MOVES;
   moves->nTactical = 0;
   moves->nQuiets = 0;
-  
+
   GenerateAllMoves(moves, board);
 }
 
@@ -132,11 +132,9 @@ inline Move PopBadCapture(MoveList* moves) {
 void ScoreTacticalMoves(MoveList* moves, Board* board) {
   for (int i = 0; i < moves->nTactical; i++) {
     Move m = moves->tactical[i];
-    int attacker = MovePiece(m);
-    moves->sTactical[i] = MoveEP(m)                   ? MVV_LVA[attacker][PAWN_WHITE]
-                          : !MovePromo(m)             ? MVV_LVA[attacker][board->squares[MoveEnd(m)]]
-                          : MovePromo(m) > ROOK_BLACK ? MVV_LVA[attacker][QUEEN_WHITE]
-                                                      : -1;
+
+    moves->sTactical[i] =
+        GetTacticalHistory(moves->data, board, m) + STATIC_MATERIAL_VALUE[PIECE_TYPE[board->squares[MoveEnd(m)]]] * 4;
   }
 }
 
@@ -144,7 +142,7 @@ void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = GetHistory(data, m, board->side);
+    moves->sQuiet[i] = GetQuietHistory(data, m, board->side);
   }
 }
 
