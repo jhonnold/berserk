@@ -53,6 +53,7 @@ extern const Score KNIGHT_MOBILITIES[9];
 extern const Score BISHOP_MOBILITIES[14];
 extern const Score ROOK_MOBILITIES[15];
 extern const Score QUEEN_MOBILITIES[28];
+extern const Score KING_MOBILITIES[9];
 
 extern const Score MINOR_BEHIND_PAWN;
 extern const Score KNIGHT_OUTPOST_REACHABLE;

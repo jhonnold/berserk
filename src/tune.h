@@ -52,6 +52,7 @@ typedef struct {
   Weight bishopMobilities[14];
   Weight rookMobilities[15];
   Weight queenMobilities[28];
+  Weight kingMobilities[9];
 
   Weight minorBehindPawn;
   Weight knightPostReachable;

@@ -172,6 +172,9 @@ void UpdateWeights(Weights* weights) {
   for (int c = 0; c < 28; c++)
     UpdateWeight(&weights->queenMobilities[c]);
 
+  for (int c = 0; c < 9; c++)
+    UpdateWeight(&weights->kingMobilities[c]);
+
   for (int pc = 0; pc < 6; pc++) {
     UpdateWeight(&weights->knightThreats[pc]);
     UpdateWeight(&weights->bishopThreats[pc]);
@@ -377,6 +380,11 @@ double UpdateAndTrain(int n, Position* positions, Weights* weights) {
     for (int c = 0; c < 28; c++) {
       weights->queenMobilities[c].mg.g += w->queenMobilities[c].mg.g;
       weights->queenMobilities[c].eg.g += w->queenMobilities[c].eg.g;
+    }
+
+    for (int c = 0; c < 9; c++) {
+      weights->kingMobilities[c].mg.g += w->kingMobilities[c].mg.g;
+      weights->kingMobilities[c].eg.g += w->kingMobilities[c].eg.g;
     }
 
     for (int pc = 0; pc < 6; pc++) {
@@ -666,6 +674,11 @@ void UpdateMobilityGradients(Position* position, double loss, Weights* weights, 
     weights->queenMobilities[c].mg.g += position->coeffs.queenMobilities[c] * mgBase;
     weights->queenMobilities[c].eg.g += position->coeffs.queenMobilities[c] * egBase;
   }
+
+  for (int c = 0; c < 9; c++) {
+    weights->kingMobilities[c].mg.g += position->coeffs.kingMobilities[c] * mgBase;
+    weights->kingMobilities[c].eg.g += position->coeffs.kingMobilities[c] * egBase;
+  }
 }
 
 void UpdateThreatGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
@@ -829,7 +842,7 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
 
   weights->passedPawnUnsupported.mg.g += position->coeffs.passedPawnUnsupported * mgBase;
   weights->passedPawnUnsupported.eg.g += position->coeffs.passedPawnUnsupported * egBase;
-  
+
   weights->passedPawnOutsideVKnight.mg.g += position->coeffs.passedPawnOutsideVKnight * mgBase;
   weights->passedPawnOutsideVKnight.eg.g += position->coeffs.passedPawnOutsideVKnight * egBase;
 }
@@ -1010,6 +1023,9 @@ void EvaluateMobilityValues(double* mg, double* eg, Position* position, Weights*
 
   for (int c = 0; c < 28; c++)
     ApplyCoeff(mg, eg, position->coeffs.queenMobilities[c], &weights->queenMobilities[c]);
+
+  for (int c = 0; c < 9; c++)
+    ApplyCoeff(mg, eg, position->coeffs.kingMobilities[c], &weights->kingMobilities[c]);
 }
 
 void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* weights) {
@@ -1221,8 +1237,8 @@ Position* LoadPositions(int* n, Weights* weights) {
 
     double eval = EvaluateCoeffs(&positions[p], weights, &ks);
     if (fabs(eval) > 6000)
-       continue;
-       
+      continue;
+
     if (fabs(positions[p].staticEval - eval) > 3) {
       printf("The coefficient based evaluation does NOT match the eval!\n");
       printf("FEN: %s\n", buffer);
@@ -1302,6 +1318,11 @@ void InitMobilityWeights(Weights* weights) {
   for (int c = 0; c < 28; c++) {
     weights->queenMobilities[c].mg.value = scoreMG(QUEEN_MOBILITIES[c]);
     weights->queenMobilities[c].eg.value = scoreEG(QUEEN_MOBILITIES[c]);
+  }
+
+  for (int c = 0; c < 9; c++) {
+    weights->kingMobilities[c].mg.value = scoreMG(KING_MOBILITIES[c]);
+    weights->kingMobilities[c].eg.value = scoreEG(KING_MOBILITIES[c]);
   }
 }
 
@@ -1450,7 +1471,7 @@ void InitPasserBonusWeights(Weights* weights) {
 
   weights->passedPawnUnsupported.mg.value = scoreMG(PASSED_PAWN_UNSUPPORTED);
   weights->passedPawnUnsupported.eg.value = scoreEG(PASSED_PAWN_UNSUPPORTED);
-  
+
   weights->passedPawnOutsideVKnight.mg.value = scoreMG(PASSED_PAWN_OUTSIDE_V_KNIGHT);
   weights->passedPawnOutsideVKnight.eg.value = scoreEG(PASSED_PAWN_OUTSIDE_V_KNIGHT);
 }
@@ -1576,6 +1597,10 @@ void PrintWeights(Weights* weights, int epoch, double error) {
 
   fprintf(fp, "\nconst Score QUEEN_MOBILITIES[28] = {\n");
   PrintWeightArray(fp, weights->queenMobilities, 28, 4);
+  fprintf(fp, "};\n");
+
+  fprintf(fp, "\nconst Score KING_MOBILITIES[9] = {\n");
+  PrintWeightArray(fp, weights->kingMobilities, 9, 3);
   fprintf(fp, "};\n");
 
   fprintf(fp, "\nconst Score MINOR_BEHIND_PAWN = ");
