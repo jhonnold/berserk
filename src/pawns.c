@@ -207,6 +207,15 @@ Score PasserEval(Board* board, EvalData* data, int side) {
           }
         }
       }
+
+      if (bb & (A_FILE | H_FILE)) {
+        if (!(board->pieces[BISHOP[xside]] | board->pieces[ROOK[xside]] | board->pieces[QUEEN[xside]]) && board->pieces[KNIGHT[xside]]) {
+          s += PASSED_PAWN_OUTSIDE_V_KNIGHT;
+
+          if (T)
+            C.passedPawnOutsideVKnight += cs[side];
+        }
+      }
     }
 
     popLsb(passers);
