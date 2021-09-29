@@ -134,7 +134,7 @@ void ScoreTacticalMoves(MoveList* moves, Board* board) {
     Move m = moves->tactical[i];
 
     moves->sTactical[i] =
-        GetTacticalHistory(moves->data, board, m) + STATIC_MATERIAL_VALUE[PIECE_TYPE[board->squares[MoveEnd(m)]]] * 4;
+        GetTacticalHistory(moves->data, board, m) + STATIC_MATERIAL_VALUE[PIECE_TYPE[board->squares[MoveEnd(m)]]] * 16;
   }
 }
 
