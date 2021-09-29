@@ -453,7 +453,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   }
 
   Move quiets[64];
-  int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0, skipQuiets = 0;
+  Move tacticals[64];
+
+  int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0, skipQuiets = 0, numTacticals = 0;
   InitAllMoves(&moves, hashMove, data);
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
@@ -470,7 +472,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     int tactical = !!Tactical(move);
     int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
-    int hist = !tactical ? GetHistory(data, move, board->side) : 0;
+    int quietHistory = !tactical ? GetQuietHistory(data, move, board->side) : 0;
     int counterHist = !tactical ? GetCounterHistory(data, move) : 0;
 
     if (bestScore > -MATE_BOUND) {
@@ -480,7 +482,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       if (!tactical && !specialQuiet && depth < 3 && counterHist <= -8192)
         continue;
 
-      if (!tactical && !board->checkers && eval + 100 * depth <= alpha && depth <= 8 && hist < 50000 / (1 + improving))
+      if (!tactical && !board->checkers && eval + 100 * depth <= alpha && depth <= 8 &&
+          quietHistory < 50000 / (1 + improving))
         skipQuiets = 1;
 
       if (tactical && moves.phase > PLAY_GOOD_TACTICAL && SEE(board, move) < STATIC_PRUNE[1][depth])
@@ -493,6 +496,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     nonPrunedMoves++;
     if (!tactical)
       quiets[numQuiets++] = move;
+    else
+      tacticals[numTacticals++] = move;
 
     // singular extension
     // if one move is better than all the rest, then we consider this singular
@@ -518,7 +523,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 8 && ttHit && move == tt->move && hist >= 98304)
+    else if (!isRoot && depth >= 8 && ttHit && move == tt->move && quietHistory >= 98304)
       extension = 1;
 
     // castle extensions
@@ -557,7 +562,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
           R++;
 
         // adjust reduction based on historical score
-        R -= hist / 24576;
+        R -= quietHistory / 24576;
       } else {
         R--;
 
@@ -601,7 +606,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(data, move, depth, board->side, quiets, numQuiets);
+        UpdateHistories(board, data, move, depth, board->side, quiets, numQuiets, tacticals, numTacticals);
         break;
       }
     }
