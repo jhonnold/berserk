@@ -479,7 +479,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       if (totalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
-      if (!tactical && !specialQuiet && depth < 3 && counterHist <= -8192)
+      if (!tactical && !specialQuiet && depth < 3 && counterHist <= -4096)
         continue;
 
       if (!tactical && !board->checkers && eval + 100 * depth <= alpha && depth <= 8 &&
@@ -562,7 +562,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
           R++;
 
         // adjust reduction based on historical score
-        R -= quietHistory / 24576;
+        R -= quietHistory / 20480;
       } else {
         R--;
 
