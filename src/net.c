@@ -14,86 +14,136 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
+#include <float.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "net.h"
+#include "random.h"
+#include "tuner/util.h"
 
-void NewMatrix(int rows, int columns, Matrix* m) {
-  if (m->values)
-    free(m->values);
+float pawnNetData[1041] = {
+#include "pawnnet.h"
+};
 
-  m->values = calloc(rows * columns, sizeof(float));
-  m->rows = rows;
-  m->columns = columns;
+Network* PAWN_NET;
+
+float ApplyNetwork(int inputs[N_FEATURES], Network* network) {
+  float hiddenOutput[N_HIDDEN];
+  memcpy(hiddenOutput, network->biases0, sizeof(float) * N_HIDDEN);
+
+  for (int i = 0; i < N_FEATURES; i++)
+    if (inputs[i])
+      for (int j = 0; j < N_HIDDEN; j++)
+        hiddenOutput[j] += network->weights0[j * N_FEATURES + i];
+
+  for (int i = 0; i < N_HIDDEN; i++)
+    hiddenOutput[i] = ReLu(hiddenOutput[i]);
+
+#ifdef TUNE
+  memcpy(network->activations0, hiddenOutput, sizeof(float) * N_HIDDEN);
+#endif
+
+  float result = network->biases1[0];
+  for (int i = 0; i < N_HIDDEN; i++)
+    result += network->weights1[i] * hiddenOutput[i];
+
+  return result;
 }
 
-void ClearMatrix(Matrix* m) {
-  for (int i = 0; i < m->rows * m->columns; i++)
-    m->values = 0;
-}
-
-int MatrixIdx(int row, int column, Matrix* m) { return row * m->columns + column; }
-
-void AddMatricies(Matrix* m1, Matrix* m2, Matrix* dest) {
-  for (int i = 0; i < m1->rows * m1->columns; i++)
-    dest->values[i] = m1->values[i] + m2->values[i];
-}
-
-void MultiplyMatricies(Matrix* m1, Matrix* m2, Matrix* dest) {
-  for (int r1 = 0; r1 < m1->rows; r1++) {
-    for (int c2 = 0; c2 < m2->columns; c2++) {
-      float s = 0;
-      for (int c1 = 0; c1 < m1->columns; c1++)
-        s += m1->values[MatrixIdx(r1, c1, m1)] * m2->values[MatrixIdx(c1, c2, m2)];
-
-      dest->values[MatrixIdx(r1, c2, dest)] = s;
-    }
+void SaveNetwork(char* path, Network* network) {
+  FILE* fp = fopen(path, "w");
+  if (fp == NULL) {
+    printf("info string Unable to save network!\n");
+    return;
   }
+
+  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
+    fprintf(fp, "%f,", network->weights0[i]);
+
+  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
+    fprintf(fp, "%f,", network->weights1[i]);
+
+  for (int i = 0; i < N_HIDDEN; i++)
+    fprintf(fp, "%f,", network->biases0[i]);
+
+  for (int i = 0; i < N_OUTPUT; i++)
+    fprintf(fp, "%f,", network->biases1[i]);
+
+  fclose(fp);
 }
 
-void ApplyFuncToMatrix(Matrix* m, float (*fn)(float)) {
-  for (int i = 0; i < m->rows * m->columns; i++)
-    m->values[i] = fn(m->values[i]);
-}
+Network* RandomNetwork() {
+  Network* network = malloc(sizeof(Network));
 
-void PrintMatrix(Matrix* m) {
-  printf("\n");
-  for (int i = 0; i < m->rows; i++) {
-    printf("[");
-    for (int j = 0; j < m->columns; j++)
-      printf("%2.4f,", m->values[MatrixIdx(i, j, m)]);
+  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
+    network->weights0[i] = (float)rand() / RAND_MAX;
 
-    printf("]\n");
+#ifdef TUNE
+    network->gWeights0[i].g = 0;
+#endif
   }
-  printf("\n");
+
+  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++) {
+    network->weights1[i] = (float)rand() / RAND_MAX;
+
+#ifdef TUNE
+    network->gWeights1[i].g = 0;
+#endif
+  }
+
+  for (int i = 0; i < N_HIDDEN; i++) {
+    network->biases0[i] = (float)rand() / RAND_MAX;
+
+#ifdef TUNE
+    network->gBiases0[i].g = 0;
+#endif
+  }
+
+  for (int i = 0; i < N_OUTPUT; i++) {
+    network->biases1[i] = (float)rand() / RAND_MAX;
+#ifdef TUNE
+    network->gBiases1[i].g = 0;
+#endif
+  }
+
+  return network;
 }
 
-void MatrixTesting() {
-  Matrix* m1 = malloc(sizeof(Matrix));
-  Matrix* m2 = malloc(sizeof(Matrix));
-  Matrix* dest = malloc(sizeof(Matrix));
+void InitNetwork() {
+  PAWN_NET = malloc(sizeof(Network));
+  int n = 0;
 
-  NewMatrix(1, 4, m1);
-  NewMatrix(4, 1, m2);
-  NewMatrix(1, 1, dest);
+  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
+    PAWN_NET->weights0[i] = pawnNetData[n++];
 
-  m1->values[0] = 1;
-  m1->values[1] = 2;
-  m1->values[2] = 3;
-  m1->values[3] = 4;
+#ifdef TUNE
+    PAWN_NET->gWeights0[i].g = 0;
+#endif
+  }
 
-  PrintMatrix(m1);
+  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++) {
+    PAWN_NET->weights1[i] = pawnNetData[n++];
 
-  m2->values[0] = 1;
-  m2->values[1] = 2;
-  m2->values[2] = 3;
-  m2->values[3] = 4;
+#ifdef TUNE
+    PAWN_NET->gWeights1[i].g = 0;
+#endif
+  }
 
-  PrintMatrix(m2);
+  for (int i = 0; i < N_HIDDEN; i++) {
+    PAWN_NET->biases0[i] = pawnNetData[n++];
 
-  MultiplyMatricies(m1, m2, dest);
+#ifdef TUNE
+    PAWN_NET->gBiases0[i].g = 0;
+#endif
+  }
 
-  PrintMatrix(dest);
+  for (int i = 0; i < N_OUTPUT; i++) {
+    PAWN_NET->biases1[i] = pawnNetData[n++];
+#ifdef TUNE
+    PAWN_NET->gBiases1[i].g = 0;
+#endif
+  }
 }

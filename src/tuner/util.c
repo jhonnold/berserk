@@ -17,35 +17,13 @@
 #include <math.h>
 #include <stdio.h>
 
-
 #include "tune.h"
 #include "util.h"
 
+float Sigmoid(float s, float k) { return 1.0f / (1.0f + expf(-s * k / 1024.0f)); }
 
-float ComputeK(int n, Position* positions) {
-  float dK = 0.01;
-  float dEdK = 1;
-  float rate = 100;
-  float dev = 1e-6;
-  float k = -3.0;
+float SigmoidPrime(float s, float k) { return s * (1.0 - s) * k / 1024.0f; }
 
-  while (fabs(dEdK) > dev) {
-    k += dK;
-    float Epdk = TotalStaticError(n, positions);
-    k -= 2 * dK;
-    float Emdk = TotalStaticError(n, positions);
-    k += dK;
+float ReLu(float s) { return s > 0.0f ? s : 0; }
 
-    dEdK = (Epdk - Emdk) / (2 * dK);
-
-    printf("K: %.9f, Error: %.9f, Deviation: %.9f\n", k, (Epdk + Emdk) / 2, fabs(dEdK));
-
-    k -= dEdK * rate;
-  }
-
-  return k;
-}
-
-float Sigmoid(float s, float k) { return 1.0f / (1.0f + expf(s * k / 800.0f)); }
-
-float SigmoidPrime(float s, float k) { return s * (1.0 - s) * k / 800.0f; }
+float ReLuPrime(float s) { return s > 0.0f ? 1 : 0; }

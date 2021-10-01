@@ -1057,11 +1057,14 @@ Score Evaluate(Board* board, ThreadData* thread) {
       data.passedPawns = pawnEntry->passedPawns;
     } else {
       Score pawnS = PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
+      pawnS += NetworkEval(board->pieces[PAWN_WHITE], board->pieces[PAWN_BLACK], PAWN_NET);
+
       TTPawnPut(board->pawnHash, pawnS, data.passedPawns, thread);
       s += pawnS;
     }
   } else {
     s += PawnEval(board, &data, WHITE) - PawnEval(board, &data, BLACK);
+    s += NetworkEval(board->pieces[PAWN_WHITE], board->pieces[PAWN_BLACK], PAWN_NET);
   }
 
   s += Imbalance(board, WHITE) - Imbalance(board, BLACK);

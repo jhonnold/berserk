@@ -38,6 +38,7 @@
 int main(int argc, char** argv) {
   SeedRandom(0);
 
+  InitNetwork();
   InitPSQT();
   InitZobristKeys();
   InitPruningAndReductionTables();
@@ -52,8 +53,6 @@ int main(int argc, char** argv) {
 #ifdef TUNE
     Tune();
 #endif
-  } else if (argc > 1 && !strncmp(argv[1], "testnet", 7)) {
-    MatrixTesting();
   } else {
     UCILoop();
   }

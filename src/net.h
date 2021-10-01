@@ -17,19 +17,14 @@
 #ifndef NET_H
 #define NET_H
 
-typedef struct {
-  int rows, columns;
-  float* values;
-} Matrix;
+#include "types.h"
 
-void NewMatrix(int rows, int columns, Matrix* m);
-void ClearMatrix(Matrix* m);
-int MatrixIdx(int row, int column, Matrix* m);
-void AddMatricies(Matrix* m1, Matrix* m2, Matrix* dest);
-void MultiplyMatricies(Matrix* m1, Matrix* m2, Matrix* dest);
-void ApplyFuncToMatrix(Matrix* m, float (*fn)(float));
-void PrintMatrix(Matrix* m);
+extern Network* PAWN_NET;
 
-void MatrixTesting();
+float ApplyNetwork(int inputs[N_FEATURES], Network* network);
+
+Network* RandomNetwork();
+void InitNetwork();
+void SaveNetwork(char* path, Network* network);
 
 #endif

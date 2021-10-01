@@ -17,10 +17,13 @@
 #ifndef PAWNS_H
 #define PAWNS_H
 
+#include "net.h"
 #include "types.h"
 
 PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread);
 void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns, ThreadData* thread);
+
+float NetworkEval(BitBoard whitePawns, BitBoard blackPawns, Network* network);
 
 Score PawnEval(Board* board, EvalData* data, int side);
 Score PasserEval(Board* board, EvalData* data, int side);

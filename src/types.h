@@ -66,7 +66,7 @@ typedef struct {
 
   int castlingRights[64];
   int castleRooks[4];
-  
+
   // data that is hard to track, so it is "remembered" when search undoes moves
   int castlingHistory[MAX_GAME_PLY];
   int epSquareHistory[MAX_GAME_PLY];
@@ -112,7 +112,7 @@ typedef struct {
   int ch[6][64][6][64];            // counter move history table
   int fh[6][64][6][64];            // follow up history table
 
-  int th[6][64][6];                // tactical (capture) history
+  int th[6][64][6]; // tactical (capture) history
 } SearchData;
 
 typedef struct {
@@ -304,6 +304,35 @@ typedef struct {
   int sTactical[MAX_MOVES];
   int sQuiet[MAX_MOVES];
 } MoveList;
+
+typedef struct {
+  int epoch;
+  float g;
+  float M;
+  float V;
+} Gradient;
+
+#define N_FEATURES 128
+#define N_HIDDEN 8
+#define N_OUTPUT 1
+
+typedef struct {
+  float weights0[N_FEATURES * N_HIDDEN];
+  float weights1[N_HIDDEN * N_OUTPUT];
+
+  float biases0[N_HIDDEN];
+  float biases1[N_OUTPUT];
+
+#ifdef TUNE
+  float activations0[N_HIDDEN];
+
+  Gradient gWeights0[N_FEATURES * N_HIDDEN];
+  Gradient gWeights1[N_HIDDEN * N_OUTPUT];
+
+  Gradient gBiases0[N_HIDDEN];
+  Gradient gBiases1[N_OUTPUT];
+#endif
+} Network;
 
 enum { WHITE, BLACK, BOTH };
 

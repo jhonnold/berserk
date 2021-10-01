@@ -28,11 +28,8 @@
 #define TUNE_KS 0
 
 typedef struct {
-  int epoch;
   float value;
-  float g;
-  float M;
-  float V;
+  Gradient grad;
 } Param;
 
 typedef struct {
@@ -132,6 +129,8 @@ typedef struct {
   int scale;
   float phaseMg;
   float phaseEg;
+  BitBoard whitePawns;
+  BitBoard blackPawns;
   Score staticEval;
   EvalCoeffs coeffs;
 } Position;
@@ -148,6 +147,7 @@ typedef struct {
   int n;
   Position* positions;
   Weights* weights;
+  Network* network;
 } GradientUpdate;
 
 void Tune();
@@ -155,11 +155,13 @@ void Tune();
 void ValidateEval(int n, Position* positions, Weights* weights);
 float TotalStaticError(int n, Position* positions);
 
+void UpdateAndApplyGradient(float* v, Gradient* grad);
 void UpdateParam(Param* p);
 void UpdateWeight(Weight* w);
+void UpdateNetwork(Network* network);
 void UpdateWeights(Weights* weights);
-void MergeWeightGradients(Weight* dest, Weight* src);
-float UpdateAndTrain(int n, Position* positions, Weights* weights);
+void MergeGradient(Weight* dest, Weight* src);
+float UpdateAndTrain(int n, Position* positions, Weights* weights, Network* network);
 
 void* UpdateGradients(void* arg);
 void UpdateMaterialGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
@@ -175,9 +177,10 @@ void UpdateSpaceGradients(Position* position, float loss, Weights* weights, Eval
 void UpdateComplexityGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
 void UpdateKingSafetyGradients(Position* position, float loss, Weights* weights, EvalGradientData* ks);
 void UpdateTempoGradient(Position* position, float loss, Weights* weights);
+void UpdateNetworkGradients(Position* position, float loss, Network* network);
 
 void ApplyCoeff(float* mg, float* eg, int coeff, Weight* w);
-float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd);
+float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd, Network* network);
 void EvaluateMaterialValues(float* mg, float* eg, Position* position, Weights* weights);
 void EvaluatePsqtValues(float* mg, float* eg, Position* position, Weights* weights);
 void EvaluatePostPsqtValues(float* mg, float* eg, Position* position, Weights* weights);
@@ -207,7 +210,7 @@ void InitKingSafetyWeights(Weights* weights);
 void InitTempoWeight(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
-Position* LoadPositions(int* n, Weights* weights);
+Position* LoadPositions(int* n, Weights* weights, Network* network);
 
 void PrintWeights(Weights* weights, int epoch, float error);
 void PrintWeightArray(FILE* fp, Weight* weights, int n, int wrap);
