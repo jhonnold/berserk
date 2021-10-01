@@ -63,17 +63,19 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
   }
 
   // Update quiets
-  for (int i = 0; i < nQ; i++) {
-    Move m = quiets[i];
-    if (m != bestMove) {
-      AddHistoryHeuristic(&data->hh[stm][MoveStartEnd(m)], -inc);
-      if (parent)
-        AddHistoryHeuristic(
-            &data->ch[PIECE_TYPE[MovePiece(parent)]][MoveEnd(parent)][PIECE_TYPE[MovePiece(m)]][MoveEnd(m)], -inc);
-      if (grandParent)
-        AddHistoryHeuristic(
-            &data->fh[PIECE_TYPE[MovePiece(grandParent)]][MoveEnd(grandParent)][PIECE_TYPE[MovePiece(m)]][MoveEnd(m)],
-            -inc);
+  if (!Tactical(bestMove)) {
+    for (int i = 0; i < nQ; i++) {
+      Move m = quiets[i];
+      if (m != bestMove) {
+        AddHistoryHeuristic(&data->hh[stm][MoveStartEnd(m)], -inc);
+        if (parent)
+          AddHistoryHeuristic(
+              &data->ch[PIECE_TYPE[MovePiece(parent)]][MoveEnd(parent)][PIECE_TYPE[MovePiece(m)]][MoveEnd(m)], -inc);
+        if (grandParent)
+          AddHistoryHeuristic(
+              &data->fh[PIECE_TYPE[MovePiece(grandParent)]][MoveEnd(grandParent)][PIECE_TYPE[MovePiece(m)]][MoveEnd(m)],
+              -inc);
+      }
     }
   }
 
