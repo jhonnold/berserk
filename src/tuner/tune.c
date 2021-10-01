@@ -23,24 +23,25 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "bits.h"
-#include "board.h"
-#include "eval.h"
-#include "search.h"
-#include "thread.h"
+#include "../bits.h"
+#include "../board.h"
+#include "../eval.h"
+#include "../search.h"
+#include "../thread.h"
 #include "tune.h"
 #include "util.h"
+#include "../util.h"
 
 const int MAX_POSITIONS = 100000000;
 
 const int sideScalar[2] = {1, -1};
 
-double ALPHA = 0.0001;
-const double BETA1 = 0.9;
-const double BETA2 = 0.999;
-const double EPSILON = 1e-8;
+float ALPHA = 0.0001;
+const float BETA1 = 0.9;
+const float BETA2 = 0.999;
+const float EPSILON = 1e-8;
 
-double K = 2.878242507;
+float K = -2.878242507;
 
 void Tune() {
   Weights weights = {0};
@@ -70,7 +71,7 @@ void Tune() {
   long start = GetTimeMS();
 
   for (int epoch = 1; epoch <= 1000; epoch++) {
-    double error = UpdateAndTrain(n, positions, &weights);
+    float error = UpdateAndTrain(n, positions, &weights);
 
     long now = GetTimeMS();
 
@@ -85,38 +86,15 @@ void Tune() {
   free(positions);
 }
 
-// Finn Eggers method for determining K
-void ComputeK(int n, Position* positions) {
-  double dK = 0.01;
-  double dEdK = 1;
-
-  double rate = 100;
-  double dev = 1e-8;
-
-  while (fabs(dEdK) > dev) {
-    K += dK;
-    double Epdk = TotalStaticError(n, positions);
-    K -= 2 * dK;
-    double Emdk = TotalStaticError(n, positions);
-    K += dK;
-
-    dEdK = (Epdk - Emdk) / (2 * dK);
-
-    printf("K: %.9f, Error: %.9f, Deviation: %.9f\n", K, (Epdk + Emdk) / 2, fabs(dEdK));
-
-    K -= dEdK * rate;
-  }
-}
-
-double TotalStaticError(int n, Position* positions) {
-  double e = 0;
+float TotalStaticError(int n, Position* positions) {
+  float e = 0;
 
 #pragma omp parallel for schedule(static) num_threads(THREADS) reduction(+ : e)
   for (int i = 0; i < n; i++) {
 
-    double sigmoid = Sigmoid(positions[i].staticEval);
-    double difference = sigmoid - positions[i].result;
-    e += pow(difference, 2);
+    float sigmoid = Sigmoid(positions[i].staticEval, K);
+    float difference = sigmoid - positions[i].result;
+    e += powf(difference, 2);
   }
 
   return e / n;
@@ -136,9 +114,9 @@ void UpdateParam(Param* p) {
   p->M = BETA1 * p->M + (1.0 - BETA1) * p->g;
   p->V = BETA2 * p->V + (1.0 - BETA2) * p->g * p->g;
 
-  double mHat = p->M / (1 - pow(BETA1, p->epoch));
-  double vHat = p->V / (1 - pow(BETA2, p->epoch));
-  double delta = ALPHA * mHat / (sqrt(vHat) + EPSILON);
+  float mHat = p->M / (1 - powf(BETA1, p->epoch));
+  float vHat = p->V / (1 - powf(BETA2, p->epoch));
+  float delta = ALPHA * mHat / (sqrtf(vHat) + EPSILON);
 
   p->value += delta;
 
@@ -311,7 +289,7 @@ void MergeWeightGradients(Weight* dest, Weight* src) {
   dest->eg.g += src->eg.g;
 }
 
-double UpdateAndTrain(int n, Position* positions, Weights* weights) {
+float UpdateAndTrain(int n, Position* positions, Weights* weights) {
   pthread_t threads[THREADS];
   GradientUpdate jobs[THREADS];
   Weights local[THREADS];
@@ -332,7 +310,7 @@ double UpdateAndTrain(int n, Position* positions, Weights* weights) {
   for (int t = 0; t < THREADS; t++)
     pthread_join(threads[t], NULL);
 
-  double error = 0;
+  float error = 0;
   for (int t = 0; t < THREADS; t++) {
     error += jobs[t].error;
     Weights* w = jobs[t].weights;
@@ -582,10 +560,10 @@ void* UpdateGradients(void* arg) {
 
   for (int i = 0; i < n; i++) {
     EvalGradientData gd[1];
-    double actual = EvaluateCoeffs(&positions[i], weights, gd);
+    float actual = EvaluateCoeffs(&positions[i], weights, gd);
 
-    double sigmoid = Sigmoid(actual);
-    double loss = (positions[i].result - sigmoid) * sigmoid * (1 - sigmoid);
+    float sigmoid = Sigmoid(actual, K);
+    float loss = (positions[i].result - sigmoid) * sigmoid * (1 - sigmoid);
 
     UpdateMaterialGradients(&positions[i], loss, weights, gd);
     UpdatePsqtGradients(&positions[i], loss, weights, gd);
@@ -610,9 +588,9 @@ void* UpdateGradients(void* arg) {
   return NULL;
 }
 
-void UpdateMaterialGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdateMaterialGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++) {
@@ -621,9 +599,9 @@ void UpdateMaterialGradients(Position* position, double loss, Weights* weights, 
   }
 }
 
-void UpdatePsqtGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdatePsqtGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++) {
@@ -636,9 +614,9 @@ void UpdatePsqtGradients(Position* position, double loss, Weights* weights, Eval
   }
 }
 
-void UpdatePostPsqtGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdatePostPsqtGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   for (int sq = 0; sq < 12; sq++) {
@@ -650,9 +628,9 @@ void UpdatePostPsqtGradients(Position* position, double loss, Weights* weights, 
   }
 }
 
-void UpdateMobilityGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdateMobilityGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   for (int c = 0; c < 9; c++) {
@@ -681,9 +659,9 @@ void UpdateMobilityGradients(Position* position, double loss, Weights* weights, 
   }
 }
 
-void UpdateThreatGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdateThreatGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   for (int pc = 0; pc < 6; pc++) {
@@ -722,9 +700,9 @@ void UpdateThreatGradients(Position* position, double loss, Weights* weights, Ev
   weights->rookCheckQueen.eg.g += position->coeffs.rookCheckQueen * egBase;
 }
 
-void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdatePieceBonusGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   weights->bishopPair.mg.g += position->coeffs.bishopPair * mgBase;
@@ -777,9 +755,9 @@ void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights
   weights->queenRookBattery.eg.g += position->coeffs.queenRookBattery * egBase;
 }
 
-void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdatePawnBonusGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   weights->defendedPawns.mg.g += position->coeffs.defendedPawns * mgBase;
@@ -813,9 +791,9 @@ void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights,
   }
 }
 
-void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdatePasserBonusGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   for (int r = 0; r < 8; r++) {
@@ -847,9 +825,9 @@ void UpdatePasserBonusGradients(Position* position, double loss, Weights* weight
   weights->passedPawnOutsideVKnight.eg.g += position->coeffs.passedPawnOutsideVKnight * egBase;
 }
 
-void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdatePawnShelterGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
   for (int f = 0; f < 4; f++) {
@@ -871,15 +849,15 @@ void UpdatePawnShelterGradients(Position* position, double loss, Weights* weight
   weights->castlingRights.eg.g += position->coeffs.castlingRights * egBase;
 }
 
-void UpdateSpaceGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+void UpdateSpaceGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
 
   weights->space.mg.g += position->coeffs.space * mgBase / 1024.0;
 }
 
-void UpdateComplexityGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd) {
+void UpdateComplexityGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd) {
   int sign = (gd->eg > 0) - (gd->eg < 0);
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (gd->complexity >= -fabs(gd->eg));
 
   weights->complexPawns.mg.g += position->coeffs.complexPawns * egBase * sign;
@@ -887,9 +865,9 @@ void UpdateComplexityGradients(Position* position, double loss, Weights* weights
   weights->complexOffset.mg.g += position->coeffs.complexOffset * egBase * sign;
 }
 
-void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights, EvalGradientData* ks) {
-  double mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
-  double egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
+void UpdateKingSafetyGradients(Position* position, float loss, Weights* weights, EvalGradientData* ks) {
+  float mgBase = position->phaseMg * position->scale * loss / MAX_SCALE;
+  float egBase = position->phaseEg * position->scale * loss / MAX_SCALE;
   egBase *= (ks->eg == 0.0 || ks->complexity >= -fabs(ks->eg));
 
   for (int i = 1; i < 5; i++) {
@@ -954,17 +932,17 @@ void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights
   weights->ksKnightDefense.mg.g -= (egBase / 32) * (ks->wDanger > 0) * position->coeffs.ksKnightDefense[WHITE];
 }
 
-void UpdateTempoGradient(Position* position, double loss, Weights* weights) {
+void UpdateTempoGradient(Position* position, float loss, Weights* weights) {
   weights->tempo.mg.g += (position->stm == WHITE ? 1 : -1) * loss;
 }
 
-void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w) {
+void ApplyCoeff(float* mg, float* eg, int coeff, Weight* w) {
   *mg += coeff * w->mg.value;
   *eg += coeff * w->eg.value;
 }
 
-double EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd) {
-  double mg = 0, eg = 0;
+float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd) {
+  float mg = 0, eg = 0;
 
   EvaluateMaterialValues(&mg, &eg, position, weights);
   EvaluatePsqtValues(&mg, &eg, position, weights);
@@ -986,24 +964,24 @@ double EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd
 
   EvaluateComplexityValues(&mg, &eg, position, weights, gd);
 
-  double result = (mg * position->phase + eg * (128 - position->phase)) / 128;
+  float result = (mg * position->phase + eg * (128 - position->phase)) / 128;
   result = (result * position->scale) / MAX_SCALE;
   return result + (position->stm == WHITE ? weights->tempo.mg.value : -weights->tempo.mg.value);
 }
 
-void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluateMaterialValues(float* mg, float* eg, Position* position, Weights* weights) {
   for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++)
     ApplyCoeff(mg, eg, position->coeffs.pieces[pc], &weights->pieces[pc]);
 }
 
-void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluatePsqtValues(float* mg, float* eg, Position* position, Weights* weights) {
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++)
     for (int sq = 0; sq < 32; sq++)
       for (int i = 0; i < 2; i++)
         ApplyCoeff(mg, eg, position->coeffs.psqt[pc][i][sq], &weights->psqt[pc][i][sq]);
 }
 
-void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluatePostPsqtValues(float* mg, float* eg, Position* position, Weights* weights) {
   for (int sq = 0; sq < 12; sq++) {
     ApplyCoeff(mg, eg, position->coeffs.knightPostPsqt[sq], &weights->knightPostPsqt[sq]);
 
@@ -1011,7 +989,7 @@ void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights*
   }
 }
 
-void EvaluateMobilityValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluateMobilityValues(float* mg, float* eg, Position* position, Weights* weights) {
   for (int c = 0; c < 9; c++)
     ApplyCoeff(mg, eg, position->coeffs.knightMobilities[c], &weights->knightMobilities[c]);
 
@@ -1028,7 +1006,7 @@ void EvaluateMobilityValues(double* mg, double* eg, Position* position, Weights*
     ApplyCoeff(mg, eg, position->coeffs.kingMobilities[c], &weights->kingMobilities[c]);
 }
 
-void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluateThreatValues(float* mg, float* eg, Position* position, Weights* weights) {
   for (int pc = 0; pc < 6; pc++) {
     ApplyCoeff(mg, eg, position->coeffs.knightThreats[pc], &weights->knightThreats[pc]);
     ApplyCoeff(mg, eg, position->coeffs.bishopThreats[pc], &weights->bishopThreats[pc]);
@@ -1045,7 +1023,7 @@ void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* w
   ApplyCoeff(mg, eg, position->coeffs.rookCheckQueen, &weights->rookCheckQueen);
 }
 
-void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluatePieceBonusValues(float* mg, float* eg, Position* position, Weights* weights) {
   ApplyCoeff(mg, eg, position->coeffs.bishopPair, &weights->bishopPair);
 
   for (int i = 0; i < 5; i++)
@@ -1067,7 +1045,7 @@ void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weight
   ApplyCoeff(mg, eg, position->coeffs.queenRookBattery, &weights->queenRookBattery);
 }
 
-void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluatePawnBonusValues(float* mg, float* eg, Position* position, Weights* weights) {
   ApplyCoeff(mg, eg, position->coeffs.defendedPawns, &weights->defendedPawns);
   ApplyCoeff(mg, eg, position->coeffs.doubledPawns, &weights->doubledPawns);
   ApplyCoeff(mg, eg, position->coeffs.openIsolatedPawns, &weights->openIsolatedPawns);
@@ -1084,7 +1062,7 @@ void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights
   }
 }
 
-void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluatePasserBonusValues(float* mg, float* eg, Position* position, Weights* weights) {
   for (int r = 0; r < 8; r++)
     ApplyCoeff(mg, eg, position->coeffs.passedPawn[r], &weights->passedPawn[r]);
 
@@ -1099,7 +1077,7 @@ void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weigh
     ApplyCoeff(mg, eg, position->coeffs.passedPawnAdvance[r], &weights->passedPawnAdvance[r]);
 }
 
-void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluatePawnShelterValues(float* mg, float* eg, Position* position, Weights* weights) {
   for (int f = 0; f < 4; f++) {
     for (int r = 0; r < 8; r++) {
       ApplyCoeff(mg, eg, position->coeffs.pawnShelter[f][r], &weights->pawnShelter[f][r]);
@@ -1113,12 +1091,12 @@ void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weigh
   ApplyCoeff(mg, eg, position->coeffs.castlingRights, &weights->castlingRights);
 }
 
-void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* weights) {
+void EvaluateSpaceValues(float* mg, float* eg, Position* position, Weights* weights) {
   *mg += position->coeffs.space * weights->space.mg.value / 1024.0;
 }
 
-void EvaluateComplexityValues(double* mg, double* eg, Position* position, Weights* weights, EvalGradientData* gd) {
-  double complexity = 0.0;
+void EvaluateComplexityValues(float* mg, float* eg, Position* position, Weights* weights, EvalGradientData* gd) {
+  float complexity = 0.0;
   complexity += position->coeffs.complexPawns * weights->complexPawns.mg.value;
   complexity += position->coeffs.complexPawnsOffset * weights->complexPawnsOffset.mg.value;
   complexity += position->coeffs.complexOffset * weights->complexOffset.mg.value;
@@ -1132,7 +1110,7 @@ void EvaluateComplexityValues(double* mg, double* eg, Position* position, Weight
     *eg = fmin(0.0, *eg - complexity);
 }
 
-void EvaluateKingSafetyValues(double* mg, double* eg, Position* position, Weights* weights, EvalGradientData* ks) {
+void EvaluateKingSafetyValues(float* mg, float* eg, Position* position, Weights* weights, EvalGradientData* ks) {
   float wDanger = 0.0;
   float bDanger = 0.0;
 
@@ -1178,8 +1156,8 @@ void LoadPosition(Board* board, Position* position, ThreadData* thread) {
 
   int phase = GetPhase(board);
 
-  position->phaseMg = (double)phase / 128;
-  position->phaseEg = 1 - (double)phase / 128;
+  position->phaseMg = (float)phase / 128;
+  position->phaseEg = 1 - (float)phase / 128;
   position->phase = phase;
 
   position->stm = board->side;
@@ -1235,7 +1213,7 @@ Position* LoadPositions(int* n, Weights* weights) {
     if (abs(positions[p].staticEval) > 6000)
       continue;
 
-    double eval = EvaluateCoeffs(&positions[p], weights, &ks);
+    float eval = EvaluateCoeffs(&positions[p], weights, &ks);
     if (fabs(eval) > 6000)
       continue;
 
@@ -1521,9 +1499,7 @@ void InitKingSafetyWeights(Weights* weights) {
 
 void InitTempoWeight(Weights* weights) { weights->tempo.mg.value = TEMPO; }
 
-double Sigmoid(double s) { return 1.0 / (1.0 + exp(-K * s / 800.0)); }
-
-void PrintWeights(Weights* weights, int epoch, double error) {
+void PrintWeights(Weights* weights, int epoch, float error) {
   FILE* fp;
   fp = fopen("weights.out", "a");
 

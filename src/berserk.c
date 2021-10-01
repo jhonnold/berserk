@@ -24,11 +24,14 @@
 #include "random.h"
 #include "search.h"
 #include "transposition.h"
-#include "tune.h"
 #include "types.h"
 #include "uci.h"
 #include "util.h"
 #include "zobrist.h"
+
+#ifdef TUNE
+#include "tuner/tune.h"
+#endif
 
 // Welcome to berserk
 int main(int argc, char** argv) {
