@@ -21,6 +21,7 @@
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
+#include "net.h"
 #include "random.h"
 #include "search.h"
 #include "transposition.h"
@@ -51,6 +52,8 @@ int main(int argc, char** argv) {
 #ifdef TUNE
     Tune();
 #endif
+  } else if (argc > 1 && !strncmp(argv[1], "testnet", 7)) {
+    MatrixTesting();
   } else {
     UCILoop();
   }
