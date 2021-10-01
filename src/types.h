@@ -184,6 +184,7 @@ typedef struct {
 
   int8_t complexPawns;
   int8_t complexPawnsOffset;
+  int8_t complexPawnsBothSides;
   int8_t complexOffset;
 
   int ks;

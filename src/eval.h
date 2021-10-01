@@ -110,6 +110,7 @@ extern const Score CAN_CASTLE;
 
 extern const Score COMPLEXITY_PAWNS;
 extern const Score COMPLEXITY_PAWNS_OFFSET;
+extern const Score COMPLEXITY_PAWNS_BOTH_SIDES;
 extern const Score COMPLEXITY_OFFSET;
 
 extern const Score KS_ATTACKER_WEIGHTS[5];
