@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 
-#include "types.h"
+#include "../types.h"
 
 #define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\lichess-big3-resolved.book"
 #define THREADS 30
@@ -137,10 +137,10 @@ typedef struct {
 } Position;
 
 typedef struct {
-  double wDanger;
-  double bDanger;
-  double complexity;
-  double eg;
+  float wDanger;
+  float bDanger;
+  float complexity;
+  float eg;
 } EvalGradientData;
 
 typedef struct {
@@ -153,44 +153,43 @@ typedef struct {
 void Tune();
 
 void ValidateEval(int n, Position* positions, Weights* weights);
-void ComputeK(int n, Position* positions);
-double TotalStaticError(int n, Position* positions);
+float TotalStaticError(int n, Position* positions);
 
 void UpdateParam(Param* p);
 void UpdateWeight(Weight* w);
 void UpdateWeights(Weights* weights);
 void MergeWeightGradients(Weight* dest, Weight* src);
-double UpdateAndTrain(int n, Position* positions, Weights* weights);
+float UpdateAndTrain(int n, Position* positions, Weights* weights);
 
 void* UpdateGradients(void* arg);
-void UpdateMaterialGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdatePsqtGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdatePostPsqtGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdateMobilityGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdateThreatGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdatePieceBonusGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdatePawnBonusGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdatePasserBonusGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdatePawnShelterGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdateSpaceGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdateComplexityGradients(Position* position, double loss, Weights* weights, EvalGradientData* gd);
-void UpdateKingSafetyGradients(Position* position, double loss, Weights* weights, EvalGradientData* ks);
-void UpdateTempoGradient(Position* position, double loss, Weights* weights);
+void UpdateMaterialGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdatePsqtGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdatePostPsqtGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdateMobilityGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdateThreatGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdatePieceBonusGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdatePawnBonusGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdatePasserBonusGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdatePawnShelterGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdateSpaceGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdateComplexityGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
+void UpdateKingSafetyGradients(Position* position, float loss, Weights* weights, EvalGradientData* ks);
+void UpdateTempoGradient(Position* position, float loss, Weights* weights);
 
-void ApplyCoeff(double* mg, double* eg, int coeff, Weight* w);
-double EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd);
-void EvaluateMaterialValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluatePsqtValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluatePostPsqtValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluateMobilityValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluateThreatValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluatePieceBonusValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluatePawnBonusValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluatePasserBonusValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluatePawnShelterValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluateSpaceValues(double* mg, double* eg, Position* position, Weights* weights);
-void EvaluateComplexityValues(double* mg, double* eg, Position* position, Weights* weights, EvalGradientData* gd);
-void EvaluateKingSafetyValues(double* mg, double* eg, Position* position, Weights* weights, EvalGradientData* ks);
+void ApplyCoeff(float* mg, float* eg, int coeff, Weight* w);
+float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd);
+void EvaluateMaterialValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluatePsqtValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluatePostPsqtValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluateMobilityValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluateThreatValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluatePieceBonusValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluatePawnBonusValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluatePasserBonusValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluatePawnShelterValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluateSpaceValues(float* mg, float* eg, Position* position, Weights* weights);
+void EvaluateComplexityValues(float* mg, float* eg, Position* position, Weights* weights, EvalGradientData* gd);
+void EvaluateKingSafetyValues(float* mg, float* eg, Position* position, Weights* weights, EvalGradientData* ks);
 
 void InitMaterialWeights(Weights* weights);
 void InitPsqtWeights(Weights* weights);
@@ -210,9 +209,7 @@ void InitTempoWeight(Weights* weights);
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
 Position* LoadPositions(int* n, Weights* weights);
 
-double Sigmoid(double s);
-
-void PrintWeights(Weights* weights, int epoch, double error);
+void PrintWeights(Weights* weights, int epoch, float error);
 void PrintWeightArray(FILE* fp, Weight* weights, int n, int wrap);
 void PrintWeight(FILE* fp, Weight* weight);
 
