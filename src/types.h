@@ -312,24 +312,24 @@ typedef struct {
   float V;
 } Gradient;
 
-#define N_PAWN_VALUES 785
-#define N_PAWN_FEATURES 96
-#define N_PAWN_HIDDEN 8
-#define N_PAWN_OUTPUT 1
+#define N_KP_VALUES 1809
+#define N_KP_FEATURES 224
+#define N_KP_HIDDEN 8
+#define N_KP_OUTPUT 1
 
 typedef struct {
-  float weights0[N_PAWN_FEATURES * N_PAWN_HIDDEN];
-  float weights1[N_PAWN_HIDDEN * N_PAWN_OUTPUT];
-  float biases0[N_PAWN_HIDDEN];
-  float biases1[N_PAWN_OUTPUT];
+  float weights0[N_KP_FEATURES * N_KP_HIDDEN];
+  float weights1[N_KP_HIDDEN * N_KP_OUTPUT];
+  float biases0[N_KP_HIDDEN];
+  float biases1[N_KP_OUTPUT];
 
-  float hiddenActivations[N_PAWN_HIDDEN];
+  float hiddenActivations[N_KP_HIDDEN];
 
-  Gradient gWeights0[N_PAWN_FEATURES * N_PAWN_HIDDEN];
-  Gradient gWeights1[N_PAWN_HIDDEN * N_PAWN_OUTPUT];
-  Gradient gBiases0[N_PAWN_HIDDEN];
-  Gradient gBiases1[N_PAWN_OUTPUT];
-} PawnNetwork;
+  Gradient gWeights0[N_KP_FEATURES * N_KP_HIDDEN];
+  Gradient gWeights1[N_KP_HIDDEN * N_KP_OUTPUT];
+  Gradient gBiases0[N_KP_HIDDEN];
+  Gradient gBiases1[N_KP_OUTPUT];
+} KPNetwork;
 
 enum { WHITE, BLACK, BOTH };
 
