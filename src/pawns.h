@@ -17,13 +17,19 @@
 #ifndef PAWNS_H
 #define PAWNS_H
 
-#include "net.h"
 #include "types.h"
+
+extern PawnNetwork* PAWN_NET;
 
 PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread);
 void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns, ThreadData* thread);
 
-float NetworkEval(BitBoard whitePawns, BitBoard blackPawns, Network* network);
+int GetPawnNetworkIdx(int sq, int color);
+Score PawnNetworkScore(Board* board);
+float PawnNetworkPredict(BitBoard whitePawns, BitBoard blackPawns, PawnNetwork* network);
+
+void InitPawnNetwork();
+void SavePawnNetwork(char* path, PawnNetwork* network);
 
 Score PawnEval(Board* board, EvalData* data, int side);
 Score PasserEval(Board* board, EvalData* data, int side);

@@ -15,13 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
+#include <string.h>
 
 #include "attacks.h"
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
 #include "movegen.h"
-#include "net.h"
 #include "pawns.h"
 #include "types.h"
 #include "util.h"
@@ -35,6 +35,12 @@
 extern EvalCoeffs C;
 extern int cs[2];
 
+PawnNetwork* PAWN_NET;
+const float PAWN_NET_DATA[N_PAWN_VALUES] = {
+#include "pawnnet.h"
+};
+
+
 inline PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread) {
   PawnHashEntry* entry = &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)];
   return entry->hash == hash ? entry : NULL;
@@ -45,20 +51,92 @@ inline void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns, ThreadData* 
   *entry = (PawnHashEntry){.hash = hash, .s = s, .passedPawns = passedPawns};
 }
 
-float NetworkEval(BitBoard whitePawns, BitBoard blackPawns, Network* network) {
-  int pawns[128] = {0};
-
-  while (whitePawns)
-    pawns[popAndGetLsb(&whitePawns)] = 1;
-  while (blackPawns)
-    pawns[64 + popAndGetLsb(&blackPawns)] = 1;
-
-  float eval = ApplyNetwork(pawns, network);
-  return eval;
+inline Score PawnNetworkScore(Board* board) {
+  float raw = PawnNetworkPredict(board->pieces[PAWN_WHITE], board->pieces[PAWN_BLACK], PAWN_NET);
+  
+  Score s = (Score) raw;
+  return makeScore(s, s);
 }
 
-// Standard pawn and passer evaluation
-// TODO: Pawn hash table
+inline int GetPawnNetworkIdx(int sq, int color) {
+  return color == WHITE ? sq - 8 : sq + 40;
+}
+
+float PawnNetworkPredict(BitBoard whitePawns, BitBoard blackPawns, PawnNetwork* network) {
+  #ifdef TUNE
+  float* hidden = network->hiddenActivations;
+  #else
+  float hidden[N_PAWN_HIDDEN];
+  #endif
+
+  memcpy(hidden, network->biases0, sizeof(float) * N_PAWN_HIDDEN);
+
+  while (whitePawns) {
+    int idx = GetPawnNetworkIdx(popAndGetLsb(&whitePawns), WHITE);
+
+    for (int i = 0; i < N_PAWN_HIDDEN; i++)
+      hidden[i] += network->weights0[i * N_PAWN_FEATURES + idx];
+  }
+
+  while (blackPawns) {
+    int idx = GetPawnNetworkIdx(popAndGetLsb(&blackPawns), BLACK);
+
+    for (int i = 0; i < N_PAWN_HIDDEN; i++)
+      hidden[i] += network->weights0[i * N_PAWN_FEATURES + idx];
+  }
+
+  // Apply ReLu
+  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+    hidden[i] = max(0.0, hidden[i]); 
+
+  float result = network->biases1[0];
+  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+    result += network->weights1[i] * hidden[i];
+
+  return result;
+}
+
+void SavePawnNetwork(char* path, PawnNetwork* network) {
+  FILE* fp = fopen(path, "a");
+  if (fp == NULL) {
+    printf("info string Unable to save network!\n");
+    return;
+  }
+
+  for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++)
+    fprintf(fp, "%f,", network->weights0[i]);
+
+  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
+    fprintf(fp, "%f,", network->weights1[i]);
+
+  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+    fprintf(fp, "%f,", network->biases0[i]);
+
+  for (int i = 0; i < N_PAWN_OUTPUT; i++)
+    fprintf(fp, "%f,", network->biases1[i]);
+
+  fprintf(fp, "\n");
+  fclose(fp);
+}
+
+void InitPawnNetwork() {
+  PAWN_NET = malloc(sizeof(PawnNetwork));
+  int n = 0;
+
+  for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++)
+    PAWN_NET->weights0[i] = PAWN_NET_DATA[n++];
+
+  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
+    PAWN_NET->weights1[i] = PAWN_NET_DATA[n++];
+
+  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+    PAWN_NET->biases0[i] =PAWN_NET_DATA[n++];
+
+  for (int i = 0; i < N_PAWN_OUTPUT; i++)
+    PAWN_NET->biases1[i] = PAWN_NET_DATA[n++];
+}
+
+// Standard pawn evaluation
 Score PawnEval(Board* board, EvalData* data, int side) {
   Score s = 0;
 
@@ -85,7 +163,6 @@ Score PawnEval(Board* board, EvalData* data, int side) {
     BitBoard passerSpan = FORWARD_RANK_MASKS[side][rank] & (ADJACENT_FILE_MASKS[file] | FILE_MASKS[file]);
     BitBoard antiPassers = board->pieces[xside] & passerSpan;
     int passed = (!antiPassers || !(antiPassers ^ levers)) &&
-                 // make sure we don't double count passers
                  !(board->pieces[PAWN[side]] & FORWARD_RANK_MASKS[side][rank] & FILE_MASKS[file]);
 
     s += DEFENDED_PAWN * bits(defenders);
@@ -119,8 +196,8 @@ Score PawnEval(Board* board, EvalData* data, int side) {
       if (T)
         C.connectedPawn[adjustedFile][adjustedRank] += cs[side] * scalar;
 
-      // candidate passers are either in tension right now (and a push is all they need)
-      // or a pawn 2 ranks down is stopping them, but our pawns can support it through
+      // candidate passers are stopped by a pawn 2 ranks down, 
+      // but our pawns can support it through
       if (!passed) {
         int enoughSupport = !(antiPassers ^ forwardLevers) && bits(connected) >= bits(forwardLevers);
 

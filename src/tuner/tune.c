@@ -26,7 +26,6 @@
 #include "../bits.h"
 #include "../board.h"
 #include "../eval.h"
-#include "../net.h"
 #include "../pawns.h"
 #include "../search.h"
 #include "../thread.h"
@@ -71,7 +70,8 @@ float ComputeK(int n, Position* positions) {
 
 void Tune() {
   Weights weights = {0};
-  Network* network = PAWN_NET;
+
+  PawnNetwork* network = PAWN_NET; // already initialized
   ResetNetworkGradients(network);
 
   InitMaterialWeights(&weights);
@@ -99,7 +99,6 @@ void Tune() {
 
   for (int epoch = 1; epoch <= 100000; epoch++) {
     float error = UpdateAndTrain(n, positions, &weights, network);
-    SaveNetwork("pawnnet.out", network);
 
     long now = GetTimeMS();
 
@@ -107,6 +106,7 @@ void Tune() {
 
     if (epoch % 25 == 0) {
       PrintWeights(&weights, epoch, error);
+      SavePawnNetwork("pawnnet.out", network);
       printf("\n");
     }
   }
@@ -128,26 +128,26 @@ float TotalStaticError(int n, Position* positions) {
   return e / n;
 }
 
-void ResetNetworkGradients(Network* network) {
-  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
+void ResetNetworkGradients(PawnNetwork* network) {
+  for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++) {
     network->gWeights0[i].g = 0;
     network->gWeights0[i].V = 0;
     network->gWeights0[i].M = 0;
   }
 
-  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++) {
+  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++) {
     network->gWeights1[i].g = 0;
     network->gWeights1[i].V = 0;
     network->gWeights1[i].M = 0;
   }
 
-  for (int i = 0; i < N_HIDDEN; i++) {
+  for (int i = 0; i < N_PAWN_HIDDEN; i++) {
     network->gBiases0[i].g = 0;
     network->gBiases0[i].V = 0;
     network->gBiases0[i].M = 0;
   }
 
-  for (int i = 0; i < N_OUTPUT; i++) {
+  for (int i = 0; i < N_PAWN_OUTPUT; i++) {
     network->gBiases1[i].g = 0;
     network->gBiases1[i].V = 0;
     network->gBiases1[i].M = 0;
@@ -175,25 +175,21 @@ void UpdateWeight(Weight* w) {
   UpdateParam(&w->eg);
 }
 
-void UpdateNetwork(Network* network) {
-  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
+void UpdateNetwork(PawnNetwork* network) {
+  for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++)
     UpdateAndApplyGradient(&network->weights0[i], &network->gWeights0[i]);
 
-  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
+  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
     UpdateAndApplyGradient(&network->weights1[i], &network->gWeights1[i]);
 
-  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
+  for (int i = 0; i < N_PAWN_HIDDEN; i++)
     UpdateAndApplyGradient(&network->biases0[i], &network->gBiases0[i]);
 
-  for (int i = 0; i < N_HIDDEN; i++)
+  for (int i = 0; i < N_PAWN_OUTPUT; i++)
     UpdateAndApplyGradient(&network->biases1[i], &network->gBiases1[i]);
 }
 
 void UpdateWeights(Weights* weights) {
-  // Fix these values, let the PSQT tune
-  // for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++)
-  //   UpdateWeight(&weights->pieces[pc]);
-
   for (int pc = PAWN_TYPE; pc <= KING_TYPE; pc++)
     for (int sq = 0; sq < 32; sq++)
       for (int i = 0; i < 2; i++)
@@ -206,16 +202,12 @@ void UpdateWeights(Weights* weights) {
 
   for (int c = 0; c < 9; c++)
     UpdateWeight(&weights->knightMobilities[c]);
-
   for (int c = 0; c < 14; c++)
     UpdateWeight(&weights->bishopMobilities[c]);
-
   for (int c = 0; c < 15; c++)
     UpdateWeight(&weights->rookMobilities[c]);
-
   for (int c = 0; c < 28; c++)
     UpdateWeight(&weights->queenMobilities[c]);
-
   for (int c = 0; c < 9; c++)
     UpdateWeight(&weights->kingMobilities[c]);
 
@@ -224,104 +216,66 @@ void UpdateWeights(Weights* weights) {
     UpdateWeight(&weights->bishopThreats[pc]);
     UpdateWeight(&weights->rookThreats[pc]);
   }
-
   UpdateWeight(&weights->kingThreat);
-
   UpdateWeight(&weights->pawnThreat);
-
   UpdateWeight(&weights->pawnPushThreat);
-
   UpdateWeight(&weights->pawnPushThreatPinned);
-
   UpdateWeight(&weights->hangingThreat);
-
   UpdateWeight(&weights->knightCheckQueen);
-
   UpdateWeight(&weights->bishopCheckQueen);
-
   UpdateWeight(&weights->rookCheckQueen);
 
   UpdateWeight(&weights->bishopPair);
-
   for (int i = 0; i < 5; i++)
     for (int j = 0; j < 5; j++)
       UpdateWeight(&weights->imbalance[i][j]);
 
   UpdateWeight(&weights->minorBehindPawn);
-
   UpdateWeight(&weights->knightPostReachable);
-
   UpdateWeight(&weights->bishopPostReachable);
-
   UpdateWeight(&weights->bishopTrapped);
-
   UpdateWeight(&weights->rookTrapped);
-
   UpdateWeight(&weights->badBishopPawns);
-
   UpdateWeight(&weights->dragonBishop);
-
   UpdateWeight(&weights->rookOpenFileOffset);
-
   UpdateWeight(&weights->rookOpenFile);
-
   UpdateWeight(&weights->rookSemiOpen);
-
   UpdateWeight(&weights->rookToOpen);
-
   UpdateWeight(&weights->queenOppositeRook);
-
   UpdateWeight(&weights->queenRookBattery);
 
   UpdateWeight(&weights->defendedPawns);
-
   UpdateWeight(&weights->doubledPawns);
-
   UpdateWeight(&weights->candidateEdgeDistance);
-
   for (int f = 0; f < 4; f++)
     UpdateWeight(&weights->isolatedPawns[f]);
-
   UpdateWeight(&weights->openIsolatedPawns);
-
   UpdateWeight(&weights->backwardsPawns);
-
   for (int r = 0; r < 8; r++) {
     for (int f = 0; f < 4; f++)
       UpdateWeight(&weights->connectedPawn[f][r]);
-
     UpdateWeight(&weights->candidatePasser[r]);
   }
 
   for (int r = 0; r < 8; r++)
     UpdateWeight(&weights->passedPawn[r]);
-
   UpdateWeight(&weights->passedPawnEdgeDistance);
-
   UpdateWeight(&weights->passedPawnKingProximity);
-
   for (int r = 0; r < 5; r++)
     UpdateWeight(&weights->passedPawnAdvance[r]);
-
   UpdateWeight(&weights->passedPawnEnemySliderBehind);
-
   UpdateWeight(&weights->passedPawnSqRule);
-
   UpdateWeight(&weights->passedPawnUnsupported);
-
   UpdateWeight(&weights->passedPawnOutsideVKnight);
 
   for (int f = 0; f < 4; f++) {
     for (int r = 0; r < 8; r++) {
       UpdateWeight(&weights->pawnShelter[f][r]);
-
       UpdateWeight(&weights->pawnStorm[f][r]);
     }
   }
-
   for (int r = 0; r < 8; r++)
     UpdateWeight(&weights->blockedPawnStorm[r]);
-
   UpdateWeight(&weights->castlingRights);
 
   UpdateParam(&weights->space.mg);
@@ -329,15 +283,12 @@ void UpdateWeights(Weights* weights) {
   UpdateParam(&weights->tempo.mg);
 
   UpdateParam(&weights->complexPawns.mg);
-
   UpdateParam(&weights->complexOffset.mg);
-
   UpdateParam(&weights->complexPawnsBothSides.mg);
 
   if (TUNE_KS) {
     for (int i = 0; i < 5; i++)
       UpdateParam(&weights->ksAttackerWeight[i].mg);
-
     UpdateParam(&weights->ksWeakSqs.mg);
     UpdateParam(&weights->ksPinned.mg);
     UpdateParam(&weights->ksKnightCheck.mg);
@@ -355,17 +306,17 @@ void MergeGradient(Weight* dest, Weight* src) {
   dest->eg.grad.g += src->eg.grad.g;
 }
 
-float UpdateAndTrain(int n, Position* positions, Weights* weights, Network* network) {
+float UpdateAndTrain(int n, Position* positions, Weights* weights, PawnNetwork* network) {
   pthread_t threads[THREADS];
   GradientUpdate jobs[THREADS];
   Weights local[THREADS];
-  Network nets[THREADS];
+  PawnNetwork nets[THREADS];
 
   int chunk = (n / THREADS) + 1;
 
   for (int t = 0; t < THREADS; t++) {
     memcpy(&local[t], weights, sizeof(Weights));
-    memcpy(&nets[t], network, sizeof(Network));
+    memcpy(&nets[t], network, sizeof(PawnNetwork));
 
     jobs[t].error = 0.0;
     jobs[t].n = t < THREADS - 1 ? chunk : (n - ((THREADS - 1) * chunk));
@@ -383,7 +334,7 @@ float UpdateAndTrain(int n, Position* positions, Weights* weights, Network* netw
   for (int t = 0; t < THREADS; t++) {
     error += jobs[t].error;
     Weights* w = jobs[t].weights;
-    Network* net = jobs[t].network;
+    PawnNetwork* net = jobs[t].network;
 
     for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++)
       MergeGradient(&weights->pieces[pc], &w->pieces[pc]);
@@ -498,14 +449,14 @@ float UpdateAndTrain(int n, Position* positions, Weights* weights, Network* netw
       MergeGradient(&weights->ksKnightDefense, &w->ksKnightDefense);
     }
 
-    for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
+    for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++)
       network->gWeights0[i].g += net->gWeights0[i].g;
-    for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
+    for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
       network->gWeights1[i].g += net->gWeights1[i].g;
 
-    for (int i = 0; i < N_HIDDEN; i++)
+    for (int i = 0; i < N_PAWN_HIDDEN; i++)
       network->gBiases0[i].g += net->gBiases0[i].g;
-    for (int i = 0; i < N_OUTPUT; i++)
+    for (int i = 0; i < N_PAWN_OUTPUT; i++)
       network->gBiases1[i].g += net->gBiases1[i].g;
   }
 
@@ -521,7 +472,7 @@ void* UpdateGradients(void* arg) {
   int n = job->n;
   Weights* weights = job->weights;
   Position* positions = job->positions;
-  Network* network = job->network;
+  PawnNetwork* network = job->network;
 
   for (int i = 0; i < n; i++) {
     EvalGradientData gd[1];
@@ -902,7 +853,7 @@ void UpdateTempoGradient(Position* position, float loss, Weights* weights) {
   weights->tempo.mg.grad.g += (position->stm == WHITE ? 1 : -1) * loss;
 }
 
-void UpdateNetworkGradients(Position* position, float loss, Network* network, EvalGradientData* gd) {
+void UpdateNetworkGradients(Position* position, float loss, PawnNetwork* network, EvalGradientData* gd) {
   float lossMg = loss * position->phaseMg * position->scale / MAX_SCALE;
   float lossEg = loss * position->phaseEg * position->scale / MAX_SCALE;
   lossEg *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
@@ -912,20 +863,28 @@ void UpdateNetworkGradients(Position* position, float loss, Network* network, Ev
   // Gradients for last layer is just the err
   network->gBiases1[0].g += err;
 
-  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
-    network->gWeights1[i].g += network->hidden[i] * err;
+  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
+    network->gWeights1[i].g += network->hiddenActivations[i] * err;
 
   // Hidden layer is a scalar of loss * weight leading into output
-  for (int i = 0; i < N_HIDDEN; i++) {
-    float firstLayerErr = err * network->weights1[i] * ReLuPrime(network->hidden[i]);
+  for (int i = 0; i < N_PAWN_HIDDEN; i++) {
+    float layerErr = err * network->weights1[i] * ReLuPrime(network->hiddenActivations[i]);
 
-    network->gBiases0[i].g += firstLayerErr;
+    network->gBiases0[i].g += layerErr;
 
-    for (int j = 0; j < N_FEATURES; j++)
-      if (j < 64 && getBit(position->whitePawns, j))
-        network->gWeights0[i * N_FEATURES + j].g += firstLayerErr;
-      else if (j >= 64 && getBit(position->blackPawns, j - 64))
-        network->gWeights0[i * N_FEATURES + j].g += firstLayerErr;
+    // update gradients for features that are enabled in this position
+    BitBoard whitePawns = position->whitePawns;
+    BitBoard blackPawns = position->blackPawns;
+
+    while (whitePawns) {
+      int idx = GetPawnNetworkIdx(popAndGetLsb(&whitePawns), WHITE);
+      network->gWeights0[i * N_PAWN_FEATURES + idx].g += layerErr;
+    }
+
+    while (blackPawns) {
+      int idx = GetPawnNetworkIdx(popAndGetLsb(&blackPawns), BLACK);
+      network->gWeights0[i * N_PAWN_FEATURES + idx].g += layerErr;
+    }
   }
 }
 
@@ -934,7 +893,7 @@ void ApplyCoeff(float* mg, float* eg, int coeff, Weight* w) {
   *eg += coeff * w->eg.value;
 }
 
-float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd, Network* network) {
+float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd, PawnNetwork* network) {
   float mg = 0, eg = 0;
 
   EvaluateMaterialValues(&mg, &eg, position, weights);
@@ -955,7 +914,7 @@ float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd,
     eg += scoreEG(position->coeffs.ks);
   }
 
-  float netEval = NetworkEval(position->whitePawns, position->blackPawns, network);
+  float netEval = PawnNetworkPredict(position->whitePawns, position->blackPawns, network);
   mg += netEval;
   eg += netEval;
 
@@ -1170,7 +1129,7 @@ void LoadPosition(Board* board, Position* position, ThreadData* thread) {
   memcpy(&position->coeffs, &C, sizeof(EvalCoeffs));
 }
 
-Position* LoadPositions(int* n, Weights* weights, Network* network) {
+Position* LoadPositions(int* n, Weights* weights, PawnNetwork* network) {
   FILE* fp;
   fp = fopen(EPD_FILE_PATH, "r");
 

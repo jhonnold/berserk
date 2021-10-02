@@ -268,8 +268,8 @@ void UCILoop() {
         s = -s;
       printf("Score: %dcp (white)\n", s);
 
-      float netEval = NetworkEval(board.pieces[PAWN_WHITE], board.pieces[PAWN_BLACK], PAWN_NET);
-      printf("Pawn network: %dcp (%.2f) (white)\n", (Score) netEval, netEval);
+      s = PawnNetworkScore(&board);
+      printf("Pawn network: %dcp (white)\n", scoreMG(s) / 2);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {

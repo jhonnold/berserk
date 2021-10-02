@@ -1,5 +1,6 @@
 CC = gcc
-SRC = *.c tuner/*.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
+SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
+TUNE_SRC = *.c tuner/*.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
 EXE = berserk
 VERSION = 5.0.0-dev
 
@@ -51,7 +52,7 @@ debug:
 	$(CC) $(DFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
 
 tune:
-	$(CC) $(TFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
+	$(CC) $(TFLAGS) $(TUNE_SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
 
 clean:
 	rm -rf $(EXE)
