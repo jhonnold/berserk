@@ -70,53 +70,19 @@ void SaveNetwork(char* path, Network* network) {
   fclose(fp);
 }
 
-Network* RandomNetwork() {
-  Network* network = malloc(sizeof(Network));
-
-  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
-    network->weights0[i] = (float)rand() / RAND_MAX;
-    network->gWeights0[i].g = 0;
-  }
-
-  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++) {
-    network->weights1[i] = (float)rand() / RAND_MAX;
-    network->gWeights1[i].g = 0;
-  }
-
-  for (int i = 0; i < N_HIDDEN; i++) {
-    network->biases0[i] = (float)rand() / RAND_MAX;
-    network->gBiases0[i].g = 0;
-  }
-
-  for (int i = 0; i < N_OUTPUT; i++) {
-    network->biases1[i] = (float)rand() / RAND_MAX;
-    network->gBiases1[i].g = 0;
-  }
-
-  return network;
-}
-
 void InitNetwork() {
   PAWN_NET = malloc(sizeof(Network));
   int n = 0;
 
-  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
+  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++)
     PAWN_NET->weights0[i] = pawnNetData[n++];
-    PAWN_NET->gWeights0[i].g = 0;
-  }
 
-  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++) {
+  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
     PAWN_NET->weights1[i] = pawnNetData[n++];
-    PAWN_NET->gWeights1[i].g = 0;
-  }
 
-  for (int i = 0; i < N_HIDDEN; i++) {
-    PAWN_NET->biases0[i] = pawnNetData[n++];
-    PAWN_NET->gBiases0[i].g = 0;
-  }
+  for (int i = 0; i < N_HIDDEN; i++)
+    PAWN_NET->biases0[i] =pawnNetData[n++];
 
-  for (int i = 0; i < N_OUTPUT; i++) {
+  for (int i = 0; i < N_OUTPUT; i++)
     PAWN_NET->biases1[i] = pawnNetData[n++];
-    PAWN_NET->gBiases1[i].g = 0;
-  }
 }

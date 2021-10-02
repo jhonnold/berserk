@@ -23,7 +23,6 @@ extern Network* PAWN_NET;
 
 float ApplyNetwork(int inputs[N_FEATURES], Network* network);
 
-Network* RandomNetwork();
 void InitNetwork();
 void SaveNetwork(char* path, Network* network);
 

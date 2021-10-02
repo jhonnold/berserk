@@ -319,7 +319,6 @@ typedef struct {
 typedef struct {
   float weights0[N_FEATURES * N_HIDDEN];
   float weights1[N_HIDDEN * N_OUTPUT];
-
   float biases0[N_HIDDEN];
   float biases1[N_OUTPUT];
 
@@ -327,7 +326,6 @@ typedef struct {
 
   Gradient gWeights0[N_FEATURES * N_HIDDEN];
   Gradient gWeights1[N_HIDDEN * N_OUTPUT];
-
   Gradient gBiases0[N_HIDDEN];
   Gradient gBiases1[N_OUTPUT];
 } Network;

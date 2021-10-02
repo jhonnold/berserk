@@ -162,6 +162,7 @@ void UpdateNetwork(Network* network);
 void UpdateWeights(Weights* weights);
 void MergeGradient(Weight* dest, Weight* src);
 float UpdateAndTrain(int n, Position* positions, Weights* weights, Network* network);
+void ResetNetworkGradients(Network* network);
 
 void* UpdateGradients(void* arg);
 void UpdateMaterialGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
@@ -177,7 +178,7 @@ void UpdateSpaceGradients(Position* position, float loss, Weights* weights, Eval
 void UpdateComplexityGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
 void UpdateKingSafetyGradients(Position* position, float loss, Weights* weights, EvalGradientData* ks);
 void UpdateTempoGradient(Position* position, float loss, Weights* weights);
-void UpdateNetworkGradients(Position* position, float loss, Network* network);
+void UpdateNetworkGradients(Position* position, float loss, Network* network, EvalGradientData* gd);
 
 void ApplyCoeff(float* mg, float* eg, int coeff, Weight* w);
 float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd, Network* network);

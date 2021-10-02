@@ -26,4 +26,4 @@ float SigmoidPrime(float s, float k) { return s * (1.0 - s) * k / 1024.0f; }
 
 float ReLu(float s) { return s > 0.0f ? s : 0; }
 
-float ReLuPrime(float s) { return s > 0.0f ? 1 : 0; }
+float ReLuPrime(float s) { return s > 0.0f; }

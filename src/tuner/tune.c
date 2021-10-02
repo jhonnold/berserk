@@ -72,6 +72,7 @@ float ComputeK(int n, Position* positions) {
 void Tune() {
   Weights weights = {0};
   Network* network = PAWN_NET;
+  ResetNetworkGradients(network);
 
   InitMaterialWeights(&weights);
   InitPsqtWeights(&weights);
@@ -96,7 +97,7 @@ void Tune() {
 
   long start = GetTimeMS();
 
-  for (int epoch = 1; epoch <= 1000; epoch++) {
+  for (int epoch = 1; epoch <= 100000; epoch++) {
     float error = UpdateAndTrain(n, positions, &weights, network);
     SaveNetwork("pawnnet.out", network);
 
@@ -125,6 +126,32 @@ float TotalStaticError(int n, Position* positions) {
   }
 
   return e / n;
+}
+
+void ResetNetworkGradients(Network* network) {
+  for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
+    network->gWeights0[i].g = 0;
+    network->gWeights0[i].V = 0;
+    network->gWeights0[i].M = 0;
+  }
+
+  for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++) {
+    network->gWeights1[i].g = 0;
+    network->gWeights1[i].V = 0;
+    network->gWeights1[i].M = 0;
+  }
+
+  for (int i = 0; i < N_HIDDEN; i++) {
+    network->gBiases0[i].g = 0;
+    network->gBiases0[i].V = 0;
+    network->gBiases0[i].M = 0;
+  }
+
+  for (int i = 0; i < N_OUTPUT; i++) {
+    network->gBiases1[i].g = 0;
+    network->gBiases1[i].V = 0;
+    network->gBiases1[i].M = 0;
+  }
 }
 
 void UpdateAndApplyGradient(float* v, Gradient* grad) {
@@ -475,7 +502,8 @@ float UpdateAndTrain(int n, Position* positions, Weights* weights, Network* netw
       network->gWeights0[i].g += net->gWeights0[i].g;
     for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
       network->gWeights1[i].g += net->gWeights1[i].g;
-    for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
+
+    for (int i = 0; i < N_HIDDEN; i++)
       network->gBiases0[i].g += net->gBiases0[i].g;
     for (int i = 0; i < N_OUTPUT; i++)
       network->gBiases1[i].g += net->gBiases1[i].g;
@@ -513,12 +541,12 @@ void* UpdateGradients(void* arg) {
     UpdatePawnShelterGradients(&positions[i], loss, weights, gd);
     UpdateSpaceGradients(&positions[i], loss, weights, gd);
     UpdateTempoGradient(&positions[i], loss, weights);
+    UpdateNetworkGradients(&positions[i], loss, network, gd);
 
     if (TUNE_KS)
       UpdateKingSafetyGradients(&positions[i], loss, weights, gd);
 
     UpdateComplexityGradients(&positions[i], loss, weights, gd);
-    UpdateNetworkGradients(&positions[i], loss, network);
 
     job->error += pow(positions[i].result - sigmoid, 2);
   }
@@ -874,24 +902,30 @@ void UpdateTempoGradient(Position* position, float loss, Weights* weights) {
   weights->tempo.mg.grad.g += (position->stm == WHITE ? 1 : -1) * loss;
 }
 
-void UpdateNetworkGradients(Position* position, float loss, Network* network) {
-  loss *= (float)position->scale / MAX_SCALE;
+void UpdateNetworkGradients(Position* position, float loss, Network* network, EvalGradientData* gd) {
+  float lossMg = loss * position->phaseMg * position->scale / MAX_SCALE;
+  float lossEg = loss * position->phaseEg * position->scale / MAX_SCALE;
+  lossEg *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
 
-  // Gradients for last layer is just scalar of loss
-  network->gBiases1[0].g += loss;
+  float err = lossMg + lossEg;
+
+  // Gradients for last layer is just the err
+  network->gBiases1[0].g += err;
+
   for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
-    network->gWeights1[i].g += network->hidden[i] * loss;
+    network->gWeights1[i].g += network->hidden[i] * err;
 
   // Hidden layer is a scalar of loss * weight leading into output
   for (int i = 0; i < N_HIDDEN; i++) {
-    float firstLayerLoss = loss * network->weights1[i] * ReLuPrime(network->hidden[i]);
+    float firstLayerErr = err * network->weights1[i] * ReLuPrime(network->hidden[i]);
 
-    network->gBiases0[i].g += firstLayerLoss;
+    network->gBiases0[i].g += firstLayerErr;
+
     for (int j = 0; j < N_FEATURES; j++)
       if (j < 64 && getBit(position->whitePawns, j))
-        network->gWeights0[i * N_FEATURES + j].g += firstLayerLoss;
+        network->gWeights0[i * N_FEATURES + j].g += firstLayerErr;
       else if (j >= 64 && getBit(position->blackPawns, j - 64))
-        network->gWeights0[i * N_FEATURES + j].g += firstLayerLoss;
+        network->gWeights0[i * N_FEATURES + j].g += firstLayerErr;
   }
 }
 
@@ -921,12 +955,11 @@ float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd,
     eg += scoreEG(position->coeffs.ks);
   }
 
-  EvaluateComplexityValues(&mg, &eg, position, weights, gd);
-
   float netEval = NetworkEval(position->whitePawns, position->blackPawns, network);
-
   mg += netEval;
   eg += netEval;
+
+  EvaluateComplexityValues(&mg, &eg, position, weights, gd);
 
   float result = (mg * position->phase + eg * (128 - position->phase)) / 128;
   result = (result * position->scale) / MAX_SCALE;
