@@ -17,8 +17,11 @@
 #ifndef TUNE_UTIL_H
 #define TUNE_UTIL_H
 
-float ComputeK(int n, Position* positions);
 float Sigmoid(float s, float k);
+float Sigmoid1(float s);
 float SigmoidPrime(float s, float k);
+float Sigmoid1Prime(float s);
+float ReLu(float s);
+float ReLuPrime(float s);
 
 #endif

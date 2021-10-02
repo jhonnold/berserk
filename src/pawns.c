@@ -14,12 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "pawns.h"
+#include <stdio.h>
+
 #include "attacks.h"
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
 #include "movegen.h"
+#include "net.h"
+#include "pawns.h"
 #include "types.h"
 #include "util.h"
 
@@ -40,6 +43,18 @@ inline PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread) {
 inline void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns, ThreadData* thread) {
   PawnHashEntry* entry = &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)];
   *entry = (PawnHashEntry){.hash = hash, .s = s, .passedPawns = passedPawns};
+}
+
+float NetworkEval(BitBoard whitePawns, BitBoard blackPawns, Network* network) {
+  int pawns[128] = {0};
+
+  while (whitePawns)
+    pawns[popAndGetLsb(&whitePawns)] = 1;
+  while (blackPawns)
+    pawns[64 + popAndGetLsb(&blackPawns)] = 1;
+
+  float eval = ApplyNetwork(pawns, network);
+  return eval;
 }
 
 // Standard pawn and passer evaluation
@@ -209,7 +224,8 @@ Score PasserEval(Board* board, EvalData* data, int side) {
       }
 
       if (bb & (A_FILE | H_FILE)) {
-        if (!(board->pieces[BISHOP[xside]] | board->pieces[ROOK[xside]] | board->pieces[QUEEN[xside]]) && board->pieces[KNIGHT[xside]]) {
+        if (!(board->pieces[BISHOP[xside]] | board->pieces[ROOK[xside]] | board->pieces[QUEEN[xside]]) &&
+            board->pieces[KNIGHT[xside]]) {
           s += PASSED_PAWN_OUTSIDE_V_KNIGHT;
 
           if (T)

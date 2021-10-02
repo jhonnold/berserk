@@ -14,16 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <math.h>
-#include <stdio.h>
+#ifndef NET_H
+#define NET_H
 
-#include "tune.h"
-#include "util.h"
+#include "types.h"
 
-float Sigmoid(float s, float k) { return 1.0f / (1.0f + expf(-s * k / 1024.0f)); }
+extern Network* PAWN_NET;
 
-float SigmoidPrime(float s, float k) { return s * (1.0 - s) * k / 1024.0f; }
+float ApplyNetwork(int inputs[N_FEATURES], Network* network);
 
-float ReLu(float s) { return s > 0.0f ? s : 0; }
+void InitNetwork();
+void SaveNetwork(char* path, Network* network);
 
-float ReLuPrime(float s) { return s > 0.0f; }
+#endif
