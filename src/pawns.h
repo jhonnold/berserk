@@ -19,17 +19,17 @@
 
 #include "types.h"
 
-extern PawnNetwork* PAWN_NET;
+extern KPNetwork* KP_NET;
 
 PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread);
 void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns, ThreadData* thread);
 
-int GetPawnNetworkIdx(int sq, int color);
-Score PawnNetworkScore(Board* board);
-float PawnNetworkPredict(BitBoard whitePawns, BitBoard blackPawns, PawnNetwork* network);
+int GetKPNetworkIdx(int piece, int sq, int color);
+Score KPNetworkScore(Board* board);
+float KPNetworkPredict(BitBoard whitePawns, BitBoard blackPawns, int wk, int bk, KPNetwork* network);
 
-void InitPawnNetwork();
-void SavePawnNetwork(char* path, PawnNetwork* network);
+void InitKPNetwork();
+void SaveKPNetwork(char* path, KPNetwork* network);
 
 Score PawnEval(Board* board, EvalData* data, int side);
 Score PasserEval(Board* board, EvalData* data, int side);

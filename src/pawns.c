@@ -35,11 +35,10 @@
 extern EvalCoeffs C;
 extern int cs[2];
 
-PawnNetwork* PAWN_NET;
-const float PAWN_NET_DATA[N_PAWN_VALUES] = {
-#include "pawnnet.h"
+KPNetwork* KP_NET;
+const float KP_NET_DATA[N_KP_VALUES] = {
+#include "kpnet.dat"
 };
-
 
 inline PawnHashEntry* TTPawnProbe(uint64_t hash, ThreadData* thread) {
   PawnHashEntry* entry = &thread->pawnHashTable[(hash & PAWN_TABLE_MASK)];
@@ -51,89 +50,102 @@ inline void TTPawnPut(uint64_t hash, Score s, BitBoard passedPawns, ThreadData* 
   *entry = (PawnHashEntry){.hash = hash, .s = s, .passedPawns = passedPawns};
 }
 
-inline Score PawnNetworkScore(Board* board) {
-  float raw = PawnNetworkPredict(board->pieces[PAWN_WHITE], board->pieces[PAWN_BLACK], PAWN_NET);
-  
-  Score s = (Score) raw;
+inline Score KPNetworkScore(Board* board) {
+  float raw = KPNetworkPredict(board->pieces[PAWN_WHITE], board->pieces[PAWN_BLACK], lsb(board->pieces[KING_WHITE]),
+                               lsb(board->pieces[KING_BLACK]), KP_NET);
+
+  Score s = (Score)raw;
   return makeScore(s, s);
 }
 
-inline int GetPawnNetworkIdx(int sq, int color) {
-  return color == WHITE ? sq - 8 : sq + 40;
+inline int GetKPNetworkIdx(int piece, int sq, int color) {
+  if (piece == PAWN_TYPE) {
+    return color == WHITE ? sq - 8 : sq + 40; // sq - 8 + 48
+  } else {
+    return color == WHITE ? sq + 96 : sq + 160; // 96 pawns sit in front
+  }
 }
 
-float PawnNetworkPredict(BitBoard whitePawns, BitBoard blackPawns, PawnNetwork* network) {
-  #ifdef TUNE
+float KPNetworkPredict(BitBoard whitePawns, BitBoard blackPawns, int wk, int bk, KPNetwork* network) {
+#ifdef TUNE
   float* hidden = network->hiddenActivations;
-  #else
-  float hidden[N_PAWN_HIDDEN];
-  #endif
+#else
+  float hidden[N_KP_HIDDEN];
+#endif
 
-  memcpy(hidden, network->biases0, sizeof(float) * N_PAWN_HIDDEN);
+  memcpy(hidden, network->biases0, sizeof(float) * N_KP_HIDDEN);
 
   while (whitePawns) {
-    int idx = GetPawnNetworkIdx(popAndGetLsb(&whitePawns), WHITE);
+    int idx = GetKPNetworkIdx(PAWN_TYPE, popAndGetLsb(&whitePawns), WHITE);
 
-    for (int i = 0; i < N_PAWN_HIDDEN; i++)
-      hidden[i] += network->weights0[i * N_PAWN_FEATURES + idx];
+    for (int i = 0; i < N_KP_HIDDEN; i++)
+      hidden[i] += network->weights0[i * N_KP_FEATURES + idx];
   }
 
   while (blackPawns) {
-    int idx = GetPawnNetworkIdx(popAndGetLsb(&blackPawns), BLACK);
+    int idx = GetKPNetworkIdx(PAWN_TYPE, popAndGetLsb(&blackPawns), BLACK);
 
-    for (int i = 0; i < N_PAWN_HIDDEN; i++)
-      hidden[i] += network->weights0[i * N_PAWN_FEATURES + idx];
+    for (int i = 0; i < N_KP_HIDDEN; i++)
+      hidden[i] += network->weights0[i * N_KP_FEATURES + idx];
   }
 
+  int idx = GetKPNetworkIdx(KING_TYPE, wk, WHITE);
+  for (int i = 0; i < N_KP_HIDDEN; i++)
+    hidden[i] += network->weights0[i * N_KP_FEATURES + idx];
+
+  idx = GetKPNetworkIdx(KING_TYPE, bk, BLACK);
+  for (int i = 0; i < N_KP_HIDDEN; i++)
+    hidden[i] += network->weights0[i * N_KP_FEATURES + idx];
+
   // Apply ReLu
-  for (int i = 0; i < N_PAWN_HIDDEN; i++)
-    hidden[i] = max(0.0, hidden[i]); 
+  for (int i = 0; i < N_KP_HIDDEN; i++)
+    hidden[i] = max(0.0, hidden[i]);
 
   float result = network->biases1[0];
-  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+  for (int i = 0; i < N_KP_HIDDEN; i++)
     result += network->weights1[i] * hidden[i];
 
   return result;
 }
 
-void SavePawnNetwork(char* path, PawnNetwork* network) {
+void SaveKPNetwork(char* path, KPNetwork* network) {
   FILE* fp = fopen(path, "a");
   if (fp == NULL) {
     printf("info string Unable to save network!\n");
     return;
   }
 
-  for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++)
+  for (int i = 0; i < N_KP_FEATURES * N_KP_HIDDEN; i++)
     fprintf(fp, "%f,", network->weights0[i]);
 
-  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
+  for (int i = 0; i < N_KP_HIDDEN * N_KP_OUTPUT; i++)
     fprintf(fp, "%f,", network->weights1[i]);
 
-  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+  for (int i = 0; i < N_KP_HIDDEN; i++)
     fprintf(fp, "%f,", network->biases0[i]);
 
-  for (int i = 0; i < N_PAWN_OUTPUT; i++)
+  for (int i = 0; i < N_KP_OUTPUT; i++)
     fprintf(fp, "%f,", network->biases1[i]);
 
   fprintf(fp, "\n");
   fclose(fp);
 }
 
-void InitPawnNetwork() {
-  PAWN_NET = malloc(sizeof(PawnNetwork));
+void InitKPNetwork() {
+  KP_NET = malloc(sizeof(KPNetwork));
   int n = 0;
 
-  for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++)
-    PAWN_NET->weights0[i] = PAWN_NET_DATA[n++];
+  for (int i = 0; i < N_KP_FEATURES * N_KP_HIDDEN; i++)
+    KP_NET->weights0[i] = KP_NET_DATA[n++];
 
-  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
-    PAWN_NET->weights1[i] = PAWN_NET_DATA[n++];
+  for (int i = 0; i < N_KP_HIDDEN * N_KP_OUTPUT; i++)
+    KP_NET->weights1[i] = KP_NET_DATA[n++];
 
-  for (int i = 0; i < N_PAWN_HIDDEN; i++)
-    PAWN_NET->biases0[i] =PAWN_NET_DATA[n++];
+  for (int i = 0; i < N_KP_HIDDEN; i++)
+    KP_NET->biases0[i] = KP_NET_DATA[n++];
 
-  for (int i = 0; i < N_PAWN_OUTPUT; i++)
-    PAWN_NET->biases1[i] = PAWN_NET_DATA[n++];
+  for (int i = 0; i < N_KP_OUTPUT; i++)
+    KP_NET->biases1[i] = KP_NET_DATA[n++];
 }
 
 // Standard pawn evaluation
@@ -196,7 +208,7 @@ Score PawnEval(Board* board, EvalData* data, int side) {
       if (T)
         C.connectedPawn[adjustedFile][adjustedRank] += cs[side] * scalar;
 
-      // candidate passers are stopped by a pawn 2 ranks down, 
+      // candidate passers are stopped by a pawn 2 ranks down,
       // but our pawns can support it through
       if (!passed) {
         int enoughSupport = !(antiPassers ^ forwardLevers) && bits(connected) >= bits(forwardLevers);
@@ -216,6 +228,36 @@ Score PawnEval(Board* board, EvalData* data, int side) {
       data->passedPawns |= bb;
 
     popLsb(pawns);
+  }
+
+  const BitBoard ourPawns = board->pieces[PAWN[side]] & ~data->attacks[xside][PAWN_TYPE] &
+                            ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
+  const BitBoard opponentPawns = board->pieces[PAWN[xside]] & ~FORWARD_RANK_MASKS[xside][rank(data->kingSq[side])];
+  const int kf = min(6, max(1, file(data->kingSq[side])));
+
+  // pawn shelter includes, pawns in front of king/enemy pawn storm (blocked/moving)
+  for (int file = kf - 1; file <= kf + 1; file++) {
+    int adjustedFile = file > 3 ? 7 - file : file;
+
+    BitBoard ourPawnFile = ourPawns & FILE_MASKS[file];
+    int pawnRank = ourPawnFile ? (side ? 7 - rank(lsb(ourPawnFile)) : rank(msb(ourPawnFile))) : 0;
+    s += PAWN_SHELTER[adjustedFile][pawnRank];
+    if (T)
+      C.pawnShelter[adjustedFile][pawnRank] += cs[side];
+
+    BitBoard opponentPawnFile = opponentPawns & FILE_MASKS[file];
+    int theirRank = opponentPawnFile ? (side ? 7 - rank(lsb(opponentPawnFile)) : rank(msb(opponentPawnFile))) : 0;
+    if (pawnRank && pawnRank == theirRank + 1) {
+      s += BLOCKED_PAWN_STORM[theirRank];
+
+      if (T)
+        C.blockedPawnStorm[theirRank] += cs[side];
+    } else {
+      s += PAWN_STORM[adjustedFile][theirRank];
+
+      if (T)
+        C.pawnStorm[adjustedFile][theirRank] += cs[side];
+    }
   }
 
   return s;

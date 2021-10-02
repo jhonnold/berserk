@@ -268,8 +268,8 @@ void UCILoop() {
         s = -s;
       printf("Score: %dcp (white)\n", s);
 
-      s = PawnNetworkScore(&board);
-      printf("Pawn network: %dcp (white)\n", scoreMG(s) / 2);
+      s = KPNetworkScore(&board);
+      printf("KPNetwork: %dcp (white)\n", scoreMG(s) / 2);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {

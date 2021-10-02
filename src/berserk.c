@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
   TTInit(32);
 
-  InitPawnNetwork();
+  InitKPNetwork();
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {

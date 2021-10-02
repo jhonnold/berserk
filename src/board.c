@@ -99,7 +99,7 @@ void ParseFen(char* fen, Board* board) {
       setBit(board->pieces[piece], i);
       board->squares[i] = piece;
 
-      if (PIECE_TYPE[piece] == PAWN_TYPE)
+      if (PIECE_TYPE[piece] == PAWN_TYPE || PIECE_TYPE[piece] == KING_TYPE)
         board->pawnHash ^= ZOBRIST_PIECES[piece][i];
 
       if (*fen != 'K' && *fen != 'k')
@@ -395,6 +395,11 @@ void MakeMove(Move move, Board* board) {
     board->pawnHash ^= ZOBRIST_PIECES[piece][end];
   } else
     board->halfMove++;
+
+  if (piece == KING[board->side]) {
+    board->pawnHash ^= ZOBRIST_PIECES[piece][start];
+    board->pawnHash ^= ZOBRIST_PIECES[piece][end];
+  }
 
   if (capture && !ep) {
     board->captureHistory[board->moveNo] = captured;

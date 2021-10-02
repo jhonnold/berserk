@@ -71,8 +71,8 @@ float ComputeK(int n, Position* positions) {
 void Tune() {
   Weights weights = {0};
 
-  PawnNetwork* network = PAWN_NET; // already initialized
-  ResetNetworkGradients(network);
+  KPNetwork* network = KP_NET; // already initialized
+  ResetKPNetworkGradients(network);
 
   InitMaterialWeights(&weights);
   InitPsqtWeights(&weights);
@@ -106,7 +106,7 @@ void Tune() {
 
     if (epoch % 25 == 0) {
       PrintWeights(&weights, epoch, error);
-      SavePawnNetwork("pawnnet.out", network);
+      SaveKPNetwork("kpnet.out", network);
       printf("\n");
     }
   }
@@ -128,26 +128,26 @@ float TotalStaticError(int n, Position* positions) {
   return e / n;
 }
 
-void ResetNetworkGradients(PawnNetwork* network) {
-  for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++) {
+void ResetKPNetworkGradients(KPNetwork* network) {
+  for (int i = 0; i < N_KP_FEATURES * N_KP_HIDDEN; i++) {
     network->gWeights0[i].g = 0;
     network->gWeights0[i].V = 0;
     network->gWeights0[i].M = 0;
   }
 
-  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++) {
+  for (int i = 0; i < N_KP_HIDDEN * N_KP_OUTPUT; i++) {
     network->gWeights1[i].g = 0;
     network->gWeights1[i].V = 0;
     network->gWeights1[i].M = 0;
   }
 
-  for (int i = 0; i < N_PAWN_HIDDEN; i++) {
+  for (int i = 0; i < N_KP_HIDDEN; i++) {
     network->gBiases0[i].g = 0;
     network->gBiases0[i].V = 0;
     network->gBiases0[i].M = 0;
   }
 
-  for (int i = 0; i < N_PAWN_OUTPUT; i++) {
+  for (int i = 0; i < N_KP_OUTPUT; i++) {
     network->gBiases1[i].g = 0;
     network->gBiases1[i].V = 0;
     network->gBiases1[i].M = 0;
@@ -175,17 +175,17 @@ void UpdateWeight(Weight* w) {
   UpdateParam(&w->eg);
 }
 
-void UpdateNetwork(PawnNetwork* network) {
-  for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++)
+void UpdateNetwork(KPNetwork* network) {
+  for (int i = 0; i < N_KP_FEATURES * N_KP_HIDDEN; i++)
     UpdateAndApplyGradient(&network->weights0[i], &network->gWeights0[i]);
 
-  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
+  for (int i = 0; i < N_KP_HIDDEN * N_KP_OUTPUT; i++)
     UpdateAndApplyGradient(&network->weights1[i], &network->gWeights1[i]);
 
-  for (int i = 0; i < N_PAWN_HIDDEN; i++)
+  for (int i = 0; i < N_KP_HIDDEN; i++)
     UpdateAndApplyGradient(&network->biases0[i], &network->gBiases0[i]);
 
-  for (int i = 0; i < N_PAWN_OUTPUT; i++)
+  for (int i = 0; i < N_KP_OUTPUT; i++)
     UpdateAndApplyGradient(&network->biases1[i], &network->gBiases1[i]);
 }
 
@@ -306,17 +306,17 @@ void MergeGradient(Weight* dest, Weight* src) {
   dest->eg.grad.g += src->eg.grad.g;
 }
 
-float UpdateAndTrain(int n, Position* positions, Weights* weights, PawnNetwork* network) {
+float UpdateAndTrain(int n, Position* positions, Weights* weights, KPNetwork* network) {
   pthread_t threads[THREADS];
   GradientUpdate jobs[THREADS];
   Weights local[THREADS];
-  PawnNetwork nets[THREADS];
+  KPNetwork nets[THREADS];
 
   int chunk = (n / THREADS) + 1;
 
   for (int t = 0; t < THREADS; t++) {
     memcpy(&local[t], weights, sizeof(Weights));
-    memcpy(&nets[t], network, sizeof(PawnNetwork));
+    memcpy(&nets[t], network, sizeof(KPNetwork));
 
     jobs[t].error = 0.0;
     jobs[t].n = t < THREADS - 1 ? chunk : (n - ((THREADS - 1) * chunk));
@@ -334,7 +334,7 @@ float UpdateAndTrain(int n, Position* positions, Weights* weights, PawnNetwork* 
   for (int t = 0; t < THREADS; t++) {
     error += jobs[t].error;
     Weights* w = jobs[t].weights;
-    PawnNetwork* net = jobs[t].network;
+    KPNetwork* net = jobs[t].network;
 
     for (int pc = PAWN_TYPE; pc < KING_TYPE; pc++)
       MergeGradient(&weights->pieces[pc], &w->pieces[pc]);
@@ -449,14 +449,14 @@ float UpdateAndTrain(int n, Position* positions, Weights* weights, PawnNetwork* 
       MergeGradient(&weights->ksKnightDefense, &w->ksKnightDefense);
     }
 
-    for (int i = 0; i < N_PAWN_FEATURES * N_PAWN_HIDDEN; i++)
+    for (int i = 0; i < N_KP_FEATURES * N_KP_HIDDEN; i++)
       network->gWeights0[i].g += net->gWeights0[i].g;
-    for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
+    for (int i = 0; i < N_KP_HIDDEN * N_KP_OUTPUT; i++)
       network->gWeights1[i].g += net->gWeights1[i].g;
 
-    for (int i = 0; i < N_PAWN_HIDDEN; i++)
+    for (int i = 0; i < N_KP_HIDDEN; i++)
       network->gBiases0[i].g += net->gBiases0[i].g;
-    for (int i = 0; i < N_PAWN_OUTPUT; i++)
+    for (int i = 0; i < N_KP_OUTPUT; i++)
       network->gBiases1[i].g += net->gBiases1[i].g;
   }
 
@@ -472,7 +472,7 @@ void* UpdateGradients(void* arg) {
   int n = job->n;
   Weights* weights = job->weights;
   Position* positions = job->positions;
-  PawnNetwork* network = job->network;
+  KPNetwork* network = job->network;
 
   for (int i = 0; i < n; i++) {
     EvalGradientData gd[1];
@@ -492,7 +492,7 @@ void* UpdateGradients(void* arg) {
     UpdatePawnShelterGradients(&positions[i], loss, weights, gd);
     UpdateSpaceGradients(&positions[i], loss, weights, gd);
     UpdateTempoGradient(&positions[i], loss, weights);
-    UpdateNetworkGradients(&positions[i], loss, network, gd);
+    UpdateKPNetworkGradients(&positions[i], loss, network, gd);
 
     if (TUNE_KS)
       UpdateKingSafetyGradients(&positions[i], loss, weights, gd);
@@ -853,7 +853,7 @@ void UpdateTempoGradient(Position* position, float loss, Weights* weights) {
   weights->tempo.mg.grad.g += (position->stm == WHITE ? 1 : -1) * loss;
 }
 
-void UpdateNetworkGradients(Position* position, float loss, PawnNetwork* network, EvalGradientData* gd) {
+void UpdateKPNetworkGradients(Position* position, float loss, KPNetwork* network, EvalGradientData* gd) {
   float lossMg = loss * position->phaseMg * position->scale / MAX_SCALE;
   float lossEg = loss * position->phaseEg * position->scale / MAX_SCALE;
   lossEg *= (gd->eg == 0.0 || gd->complexity >= -fabs(gd->eg));
@@ -863,11 +863,11 @@ void UpdateNetworkGradients(Position* position, float loss, PawnNetwork* network
   // Gradients for last layer is just the err
   network->gBiases1[0].g += err;
 
-  for (int i = 0; i < N_PAWN_HIDDEN * N_PAWN_OUTPUT; i++)
+  for (int i = 0; i < N_KP_HIDDEN * N_KP_OUTPUT; i++)
     network->gWeights1[i].g += network->hiddenActivations[i] * err;
 
   // Hidden layer is a scalar of loss * weight leading into output
-  for (int i = 0; i < N_PAWN_HIDDEN; i++) {
+  for (int i = 0; i < N_KP_HIDDEN; i++) {
     float layerErr = err * network->weights1[i] * ReLuPrime(network->hiddenActivations[i]);
 
     network->gBiases0[i].g += layerErr;
@@ -877,14 +877,20 @@ void UpdateNetworkGradients(Position* position, float loss, PawnNetwork* network
     BitBoard blackPawns = position->blackPawns;
 
     while (whitePawns) {
-      int idx = GetPawnNetworkIdx(popAndGetLsb(&whitePawns), WHITE);
-      network->gWeights0[i * N_PAWN_FEATURES + idx].g += layerErr;
+      int idx = GetKPNetworkIdx(PAWN_TYPE, popAndGetLsb(&whitePawns), WHITE);
+      network->gWeights0[i * N_KP_FEATURES + idx].g += layerErr;
     }
 
     while (blackPawns) {
-      int idx = GetPawnNetworkIdx(popAndGetLsb(&blackPawns), BLACK);
-      network->gWeights0[i * N_PAWN_FEATURES + idx].g += layerErr;
+      int idx = GetKPNetworkIdx(PAWN_TYPE, popAndGetLsb(&blackPawns), BLACK);
+      network->gWeights0[i * N_KP_FEATURES + idx].g += layerErr;
     }
+
+    int idx = GetKPNetworkIdx(KING_TYPE, position->wk, WHITE);
+    network->gWeights0[i * N_KP_FEATURES + idx].g += layerErr;
+
+    idx = GetKPNetworkIdx(KING_TYPE, position->bk, BLACK);
+    network->gWeights0[i * N_KP_FEATURES + idx].g += layerErr;
   }
 }
 
@@ -893,7 +899,7 @@ void ApplyCoeff(float* mg, float* eg, int coeff, Weight* w) {
   *eg += coeff * w->eg.value;
 }
 
-float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd, PawnNetwork* network) {
+float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd, KPNetwork* network) {
   float mg = 0, eg = 0;
 
   EvaluateMaterialValues(&mg, &eg, position, weights);
@@ -914,9 +920,9 @@ float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd,
     eg += scoreEG(position->coeffs.ks);
   }
 
-  float netEval = PawnNetworkPredict(position->whitePawns, position->blackPawns, network);
-  mg += netEval;
-  eg += netEval;
+  float kpNetEval = KPNetworkPredict(position->whitePawns, position->blackPawns, position->wk, position->bk, network);
+  mg += kpNetEval;
+  eg += kpNetEval;
 
   EvaluateComplexityValues(&mg, &eg, position, weights, gd);
 
@@ -1118,6 +1124,8 @@ void LoadPosition(Board* board, Position* position, ThreadData* thread) {
 
   position->whitePawns = board->pieces[PAWN_WHITE];
   position->blackPawns = board->pieces[PAWN_BLACK];
+  position->wk = lsb(board->pieces[KING_WHITE]);
+  position->bk = lsb(board->pieces[KING_BLACK]);
 
   position->stm = board->side;
 
@@ -1129,7 +1137,7 @@ void LoadPosition(Board* board, Position* position, ThreadData* thread) {
   memcpy(&position->coeffs, &C, sizeof(EvalCoeffs));
 }
 
-Position* LoadPositions(int* n, Weights* weights, PawnNetwork* network) {
+Position* LoadPositions(int* n, Weights* weights, KPNetwork* network) {
   FILE* fp;
   fp = fopen(EPD_FILE_PATH, "r");
 
