@@ -38,13 +38,14 @@
 int main(int argc, char** argv) {
   SeedRandom(0);
 
-  InitNetwork();
   InitPSQT();
   InitZobristKeys();
   InitPruningAndReductionTables();
   InitAttacks();
 
   TTInit(32);
+
+  InitNetwork();
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {

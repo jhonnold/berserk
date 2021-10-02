@@ -31,24 +31,19 @@ float pawnNetData[1041] = {
 Network* PAWN_NET;
 
 float ApplyNetwork(int inputs[N_FEATURES], Network* network) {
-  float hiddenOutput[N_HIDDEN];
-  memcpy(hiddenOutput, network->biases0, sizeof(float) * N_HIDDEN);
+  memcpy(network->hidden, network->biases0, sizeof(float) * N_HIDDEN);
 
   for (int i = 0; i < N_FEATURES; i++)
     if (inputs[i])
       for (int j = 0; j < N_HIDDEN; j++)
-        hiddenOutput[j] += network->weights0[j * N_FEATURES + i];
+        network->hidden[j] += network->weights0[j * N_FEATURES + i];
 
   for (int i = 0; i < N_HIDDEN; i++)
-    hiddenOutput[i] = ReLu(hiddenOutput[i]);
-
-#ifdef TUNE
-  memcpy(network->activations0, hiddenOutput, sizeof(float) * N_HIDDEN);
-#endif
+    network->hidden[i] = ReLu(network->hidden[i]);
 
   float result = network->biases1[0];
   for (int i = 0; i < N_HIDDEN; i++)
-    result += network->weights1[i] * hiddenOutput[i];
+    result += network->weights1[i] * network->hidden[i];
 
   return result;
 }
@@ -80,33 +75,22 @@ Network* RandomNetwork() {
 
   for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
     network->weights0[i] = (float)rand() / RAND_MAX;
-
-#ifdef TUNE
     network->gWeights0[i].g = 0;
-#endif
   }
 
   for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++) {
     network->weights1[i] = (float)rand() / RAND_MAX;
-
-#ifdef TUNE
     network->gWeights1[i].g = 0;
-#endif
   }
 
   for (int i = 0; i < N_HIDDEN; i++) {
     network->biases0[i] = (float)rand() / RAND_MAX;
-
-#ifdef TUNE
     network->gBiases0[i].g = 0;
-#endif
   }
 
   for (int i = 0; i < N_OUTPUT; i++) {
     network->biases1[i] = (float)rand() / RAND_MAX;
-#ifdef TUNE
     network->gBiases1[i].g = 0;
-#endif
   }
 
   return network;
@@ -118,32 +102,21 @@ void InitNetwork() {
 
   for (int i = 0; i < N_FEATURES * N_HIDDEN; i++) {
     PAWN_NET->weights0[i] = pawnNetData[n++];
-
-#ifdef TUNE
     PAWN_NET->gWeights0[i].g = 0;
-#endif
   }
 
   for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++) {
     PAWN_NET->weights1[i] = pawnNetData[n++];
-
-#ifdef TUNE
     PAWN_NET->gWeights1[i].g = 0;
-#endif
   }
 
   for (int i = 0; i < N_HIDDEN; i++) {
     PAWN_NET->biases0[i] = pawnNetData[n++];
-
-#ifdef TUNE
     PAWN_NET->gBiases0[i].g = 0;
-#endif
   }
 
   for (int i = 0; i < N_OUTPUT; i++) {
     PAWN_NET->biases1[i] = pawnNetData[n++];
-#ifdef TUNE
     PAWN_NET->gBiases1[i].g = 0;
-#endif
   }
 }

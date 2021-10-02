@@ -91,7 +91,6 @@ void Tune() {
 
   int n = 0;
   Position* positions = LoadPositions(&n, &weights, network);
-  ALPHA *= sqrtf(n);
 
   printf("Starting Error: %1.8f\n", TotalStaticError(n, positions));
 
@@ -501,7 +500,7 @@ void* UpdateGradients(void* arg) {
     float actual = EvaluateCoeffs(&positions[i], weights, gd, network);
 
     float sigmoid = Sigmoid(actual, K);
-    float loss = 2.0 * SigmoidPrime(sigmoid, K) * (sigmoid - positions[i].result);
+    float loss = SigmoidPrime(sigmoid, K) * 2.0 * (sigmoid - positions[i].result);
 
     UpdateMaterialGradients(&positions[i], loss, weights, gd);
     UpdatePsqtGradients(&positions[i], loss, weights, gd);
@@ -876,21 +875,24 @@ void UpdateTempoGradient(Position* position, float loss, Weights* weights) {
 }
 
 void UpdateNetworkGradients(Position* position, float loss, Network* network) {
-  float base = position->scale * loss / MAX_SCALE;
+  loss *= (float)position->scale / MAX_SCALE;
 
-  network->gBiases1[0].g += base;
-
+  // Gradients for last layer is just scalar of loss
+  network->gBiases1[0].g += loss;
   for (int i = 0; i < N_HIDDEN * N_OUTPUT; i++)
-    network->gWeights1[i].g += network->activations0[i] * base;
+    network->gWeights1[i].g += network->hidden[i] * loss;
 
-  for (int i = 0; i < N_HIDDEN; i++)
-    network->gBiases0[i].g += network->weights1[i] * base * ReLuPrime(network->activations0[i]);
+  // Hidden layer is a scalar of loss * weight leading into output
+  for (int i = 0; i < N_HIDDEN; i++) {
+    float firstLayerLoss = loss * network->weights1[i] * ReLuPrime(network->hidden[i]);
 
-  for (int i = 0; i < N_HIDDEN; i++)
+    network->gBiases0[i].g += firstLayerLoss;
     for (int j = 0; j < N_FEATURES; j++)
-      network->gWeights0[i * N_FEATURES + j].g +=
-          network->weights1[i] * base * ReLuPrime(network->activations0[i]) *
-          (j > 63 ? !!getBit(position->blackPawns, j - 64) : !!getBit(position->whitePawns, j));
+      if (j < 64 && getBit(position->whitePawns, j))
+        network->gWeights0[i * N_FEATURES + j].g += firstLayerLoss;
+      else if (j >= 64 && getBit(position->blackPawns, j - 64))
+        network->gWeights0[i * N_FEATURES + j].g += firstLayerLoss;
+  }
 }
 
 void ApplyCoeff(float* mg, float* eg, int coeff, Weight* w) {
@@ -922,6 +924,7 @@ float EvaluateCoeffs(Position* position, Weights* weights, EvalGradientData* gd,
   EvaluateComplexityValues(&mg, &eg, position, weights, gd);
 
   float netEval = NetworkEval(position->whitePawns, position->blackPawns, network);
+
   mg += netEval;
   eg += netEval;
 
@@ -1181,12 +1184,12 @@ Position* LoadPositions(int* n, Weights* weights, Network* network) {
     if (fabs(eval) > 6000)
       continue;
 
-    // if (fabs(positions[p].staticEval - eval) > 3) {
-    //   printf("The coefficient based evaluation does NOT match the eval!\n");
-    //   printf("FEN: %s\n", buffer);
-    //   printf("Static: %d, Coeffs: %f\n", positions[p].staticEval, eval);
-    //   exit(1);
-    // }
+    if (fabs(positions[p].staticEval - eval) > 6) {
+      printf("The coefficient based evaluation does NOT match the eval!\n");
+      printf("FEN: %s\n", buffer);
+      printf("Static: %d, Coeffs: %f\n", positions[p].staticEval, eval);
+      exit(1);
+    }
 
     if (!(++p & 4095))
       printf("Loaded %d positions...\r", p);

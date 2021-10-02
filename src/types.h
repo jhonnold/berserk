@@ -323,15 +323,13 @@ typedef struct {
   float biases0[N_HIDDEN];
   float biases1[N_OUTPUT];
 
-#ifdef TUNE
-  float activations0[N_HIDDEN];
+  float hidden[N_HIDDEN];
 
   Gradient gWeights0[N_FEATURES * N_HIDDEN];
   Gradient gWeights1[N_HIDDEN * N_OUTPUT];
 
   Gradient gBiases0[N_HIDDEN];
   Gradient gBiases1[N_OUTPUT];
-#endif
 } Network;
 
 enum { WHITE, BLACK, BOTH };

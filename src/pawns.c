@@ -53,7 +53,8 @@ float NetworkEval(BitBoard whitePawns, BitBoard blackPawns, Network* network) {
   while (blackPawns)
     pawns[64 + popAndGetLsb(&blackPawns)] = 1;
 
-  return ApplyNetwork(pawns, network);
+  float eval = ApplyNetwork(pawns, network);
+  return eval;
 }
 
 // Standard pawn and passer evaluation

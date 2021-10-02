@@ -25,6 +25,7 @@
 #include "movegen.h"
 #include "movepick.h"
 #include "noobprobe/noobprobe.h"
+#include "pawns.h"
 #include "perft.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
@@ -265,8 +266,10 @@ void UCILoop() {
       Score s = EvaluateScaled(&board, &threads[0]);
       if (board.side == BLACK)
         s = -s;
-
       printf("Score: %dcp (white)\n", s);
+
+      float netEval = NetworkEval(board.pieces[PAWN_WHITE], board.pieces[PAWN_BLACK], PAWN_NET);
+      printf("Pawn network: %dcp (%.2f) (white)\n", (Score) netEval, netEval);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {
