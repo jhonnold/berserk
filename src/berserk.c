@@ -21,7 +21,7 @@
 #include "bits.h"
 #include "board.h"
 #include "eval.h"
-#include "net.h"
+#include "pawns.h"
 #include "random.h"
 #include "search.h"
 #include "transposition.h"
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
   TTInit(32);
 
-  InitNetwork();
+  InitPawnNetwork();
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
