@@ -31,6 +31,7 @@ float pawnNetData[1041] = {
 Network* PAWN_NET;
 
 float ApplyNetwork(int inputs[N_FEATURES], Network* network) {
+#ifdef TUNE
   memcpy(network->hidden, network->biases0, sizeof(float) * N_HIDDEN);
 
   for (int i = 0; i < N_FEATURES; i++)
@@ -46,6 +47,24 @@ float ApplyNetwork(int inputs[N_FEATURES], Network* network) {
     result += network->weights1[i] * network->hidden[i];
 
   return result;
+#else
+  float hidden[N_HIDDEN];
+  memcpy(hidden, network->biases0, sizeof(float) * N_HIDDEN);
+
+  for (int i = 0; i < N_FEATURES; i++)
+    if (inputs[i])
+      for (int j = 0; j < N_HIDDEN; j++)
+        hidden[j] += network->weights0[j * N_FEATURES + i];
+
+  for (int i = 0; i < N_HIDDEN; i++)
+    hidden[i] = ReLu(hidden[i]);
+
+  float result = network->biases1[0];
+  for (int i = 0; i < N_HIDDEN; i++)
+    result += network->weights1[i] * hidden[i];
+
+  return result;
+#endif
 }
 
 void SaveNetwork(char* path, Network* network) {
