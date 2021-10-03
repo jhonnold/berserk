@@ -24,7 +24,7 @@
 #include "../types.h"
 
 #define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\lichess-big3-resolved.book"
-#define THREADS 30
+#define THREADS 24
 #define TUNE_KS 0
 
 typedef struct {
@@ -159,9 +159,11 @@ void UpdateWeight(Weight* w);
 void UpdateNetwork(KPNetwork* network);
 void UpdateWeights(Weights* weights);
 void MergeGradient(Weight* dest, Weight* src);
+float TotalTunedError(int n, Position* positions, Weights* weights, KPNetwork* network);
 float UpdateAndTrain(int n, Position* positions, Weights* weights, KPNetwork* network);
 void ResetKPNetworkGradients(KPNetwork* network);
 
+void* CalculateError(void* arg);
 void* UpdateGradients(void* arg);
 void UpdateMaterialGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
 void UpdatePsqtGradients(Position* position, float loss, Weights* weights, EvalGradientData* gd);
@@ -210,6 +212,7 @@ void InitTempoWeight(Weights* weights);
 
 void LoadPosition(Board* board, Position* position, ThreadData* thread);
 Position* LoadPositions(int* n, Weights* weights, KPNetwork* network);
+void ShufflePositions(int n, Position* positions);
 
 void PrintWeights(Weights* weights, int epoch, float error);
 void PrintWeightArray(FILE* fp, Weight* weights, int n, int wrap);
