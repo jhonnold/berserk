@@ -21,7 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
+
 
 #include "../bits.h"
 #include "../board.h"
@@ -34,6 +36,7 @@
 #include "util.h"
 
 const int MAX_POSITIONS = 100000000;
+const int BATCH_SIZE = 16384;
 
 const int sideScalar[2] = {1, -1};
 
@@ -98,17 +101,21 @@ void Tune() {
   long start = GetTimeMS();
 
   for (int epoch = 1; epoch <= 100000; epoch++) {
-    float error = UpdateAndTrain(n, positions, &weights, network);
+    for (int i = 0; i < n / BATCH_SIZE; i++)
+      UpdateAndTrain(i, positions, &weights, network);
 
     long now = GetTimeMS();
 
-    printf("Epoch: [#%4d], Error: %1.8f, Speed: %4.4fs\r", epoch, error / n, (now - start) / (1000.0 * epoch));
+    float error = TotalTunedError(n, positions, &weights, network);
+    printf("\rEpoch: [#%4d], Error: [%1.8f], Speed: [%9.0f pos/s]", epoch, error / n, 1000.0 * n * epoch / (now - start));
 
     if (epoch % 25 == 0) {
       PrintWeights(&weights, epoch, error);
       SaveKPNetwork("kpnet.out", network);
       printf("\n");
     }
+
+    ShufflePositions(n, positions);
   }
 
   free(positions);
@@ -306,7 +313,7 @@ void MergeGradient(Weight* dest, Weight* src) {
   dest->eg.grad.g += src->eg.grad.g;
 }
 
-float UpdateAndTrain(int n, Position* positions, Weights* weights, KPNetwork* network) {
+float TotalTunedError(int n, Position* positions, Weights* weights, KPNetwork* network) {
   pthread_t threads[THREADS];
   GradientUpdate jobs[THREADS];
   Weights local[THREADS];
@@ -321,6 +328,37 @@ float UpdateAndTrain(int n, Position* positions, Weights* weights, KPNetwork* ne
     jobs[t].error = 0.0;
     jobs[t].n = t < THREADS - 1 ? chunk : (n - ((THREADS - 1) * chunk));
     jobs[t].positions = &positions[t * chunk];
+    jobs[t].weights = &local[t];
+    jobs[t].network = &nets[t];
+
+    pthread_create(&threads[t], NULL, &UpdateGradients, &jobs[t]);
+  }
+
+  for (int t = 0; t < THREADS; t++)
+    pthread_join(threads[t], NULL);
+
+  float error = 0;
+  for (int t = 0; t < THREADS; t++)
+    error += jobs[t].error;
+
+  return error;
+}
+
+float UpdateAndTrain(int n, Position* positions, Weights* weights, KPNetwork* network) {
+  pthread_t threads[THREADS];
+  GradientUpdate jobs[THREADS];
+  Weights local[THREADS];
+  KPNetwork nets[THREADS];
+
+  int chunk = (BATCH_SIZE / THREADS) + 1;
+
+  for (int t = 0; t < THREADS; t++) {
+    memcpy(&local[t], weights, sizeof(Weights));
+    memcpy(&nets[t], network, sizeof(KPNetwork));
+
+    jobs[t].error = 0.0;
+    jobs[t].n = t < THREADS - 1 ? chunk : (n - ((THREADS - 1) * chunk));
+    jobs[t].positions = &positions[t * chunk + n * BATCH_SIZE];
     jobs[t].weights = &local[t];
     jobs[t].network = &nets[t];
 
@@ -464,6 +502,25 @@ float UpdateAndTrain(int n, Position* positions, Weights* weights, KPNetwork* ne
   UpdateNetwork(network);
 
   return error;
+}
+
+void* CalculateError(void* arg) {
+  GradientUpdate* job = (GradientUpdate*)arg;
+
+  int n = job->n;
+  Weights* weights = job->weights;
+  Position* positions = job->positions;
+  KPNetwork* network = job->network;
+  job->error = 0.0f;
+
+  for (int i = 0; i < n; i++) {
+    EvalGradientData gd[1];
+    float eval = EvaluateCoeffs(&positions[i], weights, gd, network);
+
+    job->error += powf(positions[i].result - Sigmoid(eval, K), 2);
+  }
+
+  return NULL;
 }
 
 void* UpdateGradients(void* arg) {
@@ -1201,6 +1258,18 @@ Position* LoadPositions(int* n, Weights* weights, KPNetwork* network) {
 
   positions = realloc(positions, sizeof(Position) * p);
   return positions;
+}
+
+void ShufflePositions(int n, Position* positions) {
+  srand(time(NULL));
+
+  for (int i = n - 1; i > 0; i--) {
+    int j = rand() % (i + 1);
+
+    Position temp = positions[i];
+    positions[i] = positions[j];
+    positions[j] = temp;
+  }
 }
 
 void InitMaterialWeights(Weights* weights) {
