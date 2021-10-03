@@ -25,6 +25,7 @@
 #include "see.h"
 #include "transposition.h"
 #include "types.h"
+#include "weights.h"
 
 void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->type = ALL_MOVES;

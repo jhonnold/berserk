@@ -23,7 +23,18 @@
 
 #include "../types.h"
 
+#define ALPHA 0.01
+#define BETA1 0.9
+#define BETA2 0.999
+#define EPSILON 1e-8
+
+#define K 3.5
+
+#define MAX_POSITIONS 100000000
+#define BATCH_SIZE 16384
+
 #define EPD_FILE_PATH "C:\\Programming\\berserk-testing\\texel\\lichess-big3-resolved.book"
+
 #define THREADS 24
 #define TUNE_KS 0
 
