@@ -25,6 +25,7 @@
 #include "pawns.h"
 #include "types.h"
 #include "util.h"
+#include "weights.h"
 
 #ifdef TUNE
 #define T 1
@@ -109,7 +110,7 @@ float KPNetworkPredict(BitBoard whitePawns, BitBoard blackPawns, int wk, int bk,
 }
 
 void SaveKPNetwork(char* path, KPNetwork* network) {
-  FILE* fp = fopen(path, "a");
+  FILE* fp = fopen(path, "w");
   if (fp == NULL) {
     printf("info string Unable to save network!\n");
     return;
@@ -127,7 +128,6 @@ void SaveKPNetwork(char* path, KPNetwork* network) {
   for (int i = 0; i < N_KP_OUTPUT; i++)
     fprintf(fp, "%f,", network->biases1[i]);
 
-  fprintf(fp, "\n");
   fclose(fp);
 }
 

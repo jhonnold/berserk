@@ -23,6 +23,7 @@
 #include "eval.h"
 #include "search.h"
 #include "util.h"
+#include "weights.h"
 
 const uint8_t kpkResults[2 * 64 * 64 * 24 / 8] = {
 #include "kpk.h"

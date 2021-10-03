@@ -28,6 +28,7 @@
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
+#include "weights.h"
 #include "zobrist.h"
 
 const BitBoard EMPTY = 0ULL;

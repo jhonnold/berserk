@@ -24,7 +24,6 @@
 #include <time.h>
 #include <unistd.h>
 
-
 #include "../bits.h"
 #include "../board.h"
 #include "../eval.h"
@@ -32,44 +31,9 @@
 #include "../search.h"
 #include "../thread.h"
 #include "../util.h"
+#include "../weights.h"
 #include "tune.h"
 #include "util.h"
-
-const int MAX_POSITIONS = 100000000;
-const int BATCH_SIZE = 16384;
-
-const int sideScalar[2] = {1, -1};
-
-float ALPHA = 0.01;
-const float BETA1 = 0.9;
-const float BETA2 = 0.999;
-const float EPSILON = 1e-8;
-
-float K = 3.5;
-
-float ComputeK(int n, Position* positions) {
-  float dK = 0.01;
-  float dEdK = 1;
-  float rate = 100;
-  float dev = 1e-6;
-  float k = -3.0;
-
-  while (fabs(dEdK) > dev) {
-    k += dK;
-    float Epdk = TotalStaticError(n, positions);
-    k -= 2 * dK;
-    float Emdk = TotalStaticError(n, positions);
-    k += dK;
-
-    dEdK = (Epdk - Emdk) / (2 * dK);
-
-    printf("K: %.9f, Error: %.9f, Deviation: %.9f\n", k, (Epdk + Emdk) / 2, fabs(dEdK));
-
-    k -= dEdK * rate;
-  }
-
-  return k;
-}
 
 void Tune() {
   Weights weights = {0};
@@ -96,7 +60,8 @@ void Tune() {
   int n = 0;
   Position* positions = LoadPositions(&n, &weights, network);
 
-  printf("Starting Error: %1.8f\n", TotalStaticError(n, positions));
+  float error = TotalStaticError(n, positions);
+  printf("Starting Error: %1.8f\n", error);
 
   long start = GetTimeMS();
 
@@ -106,14 +71,13 @@ void Tune() {
 
     long now = GetTimeMS();
 
-    float error = TotalTunedError(n, positions, &weights, network);
-    printf("\rEpoch: [#%4d], Error: [%1.8f], Speed: [%9.0f pos/s]", epoch, error / n, 1000.0 * n * epoch / (now - start));
+    float newError = TotalTunedError(n, positions, &weights, network) / n;
+    printf("\rEpoch: [#%4d], Error: [%1.8f], Delta: [%+1.8f], Speed: [%9.0f pos/s]", epoch, newError, error - newError,
+           1000.0 * n * epoch / (now - start));
+    error = newError;
 
-    if (epoch % 25 == 0) {
-      PrintWeights(&weights, epoch, error);
-      SaveKPNetwork("kpnet.out", network);
-      printf("\n");
-    }
+    PrintWeights(&weights, epoch, error);
+    SaveKPNetwork("kpnet.dat", network);
 
     ShufflePositions(n, positions);
   }
@@ -1187,7 +1151,7 @@ void LoadPosition(Board* board, Position* position, ThreadData* thread) {
   position->stm = board->side;
 
   Score eval = Evaluate(board, thread);
-  position->staticEval = sideScalar[board->side] * eval;
+  position->staticEval = board->side == WHITE ? eval : -eval;
 
   position->scale = Scale(board, C.ss);
 
@@ -1537,12 +1501,27 @@ void InitTempoWeight(Weights* weights) { weights->tempo.mg.value = TEMPO; }
 
 void PrintWeights(Weights* weights, int epoch, float error) {
   FILE* fp;
-  fp = fopen("weights.out", "a");
+  fp = fopen("weights.c", "w");
 
   if (fp == NULL)
     return;
 
-  fprintf(fp, "Epoch: %d, Error: %f\n", epoch, error);
+  fprintf(fp, "// Berserk is a UCI compliant chess engine written in C\n");
+  fprintf(fp, "// Copyright (C) 2021 Jay Honnold\n\n");
+  fprintf(fp, "// This program is free software: you can redistribute it and/or modify\n");
+  fprintf(fp, "// it under the terms of the GNU General Public License as published by\n");
+  fprintf(fp, "// the Free Software Foundation, either version 3 of the License, or\n");
+  fprintf(fp, "// (at your option) any later version.\n\n");
+  fprintf(fp, "// This program is distributed in the hope that it will be useful,\n");
+  fprintf(fp, "// but WITHOUT ANY WARRANTY; without even the implied warranty of\n");
+  fprintf(fp, "// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n");
+  fprintf(fp, "// GNU General Public License for more details.\n\n");
+  fprintf(fp, "// You should have received a copy of the GNU General Public License\n");
+  fprintf(fp, "// along with this program.  If not, see <https://www.gnu.org/licenses/>.\n\n");
+
+  fprintf(fp, "// This is an auto-generated file.\n// Generated: %ld, Epoch: %d, Error: %1.8f, Dataset: %s\n\n",
+          GetTimeMS(), epoch, error, EPD_FILE_PATH);
+  fprintf(fp, "#include \"weights.h\"\n\n// clang-format off");
 
   fprintf(fp, "\nconst Score MATERIAL_VALUES[7] = {");
   PrintWeightArray(fp, weights->pieces, 5, 0);
@@ -1830,7 +1809,7 @@ void PrintWeights(Weights* weights, int epoch, float error) {
 
   fprintf(fp, "\nconst Score TEMPO = %d;\n", (int)round(weights->tempo.mg.value));
 
-  fprintf(fp, "\n");
+  fprintf(fp, "// clang-format on\n");
   fclose(fp);
 }
 
