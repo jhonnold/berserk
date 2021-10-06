@@ -24,8 +24,8 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
+#include "nn.h"
 #include "noobprobe/noobprobe.h"
-#include "pawns.h"
 #include "perft.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
@@ -34,6 +34,7 @@
 #include "transposition.h"
 #include "uci.h"
 #include "util.h"
+
 
 #define NAME "Berserk"
 #define VERSION "5.0.0-dev"
@@ -208,6 +209,7 @@ void PrintUCIOptions() {
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
   printf("option name Ponder type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
+  printf("option name NetworkFile type string\n");
   printf("uciok\n");
 }
 
@@ -263,13 +265,9 @@ void UCILoop() {
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
-      Score s = EvaluateScaled(&board, &threads[0]);
-      if (board.side == BLACK)
-        s = -s;
-      printf("Score: %dcp (white)\n", s);
-
-      s = KPNetworkScore(&board);
-      printf("KPNetwork: %dcp (white)\n", scoreMG(s) / 2);
+      float result = NNPredict(&board);
+      int score = (int) result;
+      printf("Score: %dcp (white)\n", score);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {
@@ -327,6 +325,11 @@ void UCILoop() {
 
       CHESS_960 = !strncmp(opt, "true", 4);
       printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
+    } else if (!strncmp(in, "setoption name NetworkFile value ", 33)) {
+      char path[128];
+      sscanf(in, "%*s %*s %*s %*s %128s", path);
+
+      LoadNN(path);
     }
   }
 }

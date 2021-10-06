@@ -20,63 +20,48 @@
 #include <inttypes.h>
 #include <setjmp.h>
 
-#ifdef TUNE
-#define MAX_SEARCH_PLY 16
-#define MAX_MOVES 256
-#define MAX_GAME_PLY 32
-#else
 #define MAX_SEARCH_PLY INT8_MAX
 #define MAX_MOVES 256
 #define MAX_GAME_PLY 1024
-#endif
 
-#ifdef TUNE
-#define PAWN_TABLE_MASK (0x1)
-#define PAWN_TABLE_SIZE (1ULL << 1)
-#else
-#define PAWN_TABLE_MASK (0xFFFF)
-#define PAWN_TABLE_SIZE (1ULL << 16)
-#endif
+#define N_FEATURES 768
+#define N_HIDDEN 256
+#define N_OUTPUT 1
+
+typedef struct {
+  int n;
+  int features[4];
+  int coeffs[4];
+} NNUpdate;
 
 typedef int Score;
-
 typedef uint64_t BitBoard;
-
 typedef uint32_t Move;
 
 typedef struct {
-  BitBoard pieces[12];     // individual piece data
+  int8_t side, xside, epSquare, castling, halfMove, ply;
+  int16_t moveNo;
+
+  BitBoard checkers, pinned;
+  uint64_t piecesCounts, zobrist;
+
+  int8_t castleRooks[4];
+  int8_t castlingRights[64];
+  int8_t squares[64];         // piece per square
+
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
-  int squares[64];         // piece per square
-  BitBoard checkers;       // checking piece squares
-  BitBoard pinned;         // pinned pieces
-  uint64_t piecesCounts;   // "material key" - pieces left on the board
-
-  Score mat; // material+psqt score updated incrementally
-
-  int side;     // side to move
-  int xside;    // side not to move
-  int epSquare; // en passant square (a8 or 0 is not valid so that marks no active ep)
-  int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
-  int moveNo;   // current game move number TODO: Is this still used?
-  int halfMove; // half move count for 50 move rule
-
-  uint64_t zobrist; // zobrist hash of the position
-  uint64_t pawnHash;
-
-  int castlingRights[64];
-  int castleRooks[4];
+  BitBoard pieces[12];     // individual piece data
 
   // data that is hard to track, so it is "remembered" when search undoes moves
-  int castlingHistory[MAX_GAME_PLY];
-  int epSquareHistory[MAX_GAME_PLY];
-  int captureHistory[MAX_GAME_PLY];
-  int halfMoveHistory[MAX_GAME_PLY];
-  Score materialHistory[MAX_GAME_PLY];
+  int8_t castlingHistory[MAX_GAME_PLY];
+  int8_t epSquareHistory[MAX_GAME_PLY];
+  int8_t captureHistory[MAX_GAME_PLY];
+  int8_t halfMoveHistory[MAX_GAME_PLY];
   uint64_t zobristHistory[MAX_GAME_PLY];
-  uint64_t pawnHashHistory[MAX_GAME_PLY];
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
+
+  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__ ((aligned (64)));
 } Board;
 
 typedef struct {
@@ -242,20 +227,10 @@ typedef struct {
   BitBoard outposts[2];
 } EvalData;
 
-typedef struct {
-  Score s;
-  uint64_t hash;
-  BitBoard passedPawns;
-} PawnHashEntry;
-
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
   int count, idx, multiPV, depth;
-
-  Score scores[MAX_MOVES];
-  Move bestMoves[MAX_MOVES];
-  PV pvs[MAX_MOVES];
 
   ThreadData* threads;
   jmp_buf exit;
@@ -264,9 +239,11 @@ struct ThreadData {
   SearchResults* results;
   SearchData data;
 
-  PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
-
   Board board;
+
+  Score scores[MAX_MOVES];
+  Move bestMoves[MAX_MOVES];
+  PV pvs[MAX_MOVES];
 };
 
 typedef struct {
@@ -304,32 +281,6 @@ typedef struct {
   int sTactical[MAX_MOVES];
   int sQuiet[MAX_MOVES];
 } MoveList;
-
-typedef struct {
-  int epoch;
-  float g;
-  float M;
-  float V;
-} Gradient;
-
-#define N_KP_VALUES 1809
-#define N_KP_FEATURES 224
-#define N_KP_HIDDEN 8
-#define N_KP_OUTPUT 1
-
-typedef struct {
-  float weights0[N_KP_FEATURES * N_KP_HIDDEN];
-  float weights1[N_KP_HIDDEN * N_KP_OUTPUT];
-  float biases0[N_KP_HIDDEN];
-  float biases1[N_KP_OUTPUT];
-
-  float hiddenActivations[N_KP_HIDDEN];
-
-  Gradient gWeights0[N_KP_FEATURES * N_KP_HIDDEN];
-  Gradient gWeights1[N_KP_HIDDEN * N_KP_OUTPUT];
-  Gradient gBiases0[N_KP_HIDDEN];
-  Gradient gBiases1[N_KP_OUTPUT];
-} KPNetwork;
 
 enum { WHITE, BLACK, BOTH };
 

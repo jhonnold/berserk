@@ -1,13 +1,11 @@
 CC = gcc
 SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
-TUNE_SRC = *.c tuner/*.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
 EXE = berserk
 VERSION = 5.0.0-dev
 
 LIBS = -lm -lpthread
 WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
 CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG -g
-TFLAGS = -O3 $(WFLAGS) -flto -fopenmp -march=native -DTUNE -DNDEBUG -g
 RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG -g
 DFLAGS = -O3 $(WFLAGS) -g
 
@@ -50,9 +48,6 @@ release:
 
 debug:
 	$(CC) $(DFLAGS) $(SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
-
-tune:
-	$(CC) $(TFLAGS) $(TUNE_SRC) $(LIBS) $(POPCOUNT) -o $(EXE)
 
 clean:
 	rm -rf $(EXE)

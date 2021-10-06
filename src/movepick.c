@@ -25,7 +25,8 @@
 #include "see.h"
 #include "transposition.h"
 #include "types.h"
-#include "weights.h"
+
+const int MATERIAL_VALUES[5] = { 100, 325, 325, 550, 1100 };
 
 void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->type = ALL_MOVES;
@@ -135,7 +136,7 @@ void ScoreTacticalMoves(MoveList* moves, Board* board) {
     Move m = moves->tactical[i];
 
     int captured = PIECE_TYPE[board->squares[MoveEnd(m)]];
-    moves->sTactical[i] = GetTacticalHistory(moves->data, board, m) + scoreMG(MATERIAL_VALUES[captured]) * 16;
+    moves->sTactical[i] = GetTacticalHistory(moves->data, board, m) + MATERIAL_VALUES[captured] * 32;
   }
 }
 

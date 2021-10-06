@@ -14,16 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <math.h>
-#include <stdio.h>
+#include "types.h"
 
-#include "tune.h"
-#include "util.h"
+void ApplyFirstLayer(Board* board, float output[N_HIDDEN]);
+float ApplySecondLayer(float hidden[N_HIDDEN]);
 
-float Sigmoid(float s, float k) { return 1.0f / (1.0f + expf(-s * k / 1024.0f)); }
+float NNPredict(Board* board);
+void LoadNN(char* path);
 
-float SigmoidPrime(float s, float k) { return s * (1.0 - s) * k / 1024.0f; }
-
-float ReLu(float s) { return s > 0.0f ? s : 0; }
-
-float ReLuPrime(float s) { return s > 0.0f; }
+void ApplyUpdates(NNUpdate* updates, float curr[N_HIDDEN], float output[N_HIDDEN]);
+void AddUpdate(int feature, int c, NNUpdate* updates);

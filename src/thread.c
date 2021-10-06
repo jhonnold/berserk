@@ -75,7 +75,6 @@ void ResetThreadPool(ThreadData* threads) {
     memset(&threads[i].data.ch, 0, sizeof(threads[i].data.ch));
     memset(&threads[i].data.fh, 0, sizeof(threads[i].data.fh));
     memset(&threads[i].data.th, 0, sizeof(threads[i].data.th));
-    memset(&threads[i].pawnHashTable, 0, PAWN_TABLE_SIZE * sizeof(PawnHashEntry));
     memset(&threads[i].board, 0, sizeof(Board));
   }
 }

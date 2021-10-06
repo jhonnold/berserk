@@ -19,9 +19,8 @@
 #include "attacks.h"
 #include "bench.h"
 #include "bits.h"
-#include "board.h"
 #include "eval.h"
-#include "pawns.h"
+#include "nn.h"
 #include "random.h"
 #include "search.h"
 #include "transposition.h"
@@ -30,30 +29,21 @@
 #include "util.h"
 #include "zobrist.h"
 
-#ifdef TUNE
-#include "tuner/tune.h"
-#endif
 
 // Welcome to berserk
 int main(int argc, char** argv) {
   SeedRandom(0);
 
-  InitPSQT();
   InitZobristKeys();
   InitPruningAndReductionTables();
   InitAttacks();
 
+  LoadNN("C:/Programming/berserk-trainer/nets/berserk.e135.768.256.nn");
   TTInit(32);
-
-  InitKPNetwork();
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
     Bench();
-  } else if (argc > 1 && !strncmp(argv[1], "tune", 4)) {
-#ifdef TUNE
-    Tune();
-#endif
   } else {
     UCILoop();
   }

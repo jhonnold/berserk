@@ -19,21 +19,6 @@
 
 #include "types.h"
 
-enum {
-  KING_SIDE,
-  QUEEN_SIDE
-};
-
-extern const BitBoard FILE_MASKS[8];
-extern const BitBoard RANK_MASKS[8];
-extern const BitBoard ADJACENT_FILE_MASKS[8];
-extern const BitBoard FORWARD_RANK_MASKS[2][8];
-extern const BitBoard BOARD_SIDE[8];
-extern const BitBoard MY_SIDE[2];
-extern const BitBoard DARK_SQS;
-extern const BitBoard CENTER_SQS;
-extern const uint8_t SQ_SIDE[64];
-
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL
 #define C_FILE 0x0404040404040404ULL
@@ -51,6 +36,8 @@ extern const uint8_t SQ_SIDE[64];
 #define RANK_6 0x0000000000FF0000ULL
 #define RANK_7 0x000000000000FF00ULL
 #define RANK_8 0x00000000000000FFULL
+
+#define DARK_SQS 0x55AA55AA55AA55AAULL
 
 #define bit(sq) (1ULL << (sq))
 #define setBit(bb, sq) ((bb) |= bit(sq))
@@ -79,8 +66,5 @@ int bits(BitBoard bb);
 #define ShiftSE(bb) (((bb) & ~H_FILE) << 9)
 
 int popAndGetLsb(BitBoard* bb);
-BitBoard Fill(BitBoard initial, int direction);
-BitBoard FileFill(BitBoard initial);
-void PrintBB(BitBoard bb);
 
 #endif

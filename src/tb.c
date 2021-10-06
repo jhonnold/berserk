@@ -37,13 +37,13 @@ Move TBRootProbe(Board* board) {
                                vf(board->pieces[BISHOP_WHITE] | board->pieces[BISHOP_BLACK]),
                                vf(board->pieces[KNIGHT_WHITE] | board->pieces[KNIGHT_BLACK]),
                                vf(board->pieces[PAWN_WHITE] | board->pieces[PAWN_BLACK]), board->halfMove,
-                               board->epSquare ? MIRROR[board->epSquare] : 0, board->side == WHITE ? 1 : 0, results);
+                               board->epSquare ? (board->epSquare ^ 56) : 0, board->side == WHITE ? 1 : 0, results);
 
   if (res == TB_RESULT_FAILED || res == TB_RESULT_STALEMATE || res == TB_RESULT_CHECKMATE)
     return NULL_MOVE;
 
-  unsigned start = MIRROR[TB_GET_FROM(res)];
-  unsigned end = MIRROR[TB_GET_TO(res)];
+  unsigned start = TB_GET_FROM(res) ^ 56;
+  unsigned end = TB_GET_TO(res) ^ 56;
   unsigned ep = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
   int piece = board->squares[start];
@@ -66,5 +66,5 @@ unsigned TBProbe(Board* board) {
                       vf(board->pieces[BISHOP_WHITE] | board->pieces[BISHOP_BLACK]),
                       vf(board->pieces[KNIGHT_WHITE] | board->pieces[KNIGHT_BLACK]),
                       vf(board->pieces[PAWN_WHITE] | board->pieces[PAWN_BLACK]),
-                      board->epSquare ? MIRROR[board->epSquare] : 0, board->side == WHITE ? 1 : 0);
+                      board->epSquare ? (board->epSquare ^ 56) : 0, board->side == WHITE ? 1 : 0);
 }
