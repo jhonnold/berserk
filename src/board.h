@@ -53,6 +53,7 @@ int IsMaterialDraw(Board* board);
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);
 void MakeMove(Move move, Board* board);
+void MakeMoveUpdate(Move move, Board* board, int update);
 void UndoMove(Move move, Board* board);
 
 int IsMoveLegal(Move move, Board* board);

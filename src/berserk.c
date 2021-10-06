@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   InitPruningAndReductionTables();
   InitAttacks();
 
-  LoadNN("C:/Programming/berserk-trainer/nets/berserk.e135.768.256.nn");
+  LoadNN("C:/Programming/berserk-trainer/nets/berserk.e250.768.256.nn");
   TTInit(32);
 
   // Compliance for OpenBench

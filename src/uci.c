@@ -194,7 +194,7 @@ void ParsePosition(char* in, Board* board) {
     if (!enteredMove)
       break;
 
-    MakeMove(enteredMove, board);
+    MakeMoveUpdate(enteredMove, board, 0);
   }
 }
 
@@ -279,7 +279,7 @@ void UCILoop() {
     } else if (!strncmp(in, "apply ", 6)) {
       Move m = ParseMove(in + 6, &board);
       if (m) {
-        MakeMove(m, &board);
+        MakeMoveUpdate(m, &board, 0);
         PrintBoard(&board);
       } else
         printf("info string Invalid move!\n");

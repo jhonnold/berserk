@@ -330,6 +330,10 @@ inline void SetSpecialPieces(Board* board) {
 }
 
 void MakeMove(Move move, Board* board) {
+  MakeMoveUpdate(move, board, 1);
+}
+
+void MakeMoveUpdate(Move move, Board* board, int update) {
   NNUpdate updates[1];
   updates->n = 0;
 
@@ -492,7 +496,8 @@ void MakeMove(Move move, Board* board) {
   // this is because the new side to move will be the one in check
   SetSpecialPieces(board);
 
-  ApplyUpdates(updates, board->hiddenNeurons[board->ply - 1], board->hiddenNeurons[board->ply]);
+  if (update)
+    ApplyUpdates(updates, board->hiddenNeurons[board->ply - 1], board->hiddenNeurons[board->ply]);
 
   // Prefetch the hash entry for this board position
   TTPrefetch(board->zobrist);

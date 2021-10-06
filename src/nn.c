@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <xmmintrin.h>
 
 #include "bits.h"
 #include "board.h"
@@ -31,9 +32,9 @@ const int OUTPUT_SIZE = N_OUTPUT;
 const int N_HIDDEN_LAYERS = 1;
 const int HIDDEN_SIZES[1] = {N_HIDDEN};
 
-float FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__ ((aligned (64)));
-float HIDDEN_WEIGHTS[N_HIDDEN] __attribute__ ((aligned (64)));
-float HIDDEN_BIASES[N_HIDDEN] __attribute__ ((aligned (64)));
+float FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN];
+float HIDDEN_WEIGHTS[N_HIDDEN];
+float HIDDEN_BIASES[N_HIDDEN];
 float OUTPUT_BIAS;
 
 void ApplyFirstLayer(Board* board, float* output) {
@@ -57,7 +58,7 @@ float ApplySecondLayer(float* hidden) {
 }
 
 float NNPredict(Board* board) {
-  float hidden[N_HIDDEN] __attribute__ ((aligned (64)));
+  float hidden[N_HIDDEN];
 
   ApplyFirstLayer(board, hidden);
   return ApplySecondLayer(hidden);
@@ -101,10 +102,10 @@ void LoadNN(char* path) {
   fread(&temp, 4, 1, fp);
   fread(&temp, 4, 1, fp);
 
-  fread(FEATURE_WEIGHTS, 4, N_FEATURES * N_HIDDEN, fp);
-  fread(HIDDEN_BIASES, 4, N_HIDDEN, fp);
-  fread(HIDDEN_WEIGHTS, 4, N_HIDDEN, fp);
-  fread(&OUTPUT_BIAS, 4, N_OUTPUT, fp);
+  fread(FEATURE_WEIGHTS, sizeof(float), N_FEATURES * N_HIDDEN, fp);
+  fread(HIDDEN_BIASES, sizeof(float), N_HIDDEN, fp);
+  fread(HIDDEN_WEIGHTS, sizeof(float), N_HIDDEN, fp);
+  fread(&OUTPUT_BIAS, sizeof(float), N_OUTPUT, fp);
 
   fclose(fp);
 

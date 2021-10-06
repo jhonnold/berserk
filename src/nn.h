@@ -16,8 +16,8 @@
 
 #include "types.h"
 
-void ApplyFirstLayer(Board* board, float output[N_HIDDEN]);
-float ApplySecondLayer(float hidden[N_HIDDEN]);
+void ApplyFirstLayer(Board* board, float* output);
+float ApplySecondLayer(float* hidden);
 
 float NNPredict(Board* board);
 void LoadNN(char* path);

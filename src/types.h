@@ -61,7 +61,7 @@ typedef struct {
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
 
-  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__ ((aligned (64)));
+  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN];
 } Board;
 
 typedef struct {
@@ -101,94 +101,6 @@ typedef struct {
 } SearchData;
 
 typedef struct {
-  int8_t pieces[5];
-  int8_t psqt[6][2][32];
-  int8_t bishopPair;
-
-  int8_t knightPostPsqt[12];
-  int8_t bishopPostPsqt[12];
-
-  int8_t knightMobilities[9];
-  int8_t bishopMobilities[14];
-  int8_t rookMobilities[15];
-  int8_t queenMobilities[28];
-  int8_t kingMobilities[9];
-
-  int8_t minorBehindPawn;
-  int8_t knightPostReachable;
-  int8_t bishopPostReachable;
-  int8_t bishopTrapped;
-  int8_t rookTrapped;
-  int8_t badBishopPawns;
-  int8_t dragonBishop;
-  int8_t rookOpenFileOffset;
-  int8_t rookOpenFile;
-  int8_t rookSemiOpen;
-  int8_t rookToOpen;
-  int8_t queenOppositeRook;
-  int8_t queenRookBattery;
-
-  int8_t defendedPawns;
-  int8_t doubledPawns;
-  int8_t isolatedPawns[4];
-  int8_t openIsolatedPawns;
-  int8_t backwardsPawns;
-  int8_t connectedPawn[4][8];
-  int8_t candidatePasser[8];
-  int8_t candidateEdgeDistance;
-
-  int8_t passedPawn[8];
-  int8_t passedPawnEdgeDistance;
-  int8_t passedPawnKingProximity;
-  int8_t passedPawnAdvance[5];
-  int8_t passedPawnEnemySliderBehind;
-  int8_t passedPawnSqRule;
-  int8_t passedPawnUnsupported;
-  int8_t passedPawnOutsideVKnight;
-
-  int8_t knightThreats[6];
-  int8_t bishopThreats[6];
-  int8_t rookThreats[6];
-  int8_t kingThreat;
-  int8_t pawnThreat;
-  int8_t pawnPushThreat;
-  int8_t pawnPushThreatPinned;
-  int8_t hangingThreat;
-  int8_t knightCheckQueen;
-  int8_t bishopCheckQueen;
-  int8_t rookCheckQueen;
-
-  int16_t space;
-
-  int16_t imbalance[5][5];
-
-  int8_t pawnShelter[4][8];
-  int8_t pawnStorm[4][8];
-  int8_t blockedPawnStorm[8];
-  int8_t castlingRights;
-
-  int8_t complexPawns;
-  int8_t complexPawnsBothSides;
-  int8_t complexOffset;
-
-  int ks;
-  int danger[2];
-  int8_t ksAttackerCount[2];
-  int8_t ksAttackerWeights[2][5];
-  int8_t ksWeakSqs[2];
-  int8_t ksPinned[2];
-  int8_t ksKnightCheck[2];
-  int8_t ksBishopCheck[2];
-  int8_t ksRookCheck[2];
-  int8_t ksQueenCheck[2];
-  int8_t ksUnsafeCheck[2];
-  int8_t ksEnemyQueen[2];
-  int8_t ksKnightDefense[2];
-
-  int8_t ss;
-} EvalCoeffs;
-
-typedef struct {
   long start;
   int alloc;
   int max;
@@ -209,23 +121,6 @@ typedef struct {
   Move bestMoves[MAX_SEARCH_PLY];
   Move ponderMoves[MAX_SEARCH_PLY];
 } SearchResults;
-
-typedef struct {
-  BitBoard passedPawns;
-  BitBoard openFiles;
-
-  // these are general data objects, for buildup during eval
-  int kingSq[2];
-  BitBoard kingArea[2];
-  BitBoard attacks[2][6];  // attacks by piece type
-  BitBoard allAttacks[2];  // all attacks
-  BitBoard twoAttacks[2];  // squares attacked twice
-  Score ksAttackWeight[2]; // king safety attackers weight
-  int ksAttackerCount[2];  // attackers
-
-  BitBoard mobilitySquares[2];
-  BitBoard outposts[2];
-} EvalData;
 
 typedef struct ThreadData ThreadData;
 
