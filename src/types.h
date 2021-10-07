@@ -39,29 +39,36 @@ typedef uint64_t BitBoard;
 typedef uint32_t Move;
 
 typedef struct {
-  int8_t side, xside, epSquare, castling, halfMove, ply;
-  int16_t moveNo;
+  int side;     // side to move
+  int xside;    // side not to move
+  int epSquare; // en passant square (a8 or 0 is not valid so that marks no active ep)
+  int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
+  int moveNo;   // current game move number TODO: Is this still used?
+  int halfMove; // half move count for 50 move rule
+  int ply;
 
-  BitBoard checkers, pinned;
-  uint64_t piecesCounts, zobrist;
+  BitBoard checkers;     // checking piece squares
+  BitBoard pinned;       // pinned pieces
+  uint64_t piecesCounts; // "material key" - pieces left on the board
+  uint64_t zobrist;      // zobrist hash of the position
 
-  int8_t castleRooks[4];
-  int8_t castlingRights[64];
-  int8_t squares[64];         // piece per square
-
+  int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
-  BitBoard pieces[12];     // individual piece data
+  BitBoard pieces[13];     // individual piece data
+
+  int castleRooks[4];
+  int castlingRights[64];
 
   // data that is hard to track, so it is "remembered" when search undoes moves
-  int8_t castlingHistory[MAX_GAME_PLY];
-  int8_t epSquareHistory[MAX_GAME_PLY];
-  int8_t captureHistory[MAX_GAME_PLY];
-  int8_t halfMoveHistory[MAX_GAME_PLY];
+  int castlingHistory[MAX_GAME_PLY];
+  int epSquareHistory[MAX_GAME_PLY];
+  int captureHistory[MAX_GAME_PLY];
+  int halfMoveHistory[MAX_GAME_PLY];
   uint64_t zobristHistory[MAX_GAME_PLY];
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
+  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__((aligned(16)));
 
-  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__ ((aligned (16)));
 } Board;
 
 typedef struct {
