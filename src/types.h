@@ -61,7 +61,7 @@ typedef struct {
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
 
-  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN];
+  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__ ((aligned (16)));
 } Board;
 
 typedef struct {

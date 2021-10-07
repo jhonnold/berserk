@@ -25,6 +25,16 @@
 #include "board.h"
 #include "nn.h"
 
+#define INCBIN_PREFIX
+#define INCBIN_STYLE INCBIN_STYLE_CAMEL
+#include "incbin.h"
+
+#ifndef EVALFILE
+#define EVALFILE "berserk.e250.768.256.nn"
+#endif
+
+INCBIN(Embed, EVALFILE);
+
 const int NETWORK_MAGIC = 'B' | 'Z' << 8 | 1 << 16 | 0 << 24;
 const int NETWORK_ID = 0;
 const int INPUT_SIZE = N_FEATURES;
@@ -32,9 +42,9 @@ const int OUTPUT_SIZE = N_OUTPUT;
 const int N_HIDDEN_LAYERS = 1;
 const int HIDDEN_SIZES[1] = {N_HIDDEN};
 
-float FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN];
-float HIDDEN_WEIGHTS[N_HIDDEN];
-float HIDDEN_BIASES[N_HIDDEN];
+float FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(16)));
+float HIDDEN_WEIGHTS[N_HIDDEN] __attribute__((aligned(16)));
+float HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(16)));
 float OUTPUT_BIAS;
 
 void ApplyFirstLayer(Board* board, float* output) {
@@ -42,7 +52,8 @@ void ApplyFirstLayer(Board* board, float* output) {
 
   for (int sq = 0; sq < 64; sq++) {
     int pc = board->squares[sq];
-    if (pc == NO_PIECE) continue;
+    if (pc == NO_PIECE)
+      continue;
 
     for (int i = 0; i < N_HIDDEN; i++)
       output[i] += FEATURE_WEIGHTS[FeatureIdx(pc, sq) * N_HIDDEN + i];
@@ -50,15 +61,24 @@ void ApplyFirstLayer(Board* board, float* output) {
 }
 
 float ApplySecondLayer(float* hidden) {
-  float result = 0.0f;
-  for (int j = 0; j < N_HIDDEN; j++)
-    result += fmax(0.0f, hidden[j]) * HIDDEN_WEIGHTS[j];
+  const __m128 zero = _mm_setzero_ps();
+  __m128 r4 = _mm_setzero_ps();
 
-  return result + OUTPUT_BIAS;
+  for (size_t j = 0; j < N_HIDDEN; j += 4) {
+    const __m128 activated = _mm_max_ps(_mm_load_ps(hidden + j), zero);
+    const __m128 weights = _mm_load_ps(HIDDEN_WEIGHTS + j);
+
+    r4 = _mm_add_ps(r4, _mm_mul_ps(activated, weights));
+  }
+
+  const __m128 r2 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
+  const __m128 r1 = _mm_add_ss(r2, _mm_shuffle_ps(r2, r2, 0x1));
+  const float sum = _mm_cvtss_f32(r1);
+  return OUTPUT_BIAS + sum;
 }
 
 float NNPredict(Board* board) {
-  float hidden[N_HIDDEN];
+  float hidden[N_HIDDEN] __attribute__((aligned(16)));
 
   ApplyFirstLayer(board, hidden);
   return ApplySecondLayer(hidden);
@@ -71,12 +91,29 @@ void AddUpdate(int feature, int c, NNUpdate* updates) {
   updates->n++;
 }
 
-void ApplyUpdates(NNUpdate* updates, float* curr, float* output) {
-  memcpy(output, curr, sizeof(float) * N_HIDDEN);
+void ApplyUpdates(NNUpdate* updates, float* output) {
+  for (int i = 0; i < updates->n; i++) {
+    const int c = updates->coeffs[i];
+    const int f = updates->features[i];
 
-  for (int i = 0; i < updates->n; i++)
     for (int j = 0; j < N_HIDDEN; j++)
-      output[j] += updates->coeffs[i] * FEATURE_WEIGHTS[updates->features[i] * N_HIDDEN + j];
+      output[j] += c * FEATURE_WEIGHTS[f * N_HIDDEN + j];
+  }
+}
+
+void LoadDefaultNN() {
+  size_t i = 24;
+
+  memcpy(FEATURE_WEIGHTS, EmbedData + i, sizeof(float) * N_FEATURES * N_HIDDEN);
+  i += sizeof(float) * N_FEATURES * N_HIDDEN;
+
+  memcpy(HIDDEN_BIASES, EmbedData + i, sizeof(float) *  N_HIDDEN);
+  i += sizeof(float) * N_HIDDEN;
+
+  memcpy(HIDDEN_WEIGHTS, EmbedData + i, sizeof(float) * N_HIDDEN);
+  i += sizeof(float) * N_HIDDEN;
+
+  memcpy(&OUTPUT_BIAS, EmbedData + i, sizeof(float));
 }
 
 void LoadNN(char* path) {

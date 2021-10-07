@@ -21,6 +21,7 @@ float ApplySecondLayer(float* hidden);
 
 float NNPredict(Board* board);
 void LoadNN(char* path);
+void LoadDefaultNN();
 
-void ApplyUpdates(NNUpdate* updates, float curr[N_HIDDEN], float output[N_HIDDEN]);
+void ApplyUpdates(NNUpdate* updates, float* output);
 void AddUpdate(int feature, int c, NNUpdate* updates);

@@ -2,15 +2,16 @@ CC = gcc
 SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
 EXE = berserk
 VERSION = 5.0.0-dev
+EVALFILE = berserk.e250.768.256.nn
 
 LIBS = -lm -lpthread
-WFLAGS = -std=gnu11 -Wall -Wextra -Wshadow
-CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG -g
-RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG -g
-DFLAGS = -O3 $(WFLAGS) -g
+WFLAGS = -std=gnu17 -Wall -Wextra -Wshadow
+CFLAGS = -O3 $(WFLAGS) -flto -march=native -DNDEBUG -DEVALFILE=\"$(EVALFILE)\" -g
+RFLAGS = -O3 $(WFLAGS) -flto -static -DNDEBUG -DEVALFILE=\"$(EVALFILE)\" -g
+DFLAGS = -O3 $(WFLAGS) -DEVALFILE=\"$(EVALFILE)\" -g
 
 POPCOUNT = -DPOPCOUNT -msse -msse3 -mpopcnt
-AVX2 = $(POPCOUNT) -mavx2 -msse4.1 -mssse3 -msse2
+AVX2 = $(POPCOUNT) -mavx -mavx2 -msse4.1 -mssse3 -msse2
 PEXT = $(POPCOUNT) -DPEXT -mbmi2
 AVX2PEXT = $(POPCOUNT) -DPEXT -mbmi2 -mavx2 -msse4.1 -mssse3 -msse2
 
