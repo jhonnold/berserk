@@ -2,7 +2,7 @@ CC = gcc
 SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
 EXE = berserk
 VERSION = 5.0.0-dev
-EVALFILE = berserk.e250.768.256.nn
+EVALFILE = default.nn
 
 LIBS = -lm -lpthread
 WFLAGS = -std=gnu17 -Wall -Wextra -Wshadow

@@ -30,7 +30,7 @@
 #include "incbin.h"
 
 #ifndef EVALFILE
-#define EVALFILE "berserk.e250.768.256.nn"
+#define EVALFILE "default.nn"
 #endif
 
 INCBIN(Embed, EVALFILE);
