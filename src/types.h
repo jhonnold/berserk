@@ -28,6 +28,12 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
+#if defined(__AVX__)
+#define ALIGN_ON 32
+#else
+#define ALIGN_ON 16
+#endif
+
 typedef struct {
   int n;
   int features[4];
@@ -67,7 +73,7 @@ typedef struct {
   uint64_t zobristHistory[MAX_GAME_PLY];
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
-  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__((aligned(16)));
+  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 
 } Board;
 
