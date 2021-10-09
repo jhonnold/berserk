@@ -290,7 +290,7 @@ void UCILoop() {
       printf("info string set Hash to value %d (%zu bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
-      free(threads);
+      FreeThreads(threads);
       threads = CreatePool(max(1, min(256, n)));
       printf("info string set Threads to value %d\n", n);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {

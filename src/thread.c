@@ -17,26 +17,30 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "eval.h"
 #include "thread.h"
 #include "types.h"
 #include "util.h"
 
+void* aligned_malloc(int size) {
+  void* mem = malloc(size + ALIGN_ON + sizeof(void*));
+  void** ptr = (void**)((uintptr_t)(mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
+  ptr[-1] = mem;
+  return ptr;
+}
+
+void aligned_free(void* ptr) { free(((void**)ptr)[-1]); }
 
 // initialize a pool of threads
 ThreadData* CreatePool(int count) {
-#ifdef WIN32
-  ThreadData* threads = _aligned_malloc(count * sizeof(ThreadData), ALIGN_ON);
-#else
-  ThreadData* threads = aligned_alloc(count * sizeof(ThreadData), ALIGN_ON);
-#endif
+  ThreadData* threads = malloc(count * sizeof(ThreadData));
 
   for (int i = 0; i < count; i++) {
     // allow reference to one another
     threads[i].idx = i;
     threads[i].threads = threads;
     threads[i].count = count;
+    threads[i].accumulator = (Accumulator*) aligned_malloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
   }
 
   return threads;
@@ -60,6 +64,7 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchRes
 
     // need full copies of the board
     memcpy(&threads[i].board, board, sizeof(Board));
+    threads[i].board.accumulator = threads[i].accumulator;
   }
 }
 
@@ -82,8 +87,14 @@ void ResetThreadPool(ThreadData* threads) {
     memset(&threads[i].data.ch, 0, sizeof(threads[i].data.ch));
     memset(&threads[i].data.fh, 0, sizeof(threads[i].data.fh));
     memset(&threads[i].data.th, 0, sizeof(threads[i].data.th));
-    memset(&threads[i].board, 0, sizeof(Board));
   }
+}
+
+void FreeThreads(ThreadData* threads) {
+  for (int i = 0; i < threads->count; i++)
+    aligned_free(threads[i].accumulator);
+
+  free(threads);
 }
 
 // sum node counts

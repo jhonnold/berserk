@@ -23,6 +23,6 @@ Score Evaluate(Board* board) {
   if (IsMaterialDraw(board))
     return 0;
 
-  float output = ApplySecondLayer(board->hiddenNeurons[board->ply]);
+  float output = ApplySecondLayer(board->accumulator[board->ply]);
   return (Score)(board->side == WHITE ? output : -output);
 }

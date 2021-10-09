@@ -40,6 +40,8 @@ typedef struct {
   int coeffs[4];
 } NNUpdate;
 
+typedef float Accumulator[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+
 typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
@@ -58,6 +60,8 @@ typedef struct {
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
 
+  Accumulator* accumulator;
+
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
   BitBoard pieces[13];     // individual piece data
@@ -73,8 +77,7 @@ typedef struct {
   uint64_t zobristHistory[MAX_GAME_PLY];
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
-  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
-} __attribute__((aligned(ALIGN_ON))) Board;
+} Board;
 
 typedef struct {
   int count;
@@ -139,6 +142,8 @@ typedef struct ThreadData ThreadData;
 struct ThreadData {
   int count, idx, multiPV, depth;
 
+  Accumulator* accumulator;
+
   ThreadData* threads;
   jmp_buf exit;
 
@@ -146,12 +151,12 @@ struct ThreadData {
   SearchResults* results;
   SearchData data;
 
-  Board board __attribute__((aligned(ALIGN_ON)));
+  Board board;
 
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];
   PV pvs[MAX_MOVES];
-} __attribute__((aligned(ALIGN_ON)));
+};
 
 typedef struct {
   Board* board;

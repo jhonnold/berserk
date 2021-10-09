@@ -51,8 +51,8 @@ float HIDDEN_WEIGHTS[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 float HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 float OUTPUT_BIAS;
 
-void ApplyFirstLayer(Board* board, float* output) {
-  memcpy(output, HIDDEN_BIASES, sizeof(float) * N_HIDDEN);
+void ApplyFirstLayer(Board* board, Accumulator output) {
+  memcpy(output, HIDDEN_BIASES, sizeof(Accumulator));
 
   for (int sq = 0; sq < 64; sq++) {
     int pc = board->squares[sq];
@@ -65,7 +65,7 @@ void ApplyFirstLayer(Board* board, float* output) {
 }
 
 #if defined(__AVX__)
-float ApplySecondLayer(float* hidden) {
+float ApplySecondLayer(Accumulator hidden) {
   const __m256 zero = _mm256_setzero_ps();
   __m256 r8 = _mm256_setzero_ps();
 
@@ -84,7 +84,7 @@ float ApplySecondLayer(float* hidden) {
   return OUTPUT_BIAS + sum;
 }
 #elif defined(__SSE__)
-float ApplySecondLayer(float* hidden) {
+float ApplySecondLayer(Accumulator hidden) {
   const __m128 zero = _mm_setzero_ps();
   __m128 r4 = _mm_setzero_ps();
 
@@ -101,7 +101,7 @@ float ApplySecondLayer(float* hidden) {
   return OUTPUT_BIAS + sum;
 }
 #else
-float ApplySecondLayer(float* hidden) {
+float ApplySecondLayer(Accumulator hidden) {
   float result = OUTPUT_BIAS;
   for (int i = 0; i < N_HIDDEN; i++)
     result += fmax(hidden[i], 0.0f) * HIDDEN_WEIGHTS[i];
@@ -111,7 +111,7 @@ float ApplySecondLayer(float* hidden) {
 #endif
 
 float NNPredict(Board* board) {
-  float hidden[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+  Accumulator hidden;
 
   ApplyFirstLayer(board, hidden);
   return ApplySecondLayer(hidden);
@@ -124,7 +124,7 @@ void AddUpdate(int feature, int c, NNUpdate* updates) {
   updates->n++;
 }
 
-void ApplyUpdates(NNUpdate* updates, float* output) {
+void ApplyUpdates(NNUpdate* updates, Accumulator output) {
   for (int i = 0; i < updates->n; i++) {
     const int c = updates->coeffs[i];
     const int f = updates->features[i];

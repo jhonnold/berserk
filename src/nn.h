@@ -16,12 +16,12 @@
 
 #include "types.h"
 
-void ApplyFirstLayer(Board* board, float* output);
-float ApplySecondLayer(float* hidden);
+void ApplyFirstLayer(Board* board, Accumulator output);
+float ApplySecondLayer(Accumulator hidden);
 
 float NNPredict(Board* board);
 void LoadNN(char* path);
 void LoadDefaultNN();
 
-void ApplyUpdates(NNUpdate* updates, float* output);
+void ApplyUpdates(NNUpdate* updates, Accumulator output);
 void AddUpdate(int feature, int c, NNUpdate* updates);

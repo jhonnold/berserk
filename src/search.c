@@ -136,8 +136,7 @@ void* Search(void* arg) {
   int score = 0;
 
   board->ply = 0;
-  memset(board->hiddenNeurons, 0, sizeof(board->hiddenNeurons));
-  ApplyFirstLayer(board, board->hiddenNeurons[board->ply]);
+  ApplyFirstLayer(board, board->accumulator[board->ply]);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {

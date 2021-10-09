@@ -329,9 +329,7 @@ inline void SetSpecialPieces(Board* board) {
   }
 }
 
-void MakeMove(Move move, Board* board) {
-  MakeMoveUpdate(move, board, 1);
-}
+void MakeMove(Move move, Board* board) { MakeMoveUpdate(move, board, 1); }
 
 void MakeMoveUpdate(Move move, Board* board, int update) {
   NNUpdate updates[1];
@@ -497,8 +495,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    memcpy(board->hiddenNeurons[board->ply], board->hiddenNeurons[board->ply - 1], sizeof(float) * N_HIDDEN);
-    ApplyUpdates(updates, board->hiddenNeurons[board->ply]);
+    memcpy(board->accumulator[board->ply], board->accumulator[board->ply - 1], sizeof(float) * N_HIDDEN);
+    ApplyUpdates(updates, board->accumulator[board->ply]);
   }
 
   // Prefetch the hash entry for this board position
