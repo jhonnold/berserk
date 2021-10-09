@@ -74,8 +74,7 @@ typedef struct {
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
   float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
-
-} Board;
+} __attribute__((aligned(ALIGN_ON))) Board;
 
 typedef struct {
   int count;
@@ -147,12 +146,12 @@ struct ThreadData {
   SearchResults* results;
   SearchData data;
 
-  Board board;
+  Board board __attribute__((aligned(ALIGN_ON)));
 
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];
   PV pvs[MAX_MOVES];
-};
+} __attribute__((aligned(ALIGN_ON)));
 
 typedef struct {
   Board* board;

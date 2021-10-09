@@ -17,13 +17,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 #include "eval.h"
+#include "thread.h"
 #include "types.h"
 #include "util.h"
 
+
 // initialize a pool of threads
 ThreadData* CreatePool(int count) {
-  ThreadData* threads = malloc(count * sizeof(ThreadData));
+#ifdef WIN32
+  ThreadData* threads = _aligned_malloc(count * sizeof(ThreadData), ALIGN_ON);
+#else
+  ThreadData* threads = aligned_alloc(count * sizeof(ThreadData), ALIGN_ON);
+#endif
 
   for (int i = 0; i < count; i++) {
     // allow reference to one another
