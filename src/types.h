@@ -25,8 +25,14 @@
 #define MAX_GAME_PLY 1024
 
 #define N_FEATURES 768
-#define N_HIDDEN 256
+#define N_HIDDEN 512
 #define N_OUTPUT 1
+
+#if defined(__AVX__)
+#define ALIGN_ON 32
+#else
+#define ALIGN_ON 16
+#endif
 
 typedef struct {
   int n;
@@ -67,9 +73,8 @@ typedef struct {
   uint64_t zobristHistory[MAX_GAME_PLY];
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
-  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__((aligned(16)));
-
-} Board;
+  float hiddenNeurons[MAX_SEARCH_PLY][N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+} __attribute__((aligned(ALIGN_ON))) Board;
 
 typedef struct {
   int count;
@@ -141,12 +146,12 @@ struct ThreadData {
   SearchResults* results;
   SearchData data;
 
-  Board board;
+  Board board __attribute__((aligned(ALIGN_ON)));
 
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];
   PV pvs[MAX_MOVES];
-};
+} __attribute__((aligned(ALIGN_ON)));
 
 typedef struct {
   Board* board;

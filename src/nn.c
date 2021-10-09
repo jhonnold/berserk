@@ -19,7 +19,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#if defined(__AVX__)
+#include <immintrin.h>
+#elif defined(__SSE__)
 #include <xmmintrin.h>
+#endif
 
 #include "bits.h"
 #include "board.h"
@@ -42,9 +46,9 @@ const int OUTPUT_SIZE = N_OUTPUT;
 const int N_HIDDEN_LAYERS = 1;
 const int HIDDEN_SIZES[1] = {N_HIDDEN};
 
-float FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(16)));
-float HIDDEN_WEIGHTS[N_HIDDEN] __attribute__((aligned(16)));
-float HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(16)));
+float FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+float HIDDEN_WEIGHTS[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+float HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 float OUTPUT_BIAS;
 
 void ApplyFirstLayer(Board* board, float* output) {
@@ -60,6 +64,26 @@ void ApplyFirstLayer(Board* board, float* output) {
   }
 }
 
+#if defined(__AVX__)
+float ApplySecondLayer(float* hidden) {
+  const __m256 zero = _mm256_setzero_ps();
+  __m256 r8 = _mm256_setzero_ps();
+
+  for (size_t j = 0; j < N_HIDDEN; j += 8) {
+    const __m256 activated = _mm256_max_ps(_mm256_load_ps(hidden + j), zero);
+    const __m256 weights = _mm256_load_ps(HIDDEN_WEIGHTS + j);
+
+    r8 = _mm256_add_ps(r8, _mm256_mul_ps(activated, weights));
+  }
+
+  const __m128 r4 = _mm_add_ps(_mm256_castps256_ps128(r8), _mm256_extractf128_ps(r8, 1));
+  const __m128 r2 = _mm_add_ps(r4, _mm_movehl_ps(r4, r4));
+  const __m128 r1 = _mm_add_ss(r2, _mm_shuffle_ps(r2, r2, 0x1));
+  const float sum = _mm_cvtss_f32(r1);
+
+  return OUTPUT_BIAS + sum;
+}
+#elif defined(__SSE__)
 float ApplySecondLayer(float* hidden) {
   const __m128 zero = _mm_setzero_ps();
   __m128 r4 = _mm_setzero_ps();
@@ -76,9 +100,18 @@ float ApplySecondLayer(float* hidden) {
   const float sum = _mm_cvtss_f32(r1);
   return OUTPUT_BIAS + sum;
 }
+#else
+float ApplySecondLayer(float* hidden) {
+  float result = OUTPUT_BIAS;
+  for (int i = 0; i < N_HIDDEN; i++)
+    result += fmax(hidden[i], 0.0f) * HIDDEN_WEIGHTS[i];
+
+  return result;
+}
+#endif
 
 float NNPredict(Board* board) {
-  float hidden[N_HIDDEN] __attribute__((aligned(16)));
+  float hidden[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 
   ApplyFirstLayer(board, hidden);
   return ApplySecondLayer(hidden);
@@ -107,7 +140,7 @@ void LoadDefaultNN() {
   memcpy(FEATURE_WEIGHTS, EmbedData + i, sizeof(float) * N_FEATURES * N_HIDDEN);
   i += sizeof(float) * N_FEATURES * N_HIDDEN;
 
-  memcpy(HIDDEN_BIASES, EmbedData + i, sizeof(float) *  N_HIDDEN);
+  memcpy(HIDDEN_BIASES, EmbedData + i, sizeof(float) * N_HIDDEN);
   i += sizeof(float) * N_HIDDEN;
 
   memcpy(HIDDEN_WEIGHTS, EmbedData + i, sizeof(float) * N_HIDDEN);
