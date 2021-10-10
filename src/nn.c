@@ -46,8 +46,8 @@ const int INPUT_SIZE = N_FEATURES;
 const int OUTPUT_SIZE = N_OUTPUT;
 const int N_HIDDEN_LAYERS = 1;
 const int HIDDEN_SIZES[1] = {N_HIDDEN};
-const int QUANTIZATION_PRECISION_IN = 64;
-const int QUANTIZATION_PRECISION_OUT = 256;
+const int QUANTIZATION_PRECISION_IN = 256;
+const int QUANTIZATION_PRECISION_OUT = 64;
 
 Weight FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 Weight HIDDEN_WEIGHTS[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
