@@ -51,7 +51,7 @@ float HIDDEN_WEIGHTS[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 float HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 float OUTPUT_BIAS;
 
-void ApplyFirstLayer(Board* board, Accumulator output) {
+void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
   memcpy(output, HIDDEN_BIASES, sizeof(Accumulator));
 
   for (int sq = 0; sq < 64; sq++) {
@@ -60,7 +60,7 @@ void ApplyFirstLayer(Board* board, Accumulator output) {
       continue;
 
     for (int i = 0; i < N_HIDDEN; i++)
-      output[i] += FEATURE_WEIGHTS[FeatureIdx(pc, sq) * N_HIDDEN + i];
+      output[i] += FEATURE_WEIGHTS[FeatureIdx(pc, sq, perspective) * N_HIDDEN + i];
   }
 }
 
@@ -113,7 +113,7 @@ float ApplySecondLayer(Accumulator hidden) {
 float NNPredict(Board* board) {
   Accumulator hidden;
 
-  ApplyFirstLayer(board, hidden);
+  ApplyFirstLayer(board, hidden, board->side);
   return ApplySecondLayer(hidden);
 }
 

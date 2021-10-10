@@ -16,7 +16,7 @@
 
 #include "types.h"
 
-void ApplyFirstLayer(Board* board, Accumulator output);
+void ApplyFirstLayer(Board* board, Accumulator output, int perspective);
 float ApplySecondLayer(Accumulator hidden);
 
 float NNPredict(Board* board);

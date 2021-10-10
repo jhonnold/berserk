@@ -60,7 +60,7 @@ typedef struct {
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
 
-  Accumulator* accumulator;
+  Accumulator* accumulators[2];
 
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
@@ -142,7 +142,7 @@ typedef struct ThreadData ThreadData;
 struct ThreadData {
   int count, idx, multiPV, depth;
 
-  Accumulator* accumulator;
+  Accumulator* accumulators[2];
 
   ThreadData* threads;
   jmp_buf exit;

@@ -136,7 +136,8 @@ void* Search(void* arg) {
   int score = 0;
 
   board->ply = 0;
-  ApplyFirstLayer(board, board->accumulator[board->ply]);
+  ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
+  ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
