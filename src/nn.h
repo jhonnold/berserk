@@ -17,9 +17,9 @@
 #include "types.h"
 
 void ApplyFirstLayer(Board* board, Accumulator output);
-Weight ApplySecondLayer(Accumulator hidden);
+int ApplySecondLayer(Accumulator hidden);
 
-Weight NNPredict(Board* board);
+int NNPredict(Board* board);
 void LoadNN(char* path);
 void LoadDefaultNN();
 

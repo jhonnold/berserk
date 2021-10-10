@@ -40,7 +40,7 @@ typedef struct {
   int coeffs[4];
 } NNUpdate;
 
-typedef int Weight;
+typedef int16_t Weight;
 typedef Weight Accumulator[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 
 typedef int Score;

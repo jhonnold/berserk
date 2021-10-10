@@ -46,13 +46,13 @@ const int INPUT_SIZE = N_FEATURES;
 const int OUTPUT_SIZE = N_OUTPUT;
 const int N_HIDDEN_LAYERS = 1;
 const int HIDDEN_SIZES[1] = {N_HIDDEN};
-const int QUANTIZATION_PRECISION_IN = 256;
-const int QUANTIZATION_PRECISION_OUT = 64;
+const int QUANTIZATION_PRECISION_IN = 32;
+const int QUANTIZATION_PRECISION_OUT = 512;
 
 Weight FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 Weight HIDDEN_WEIGHTS[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 Weight HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
-Weight OUTPUT_BIAS;
+int OUTPUT_BIAS;
 
 void ApplyFirstLayer(Board* board, Accumulator output) {
   memcpy(output, HIDDEN_BIASES, sizeof(Accumulator));
@@ -68,16 +68,16 @@ void ApplyFirstLayer(Board* board, Accumulator output) {
 }
 
 #if defined(__AVX__)
-Weight ApplySecondLayer(Accumulator hidden) {
-  Weight result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
+int ApplySecondLayer(Accumulator hidden) {
+  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
   const __m256i zero = _mm256_setzero_si256();
   __m256i r8 = _mm256_setzero_si256();
 
-  for (size_t j = 0; j < N_HIDDEN / 8; j++) {
-    const __m256i activated = _mm256_max_epi32(((__m256i*)hidden)[j], zero);
+  for (size_t j = 0; j < N_HIDDEN / 16; j++) {
+    const __m256i activated = _mm256_max_epi16(((__m256i*)hidden)[j], zero);
 
-    r8 = _mm256_add_epi32(r8, _mm256_mullo_epi32(activated, ((__m256i*)HIDDEN_WEIGHTS)[j]));
+    r8 = _mm256_add_epi32(r8, _mm256_madd_epi16(activated, ((__m256i*)HIDDEN_WEIGHTS)[j]));
   }
 
   const __m128i r4 = _mm_add_epi32(_mm256_castsi256_si128(r8), _mm256_extractf128_si256(r8, 1));
@@ -88,16 +88,16 @@ Weight ApplySecondLayer(Accumulator hidden) {
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #elif defined(__SSE__)
-Weight ApplySecondLayer(Accumulator hidden) {
-  Weight result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
+int ApplySecondLayer(Accumulator hidden) {
+  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
   const __m128i zero = _mm_setzero_si128();
   __m128i r4 = _mm_setzero_si128();
 
-  for (size_t j = 0; j < N_HIDDEN / 4; j++) {
-    const __m128i activated = _mm_max_epi32(((__m128i*)hidden)[j], zero);
+  for (size_t j = 0; j < N_HIDDEN / 8; j++) {
+    const __m128i activated = _mm_max_epi16(((__m128i*)hidden)[j], zero);
 
-    r4 = _mm_add_epi32(r4, _mm_mullo_epi32(activated, ((__m128i*)HIDDEN_WEIGHTS)[j]));
+    r4 = _mm_add_epi32(r4, _mm_madd_epi16(activated, ((__m128i*)HIDDEN_WEIGHTS)[j]));
   }
 
   const __m128i r2 = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
@@ -107,8 +107,8 @@ Weight ApplySecondLayer(Accumulator hidden) {
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #else
-Weight ApplySecondLayer(Accumulator hidden) {
-  Weight result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
+int ApplySecondLayer(Accumulator hidden) {
+  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
   for (int i = 0; i < N_HIDDEN; i++)
     result += max(hidden[i], 0) * HIDDEN_WEIGHTS[i];
@@ -117,7 +117,7 @@ Weight ApplySecondLayer(Accumulator hidden) {
 }
 #endif
 
-Weight NNPredict(Board* board) {
+int NNPredict(Board* board) {
   Accumulator hidden;
 
   ApplyFirstLayer(board, hidden);
@@ -141,21 +141,26 @@ void ApplyUpdates(NNUpdate* updates, Accumulator output) {
   }
 }
 
-inline Weight LoadWeight(float v, int in) { return round(v * (in ? QUANTIZATION_PRECISION_IN : QUANTIZATION_PRECISION_OUT)); }
+inline Weight LoadWeight(float v, int in) {
+  return round(v * (in ? QUANTIZATION_PRECISION_IN : QUANTIZATION_PRECISION_OUT));
+}
 
 void LoadDefaultNN() {
   float* data = (float*)EmbedData + 6;
 
-  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++)
+  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) {
     FEATURE_WEIGHTS[j] = LoadWeight(*data++, 1);
+  }
 
-  for (int j = 0; j < N_HIDDEN; j++)
+  for (int j = 0; j < N_HIDDEN; j++) {
     HIDDEN_BIASES[j] = LoadWeight(*data++, 1);
+  }
 
-  for (int j = 0; j < N_HIDDEN; j++)
+  for (int j = 0; j < N_HIDDEN; j++) {
     HIDDEN_WEIGHTS[j] = LoadWeight(*data++, 0);
+  }
 
-  OUTPUT_BIAS = LoadWeight(*data, 0);
+  OUTPUT_BIAS = round(*data * QUANTIZATION_PRECISION_OUT);
 }
 
 void LoadNN(char* path) {
@@ -202,9 +207,9 @@ void LoadNN(char* path) {
   float outputBias;
   fread(&outputBias, sizeof(float), N_OUTPUT, fp);
 
-  OUTPUT_BIAS = LoadWeight(outputBias, 0);
+  OUTPUT_BIAS = round(outputBias * QUANTIZATION_PRECISION_OUT);
 
   fclose(fp);
 
-  printf("info string Succesfully loaded net %s\n", path);
+  printf("info string Successfully loaded net %s\n", path);
 }
