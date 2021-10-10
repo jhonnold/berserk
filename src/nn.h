@@ -19,7 +19,7 @@
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective);
 float ApplySecondLayer(Accumulator hidden);
 
-float NNPredict(Board* board);
+int NNPredict(Board* board);
 void LoadNN(char* path);
 void LoadDefaultNN();
 
