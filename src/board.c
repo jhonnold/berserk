@@ -495,7 +495,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    memcpy(board->accumulator[board->ply], board->accumulator[board->ply - 1], sizeof(float) * N_HIDDEN);
+    memcpy(board->accumulator[board->ply], board->accumulator[board->ply - 1], sizeof(Accumulator));
     ApplyUpdates(updates, board->accumulator[board->ply]);
   }
 
