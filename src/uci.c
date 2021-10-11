@@ -265,8 +265,8 @@ void UCILoop() {
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
-      Weight result = NNPredict(&board);
-      printf("Score: %dcp (white)\n", result);
+      int score = NNPredict(&board);
+      printf("Score: %dcp (white)\n", board.side == WHITE ? score : -score);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {

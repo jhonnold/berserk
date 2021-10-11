@@ -332,8 +332,9 @@ inline void SetSpecialPieces(Board* board) {
 void MakeMove(Move move, Board* board) { MakeMoveUpdate(move, board, 1); }
 
 void MakeMoveUpdate(Move move, Board* board, int update) {
-  NNUpdate updates[1];
-  updates->n = 0;
+  NNUpdate updates[2];
+  updates[WHITE].n = 0;
+  updates[BLACK].n = 0;
 
   int start = MoveStart(move);
   int end = MoveEnd(move);
@@ -363,8 +364,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->zobrist ^= ZOBRIST_PIECES[piece][start];
   board->zobrist ^= ZOBRIST_PIECES[piece][end];
 
-  AddUpdate(FeatureIdx(piece, start), -1, updates);
-  AddUpdate(FeatureIdx(promoted ? promoted : piece, end), 1, updates);
+  AddUpdate(FeatureIdx(piece, start, WHITE), -1, &updates[WHITE]);
+  AddUpdate(FeatureIdx(promoted ? promoted : piece, end, WHITE), 1, &updates[WHITE]);
+  AddUpdate(FeatureIdx(piece, start, BLACK), -1, &updates[BLACK]);
+  AddUpdate(FeatureIdx(promoted ? promoted : piece, end, BLACK), 1, &updates[BLACK]);
 
   if (piece == PAWN[board->side])
     board->halfMove = 0; // reset on pawn move
@@ -377,7 +380,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->zobrist ^= ZOBRIST_PIECES[captured][end];
 
-    AddUpdate(FeatureIdx(captured, end), -1, updates);
+    AddUpdate(FeatureIdx(captured, end, WHITE), -1, &updates[WHITE]);
+    AddUpdate(FeatureIdx(captured, end, BLACK), -1, &updates[BLACK]);
 
     board->piecesCounts -= PIECE_COUNT_IDX[captured]; // when there's a capture, we need to update our piece counts
     board->halfMove = 0;                              // reset on capture
@@ -404,7 +408,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->zobrist ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
 
-    AddUpdate(FeatureIdx(PAWN[board->xside], end - PAWN_DIRECTIONS[board->side]), -1, updates);
+    AddUpdate(FeatureIdx(PAWN[board->xside], end - PAWN_DIRECTIONS[board->side], WHITE), -1, &updates[WHITE]);
+    AddUpdate(FeatureIdx(PAWN[board->xside], end - PAWN_DIRECTIONS[board->side], BLACK), -1, &updates[BLACK]);
 
     board->piecesCounts -= PIECE_COUNT_IDX[PAWN[board->xside]];
     board->halfMove = 0; // this is a capture
@@ -433,8 +438,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][board->castleRooks[0]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][F1];
 
-      AddUpdate(FeatureIdx(ROOK_WHITE, board->castleRooks[0]), -1, updates);
-      AddUpdate(FeatureIdx(ROOK_WHITE, F1), 1, updates);
+      AddUpdate(FeatureIdx(ROOK_WHITE, board->castleRooks[0], WHITE), -1, &updates[WHITE]);
+      AddUpdate(FeatureIdx(ROOK_WHITE, F1, WHITE), 1, &updates[WHITE]);
+      AddUpdate(FeatureIdx(ROOK_WHITE, board->castleRooks[0], BLACK), -1, &updates[BLACK]);
+      AddUpdate(FeatureIdx(ROOK_WHITE, F1, BLACK), 1, &updates[BLACK]);
     } else if (end == C1) {
       popBit(board->pieces[ROOK[WHITE]], board->castleRooks[1]);
       setBit(board->pieces[ROOK[WHITE]], D1);
@@ -446,8 +453,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][board->castleRooks[1]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][D1];
 
-      AddUpdate(FeatureIdx(ROOK_WHITE, board->castleRooks[1]), -1, updates);
-      AddUpdate(FeatureIdx(ROOK_WHITE, D1), 1, updates);
+      AddUpdate(FeatureIdx(ROOK_WHITE, board->castleRooks[1], WHITE), -1, &updates[WHITE]);
+      AddUpdate(FeatureIdx(ROOK_WHITE, D1, WHITE), 1, &updates[WHITE]);
+      AddUpdate(FeatureIdx(ROOK_WHITE, board->castleRooks[1], BLACK), -1, &updates[BLACK]);
+      AddUpdate(FeatureIdx(ROOK_WHITE, D1, BLACK), 1, &updates[BLACK]);
     } else if (end == G8) {
       popBit(board->pieces[ROOK[BLACK]], board->castleRooks[2]);
       setBit(board->pieces[ROOK[BLACK]], F8);
@@ -459,8 +468,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][board->castleRooks[2]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][F8];
 
-      AddUpdate(FeatureIdx(ROOK_BLACK, board->castleRooks[2]), -1, updates);
-      AddUpdate(FeatureIdx(ROOK_BLACK, F8), 1, updates);
+      AddUpdate(FeatureIdx(ROOK_BLACK, board->castleRooks[2], WHITE), -1, &updates[WHITE]);
+      AddUpdate(FeatureIdx(ROOK_BLACK, F8, WHITE), 1, &updates[WHITE]);
+      AddUpdate(FeatureIdx(ROOK_BLACK, board->castleRooks[2], BLACK), -1, &updates[BLACK]);
+      AddUpdate(FeatureIdx(ROOK_BLACK, F8, BLACK), 1, &updates[BLACK]);
     } else if (end == C8) {
       popBit(board->pieces[ROOK[BLACK]], board->castleRooks[3]);
       setBit(board->pieces[ROOK[BLACK]], D8);
@@ -472,8 +483,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][board->castleRooks[3]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][D8];
 
-      AddUpdate(FeatureIdx(ROOK_BLACK, board->castleRooks[3]), -1, updates);
-      AddUpdate(FeatureIdx(ROOK_BLACK, D8), 1, updates);
+      AddUpdate(FeatureIdx(ROOK_BLACK, board->castleRooks[3], WHITE), -1, &updates[WHITE]);
+      AddUpdate(FeatureIdx(ROOK_BLACK, D8, WHITE), 1, &updates[WHITE]);
+      AddUpdate(FeatureIdx(ROOK_BLACK, board->castleRooks[3], BLACK), -1, &updates[BLACK]);
+      AddUpdate(FeatureIdx(ROOK_BLACK, D8, BLACK), 1, &updates[BLACK]);
     }
   }
 
@@ -495,8 +508,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    memcpy(board->accumulator[board->ply], board->accumulator[board->ply - 1], sizeof(Accumulator));
-    ApplyUpdates(updates, board->accumulator[board->ply]);
+    memcpy(board->accumulators[WHITE][board->ply], board->accumulators[WHITE][board->ply - 1], sizeof(Accumulator));
+    memcpy(board->accumulators[BLACK][board->ply], board->accumulators[BLACK][board->ply - 1], sizeof(Accumulator));
+    ApplyUpdates(&updates[WHITE], board->accumulators[WHITE][board->ply]);
+    ApplyUpdates(&updates[BLACK], board->accumulators[BLACK][board->ply]);
   }
 
   // Prefetch the hash entry for this board position
@@ -837,8 +852,8 @@ int IsMoveLegal(Move move, Board* board) {
   return 1;
 }
 
-inline int FeatureIdx(int piece, int sq) {
-  int corrected = piece / 2 + 6 * (piece & 1);
+inline int FeatureIdx(int piece, int sq, int perspective) {
+  int corrected = piece / 2 + 6 * ((piece & 1) != perspective);
 
-  return corrected * 64 + (sq ^ 56);
+  return corrected * 64 + (sq ^ (perspective == WHITE ? 56 : 0));
 }

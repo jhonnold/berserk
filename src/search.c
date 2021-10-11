@@ -136,7 +136,8 @@ void* Search(void* arg) {
   int score = 0;
 
   board->ply = 0;
-  ApplyFirstLayer(board, board->accumulator[board->ply]);
+  ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
+  ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
@@ -520,10 +521,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
     else if (!isRoot && depth >= 8 && ttHit && move == tt->move && quietHistory >= 98304)
-      extension = 1;
-
-    // castle extensions
-    else if (MoveCastle(move))
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
