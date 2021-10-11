@@ -23,6 +23,6 @@ Score Evaluate(Board* board) {
   if (IsMaterialDraw(board))
     return 0;
 
-  float output = ApplySecondLayer(board->accumulators[board->side][board->ply]);
+  int output = ApplySecondLayer(board->accumulators[board->side][board->ply]);
   return (Score)output;
 }

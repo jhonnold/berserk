@@ -17,7 +17,7 @@
 #include "types.h"
 
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective);
-float ApplySecondLayer(Accumulator hidden);
+int ApplySecondLayer(Accumulator hidden);
 
 int NNPredict(Board* board);
 void LoadNN(char* path);
