@@ -522,10 +522,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     else if (!isRoot && depth >= 8 && ttHit && move == tt->move && quietHistory >= 98304)
       extension = 1;
 
-    // castle extensions
-    else if (MoveCastle(move))
-      extension = 1;
-
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
     else if (isPV && !isRoot && IsRecapture(data, move))
