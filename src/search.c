@@ -29,6 +29,7 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
+#include "nn.h"
 #include "noobprobe/noobprobe.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
@@ -38,7 +39,7 @@
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
-#include "nn.h"
+
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
@@ -128,7 +129,7 @@ void* Search(void* arg) {
   SearchParams* params = thread->params;
   SearchResults* results = thread->results;
   Board* board = &thread->board;
-  
+
   int mainThread = !thread->idx;
   int searchStability = 0;
   int alpha = -CHECKMATE;
@@ -599,7 +600,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(board, data, move, depth, board->side, quiets, numQuiets, tacticals, numTacticals);
+        UpdateHistories(board, data, move, depth + (bestScore > beta + 100), board->side, quiets, numQuiets, tacticals,
+                        numTacticals);
         break;
       }
     }
