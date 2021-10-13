@@ -17,11 +17,10 @@
 #include "types.h"
 
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective);
-int ApplySecondLayer(Accumulator hidden);
+int ApplySecondLayer(Accumulator a1, Accumulator a2);
 
 int NNPredict(Board* board);
-void LoadNN(char* path);
 void LoadDefaultNN();
 
-void ApplyUpdates(NNUpdate* updates, Accumulator output);
+void ApplyUpdates(NNUpdate* updates, Accumulator output, int stm);
 void AddUpdate(int feature, int c, NNUpdate* updates);

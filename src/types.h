@@ -25,7 +25,7 @@
 #define MAX_GAME_PLY 1024
 
 #define N_FEATURES 768
-#define N_HIDDEN 512
+#define N_HIDDEN 64
 #define N_OUTPUT 1
 
 #if defined(__AVX__)

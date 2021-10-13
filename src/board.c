@@ -510,8 +510,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   if (update) {
     memcpy(board->accumulators[WHITE][board->ply], board->accumulators[WHITE][board->ply - 1], sizeof(Accumulator));
     memcpy(board->accumulators[BLACK][board->ply], board->accumulators[BLACK][board->ply - 1], sizeof(Accumulator));
-    ApplyUpdates(&updates[WHITE], board->accumulators[WHITE][board->ply]);
-    ApplyUpdates(&updates[BLACK], board->accumulators[BLACK][board->ply]);
+    ApplyUpdates(&updates[WHITE], board->accumulators[WHITE][board->ply], WHITE);
+    ApplyUpdates(&updates[BLACK], board->accumulators[BLACK][board->ply], BLACK);
   }
 
   // Prefetch the hash entry for this board position

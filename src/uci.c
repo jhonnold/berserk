@@ -209,7 +209,6 @@ void PrintUCIOptions() {
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
   printf("option name Ponder type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
-  printf("option name NetworkFile type string\n");
   printf("uciok\n");
 }
 
@@ -324,11 +323,6 @@ void UCILoop() {
 
       CHESS_960 = !strncmp(opt, "true", 4);
       printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
-    } else if (!strncmp(in, "setoption name NetworkFile value ", 33)) {
-      char path[128];
-      sscanf(in, "%*s %*s %*s %*s %128s", path);
-
-      LoadNN(path);
     }
   }
 }
