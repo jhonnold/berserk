@@ -560,8 +560,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       } else {
         R--;
 
-        if (isPV)
-          R--;
+        R = 1 - 4 * th / (abs(th) + 16384 + (8192 * isPV));
       }
 
       // prevent dropping into QS, extending, or reducing all extensions
