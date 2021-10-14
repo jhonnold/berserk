@@ -558,7 +558,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         // adjust reduction based on historical score
         R -= quietHistory / 20480;
       } else {
-        R--;
+        int th = GetTacticalHistory(data, board, move);
 
         R = 1 - 4 * th / (abs(th) + 16384 + (8192 * isPV));
       }
