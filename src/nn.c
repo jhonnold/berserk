@@ -49,13 +49,13 @@ const int HIDDEN_SIZES[1] = {N_HIDDEN};
 const int QUANTIZATION_PRECISION_IN = 32;
 const int QUANTIZATION_PRECISION_OUT = 512;
 
-Weight FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
-Weight HIDDEN_WEIGHTS[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
-Weight HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+Weight FEATURE_WEIGHTS[2][N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+Weight HIDDEN_BIASES[2][N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+Weight HIDDEN_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int OUTPUT_BIAS;
 
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
-  memcpy(output, HIDDEN_BIASES, sizeof(Accumulator));
+  memcpy(output, HIDDEN_BIASES[perspective], sizeof(Accumulator));
 
   for (int sq = 0; sq < 64; sq++) {
     int pc = board->squares[sq];
@@ -63,23 +63,27 @@ void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
       continue;
 
     for (int i = 0; i < N_HIDDEN; i++)
-      output[i] += FEATURE_WEIGHTS[FeatureIdx(pc, sq, perspective) * N_HIDDEN + i];
+      output[i] += FEATURE_WEIGHTS[perspective][FeatureIdx(pc, sq, perspective) * N_HIDDEN + i];
   }
 }
 
 #if defined(__AVX__)
-int ApplySecondLayer(Accumulator hidden) {
+int ApplySecondLayer(Accumulator a1, Accumulator a2) {
   int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
   const __m256i zero = _mm256_setzero_si256();
-  __m256i r8 = _mm256_setzero_si256();
+  __m256i s0 = _mm256_setzero_si256();
+  __m256i s1 = _mm256_setzero_si256();
 
   for (size_t j = 0; j < N_HIDDEN / 16; j++) {
-    const __m256i activated = _mm256_max_epi16(((__m256i*)hidden)[j], zero);
+    const __m256i ac0 = _mm256_max_epi16(((__m256i*)a1)[j], zero);
+    const __m256i ac1 = _mm256_max_epi16(((__m256i*)a2)[j], zero);
 
-    r8 = _mm256_add_epi32(r8, _mm256_madd_epi16(activated, ((__m256i*)HIDDEN_WEIGHTS)[j]));
+    s0 = _mm256_add_epi32(s0, _mm256_madd_epi16(ac0, ((__m256i*)HIDDEN_WEIGHTS)[j]));
+    s1 = _mm256_add_epi32(s1, _mm256_madd_epi16(ac1, ((__m256i*)HIDDEN_WEIGHTS)[j + N_HIDDEN / 16]));
   }
 
+  const __m256i r8 = _mm256_add_epi32(s0, s1);
   const __m128i r4 = _mm_add_epi32(_mm256_castsi256_si128(r8), _mm256_extractf128_si256(r8, 1));
   const __m128i r2 = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
   const __m128i r1 = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
@@ -88,18 +92,22 @@ int ApplySecondLayer(Accumulator hidden) {
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #elif defined(__SSE__)
-int ApplySecondLayer(Accumulator hidden) {
+int ApplySecondLayer(Accumulator a1, Accumulator a2) {
   int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
   const __m128i zero = _mm_setzero_si128();
-  __m128i r4 = _mm_setzero_si128();
+  __m128i s0 = _mm_setzero_si128();
+  __m128i s1 = _mm_setzero_si128();
 
   for (size_t j = 0; j < N_HIDDEN / 8; j++) {
-    const __m128i activated = _mm_max_epi16(((__m128i*)hidden)[j], zero);
+    const __m128i ac0 = _mm_max_epi16(((__m128i*)a1)[j], zero);
+    const __m128i ac1 = _mm_max_epi16(((__m128i*)a2)[j], zero);
 
-    r4 = _mm_add_epi32(r4, _mm_madd_epi16(activated, ((__m128i*)HIDDEN_WEIGHTS)[j]));
+    s0 = _mm_add_epi32(s0, _mm_madd_epi16(ac0, ((__m128i*)HIDDEN_WEIGHTS)[j]));
+    s1 = _mm_add_epi32(s1, _mm_madd_epi16(ac1, ((__m128i*)HIDDEN_WEIGHTS)[j + N_HIDDEN / 8]));
   }
 
+  const __m128i r4 = _mm_add_epi32(s0, s1);
   const __m128i r2 = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
   const __m128i r1 = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
 
@@ -107,21 +115,29 @@ int ApplySecondLayer(Accumulator hidden) {
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #else
-int ApplySecondLayer(Accumulator hidden) {
+int ApplySecondLayer(Accumulator a1, Accumulator a2) {
   int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
-  for (int i = 0; i < N_HIDDEN; i++)
-    result += max(hidden[i], 0) * HIDDEN_WEIGHTS[i];
+  for (int i = 0; i < N_HIDDEN; i++) {
+    result += max(a1[i], 0) * HIDDEN_WEIGHTS[i];
+    result += max(a2[i], 0) * HIDDEN_WEIGHTS[i + N_HIDDEN];
+  }
 
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #endif
 
 int NNPredict(Board* board) {
-  Accumulator hidden;
+  Accumulator white;
+  Accumulator black;
 
-  ApplyFirstLayer(board, hidden, board->side);
-  return ApplySecondLayer(hidden);
+  ApplyFirstLayer(board, white, WHITE);
+  ApplyFirstLayer(board, black, BLACK);
+
+  Weight* stm = board->side == WHITE ? white : black;
+  Weight* xstm = board->side == WHITE ? black : white;
+
+  return ApplySecondLayer(stm, xstm);
 }
 
 void AddUpdate(int feature, int c, NNUpdate* updates) {
@@ -131,13 +147,13 @@ void AddUpdate(int feature, int c, NNUpdate* updates) {
   updates->n++;
 }
 
-void ApplyUpdates(NNUpdate* updates, Accumulator output) {
+void ApplyUpdates(NNUpdate* updates, Accumulator output, int stm) {
   for (int i = 0; i < updates->n; i++) {
     const int c = updates->coeffs[i];
     const int f = updates->features[i];
 
     for (int j = 0; j < N_HIDDEN; j++)
-      output[j] += c * FEATURE_WEIGHTS[f * N_HIDDEN + j];
+      output[j] += c * FEATURE_WEIGHTS[stm][f * N_HIDDEN + j];
   }
 }
 
@@ -149,67 +165,24 @@ void LoadDefaultNN() {
   float* data = (float*)EmbedData + 6;
 
   for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) {
-    FEATURE_WEIGHTS[j] = LoadWeight(*data++, 1);
+    FEATURE_WEIGHTS[WHITE][j] = LoadWeight(*data++, 1);
+  }
+
+  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) {
+    FEATURE_WEIGHTS[BLACK][j] = LoadWeight(*data++, 1);
   }
 
   for (int j = 0; j < N_HIDDEN; j++) {
-    HIDDEN_BIASES[j] = LoadWeight(*data++, 1);
+    HIDDEN_BIASES[WHITE][j] = LoadWeight(*data++, 1);
   }
 
   for (int j = 0; j < N_HIDDEN; j++) {
+    HIDDEN_BIASES[BLACK][j] = LoadWeight(*data++, 1);
+  }
+
+  for (int j = 0; j < N_HIDDEN * 2; j++) {
     HIDDEN_WEIGHTS[j] = LoadWeight(*data++, 0);
   }
 
   OUTPUT_BIAS = round(*data * QUANTIZATION_PRECISION_OUT);
-}
-
-void LoadNN(char* path) {
-  FILE* fp = fopen(path, "rb");
-  if (fp == NULL) {
-    printf("Unable to read network at %s!\n", path);
-    exit(1);
-  }
-
-  int magic;
-  fread(&magic, 4, 1, fp);
-
-  if (magic != NETWORK_MAGIC) {
-    printf("Magic header does not match!\n");
-    exit(1);
-  }
-
-  // Skip past the topology as we only support one
-  int temp;
-  fread(&temp, 4, 1, fp);
-  fread(&temp, 4, 1, fp);
-  fread(&temp, 4, 1, fp);
-  fread(&temp, 4, 1, fp);
-  fread(&temp, 4, 1, fp);
-
-  float featureWeights[N_FEATURES * N_HIDDEN];
-  fread(featureWeights, sizeof(float), N_FEATURES * N_HIDDEN, fp);
-
-  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++)
-    FEATURE_WEIGHTS[j] = LoadWeight(featureWeights[j], 1);
-
-  float hiddenBiases[N_HIDDEN];
-  fread(hiddenBiases, sizeof(float), N_HIDDEN, fp);
-
-  for (int j = 0; j < N_HIDDEN; j++)
-    HIDDEN_BIASES[j] = LoadWeight(hiddenBiases[j], 1);
-
-  float hiddenWeights[N_HIDDEN];
-  fread(hiddenWeights, sizeof(float), N_HIDDEN, fp);
-
-  for (int j = 0; j < N_HIDDEN; j++)
-    HIDDEN_WEIGHTS[j] = LoadWeight(hiddenWeights[j], 0);
-
-  float outputBias;
-  fread(&outputBias, sizeof(float), N_OUTPUT, fp);
-
-  OUTPUT_BIAS = round(outputBias * QUANTIZATION_PRECISION_OUT);
-
-  fclose(fp);
-
-  printf("info string Successfully loaded net %s\n", path);
 }
