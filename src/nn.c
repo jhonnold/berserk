@@ -131,8 +131,8 @@ int NNPredict(Board* board) {
   Accumulator white;
   Accumulator black;
 
-  ApplyFirstLayer(board, white, board->side);
-  ApplyFirstLayer(board, black, board->xside);
+  ApplyFirstLayer(board, white, WHITE);
+  ApplyFirstLayer(board, black, BLACK);
 
   Weight* stm = board->side == WHITE ? white : black;
   Weight* xstm = board->side == WHITE ? black : white;
