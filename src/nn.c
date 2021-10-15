@@ -49,13 +49,13 @@ const int HIDDEN_SIZES[1] = {N_HIDDEN};
 const int QUANTIZATION_PRECISION_IN = 32;
 const int QUANTIZATION_PRECISION_OUT = 512;
 
-Weight FEATURE_WEIGHTS[2][N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
-Weight HIDDEN_BIASES[2][N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+Weight FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+Weight HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 Weight HIDDEN_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int OUTPUT_BIAS;
 
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
-  memcpy(output, HIDDEN_BIASES[perspective], sizeof(Accumulator));
+  memcpy(output, HIDDEN_BIASES, sizeof(Accumulator));
 
   for (int sq = 0; sq < 64; sq++) {
     int pc = board->squares[sq];
@@ -63,7 +63,7 @@ void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
       continue;
 
     for (int i = 0; i < N_HIDDEN; i++)
-      output[i] += FEATURE_WEIGHTS[perspective][FeatureIdx(pc, sq, perspective) * N_HIDDEN + i];
+      output[i] += FEATURE_WEIGHTS[FeatureIdx(pc, sq, perspective) * N_HIDDEN + i];
   }
 }
 
@@ -147,13 +147,13 @@ void AddUpdate(int feature, int c, NNUpdate* updates) {
   updates->n++;
 }
 
-void ApplyUpdates(NNUpdate* updates, Accumulator output, int stm) {
+void ApplyUpdates(NNUpdate* updates, Accumulator output) {
   for (int i = 0; i < updates->n; i++) {
     const int c = updates->coeffs[i];
     const int f = updates->features[i];
 
     for (int j = 0; j < N_HIDDEN; j++)
-      output[j] += c * FEATURE_WEIGHTS[stm][f * N_HIDDEN + j];
+      output[j] += c * FEATURE_WEIGHTS[f * N_HIDDEN + j];
   }
 }
 
@@ -165,19 +165,11 @@ void LoadDefaultNN() {
   float* data = (float*)EmbedData + 6;
 
   for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) {
-    FEATURE_WEIGHTS[WHITE][j] = LoadWeight(*data++, 1);
-  }
-
-  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) {
-    FEATURE_WEIGHTS[BLACK][j] = LoadWeight(*data++, 1);
+    FEATURE_WEIGHTS[j] = LoadWeight(*data++, 1);
   }
 
   for (int j = 0; j < N_HIDDEN; j++) {
-    HIDDEN_BIASES[WHITE][j] = LoadWeight(*data++, 1);
-  }
-
-  for (int j = 0; j < N_HIDDEN; j++) {
-    HIDDEN_BIASES[BLACK][j] = LoadWeight(*data++, 1);
+    HIDDEN_BIASES[j] = LoadWeight(*data++, 1);
   }
 
   for (int j = 0; j < N_HIDDEN * 2; j++) {
