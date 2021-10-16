@@ -35,9 +35,9 @@
 #endif
 
 typedef struct {
-  int n;
-  int features[4];
-  int coeffs[4];
+  int na, nr;
+  int additions[2];
+  int removals[2];
 } NNUpdate;
 
 typedef int16_t Weight;
