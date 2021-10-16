@@ -22,5 +22,6 @@ int ApplySecondLayer(Accumulator a1, Accumulator a2);
 int NNPredict(Board* board);
 void LoadDefaultNN();
 
-void ApplyUpdates(NNUpdate* updates, Accumulator output);
-void AddUpdate(int feature, int c, NNUpdate* updates);
+void ApplyUpdates(Board* board, int side, NNUpdate* updates);
+void AddAddition(int f, NNUpdate* updates);
+void AddRemoval(int f, NNUpdate* updates);
