@@ -29,6 +29,7 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
+#include "nn.h"
 #include "noobprobe/noobprobe.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
@@ -38,7 +39,7 @@
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
-#include "weights.h"
+
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
@@ -126,19 +127,21 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
 void* Search(void* arg) {
   ThreadData* thread = (ThreadData*)arg;
   SearchParams* params = thread->params;
-  SearchData* data = &thread->data;
   SearchResults* results = thread->results;
   Board* board = &thread->board;
+
   int mainThread = !thread->idx;
   int searchStability = 0;
-
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
   int score = 0;
 
+  board->ply = 0;
+  ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
+  ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
+
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
-
     // Iterative deepening
     for (int depth = 1; depth <= params->depth; depth++) {
       for (thread->multiPV = 0; thread->multiPV < params->multiPV; thread->multiPV++) {
@@ -155,12 +158,6 @@ void* Search(void* arg) {
           alpha = max(score - WINDOW, -CHECKMATE);
           beta = min(score + WINDOW, CHECKMATE);
           delta = WINDOW;
-
-          int contempt =
-              (abs(score) <= 100) * score / 4 + (score > 100) * (20 + score / 20) + (score < -100) * (-20 + score / 20);
-          contempt = max(-40, min(40, contempt));
-          data->contempt =
-              board->side == WHITE ? makeScore(contempt, contempt / 2) : -makeScore(contempt, contempt / 2);
         } else {
           alpha = -CHECKMATE;
           beta = CHECKMATE;
@@ -299,7 +296,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Prevent overflows
     if (data->ply > MAX_SEARCH_PLY - 1)
-      return EvaluateScaled(board, thread);
+      return Evaluate(board);
 
     // Mate distance pruning
     alpha = max(alpha, -CHECKMATE + data->ply);
@@ -373,7 +370,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
   // pull previous static eval from tt - this is depth independent
   int eval;
   if (!skipMove) {
-    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : EvaluateScaled(board, thread));
+    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board));
   } else {
     // after se, just used already determined eval
     eval = data->evals[data->ply];
@@ -527,10 +524,6 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     else if (!isRoot && depth >= 8 && ttHit && move == tt->move && quietHistory >= 98304)
       extension = 1;
 
-    // castle extensions
-    else if (MoveCastle(move))
-      extension = 1;
-
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
     else if (isPV && !isRoot && IsRecapture(data, move))
@@ -565,10 +558,9 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         // adjust reduction based on historical score
         R -= quietHistory / 20480;
       } else {
-        R--;
+        int th = GetTacticalHistory(data, board, move);
 
-        if (isPV)
-          R--;
+        R = 1 - 4 * th / (abs(th) + 16384 + (8192 * isPV));
       }
 
       // prevent dropping into QS, extending, or reducing all extensions
@@ -607,7 +599,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(board, data, move, depth, board->side, quiets, numQuiets, tacticals, numTacticals);
+        UpdateHistories(board, data, move, depth + (bestScore > beta + 100), board->side, quiets, numQuiets, tacticals,
+                        numTacticals);
         break;
       }
     }
@@ -653,7 +646,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
 
   // prevent overflows
   if (data->ply > MAX_SEARCH_PLY - 1)
-    return EvaluateScaled(board, thread);
+    return Evaluate(board);
 
   // check the transposition table for previous info
   int ttHit = 0, ttScore = UNKNOWN;
@@ -672,7 +665,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
   int bestScore = -CHECKMATE + data->ply;
 
   // pull cached eval if it exists
-  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : EvaluateScaled(board, thread));
+  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board));
   if (!ttHit)
     TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 

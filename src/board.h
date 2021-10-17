@@ -25,8 +25,6 @@
 #define rank(sq) ((sq) >> 3)
 #define sq(r, f) ((r) * 8 + (f))
 
-extern const BitBoard EMPTY;
-
 extern const int PAWN[];
 extern const int KNIGHT[];
 extern const int BISHOP[];
@@ -34,8 +32,6 @@ extern const int ROOK[];
 extern const int QUEEN[];
 extern const int KING[];
 extern const int PIECE_TYPE[];
-
-extern const int MIRROR[];
 
 extern const uint64_t PIECE_COUNT_IDX[];
 
@@ -57,9 +53,12 @@ int IsMaterialDraw(Board* board);
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);
 void MakeMove(Move move, Board* board);
+void MakeMoveUpdate(Move move, Board* board, int update);
 void UndoMove(Move move, Board* board);
 
 int IsMoveLegal(Move move, Board* board);
 int MoveIsLegal(Move move, Board* board);
+
+int FeatureIdx(int piece, int sq, int perspective);
 
 #endif

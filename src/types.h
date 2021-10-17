@@ -20,61 +20,62 @@
 #include <inttypes.h>
 #include <setjmp.h>
 
-#ifdef TUNE
-#define MAX_SEARCH_PLY 16
-#define MAX_MOVES 256
-#define MAX_GAME_PLY 32
-#else
 #define MAX_SEARCH_PLY INT8_MAX
 #define MAX_MOVES 256
 #define MAX_GAME_PLY 1024
+
+#define N_FEATURES 768
+#define N_HIDDEN 256
+#define N_OUTPUT 1
+
+#if defined(__AVX__)
+#define ALIGN_ON 32
+#else
+#define ALIGN_ON 16
 #endif
 
-#ifdef TUNE
-#define PAWN_TABLE_MASK (0x1)
-#define PAWN_TABLE_SIZE (1ULL << 1)
-#else
-#define PAWN_TABLE_MASK (0xFFFF)
-#define PAWN_TABLE_SIZE (1ULL << 16)
-#endif
+typedef struct {
+  int na, nr;
+  int additions[2];
+  int removals[2];
+} NNUpdate;
+
+typedef int16_t Weight;
+typedef Weight Accumulator[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 
 typedef int Score;
-
 typedef uint64_t BitBoard;
-
 typedef uint32_t Move;
 
 typedef struct {
-  BitBoard pieces[12];     // individual piece data
-  BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
-  int squares[64];         // piece per square
-  BitBoard checkers;       // checking piece squares
-  BitBoard pinned;         // pinned pieces
-  uint64_t piecesCounts;   // "material key" - pieces left on the board
-
-  Score mat; // material+psqt score updated incrementally
-
   int side;     // side to move
   int xside;    // side not to move
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no active ep)
   int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
   int moveNo;   // current game move number TODO: Is this still used?
   int halfMove; // half move count for 50 move rule
+  int ply;
 
-  uint64_t zobrist; // zobrist hash of the position
-  uint64_t pawnHash;
+  BitBoard checkers;     // checking piece squares
+  BitBoard pinned;       // pinned pieces
+  uint64_t piecesCounts; // "material key" - pieces left on the board
+  uint64_t zobrist;      // zobrist hash of the position
 
-  int castlingRights[64];
+  Accumulator* accumulators[2];
+
+  int squares[64];         // piece per square
+  BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
+  BitBoard pieces[13];     // individual piece data
+
   int castleRooks[4];
+  int castlingRights[64];
 
   // data that is hard to track, so it is "remembered" when search undoes moves
   int castlingHistory[MAX_GAME_PLY];
   int epSquareHistory[MAX_GAME_PLY];
   int captureHistory[MAX_GAME_PLY];
   int halfMoveHistory[MAX_GAME_PLY];
-  Score materialHistory[MAX_GAME_PLY];
   uint64_t zobristHistory[MAX_GAME_PLY];
-  uint64_t pawnHashHistory[MAX_GAME_PLY];
   BitBoard checkersHistory[MAX_GAME_PLY];
   BitBoard pinnedHistory[MAX_GAME_PLY];
 } Board;
@@ -116,94 +117,6 @@ typedef struct {
 } SearchData;
 
 typedef struct {
-  int8_t pieces[5];
-  int8_t psqt[6][2][32];
-  int8_t bishopPair;
-
-  int8_t knightPostPsqt[12];
-  int8_t bishopPostPsqt[12];
-
-  int8_t knightMobilities[9];
-  int8_t bishopMobilities[14];
-  int8_t rookMobilities[15];
-  int8_t queenMobilities[28];
-  int8_t kingMobilities[9];
-
-  int8_t minorBehindPawn;
-  int8_t knightPostReachable;
-  int8_t bishopPostReachable;
-  int8_t bishopTrapped;
-  int8_t rookTrapped;
-  int8_t badBishopPawns;
-  int8_t dragonBishop;
-  int8_t rookOpenFileOffset;
-  int8_t rookOpenFile;
-  int8_t rookSemiOpen;
-  int8_t rookToOpen;
-  int8_t queenOppositeRook;
-  int8_t queenRookBattery;
-
-  int8_t defendedPawns;
-  int8_t doubledPawns;
-  int8_t isolatedPawns[4];
-  int8_t openIsolatedPawns;
-  int8_t backwardsPawns;
-  int8_t connectedPawn[4][8];
-  int8_t candidatePasser[8];
-  int8_t candidateEdgeDistance;
-
-  int8_t passedPawn[8];
-  int8_t passedPawnEdgeDistance;
-  int8_t passedPawnKingProximity;
-  int8_t passedPawnAdvance[5];
-  int8_t passedPawnEnemySliderBehind;
-  int8_t passedPawnSqRule;
-  int8_t passedPawnUnsupported;
-  int8_t passedPawnOutsideVKnight;
-
-  int8_t knightThreats[6];
-  int8_t bishopThreats[6];
-  int8_t rookThreats[6];
-  int8_t kingThreat;
-  int8_t pawnThreat;
-  int8_t pawnPushThreat;
-  int8_t pawnPushThreatPinned;
-  int8_t hangingThreat;
-  int8_t knightCheckQueen;
-  int8_t bishopCheckQueen;
-  int8_t rookCheckQueen;
-
-  int16_t space;
-
-  int16_t imbalance[5][5];
-
-  int8_t pawnShelter[4][8];
-  int8_t pawnStorm[4][8];
-  int8_t blockedPawnStorm[8];
-  int8_t castlingRights;
-
-  int8_t complexPawns;
-  int8_t complexPawnsBothSides;
-  int8_t complexOffset;
-
-  int ks;
-  int danger[2];
-  int8_t ksAttackerCount[2];
-  int8_t ksAttackerWeights[2][5];
-  int8_t ksWeakSqs[2];
-  int8_t ksPinned[2];
-  int8_t ksKnightCheck[2];
-  int8_t ksBishopCheck[2];
-  int8_t ksRookCheck[2];
-  int8_t ksQueenCheck[2];
-  int8_t ksUnsafeCheck[2];
-  int8_t ksEnemyQueen[2];
-  int8_t ksKnightDefense[2];
-
-  int8_t ss;
-} EvalCoeffs;
-
-typedef struct {
   long start;
   int alloc;
   int max;
@@ -225,37 +138,12 @@ typedef struct {
   Move ponderMoves[MAX_SEARCH_PLY];
 } SearchResults;
 
-typedef struct {
-  BitBoard passedPawns;
-  BitBoard openFiles;
-
-  // these are general data objects, for buildup during eval
-  int kingSq[2];
-  BitBoard kingArea[2];
-  BitBoard attacks[2][6];  // attacks by piece type
-  BitBoard allAttacks[2];  // all attacks
-  BitBoard twoAttacks[2];  // squares attacked twice
-  Score ksAttackWeight[2]; // king safety attackers weight
-  int ksAttackerCount[2];  // attackers
-
-  BitBoard mobilitySquares[2];
-  BitBoard outposts[2];
-} EvalData;
-
-typedef struct {
-  Score s;
-  uint64_t hash;
-  BitBoard passedPawns;
-} PawnHashEntry;
-
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
   int count, idx, multiPV, depth;
 
-  Score scores[MAX_MOVES];
-  Move bestMoves[MAX_MOVES];
-  PV pvs[MAX_MOVES];
+  Accumulator* accumulators[2];
 
   ThreadData* threads;
   jmp_buf exit;
@@ -264,9 +152,11 @@ struct ThreadData {
   SearchResults* results;
   SearchData data;
 
-  PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
-
   Board board;
+
+  Score scores[MAX_MOVES];
+  Move bestMoves[MAX_MOVES];
+  PV pvs[MAX_MOVES];
 };
 
 typedef struct {
@@ -304,32 +194,6 @@ typedef struct {
   int sTactical[MAX_MOVES];
   int sQuiet[MAX_MOVES];
 } MoveList;
-
-typedef struct {
-  int epoch;
-  float g;
-  float M;
-  float V;
-} Gradient;
-
-#define N_KP_VALUES 1809
-#define N_KP_FEATURES 224
-#define N_KP_HIDDEN 8
-#define N_KP_OUTPUT 1
-
-typedef struct {
-  float weights0[N_KP_FEATURES * N_KP_HIDDEN];
-  float weights1[N_KP_HIDDEN * N_KP_OUTPUT];
-  float biases0[N_KP_HIDDEN];
-  float biases1[N_KP_OUTPUT];
-
-  float hiddenActivations[N_KP_HIDDEN];
-
-  Gradient gWeights0[N_KP_FEATURES * N_KP_HIDDEN];
-  Gradient gWeights1[N_KP_HIDDEN * N_KP_OUTPUT];
-  Gradient gBiases0[N_KP_HIDDEN];
-  Gradient gBiases1[N_KP_OUTPUT];
-} KPNetwork;
 
 enum { WHITE, BLACK, BOTH };
 

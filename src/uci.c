@@ -24,8 +24,8 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
+#include "nn.h"
 #include "noobprobe/noobprobe.h"
-#include "pawns.h"
 #include "perft.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
@@ -34,6 +34,7 @@
 #include "transposition.h"
 #include "uci.h"
 #include "util.h"
+
 
 #define NAME "Berserk"
 #define VERSION "5.0.0-dev"
@@ -193,7 +194,7 @@ void ParsePosition(char* in, Board* board) {
     if (!enteredMove)
       break;
 
-    MakeMove(enteredMove, board);
+    MakeMoveUpdate(enteredMove, board, 0);
   }
 }
 
@@ -263,13 +264,8 @@ void UCILoop() {
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
-      Score s = EvaluateScaled(&board, &threads[0]);
-      if (board.side == BLACK)
-        s = -s;
-      printf("Score: %dcp (white)\n", s);
-
-      s = KPNetworkScore(&board);
-      printf("KPNetwork: %dcp (white)\n", scoreMG(s) / 2);
+      int score = NNPredict(&board);
+      printf("Score: %dcp (white)\n", board.side == WHITE ? score : -score);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {
@@ -281,7 +277,7 @@ void UCILoop() {
     } else if (!strncmp(in, "apply ", 6)) {
       Move m = ParseMove(in + 6, &board);
       if (m) {
-        MakeMove(m, &board);
+        MakeMoveUpdate(m, &board, 0);
         PrintBoard(&board);
       } else
         printf("info string Invalid move!\n");
@@ -292,7 +288,7 @@ void UCILoop() {
       printf("info string set Hash to value %d (%zu bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
-      free(threads);
+      FreeThreads(threads);
       threads = CreatePool(max(1, min(256, n)));
       printf("info string set Threads to value %d\n", n);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {

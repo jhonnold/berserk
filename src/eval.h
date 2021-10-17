@@ -21,29 +21,6 @@
 
 #include "types.h"
 
-#define scoreMG(s) ((int16_t)((uint16_t)((unsigned)((s)))))
-#define scoreEG(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
-#define psqtIdx(sq) ((rank((sq)) << 2) + (file((sq)) > 3 ? file((sq)) ^ 7 : file((sq))))
-#define rel(sq, side) ((side) ? MIRROR[(sq)] : (sq))
-#define distance(a, b) max(abs(rank(a) - rank(b)), abs(file(a) - file(b)))
-
-extern EvalCoeffs C;
-
-extern const int MAX_SCALE;
-extern const int MAX_PHASE;
-extern const Score PHASE_MULTIPLIERS[5];
-
-extern const int STATIC_MATERIAL_VALUE[7];
-
-extern Score PSQT[12][2][64];
-
-void InitPSQT();
-
-int Scale(Board* board, int ss);
-Score GetPhase(Board* board);
-
-Score MaterialValue(Board* board, int side);
-Score Evaluate(Board* board, ThreadData* thread);
-Score EvaluateScaled(Board* board, ThreadData* thread);
+Score Evaluate(Board* board);
 
 #endif

@@ -18,11 +18,12 @@
 #include "attacks.h"
 #include "bits.h"
 #include "board.h"
-#include "eval.h"
 #include "move.h"
 #include "movegen.h"
 #include "types.h"
 #include "util.h"
+
+const int STATIC_MATERIAL_VALUE[7] = {100, 565, 565, 705, 1000, 30000, 0};
 
 // Static exchange evaluation using The Swap Algorithm - https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
 inline int SEE(Board* board, Move move) {
