@@ -35,13 +35,9 @@
 #include "uci.h"
 #include "util.h"
 
-
-#define NAME "Berserk"
-#define VERSION "5.0.0-dev"
-
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD = 100;
+int MOVE_OVERHEAD = 5000;
 int MULTI_PV = 1;
 int PONDER_ENABLED = 1;
 int CHESS_960 = 0;
@@ -199,7 +195,7 @@ void ParsePosition(char* in, Board* board) {
 }
 
 void PrintUCIOptions() {
-  printf("id name " NAME " " VERSION "\n");
+  printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 65536\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
@@ -209,6 +205,7 @@ void PrintUCIOptions() {
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
   printf("option name Ponder type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
+  printf("option name MoveOverhead type spin default 5000 min 100 max 10000\n");
   printf("uciok\n");
 }
 
@@ -323,6 +320,14 @@ void UCILoop() {
 
       CHESS_960 = !strncmp(opt, "true", 4);
       printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
+      printf("info string Resetting board...\n");
+
+      ParsePosition("position startpos\n", &board);
+      TTClear();
+      ResetThreadPool(threads);
+      failedQueries = 0;
+    } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
+      MOVE_OVERHEAD = min(10000, max(100, GetOptionIntValue(in)));
     }
   }
 }

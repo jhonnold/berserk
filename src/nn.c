@@ -16,7 +16,7 @@
 
 #include <math.h>
 #include <string.h>
-#if defined(__AVX__)
+#if defined(__AVX2__)
 #include <immintrin.h>
 #elif defined(__SSE__)
 #include <xmmintrin.h>
@@ -59,7 +59,7 @@ void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
   }
 }
 
-#if defined(__AVX__)
+#if defined(__AVX2__)
 int ApplySecondLayer(Accumulator stm, Accumulator xstm) {
   int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 

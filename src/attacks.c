@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#ifdef PEXT
+#ifdef USE_PEXT
 #include <immintrin.h>
 #endif
 
@@ -415,7 +415,7 @@ void InitBishopAttacks() {
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
 
-#ifndef PEXT
+#ifndef USE_PEXT
       int idx = (occupancy * BISHOP_MAGICS[sq]) >> (64 - bits);
       BISHOP_ATTACKS[sq][idx] = GetBishopAttacksOTF(sq, occupancy);
 #else
@@ -434,7 +434,7 @@ void InitRookAttacks() {
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
 
-#ifndef PEXT
+#ifndef USE_PEXT
       int idx = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
       ROOK_ATTACKS[sq][idx] = GetRookAttacksOTF(sq, occupancy);
 #else
@@ -455,7 +455,7 @@ void InitAttacks() {
   InitBishopMasks();
   InitRookMasks();
 
-#ifndef PEXT
+#ifndef USE_PEXT
   InitBishopMagics();
   InitRookMagics();
 #endif
@@ -469,7 +469,7 @@ inline BitBoard GetPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][s
 inline BitBoard GetKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
 
 inline BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
-#ifndef PEXT
+#ifndef USE_PEXT
   occupancy &= BISHOP_MASKS[sq];
   occupancy *= BISHOP_MAGICS[sq];
   occupancy >>= 64 - BISHOP_RELEVANT_BITS[sq];
@@ -481,7 +481,7 @@ inline BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
 }
 
 inline BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
-#ifndef PEXT
+#ifndef USE_PEXT
   occupancy &= ROOK_MASKS[sq];
   occupancy *= ROOK_MAGICS[sq];
   occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];

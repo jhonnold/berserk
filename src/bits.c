@@ -21,15 +21,6 @@
 #include "board.h"
 #include "types.h"
 
-#ifndef POPCOUNT
-inline int bits(BitBoard bb) {
-  int c;
-  for (c = 0; bb; bb &= bb - 1)
-    c++;
-  return c;
-}
-#endif
-
 inline int popAndGetLsb(BitBoard* bb) {
   int sq = lsb(*bb);
   popLsb(*bb);

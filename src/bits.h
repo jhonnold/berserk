@@ -40,6 +40,7 @@
 #define DARK_SQS 0x55AA55AA55AA55AAULL
 
 #define bit(sq) (1ULL << (sq))
+#define bits(bb) (__builtin_popcountll(bb))
 #define setBit(bb, sq) ((bb) |= bit(sq))
 #define getBit(bb, sq) ((bb) & bit(sq))
 #define popBit(bb, sq) ((bb) &= ~bit(sq))
@@ -47,12 +48,6 @@
 #define lsb(bb) (__builtin_ctzll(bb))
 #define msb(bb) (63 ^ __builtin_clzll(bb))
 #define subset(a, b) (((a) & (b)) == (a))
-
-#ifndef POPCOUNT
-int bits(BitBoard bb);
-#else
-#define bits(bb) (__builtin_popcountll(bb))
-#endif
 
 #define ShiftN(bb) ((bb) >> 8)
 #define ShiftS(bb) ((bb) << 8)

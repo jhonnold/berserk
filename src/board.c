@@ -131,14 +131,6 @@ void ParseFen(char* fen, Board* board) {
     fen++;
   }
 
-  if (board->castleRooks[0] != H1 || board->castleRooks[1] != A1 || board->castleRooks[2] != H8 ||
-      board->castleRooks[3] != A8) {
-    if (!CHESS_960) {
-      CHESS_960 = 1;
-      printf("info string set UCI_Chess960 to value true\n");
-    }
-  }
-
   for (int i = 0; i < 64; i++) {
     board->castlingRights[i] = board->castling;
 
