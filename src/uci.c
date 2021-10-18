@@ -37,9 +37,9 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD = 5000;
+int MOVE_OVERHEAD = 300;
 int MULTI_PV = 1;
-int PONDER_ENABLED = 1;
+int PONDER_ENABLED = 0;
 int CHESS_960 = 0;
 volatile int PONDERING = 0;
 
@@ -99,8 +99,14 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   if ((ptrChar = strstr(in, "depth")))
     depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
 
-  if ((ptrChar = strstr(in, "ponder")))
-    PONDERING = 1;
+  if ((ptrChar = strstr(in, "ponder"))) {
+    if (PONDER_ENABLED)
+      PONDERING = 1;
+    else {
+      printf("info string Enable option Ponder to use 'ponder'\n");
+      return;
+    }
+  }
 
   if ((ptrChar = strstr(in, "searchmoves"))) {
     params->searchMoves = 1;
@@ -203,9 +209,9 @@ void PrintUCIOptions() {
   printf("option name NoobBook type check default false\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
-  printf("option name Ponder type check default true\n");
+  printf("option name Ponder type check default false\n");
   printf("option name UCI_Chess960 type check default false\n");
-  printf("option name MoveOverhead type spin default 5000 min 100 max 10000\n");
+  printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
   printf("uciok\n");
 }
 

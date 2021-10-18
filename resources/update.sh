@@ -1,23 +1,18 @@
 #!/bin/bash
 
 REPO_URL=https://github.com/jhonnold/berserk.git
-VERSION=5.0.0-dev
 
-echo "Downloading Berserk version $VERSION"
-git clone --depth 1 --branch main
+echo "Downloading Berserk"
+git clone --depth 1 --branch main $REPO_URL
 cd berserk
-read -p "Download complete, please enter to continue..."
+echo "Download complete"
 
 echo "Compiling Berserk..."
 cd src
-sed -i.bak "s/ -static/ /" makefile
-make release
-cd ../dist
-
+make
 echo "Compilation complete..."
 
-ln -s berserk-$VERSION-x64-avx2-pext berserk-x64-avx2-pext
-EXE=$PWD/berserk-x64-avx2-pext
+EXE=$PWD/berserk
 echo "Setting EXE to $EXE"
 
 $EXE bench
