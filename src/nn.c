@@ -15,7 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
+
 #if defined(__AVX2__)
 #include <immintrin.h>
 #elif defined(__SSE__)
@@ -34,6 +36,8 @@
 #ifndef EVALFILE
 #define EVALFILE "default.nn"
 #endif
+
+uint64_t DEFAULT_NN_HASH = UINT64_MAX;
 
 INCBIN(Embed, EVALFILE);
 
@@ -151,7 +155,12 @@ inline Weight LoadWeight(float v, int in) {
 }
 
 void LoadDefaultNN() {
-  float* data = (float*)EmbedData + 6;
+  if (EmbedData[0] != 'B' || EmbedData[1] != 'R' || EmbedData[2] != 'K' || EmbedData[3] != 'R')
+    printf("info string Berserk was not built using a standard net, use with caution!\n");
+
+  DEFAULT_NN_HASH = *((uint64_t*)(EmbedData + 4));
+
+  float* data = (float*)EmbedData + 3; // Skip the 4 byte magic and 8 byte hash
 
   for (int j = 0; j < N_FEATURES * N_HIDDEN; j++)
     FEATURE_WEIGHTS[j] = LoadWeight(*data++, 1);

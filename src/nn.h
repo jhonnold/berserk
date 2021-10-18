@@ -16,6 +16,8 @@
 
 #include "types.h"
 
+extern uint64_t DEFAULT_NN_HASH;
+
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective);
 int ApplySecondLayer(Accumulator a1, Accumulator a2);
 
