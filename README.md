@@ -32,7 +32,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 
 ### Lars No SMP
 
-#### Rank #10
+#### Rank #6
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -45,6 +45,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.3.0       | 3248    | 15'    |
 | 4.4.0       | 3314    | 15'    |
 | 4.5.0       | 3344    | 15'    |
+| 5           | 3371    | 15'    |
+| 6           | 3446    | 15'    |
 
 ## Features
 
