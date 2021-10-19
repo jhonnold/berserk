@@ -503,8 +503,13 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   if (update) {
     if ((piece == KING_WHITE || piece == KING_BLACK) && (start & 0x04) != (end & 0x04)) {
-      ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
-      ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
+      if (piece == KING_WHITE) {
+        ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
+        ApplyUpdates(board, BLACK, bUpdates);
+      } else {
+        ApplyUpdates(board, WHITE, wUpdates);
+        ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
+      }
     } else {
       ApplyUpdates(board, WHITE, wUpdates);
       ApplyUpdates(board, BLACK, bUpdates);
