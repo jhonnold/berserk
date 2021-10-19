@@ -50,13 +50,15 @@ Weight HIDDEN_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int32_t OUTPUT_BIAS;
 
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
+  int kingSq = lsb(board->pieces[KING[perspective]]);
+  
   memcpy(output, HIDDEN_BIASES, sizeof(Accumulator));
 
   BitBoard occ = board->occupancies[BOTH];
   while (occ) {
     int sq = popAndGetLsb(&occ);
     int pc = board->squares[sq];
-    int feature = FeatureIdx(pc, sq, perspective);
+    int feature = FeatureIdx(pc, sq, kingSq, perspective);
 
     for (int i = 0; i < N_HIDDEN; i++)
       output[i] += FEATURE_WEIGHTS[feature * N_HIDDEN + i];
