@@ -337,6 +337,9 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int castle = MoveCastle(move);
   int captured = board->squares[end];
 
+  int wkingSq = lsb(board->pieces[KING_WHITE]);
+  int bkingSq = lsb(board->pieces[KING_BLACK]);
+
   // store hard to recalculate values
   board->zobristHistory[board->moveNo] = board->zobrist;
   board->castlingHistory[board->moveNo] = board->castling;
@@ -355,10 +358,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->zobrist ^= ZOBRIST_PIECES[piece][start];
   board->zobrist ^= ZOBRIST_PIECES[piece][end];
 
-  AddRemoval(FeatureIdx(piece, start, WHITE), wUpdates);
-  AddRemoval(FeatureIdx(piece, start, BLACK), bUpdates);
-  AddAddition(FeatureIdx(promoted ? promoted : piece, end, WHITE), wUpdates);
-  AddAddition(FeatureIdx(promoted ? promoted : piece, end, BLACK), bUpdates);
+  AddRemoval(FeatureIdx(piece, start, wkingSq, WHITE), wUpdates);
+  AddRemoval(FeatureIdx(piece, start, bkingSq, BLACK), bUpdates);
+  AddAddition(FeatureIdx(promoted ? promoted : piece, end, wkingSq, WHITE), wUpdates);
+  AddAddition(FeatureIdx(promoted ? promoted : piece, end, bkingSq, BLACK), bUpdates);
 
   if (piece == PAWN[board->side])
     board->halfMove = 0; // reset on pawn move
@@ -371,8 +374,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->zobrist ^= ZOBRIST_PIECES[captured][end];
 
-    AddRemoval(FeatureIdx(captured, end, WHITE), wUpdates);
-    AddRemoval(FeatureIdx(captured, end, BLACK), bUpdates);
+    AddRemoval(FeatureIdx(captured, end, wkingSq, WHITE), wUpdates);
+    AddRemoval(FeatureIdx(captured, end, bkingSq, BLACK), bUpdates);
 
     board->piecesCounts -= PIECE_COUNT_IDX[captured]; // when there's a capture, we need to update our piece counts
     board->halfMove = 0;                              // reset on capture
@@ -399,8 +402,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->zobrist ^= ZOBRIST_PIECES[PAWN[board->xside]][end - PAWN_DIRECTIONS[board->side]];
 
-    AddRemoval(FeatureIdx(PAWN[board->xside], end - PAWN_DIRECTIONS[board->side], WHITE), wUpdates);
-    AddRemoval(FeatureIdx(PAWN[board->xside], end - PAWN_DIRECTIONS[board->side], BLACK), bUpdates);
+    AddRemoval(FeatureIdx(PAWN[board->xside], end - PAWN_DIRECTIONS[board->side], wkingSq, WHITE), wUpdates);
+    AddRemoval(FeatureIdx(PAWN[board->xside], end - PAWN_DIRECTIONS[board->side], bkingSq, BLACK), bUpdates);
 
     board->piecesCounts -= PIECE_COUNT_IDX[PAWN[board->xside]];
     board->halfMove = 0; // this is a capture
@@ -429,10 +432,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][board->castleRooks[0]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][F1];
 
-      AddRemoval(FeatureIdx(ROOK_WHITE, board->castleRooks[0], WHITE), wUpdates);
-      AddRemoval(FeatureIdx(ROOK_WHITE, board->castleRooks[0], BLACK), bUpdates);
-      AddAddition(FeatureIdx(ROOK_WHITE, F1, WHITE), wUpdates);
-      AddAddition(FeatureIdx(ROOK_WHITE, F1, BLACK), bUpdates);
+      AddRemoval(FeatureIdx(ROOK_WHITE, board->castleRooks[0], wkingSq, WHITE), wUpdates);
+      AddRemoval(FeatureIdx(ROOK_WHITE, board->castleRooks[0], bkingSq, BLACK), bUpdates);
+      AddAddition(FeatureIdx(ROOK_WHITE, F1, wkingSq, WHITE), wUpdates);
+      AddAddition(FeatureIdx(ROOK_WHITE, F1, bkingSq, BLACK), bUpdates);
     } else if (end == C1) {
       popBit(board->pieces[ROOK[WHITE]], board->castleRooks[1]);
       setBit(board->pieces[ROOK[WHITE]], D1);
@@ -444,10 +447,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][board->castleRooks[1]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[WHITE]][D1];
 
-      AddRemoval(FeatureIdx(ROOK_WHITE, board->castleRooks[1], WHITE), wUpdates);
-      AddRemoval(FeatureIdx(ROOK_WHITE, board->castleRooks[1], BLACK), bUpdates);
-      AddAddition(FeatureIdx(ROOK_WHITE, D1, WHITE), wUpdates);
-      AddAddition(FeatureIdx(ROOK_WHITE, D1, BLACK), bUpdates);
+      AddRemoval(FeatureIdx(ROOK_WHITE, board->castleRooks[1], wkingSq, WHITE), wUpdates);
+      AddRemoval(FeatureIdx(ROOK_WHITE, board->castleRooks[1], bkingSq, BLACK), bUpdates);
+      AddAddition(FeatureIdx(ROOK_WHITE, D1, wkingSq, WHITE), wUpdates);
+      AddAddition(FeatureIdx(ROOK_WHITE, D1, bkingSq, BLACK), bUpdates);
     } else if (end == G8) {
       popBit(board->pieces[ROOK[BLACK]], board->castleRooks[2]);
       setBit(board->pieces[ROOK[BLACK]], F8);
@@ -459,10 +462,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][board->castleRooks[2]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][F8];
 
-      AddRemoval(FeatureIdx(ROOK_BLACK, board->castleRooks[2], WHITE), wUpdates);
-      AddRemoval(FeatureIdx(ROOK_BLACK, board->castleRooks[2], BLACK), bUpdates);
-      AddAddition(FeatureIdx(ROOK_BLACK, F8, WHITE), wUpdates);
-      AddAddition(FeatureIdx(ROOK_BLACK, F8, BLACK), bUpdates);
+      AddRemoval(FeatureIdx(ROOK_BLACK, board->castleRooks[2], wkingSq, WHITE), wUpdates);
+      AddRemoval(FeatureIdx(ROOK_BLACK, board->castleRooks[2], bkingSq, BLACK), bUpdates);
+      AddAddition(FeatureIdx(ROOK_BLACK, F8, wkingSq, WHITE), wUpdates);
+      AddAddition(FeatureIdx(ROOK_BLACK, F8, bkingSq, BLACK), bUpdates);
     } else if (end == C8) {
       popBit(board->pieces[ROOK[BLACK]], board->castleRooks[3]);
       setBit(board->pieces[ROOK[BLACK]], D8);
@@ -474,10 +477,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][board->castleRooks[3]];
       board->zobrist ^= ZOBRIST_PIECES[ROOK[BLACK]][D8];
 
-      AddRemoval(FeatureIdx(ROOK_BLACK, board->castleRooks[3], WHITE), wUpdates);
-      AddRemoval(FeatureIdx(ROOK_BLACK, board->castleRooks[3], BLACK), bUpdates);
-      AddAddition(FeatureIdx(ROOK_BLACK, D8, WHITE), wUpdates);
-      AddAddition(FeatureIdx(ROOK_BLACK, D8, BLACK), bUpdates);
+      AddRemoval(FeatureIdx(ROOK_BLACK, board->castleRooks[3], wkingSq, WHITE), wUpdates);
+      AddRemoval(FeatureIdx(ROOK_BLACK, board->castleRooks[3], bkingSq, BLACK), bUpdates);
+      AddAddition(FeatureIdx(ROOK_BLACK, D8, wkingSq, WHITE), wUpdates);
+      AddAddition(FeatureIdx(ROOK_BLACK, D8, bkingSq, BLACK), bUpdates);
     }
   }
 
@@ -499,8 +502,18 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    ApplyUpdates(board, WHITE, wUpdates);
-    ApplyUpdates(board, BLACK, bUpdates);
+    if ((piece != KING_WHITE || piece != KING_BLACK)) {
+      ApplyUpdates(board, WHITE, wUpdates);
+      ApplyUpdates(board, BLACK, bUpdates);
+    } else {
+      if (piece == KING_WHITE && (start & 0x04) != (end & 0x04)) {
+        ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
+        ApplyUpdates(board, BLACK, bUpdates);
+      } else if (piece == KING_BLACK && (start & 0x04) != (end & 0x04)) {
+        ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
+        ApplyUpdates(board, WHITE, wUpdates);
+      }
+    }
   }
 
   // Prefetch the hash entry for this board position
@@ -841,8 +854,10 @@ int IsMoveLegal(Move move, Board* board) {
   return 1;
 }
 
-inline int FeatureIdx(int piece, int sq, int perspective) {
+inline int SameSideKing(int sq, int kingsq) { return (sq & 0x04) == (kingsq & 0x04); }
+
+inline int FeatureIdx(int piece, int sq, int kingsq, int perspective) {
   int corrected = piece / 2 + 6 * ((piece & 1) != perspective);
 
-  return corrected * 64 + (sq ^ (perspective == WHITE ? 56 : 0));
+  return corrected * 128 + SameSideKing(sq, kingsq) * 64 + (sq ^ (perspective == WHITE ? 56 : 0));
 }

@@ -59,6 +59,7 @@ void UndoMove(Move move, Board* board);
 int IsMoveLegal(Move move, Board* board);
 int MoveIsLegal(Move move, Board* board);
 
-int FeatureIdx(int piece, int sq, int perspective);
+int SameSideKing(int sq, int kingsq);
+int FeatureIdx(int piece, int sq, int kingsq, int perspective);
 
 #endif
