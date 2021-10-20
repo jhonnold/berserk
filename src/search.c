@@ -332,11 +332,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       int flag;
       switch (tbResult) {
       case TB_WIN:
-        score = TB_WIN_BOUND - data->ply;
+        score = TB_WIN_SCORE - data->ply;
         flag = TT_LOWER;
         break;
       case TB_LOSS:
-        score = -TB_WIN_BOUND + data->ply;
+        score = -TB_WIN_SCORE + data->ply;
         flag = TT_UPPER;
         break;
       default:
@@ -397,7 +397,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 6 && !skipMove && eval - 80 * depth + (improving ? 75 : 15) >= beta && eval < MATE_BOUND)
+    if (depth <= 6 && !skipMove && eval - 80 * depth + (improving ? 75 : 15) >= beta && eval < TB_WIN_BOUND)
       return eval;
 
     // Null move pruning
@@ -425,7 +425,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 110;
-    if (depth > 4 && abs(beta) < MATE_BOUND && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
+    if (depth > 4 && abs(beta) < TB_WIN_BOUND && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
       InitTacticalMoves(&moves, data, 0);
       while ((move = NextMove(&moves, board, 1))) {
         if (skipMove == move)
@@ -504,7 +504,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
     int extension = 0;
     if (depth >= 8 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
-        abs(ttScore) < MATE_BOUND && (tt->flags & TT_LOWER)) {
+        abs(ttScore) < TB_WIN_BOUND && (tt->flags & TT_LOWER)) {
       int sBeta = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
@@ -521,7 +521,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 8 && ttHit && move == tt->move && quietHistory >= 98304)
+    else if (!isRoot && depth >= 8 && ttHit && move == tt->move && abs(ttScore) < TB_WIN_BOUND && quietHistory >= 98304)
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
