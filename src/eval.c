@@ -24,5 +24,5 @@ Score Evaluate(Board* board) {
     return 0;
 
   int output = ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]);
-  return 4 * output / 3;
+  return 5 * output / 4;
 }
