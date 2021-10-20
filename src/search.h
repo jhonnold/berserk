@@ -24,6 +24,7 @@
 #define CHECKMATE 32256
 #define MATE_BOUND 30000
 #define TB_WIN_BOUND 20000
+#define TB_WIN_SCORE 21000
 
 // static evaluation pruning
 // capture cutoff is linear 70x
