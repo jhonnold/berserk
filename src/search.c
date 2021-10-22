@@ -503,7 +503,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
     int extension = 0;
-    if (depth >= 8 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
+    if (depth >= 7 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
         abs(ttScore) < TB_WIN_BOUND && (tt->flags & TT_LOWER)) {
       int sBeta = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
@@ -521,7 +521,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 8 && ttHit && move == tt->move && abs(ttScore) < TB_WIN_BOUND && quietHistory >= 98304)
+    else if (!isRoot && depth >= 7 && ttHit && move == tt->move && abs(ttScore) < TB_WIN_BOUND && quietHistory >= 98304)
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
@@ -533,7 +533,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     MakeMove(move, board);
 
     // apply extensions
-    int newDepth = depth + max(extension, (board->checkers && depth < 8));
+    int newDepth = depth + max(extension, (board->checkers && depth < 7));
 
     // Late move reductions
     int R = 1;
