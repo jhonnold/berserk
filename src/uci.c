@@ -268,7 +268,33 @@ void UCILoop() {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
       int score = NNPredict(&board);
-      printf("Score: %dcp (white)\n", board.side == WHITE ? score : -score);
+      score = board.side == WHITE ? score : -score;
+
+      for (int r = 0; r < 8; r++) {
+        printf("+-----+-----+-----+-----+-----+-----+-----+-----+\n");
+        printf("|");
+        for (int f = 0; f < 8; f++) {
+          int sq = r * 8 + f;
+          if (board.squares[sq] < KING_WHITE) {
+            popBit(board.occupancies[BOTH], sq);
+            int new = NNPredict(&board);
+            new = board.side == WHITE ? new : -new;
+            int diff = score - new;
+            printf("%+5d|", diff);
+            setBit(board.occupancies[BOTH], sq);
+          } else if (board.squares[sq] == KING_WHITE) {
+            printf("  K  |");
+          } else if (board.squares[sq] == KING_BLACK) {
+            printf("  k  |");
+          } else {
+            printf("     |");
+          }
+        }
+        printf("\n");
+      }
+      printf("+-----+-----+-----+-----+-----+-----+-----+-----+\n");
+
+      printf("Score: %dcp (white)\n", score);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {
