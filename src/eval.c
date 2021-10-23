@@ -30,5 +30,5 @@ Score Evaluate(Board* board) {
     return 0;
 
   int output = ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]);
-  return (96 + min(MAX_PHASE, board->phase)) * output / 96;
+  return (72 + min(MAX_PHASE, board->phase)) * output / 96;
 }
