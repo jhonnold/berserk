@@ -14,9 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <stdio.h>
+
 #include "eval.h"
 #include "board.h"
 #include "nn.h"
+#include "util.h"
+
+const int PHASE_VALUES[6] = { 0, 2, 2, 4, 8, 0 };
+const int MAX_PHASE = 48;
 
 // Main evalution method
 Score Evaluate(Board* board) {
@@ -24,5 +30,5 @@ Score Evaluate(Board* board) {
     return 0;
 
   int output = ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]);
-  return 5 * output / 4;
+  return (72 + min(MAX_PHASE, board->phase)) * output / 96;
 }

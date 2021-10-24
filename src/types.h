@@ -55,6 +55,7 @@ typedef struct {
   int moveNo;   // current game move number TODO: Is this still used?
   int halfMove; // half move count for 50 move rule
   int ply;
+  int phase;
 
   BitBoard checkers;     // checking piece squares
   BitBoard pinned;       // pinned pieces

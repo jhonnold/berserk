@@ -70,6 +70,7 @@ void ClearBoard(Board* board) {
   board->castling = 0;
   board->moveNo = 0;
   board->halfMove = 0;
+  board->phase = 0;
 }
 
 void ParseFen(char* fen, Board* board) {
@@ -80,6 +81,8 @@ void ParseFen(char* fen, Board* board) {
       int piece = CHAR_TO_PIECE[(int)*fen];
       setBit(board->pieces[piece], i);
       board->squares[i] = piece;
+
+      board->phase += PHASE_VALUES[PIECE_TYPE[piece]];
 
       if (*fen != 'K' && *fen != 'k')
         board->piecesCounts += PIECE_COUNT_IDX[piece];
@@ -379,6 +382,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->piecesCounts -= PIECE_COUNT_IDX[captured]; // when there's a capture, we need to update our piece counts
     board->halfMove = 0;                              // reset on capture
+
+    board->phase -= PHASE_VALUES[PIECE_TYPE[captured]];
   }
 
   if (promoted) {
@@ -392,6 +397,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->piecesCounts -= PIECE_COUNT_IDX[piece];
     board->piecesCounts += PIECE_COUNT_IDX[promoted];
+
+    board->phase += PHASE_VALUES[PIECE_TYPE[promoted]];
   }
 
   if (ep) {
@@ -407,6 +414,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->piecesCounts -= PIECE_COUNT_IDX[PAWN[board->xside]];
     board->halfMove = 0; // this is a capture
+
+    // skip the phase as pawns = 0
   }
 
   if (board->epSquare) {
@@ -548,8 +557,6 @@ void UndoMove(Move move, Board* board) {
   board->squares[end] = NO_PIECE;
   board->squares[start] = piece;
 
-  // board->mat -= PSQT[piece][end] - PSQT[piece][start];
-
   if (capture) {
     int captured = board->captureHistory[board->moveNo];
     setBit(board->pieces[captured], end);
@@ -558,6 +565,8 @@ void UndoMove(Move move, Board* board) {
       board->squares[end] = captured;
 
       board->piecesCounts += PIECE_COUNT_IDX[captured];
+
+      board->phase += PHASE_VALUES[PIECE_TYPE[captured]];
     }
   }
 
@@ -566,6 +575,8 @@ void UndoMove(Move move, Board* board) {
 
     board->piecesCounts -= PIECE_COUNT_IDX[promoted];
     board->piecesCounts += PIECE_COUNT_IDX[piece];
+
+    board->phase -= PHASE_VALUES[PIECE_TYPE[promoted]];
   }
 
   if (ep) {
