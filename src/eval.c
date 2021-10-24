@@ -16,12 +16,13 @@
 
 #include <stdio.h>
 
-#include "eval.h"
 #include "board.h"
+#include "eval.h"
 #include "nn.h"
 #include "util.h"
 
-const int PHASE_VALUES[6] = { 0, 2, 2, 4, 8, 0 };
+
+const int PHASE_VALUES[6] = {0, 2, 2, 4, 8, 0};
 const int MAX_PHASE = 48;
 
 // Main evalution method
@@ -29,6 +30,9 @@ Score Evaluate(Board* board) {
   if (IsMaterialDraw(board))
     return 0;
 
-  int output = ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]);
+  int output =
+      ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]) +
+      board->skipAccumulator[board->side][board->ply] / QUANTIZATION_PRECISION_OUT;
+
   return (72 + min(MAX_PHASE, board->phase)) * output / 96;
 }

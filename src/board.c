@@ -514,10 +514,14 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     if ((piece == KING_WHITE || piece == KING_BLACK) && (start & 0x04) != (end & 0x04)) {
       if (piece == KING_WHITE) {
         ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
+        board->skipAccumulator[WHITE][board->ply] = ApplySkipConnection(board, WHITE);
+
         ApplyUpdates(board, BLACK, bUpdates);
       } else {
         ApplyUpdates(board, WHITE, wUpdates);
+
         ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
+        board->skipAccumulator[BLACK][board->ply] = ApplySkipConnection(board, BLACK);
       }
     } else {
       ApplyUpdates(board, WHITE, wUpdates);

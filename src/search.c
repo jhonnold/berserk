@@ -40,7 +40,6 @@
 #include "types.h"
 #include "util.h"
 
-
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
@@ -139,6 +138,8 @@ void* Search(void* arg) {
   board->ply = 0;
   ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
   ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
+  board->skipAccumulator[WHITE][board->ply] = ApplySkipConnection(board, WHITE);
+  board->skipAccumulator[BLACK][board->ply] = ApplySkipConnection(board, BLACK);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
