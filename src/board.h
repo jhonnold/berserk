@@ -18,12 +18,13 @@
 #define BOARD_H
 
 #include "types.h"
+#include "util.h"
 
 #define NO_PIECE 12
 
 #define file(sq) ((sq)&7)
 #define rank(sq) ((sq) >> 3)
-#define sq(r, f) ((r) * 8 + (f))
+#define sq(r, f) ((r)*8 + (f))
 
 extern const int PAWN[];
 extern const int KNIGHT[];
@@ -59,7 +60,18 @@ void UndoMove(Move move, Board* board);
 int IsMoveLegal(Move move, Board* board);
 int MoveIsLegal(Move move, Board* board);
 
-int KingIdx(int k);
-int FeatureIdx(int piece, int sq, int kingsq, int perspective);
+INLINE int KingIdx(int k) { return 2 * !!(k & 4) + !!(k & 32); }
+
+INLINE int FeatureIdx(int piece, int sq, int kingsq, const int perspective) {
+  if (perspective == WHITE) {
+    int pc = piece / 2 + 6 * !!(piece & 1);
+
+    return pc * 256 + KingIdx(kingsq ^ 56) * 64 + (sq ^ 56);
+  } else {
+    int pc = piece / 2 + 6 * !(piece & 1);
+
+    return pc * 256 + KingIdx(kingsq) * 64 + sq;
+  }
+}
 
 #endif

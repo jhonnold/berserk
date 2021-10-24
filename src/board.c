@@ -874,12 +874,3 @@ int IsMoveLegal(Move move, Board* board) {
 
   return 1;
 }
-
-inline int KingIdx(int k) { return 2 * !!(k & 4) + !!(k & 32); }
-
-inline int FeatureIdx(int piece, int sq, int kingsq, int perspective) {
-  int corrected = piece / 2 + 6 * ((piece & 1) != perspective);
-
-  return corrected * 256 + KingIdx(kingsq ^ (perspective == WHITE ? 56 : 0)) * 64 +
-         (sq ^ (perspective == WHITE ? 56 : 0));
-}
