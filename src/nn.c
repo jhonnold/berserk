@@ -42,7 +42,7 @@ uint64_t DEFAULT_NN_HASH = UINT64_MAX;
 INCBIN(Embed, EVALFILE);
 
 const int QUANTIZATION_PRECISION_IN = 32;
-const int QUANTIZATION_PRECISION_OUT = 512;
+const int QUANTIZATION_PRECISION_OUT = 256;
 
 Weight FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 Weight HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
@@ -188,17 +188,45 @@ void LoadDefaultNN() {
 
   float* data = (float*)EmbedData + 3; // Skip the 4 byte magic and 8 byte hash
 
-  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++)
+  int max = 0;
+  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) {
     FEATURE_WEIGHTS[j] = LoadWeight(*data++, 1);
+    if (abs(FEATURE_WEIGHTS[j]) > max)
+      max = FEATURE_WEIGHTS[j];
+  }
 
-  for (int j = 0; j < N_HIDDEN; j++)
+  printf("%d\n", max);
+  max = 0;
+
+  for (int j = 0; j < N_HIDDEN; j++) {
     HIDDEN_BIASES[j] = LoadWeight(*data++, 1);
+    if (abs(HIDDEN_BIASES[j]) > max)
+      max = HIDDEN_BIASES[j];
+  }
 
-  for (int j = 0; j < N_HIDDEN * 2; j++)
+  printf("%d\n", max);
+  max = 0;
+
+  for (int j = 0; j < N_HIDDEN * 2; j++) {
     HIDDEN_WEIGHTS[j] = LoadWeight(*data++, 0);
+    if (abs(HIDDEN_WEIGHTS[j]) > max)
+      max = HIDDEN_WEIGHTS[j];
+  }
+
+  printf("%d\n", max);
+  max = 0;
 
   OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
 
-  for (int j = 0; j < N_FEATURES; j++)
+  printf("%d\n", OUTPUT_BIAS);
+  max = 0;
+
+  for (int j = 0; j < N_FEATURES; j++) {
     SKIP_WEIGHTS[j] = LoadWeight(*data++, 0);
+    if (abs(SKIP_WEIGHTS[j]) > max)
+      max = SKIP_WEIGHTS[j];
+  }
+
+  printf("%d\n", max);
+  max = 0;
 }
