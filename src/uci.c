@@ -271,28 +271,33 @@ void UCILoop() {
       score = board.side == WHITE ? score : -score;
 
       for (int r = 0; r < 8; r++) {
-        printf("+-----+-----+-----+-----+-----+-----+-----+-----+\n");
+        printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
         printf("|");
-        for (int f = 0; f < 8; f++) {
-          int sq = r * 8 + f;
-          if (board.squares[sq] < KING_WHITE) {
+        for (int f = 0; f < 16; f++) {
+          if (f == 8)
+            printf("\n|");
+
+          int sq = r * 8 + (f > 7 ? f - 8 : f);
+
+          if (f < 8) {
+            if (board.squares[sq] == NO_PIECE)
+              printf("       |");
+            else
+              printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
+          } else if (board.squares[sq] < KING_WHITE) {
             popBit(board.occupancies[BOTH], sq);
             int new = NNPredict(&board);
             new = board.side == WHITE ? new : -new;
             int diff = score - new;
-            printf("%+5d|", diff);
+            printf("%+7d|", diff);
             setBit(board.occupancies[BOTH], sq);
-          } else if (board.squares[sq] == KING_WHITE) {
-            printf("  K  |");
-          } else if (board.squares[sq] == KING_BLACK) {
-            printf("  k  |");
           } else {
-            printf("     |");
+            printf("       |");
           }
         }
         printf("\n");
       }
-      printf("+-----+-----+-----+-----+-----+-----+-----+-----+\n");
+      printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 
       printf("Score: %dcp (white)\n", score);
     } else if (!strncmp(in, "moves", 5)) {

@@ -223,24 +223,30 @@ void BoardToFen(char* fen, Board* board) {
 void PrintBoard(Board* board) {
   static char fenBuffer[128];
 
-  for (int i = 0; i < 64; i++) {
-    if (file(i) == 0)
-      printf(" %d ", 8 - rank(i));
+  for (int r = 0; r < 8; r++) {
+    printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+    printf("|");
+    for (int f = 0; f < 16; f++) {
+      if (f == 8)
+        printf("\n|");
 
-    if (board->squares[i] == NO_PIECE)
-      printf(" .");
-    else
-      printf(" %c", PIECE_TO_CHAR[board->squares[i]]);
+      int sq = r * 8 + (f > 7 ? f - 8 : f);
 
-    if ((i & 7) == 7)
-      printf("\n");
+      if (f < 8) {
+        if (board->squares[sq] == NO_PIECE)
+          printf("       |");
+        else
+          printf("   %c   |", PIECE_TO_CHAR[board->squares[sq]]);
+      } else {
+        printf("       |");
+      }
+    }
+    printf("\n");
   }
-
-  printf("\n    a b c d e f g h\n");
+  printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 
   BoardToFen(fenBuffer, board);
-  printf(" %s\n", fenBuffer);
-  printf("\n\n");
+  printf("\nFEN: %s\n\n", fenBuffer);
 }
 
 inline int HasNonPawn(Board* board) { return (board->piecesCounts & NON_PAWN_PIECE_MASK[board->side]) != 0; }
