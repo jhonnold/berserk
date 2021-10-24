@@ -517,7 +517,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    if ((piece == KING_WHITE || piece == KING_BLACK) && (start & 0x04) != (end & 0x04)) {
+    if ((piece == KING_WHITE || piece == KING_BLACK) && ((start & 4) != (end & 4) || (start & 32) != (end & 32))) {
       if (piece == KING_WHITE) {
         ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
         board->skipAccumulator[WHITE][board->ply] = ApplySkipConnection(board, WHITE);
@@ -875,10 +875,11 @@ int IsMoveLegal(Move move, Board* board) {
   return 1;
 }
 
-inline int SameSideKing(int sq, int kingsq) { return (sq & 0x04) == (kingsq & 0x04); }
+inline int KingIdx(int k) { return 2 * !!(k & 4) + !!(k & 32); }
 
 inline int FeatureIdx(int piece, int sq, int kingsq, int perspective) {
   int corrected = piece / 2 + 6 * ((piece & 1) != perspective);
 
-  return corrected * 128 + SameSideKing(sq, kingsq) * 64 + (sq ^ (perspective == WHITE ? 56 : 0));
+  return corrected * 256 + KingIdx(kingsq ^ (perspective == WHITE ? 56 : 0)) * 64 +
+         (sq ^ (perspective == WHITE ? 56 : 0));
 }
