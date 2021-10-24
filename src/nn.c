@@ -188,45 +188,17 @@ void LoadDefaultNN() {
 
   float* data = (float*)EmbedData + 3; // Skip the 4 byte magic and 8 byte hash
 
-  Weight max = 0;
-  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) {
+  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++)
     FEATURE_WEIGHTS[j] = LoadWeight(*data++, 1);
-    if (abs(FEATURE_WEIGHTS[j]) > max)
-      max = FEATURE_WEIGHTS[j];
-  }
 
-  printf("%d\n", max);
-  max = 0;
-
-  for (int j = 0; j < N_HIDDEN; j++) {
+  for (int j = 0; j < N_HIDDEN; j++)
     HIDDEN_BIASES[j] = LoadWeight(*data++, 1);
-    if (abs(HIDDEN_BIASES[j]) > max)
-      max = HIDDEN_BIASES[j];
-  }
 
-  printf("%d\n", max);
-  max = 0;
-
-  for (int j = 0; j < N_HIDDEN * 2; j++) {
+  for (int j = 0; j < N_HIDDEN * 2; j++)
     HIDDEN_WEIGHTS[j] = LoadWeight(*data++, 0);
-    if (abs(HIDDEN_WEIGHTS[j]) > max)
-      max = HIDDEN_WEIGHTS[j];
-  }
-
-  printf("%d\n", max);
-  max = 0;
 
   OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
 
-  printf("%d\n", OUTPUT_BIAS);
-  max = 0;
-
-  for (int j = 0; j < N_FEATURES; j++) {
+  for (int j = 0; j < N_FEATURES; j++)
     SKIP_WEIGHTS[j] = LoadWeight(*data++, 0);
-    if (abs(SKIP_WEIGHTS[j]) > max)
-      max = SKIP_WEIGHTS[j];
-  }
-
-  printf("%d\n", max);
-  max = 0;
 }
