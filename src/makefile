@@ -23,6 +23,12 @@ PEXT = -mbmi2 -DUSE_PEXT
 all:
 	$(CC) $(CFLAGS) $(DEFS) $(SRC) $(LIBS) -o $(EXE)
 
+pgo:
+	$(CC) $(CFLAGS) -fprofile-generate $(DEFS) $(SRC) $(LIBS) -o $(EXE)
+	./$(EXE) bench
+	$(CC) $(CFLAGS) -fprofile-use $(DEFS) $(SRC) $(LIBS) -o $(EXE)
+	rm -f *.gcda
+
 clean:
 	rm -rf $(EXE)
 
