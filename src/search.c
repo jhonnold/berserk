@@ -134,6 +134,7 @@ void* Search(void* arg) {
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
   int score = 0;
+  int cfh = 0;
 
   board->ply = 0;
   ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
@@ -179,14 +180,16 @@ void* Search(void* arg) {
             alpha = max(alpha - delta, -CHECKMATE);
 
             searchDepth = depth;
+            cfh = 0;
           } else if (score >= beta) {
             beta = min(beta + delta, CHECKMATE);
 
             if (abs(score) < TB_WIN_BOUND)
-              searchDepth--;
+              searchDepth = max(1, searchDepth - (++cfh));
           } else {
             thread->scores[thread->multiPV] = score;
             thread->bestMoves[thread->multiPV] = pv->moves[0];
+            cfh = 0;
             break;
           }
 
