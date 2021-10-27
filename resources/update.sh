@@ -3,13 +3,13 @@
 REPO_URL=https://github.com/jhonnold/berserk.git
 
 echo "Downloading Berserk"
-git clone --depth 1 --branch main $REPO_URL
+git clone --depth 1 --branch dev $REPO_URL
 cd berserk
 echo "Download complete"
 
 echo "Compiling Berserk..."
 cd src
-make
+make pgo
 echo "Compilation complete..."
 
 EXE=$PWD/berserk
