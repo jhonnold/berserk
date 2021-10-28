@@ -168,7 +168,7 @@ void* Search(void* arg) {
 
         while (!params->stopped) {
           // search!
-          score = Negamax(alpha, beta, searchDepth, thread, pv);
+          score = Negamax(alpha, beta, searchDepth, 0, thread, pv);
 
           if (mainThread && (score <= alpha || score >= beta) && params->multiPV == 1 &&
               GetTimeMS() - params->start >= 2500)
@@ -256,7 +256,7 @@ void* Search(void* arg) {
   return NULL;
 }
 
-int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
+int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv) {
   SearchParams* params = thread->params;
   SearchData* data = &thread->data;
   Board* board = &thread->board;
@@ -414,7 +414,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       data->moves[data->ply++] = NULL_MOVE;
       MakeNullMove(board);
 
-      score = -Negamax(-beta, -beta + 1, depth - R, thread, &childPv);
+      score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv);
 
       UndoNullMove(board);
       data->ply--;
@@ -443,7 +443,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
         // if it's still above our cutoff, revalidate
         if (score >= probBeta)
-          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, thread, pv);
+          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv);
 
         UndoMove(move, board);
         data->ply--;
@@ -513,7 +513,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
-      score = Negamax(sBeta - 1, sBeta, sDepth, thread, pv);
+      score = Negamax(sBeta - 1, sBeta, sDepth, cutnode, thread, pv);
       data->skipMove[data->ply] = NULL_MOVE;
 
       // no score failed above sBeta, so this is singular
@@ -559,6 +559,13 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
           R++;
 
+        // Reduce more on expected cut nodes
+        // idea from komodo/sf, explained by Don Daily here
+        // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
+        // and https://www.chessprogramming.org/Node_Types
+        if (cutnode)
+          R++;
+
         // adjust reduction based on historical score
         R -= quietHistory / 20480;
       } else {
@@ -573,16 +580,16 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // First move of a PV node
     if (isPV && nonPrunedMoves == 1) {
-      score = -Negamax(-beta, -alpha, newDepth - 1, thread, &childPv);
+      score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv);
     } else {
       // potentially reduced search
-      score = -Negamax(-alpha - 1, -alpha, newDepth - R, thread, &childPv);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv);
 
       if (score > alpha && R != 1) // failed high on a reducede search, try again
-        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, thread, &childPv);
+        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv);
 
       if (score > alpha && (isRoot || score < beta)) // failed high again, do full window
-        score = -Negamax(-beta, -alpha, newDepth - 1, thread, &childPv);
+        score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv);
     }
 
     UndoMove(move, board);
