@@ -218,14 +218,15 @@ void* Search(void* arg) {
         }
       }
 
-      if (mainThread)
+      if (mainThread) {
+        results->depth = depth;
+        results->scores[depth] = thread->scores[0];
+        results->bestMoves[depth] = thread->bestMoves[0];
+        results->ponderMoves[depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
+
         for (int i = 0; i < params->multiPV; i++)
           PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
-
-      results->depth = depth;
-      results->scores[depth] = thread->scores[0];
-      results->bestMoves[depth] = thread->bestMoves[0];
-      results->ponderMoves[depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
+      }
 
       if (!mainThread || depth < 5 || !params->timeset)
         continue;
