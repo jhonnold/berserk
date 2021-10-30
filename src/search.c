@@ -557,6 +557,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (specialQuiet)
           R -= 2;
 
+        if (PIECE_TYPE[MovePiece(move)] == PAWN_TYPE && rank(MoveEnd(move) ^ (board->xside == WHITE ? 0 : 56)) == 1)
+          R--;
+
         if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
           R++;
 
