@@ -21,9 +21,8 @@
 #include "nn.h"
 #include "util.h"
 
-
-const int PHASE_VALUES[6] = {0, 2, 2, 4, 8, 0};
-const int MAX_PHASE = 48;
+const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
+const int MAX_PHASE = 64;
 
 // Main evalution method
 Score Evaluate(Board* board) {
@@ -34,5 +33,6 @@ Score Evaluate(Board* board) {
       ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]) +
       board->skipAccumulator[board->side][board->ply] / QUANTIZATION_PRECISION_OUT;
 
-  return (72 + min(MAX_PHASE, board->phase)) * output / 96;
+  int scalar = 96 + board->phase;
+  return scalar * output / 128;
 }
