@@ -1,7 +1,7 @@
 CC = gcc
 SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
 EXE = berserk
-VERSION = 7-dev
+VERSION = 7
 EVALFILE = default.nn
 
 DEFS = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG

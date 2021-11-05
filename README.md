@@ -16,10 +16,11 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.2.0       | 3131    | 40/15  |
 | 4.2.0 (4CPU)| 3224    | 40/15  |
 | 4.5.1       | 3294    | 40/15  |
+| 6           | 3327    | 40/15  |
 
 ### CCRL (Blitz)
 
-#### Rank [#16](https://ccrl.chessdom.com/ccrl/404/)
+#### Rank [#12](https://ccrl.chessdom.com/ccrl/404/)
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -29,6 +30,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.1.0       | 3117    | 2'+1"  |
 | 4.4.0       | 3316    | 2'+1"  |
 | 4.4.0 (8CPU)| 3467    | 2'+1"  |
+| 6           | 3436    | 2'+1"  |
+| 6 (8CPU)    | 3559    | 2'+1"  |
 
 ### Lars No SMP
 
@@ -94,7 +97,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 ### Future Improvements
 
 - ~~FRC Support~~
-- Small Pawn NN
+- ~~Small Pawn NN~~
 - Piece specific EG evaluation methods
   - Potentially small NNs for these
 - Proper KS Tuning
