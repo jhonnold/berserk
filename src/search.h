@@ -24,6 +24,7 @@
 #define CHECKMATE 32256
 #define MATE_BOUND 30000
 #define TB_WIN_BOUND 20000
+#define TB_WIN_SCORE 21000
 
 // static evaluation pruning
 // capture cutoff is linear 70x
@@ -42,7 +43,7 @@ void InitPruningAndReductionTables();
 void* UCISearch(void* arg);
 void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results);
 void* Search(void* arg);
-int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv);
+int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv);
 int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv);
 
 void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board);

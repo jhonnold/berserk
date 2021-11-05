@@ -201,7 +201,7 @@ void ParsePosition(char* in, Board* board) {
 }
 
 void PrintUCIOptions() {
-  printf("id name Berserk " VERSION "\n");
+  printf("id name Berserk " VERSION " NN (%llx)\n", DEFAULT_NN_HASH);
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 65536\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
@@ -268,7 +268,38 @@ void UCILoop() {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
       int score = NNPredict(&board);
-      printf("Score: %dcp (white)\n", board.side == WHITE ? score : -score);
+      score = board.side == WHITE ? score : -score;
+
+      for (int r = 0; r < 8; r++) {
+        printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+        printf("|");
+        for (int f = 0; f < 16; f++) {
+          if (f == 8)
+            printf("\n|");
+
+          int sq = r * 8 + (f > 7 ? f - 8 : f);
+
+          if (f < 8) {
+            if (board.squares[sq] == NO_PIECE)
+              printf("       |");
+            else
+              printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
+          } else if (board.squares[sq] < KING_WHITE) {
+            popBit(board.occupancies[BOTH], sq);
+            int new = NNPredict(&board);
+            new = board.side == WHITE ? new : -new;
+            int diff = score - new;
+            printf("%+7d|", diff);
+            setBit(board.occupancies[BOTH], sq);
+          } else {
+            printf("       |");
+          }
+        }
+        printf("\n");
+      }
+      printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+
+      printf("Score: %dcp (white)\n", score);
     } else if (!strncmp(in, "moves", 5)) {
       PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {

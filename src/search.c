@@ -40,7 +40,6 @@
 #include "types.h"
 #include "util.h"
 
-
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
@@ -135,10 +134,13 @@ void* Search(void* arg) {
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
   int score = 0;
+  int cfh = 0;
 
   board->ply = 0;
   ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
   ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
+  board->skipAccumulator[WHITE][board->ply] = ApplySkipConnection(board, WHITE);
+  board->skipAccumulator[BLACK][board->ply] = ApplySkipConnection(board, BLACK);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
@@ -166,7 +168,7 @@ void* Search(void* arg) {
 
         while (!params->stopped) {
           // search!
-          score = Negamax(alpha, beta, searchDepth, thread, pv);
+          score = Negamax(alpha, beta, searchDepth, 0, thread, pv);
 
           if (mainThread && (score <= alpha || score >= beta) && params->multiPV == 1 &&
               GetTimeMS() - params->start >= 2500)
@@ -178,14 +180,16 @@ void* Search(void* arg) {
             alpha = max(alpha - delta, -CHECKMATE);
 
             searchDepth = depth;
+            cfh = 0;
           } else if (score >= beta) {
             beta = min(beta + delta, CHECKMATE);
 
             if (abs(score) < TB_WIN_BOUND)
-              searchDepth--;
+              searchDepth = max(1, searchDepth - (++cfh));
           } else {
             thread->scores[thread->multiPV] = score;
             thread->bestMoves[thread->multiPV] = pv->moves[0];
+            cfh = 0;
             break;
           }
 
@@ -214,14 +218,15 @@ void* Search(void* arg) {
         }
       }
 
-      if (mainThread)
+      if (mainThread) {
+        results->depth = depth;
+        results->scores[depth] = thread->scores[0];
+        results->bestMoves[depth] = thread->bestMoves[0];
+        results->ponderMoves[depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
+
         for (int i = 0; i < params->multiPV; i++)
           PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
-
-      results->depth = depth;
-      results->scores[depth] = thread->scores[0];
-      results->bestMoves[depth] = thread->bestMoves[0];
-      results->ponderMoves[depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
+      }
 
       if (!mainThread || depth < 5 || !params->timeset)
         continue;
@@ -252,7 +257,7 @@ void* Search(void* arg) {
   return NULL;
 }
 
-int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
+int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv) {
   SearchParams* params = thread->params;
   SearchData* data = &thread->data;
   Board* board = &thread->board;
@@ -332,11 +337,11 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       int flag;
       switch (tbResult) {
       case TB_WIN:
-        score = TB_WIN_BOUND - data->ply;
+        score = TB_WIN_SCORE - data->ply;
         flag = TT_LOWER;
         break;
       case TB_LOSS:
-        score = -TB_WIN_BOUND + data->ply;
+        score = -TB_WIN_SCORE + data->ply;
         flag = TT_UPPER;
         break;
       default:
@@ -397,7 +402,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 6 && !skipMove && eval - 80 * depth + (improving ? 75 : 15) >= beta && eval < MATE_BOUND)
+    if (depth <= 6 && !skipMove && eval - 80 * depth + (improving ? 75 : 15) >= beta && eval < TB_WIN_BOUND)
       return eval;
 
     // Null move pruning
@@ -410,7 +415,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
       data->moves[data->ply++] = NULL_MOVE;
       MakeNullMove(board);
 
-      score = -Negamax(-beta, -beta + 1, depth - R, thread, &childPv);
+      score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv);
 
       UndoNullMove(board);
       data->ply--;
@@ -425,7 +430,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 110;
-    if (depth > 4 && abs(beta) < MATE_BOUND && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
+    if (depth > 4 && abs(beta) < TB_WIN_BOUND && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
       InitTacticalMoves(&moves, data, 0);
       while ((move = NextMove(&moves, board, 1))) {
         if (skipMove == move)
@@ -439,7 +444,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
         // if it's still above our cutoff, revalidate
         if (score >= probBeta)
-          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, thread, pv);
+          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv);
 
         UndoMove(move, board);
         data->ply--;
@@ -503,13 +508,13 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
     int extension = 0;
-    if (depth >= 8 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
-        abs(ttScore) < MATE_BOUND && (tt->flags & TT_LOWER)) {
+    if (depth >= 7 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
+        abs(ttScore) < TB_WIN_BOUND && (tt->flags & TT_LOWER)) {
       int sBeta = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
       data->skipMove[data->ply] = move;
-      score = Negamax(sBeta - 1, sBeta, sDepth, thread, pv);
+      score = Negamax(sBeta - 1, sBeta, sDepth, cutnode, thread, pv);
       data->skipMove[data->ply] = NULL_MOVE;
 
       // no score failed above sBeta, so this is singular
@@ -521,7 +526,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 8 && ttHit && move == tt->move && quietHistory >= 98304)
+    else if (!isRoot && depth >= 7 && ttHit && move == tt->move && abs(ttScore) < TB_WIN_BOUND && quietHistory >= 98304)
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
@@ -533,7 +538,7 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     MakeMove(move, board);
 
     // apply extensions
-    int newDepth = depth + max(extension, (board->checkers && depth < 8));
+    int newDepth = depth + max(extension, (board->checkers && depth < 7));
 
     // Late move reductions
     int R = 1;
@@ -552,7 +557,20 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
         if (specialQuiet)
           R -= 2;
 
+        if (PIECE_TYPE[MovePiece(move)] == PAWN_TYPE && rank(MoveEnd(move) ^ (board->xside == WHITE ? 0 : 56)) == 1)
+          R--;
+
+        if (board->checkers) // move GAVE check
+          R--;
+
         if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
+          R++;
+
+        // Reduce more on expected cut nodes
+        // idea from komodo/sf, explained by Don Daily here
+        // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
+        // and https://www.chessprogramming.org/Node_Types
+        if (cutnode)
           R++;
 
         // adjust reduction based on historical score
@@ -569,16 +587,16 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
 
     // First move of a PV node
     if (isPV && nonPrunedMoves == 1) {
-      score = -Negamax(-beta, -alpha, newDepth - 1, thread, &childPv);
+      score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv);
     } else {
       // potentially reduced search
-      score = -Negamax(-alpha - 1, -alpha, newDepth - R, thread, &childPv);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv);
 
       if (score > alpha && R != 1) // failed high on a reducede search, try again
-        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, thread, &childPv);
+        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv);
 
       if (score > alpha && (isRoot || score < beta)) // failed high again, do full window
-        score = -Negamax(-beta, -alpha, newDepth - 1, thread, &childPv);
+        score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv);
     }
 
     UndoMove(move, board);
@@ -618,7 +636,8 @@ int Negamax(int alpha, int beta, int depth, ThreadData* thread, PV* pv) {
     // save to the TT
     // TT_LOWER = we failed high, TT_UPPER = we didnt raise alpha, TT_EXACT = in
     int TTFlag = bestScore >= beta ? TT_LOWER : bestScore <= origAlpha ? TT_UPPER : TT_EXACT;
-    TTPut(board->zobrist, depth, bestScore, TTFlag, bestMove, data->ply, data->evals[data->ply]);
+    Move moveToStore = ttHit && TTFlag == TT_UPPER && (tt->flags & TT_LOWER) ? hashMove : bestMove;
+    TTPut(board->zobrist, depth, bestScore, TTFlag, moveToStore, data->ply, data->evals[data->ply]);
   }
 
   return bestScore;

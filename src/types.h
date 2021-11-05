@@ -24,8 +24,8 @@
 #define MAX_MOVES 256
 #define MAX_GAME_PLY 1024
 
-#define N_FEATURES 768
-#define N_HIDDEN 256
+#define N_FEATURES 1536
+#define N_HIDDEN 512
 #define N_OUTPUT 1
 
 #if defined(__AVX__)
@@ -55,12 +55,14 @@ typedef struct {
   int moveNo;   // current game move number TODO: Is this still used?
   int halfMove; // half move count for 50 move rule
   int ply;
+  int phase;
 
   BitBoard checkers;     // checking piece squares
   BitBoard pinned;       // pinned pieces
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
 
+  int skipAccumulator[2][MAX_GAME_PLY];
   Accumulator* accumulators[2];
 
   int squares[64];         // piece per square

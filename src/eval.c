@@ -14,15 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "eval.h"
+#include <stdio.h>
+
 #include "board.h"
+#include "eval.h"
 #include "nn.h"
+#include "util.h"
+
+const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
+const int MAX_PHASE = 64;
 
 // Main evalution method
 Score Evaluate(Board* board) {
   if (IsMaterialDraw(board))
     return 0;
 
-  int output = ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]);
-  return (Score)output;
+  int output =
+      ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]) +
+      board->skipAccumulator[board->side][board->ply] / QUANTIZATION_PRECISION_OUT;
+
+  int scalar = 128 + board->phase;
+  return scalar * output / 128;
 }

@@ -16,7 +16,18 @@
 
 #include "types.h"
 
+extern uint64_t DEFAULT_NN_HASH;
+extern const int QUANTIZATION_PRECISION_IN;
+extern const int QUANTIZATION_PRECISION_OUT;
+
+extern Weight FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN];
+extern Weight HIDDEN_BIASES[N_HIDDEN];
+extern Weight HIDDEN_WEIGHTS[2 * N_HIDDEN];
+extern int32_t OUTPUT_BIAS;
+extern Weight SKIP_WEIGHTS[N_FEATURES];
+
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective);
+int ApplySkipConnection(Board* board, int perspective);
 int ApplySecondLayer(Accumulator a1, Accumulator a2);
 
 int NNPredict(Board* board);

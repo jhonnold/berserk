@@ -15,7 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
+
 #if defined(__AVX2__)
 #include <immintrin.h>
 #elif defined(__SSE__)
@@ -35,6 +37,8 @@
 #define EVALFILE "default.nn"
 #endif
 
+uint64_t DEFAULT_NN_HASH = UINT64_MAX;
+
 INCBIN(Embed, EVALFILE);
 
 const int QUANTIZATION_PRECISION_IN = 32;
@@ -44,19 +48,36 @@ Weight FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)))
 Weight HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 Weight HIDDEN_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int32_t OUTPUT_BIAS;
+Weight SKIP_WEIGHTS[N_FEATURES] __attribute__((aligned(ALIGN_ON)));
 
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
+  int kingSq = lsb(board->pieces[KING[perspective]]);
+
   memcpy(output, HIDDEN_BIASES, sizeof(Accumulator));
 
   BitBoard occ = board->occupancies[BOTH];
   while (occ) {
     int sq = popAndGetLsb(&occ);
     int pc = board->squares[sq];
-    int feature = FeatureIdx(pc, sq, perspective);
+    int feature = FeatureIdx(pc, sq, kingSq, perspective);
 
     for (int i = 0; i < N_HIDDEN; i++)
       output[i] += FEATURE_WEIGHTS[feature * N_HIDDEN + i];
   }
+}
+
+int ApplySkipConnection(Board* board, int perspective) {
+  int result = 0;
+  int kingSq = lsb(board->pieces[KING[perspective]]);
+  BitBoard occ = board->occupancies[BOTH];
+  while (occ) {
+    int sq = popAndGetLsb(&occ);
+    int pc = board->squares[sq];
+    int feature = FeatureIdx(pc, sq, kingSq, perspective);
+    result += SKIP_WEIGHTS[feature];
+  }
+
+  return result;
 }
 
 #if defined(__AVX2__)
@@ -126,7 +147,7 @@ int NNPredict(Board* board) {
   ApplyFirstLayer(board, stm, board->side);
   ApplyFirstLayer(board, xstm, board->xside);
 
-  return ApplySecondLayer(stm, xstm);
+  return ApplySecondLayer(stm, xstm) + ApplySkipConnection(board, board->side) / QUANTIZATION_PRECISION_OUT;
 }
 
 inline void AddAddition(int f, NNUpdate* updates) { updates->additions[updates->na++] = f; }
@@ -135,15 +156,24 @@ inline void AddRemoval(int f, NNUpdate* updates) { updates->removals[updates->nr
 
 void ApplyUpdates(Board* board, int side, NNUpdate* updates) {
   Weight* output = board->accumulators[side][board->ply];
-  memcpy(output, board->accumulators[side][board->ply - 1], sizeof(Accumulator));
+  int* skipOutput = &board->skipAccumulator[side][board->ply];
 
-  for (int i = 0; i < updates->nr; i++)
+  memcpy(output, board->accumulators[side][board->ply - 1], sizeof(Accumulator));
+  *skipOutput = board->skipAccumulator[side][board->ply - 1];
+
+  for (int i = 0; i < updates->nr; i++) {
     for (int j = 0; j < N_HIDDEN; j++)
       output[j] -= FEATURE_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
 
-  for (int i = 0; i < updates->na; i++)
+    *skipOutput -= SKIP_WEIGHTS[updates->removals[i]];
+  }
+
+  for (int i = 0; i < updates->na; i++) {
     for (int j = 0; j < N_HIDDEN; j++)
       output[j] += FEATURE_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
+
+    *skipOutput += SKIP_WEIGHTS[updates->additions[i]];
+  }
 }
 
 inline Weight LoadWeight(float v, int in) {
@@ -151,7 +181,12 @@ inline Weight LoadWeight(float v, int in) {
 }
 
 void LoadDefaultNN() {
-  float* data = (float*)EmbedData + 6;
+  if (EmbedData[0] != 'B' || EmbedData[1] != 'R' || EmbedData[2] != 'K' || EmbedData[3] != 'R')
+    printf("info string Berserk was not built using a standard net, use with caution!\n");
+
+  DEFAULT_NN_HASH = *((uint64_t*)(EmbedData + 4));
+
+  float* data = (float*)EmbedData + 3; // Skip the 4 byte magic and 8 byte hash
 
   for (int j = 0; j < N_FEATURES * N_HIDDEN; j++)
     FEATURE_WEIGHTS[j] = LoadWeight(*data++, 1);
@@ -162,5 +197,8 @@ void LoadDefaultNN() {
   for (int j = 0; j < N_HIDDEN * 2; j++)
     HIDDEN_WEIGHTS[j] = LoadWeight(*data++, 0);
 
-  OUTPUT_BIAS = round(*data * QUANTIZATION_PRECISION_OUT);
+  OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
+
+  for (int j = 0; j < N_FEATURES; j++)
+    SKIP_WEIGHTS[j] = LoadWeight(*data++, 0);
 }

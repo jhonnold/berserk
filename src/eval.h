@@ -21,6 +21,10 @@
 
 #include "types.h"
 
+extern const int PHASE_VALUES[6];
+extern const int MAX_PHASE;
+
+
 Score Evaluate(Board* board);
 
 #endif
