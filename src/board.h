@@ -60,17 +60,17 @@ void UndoMove(Move move, Board* board);
 int IsMoveLegal(Move move, Board* board);
 int MoveIsLegal(Move move, Board* board);
 
-INLINE int KingIdx(int k) { return 2 * !!(k & 4) + !!(k & 32); }
+INLINE int KingIdx(int k) { return !!(k & 4); }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int perspective) {
   if (perspective == WHITE) {
     int pc = piece / 2 + 6 * !!(piece & 1);
 
-    return pc * 256 + KingIdx(kingsq ^ 56) * 64 + (sq ^ 56);
+    return pc * 128 + KingIdx(kingsq ^ 56) * 64 + (sq ^ 56);
   } else {
     int pc = piece / 2 + 6 * !(piece & 1);
 
-    return pc * 256 + KingIdx(kingsq) * 64 + sq;
+    return pc * 128 + KingIdx(kingsq) * 64 + sq;
   }
 }
 

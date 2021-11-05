@@ -517,7 +517,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    if ((piece == KING_WHITE || piece == KING_BLACK) && ((start & 4) != (end & 4) || (start & 32) != (end & 32))) {
+    if ((piece == KING_WHITE || piece == KING_BLACK) && (start & 4) != (end & 4)) {
       if (piece == KING_WHITE) {
         ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
         board->skipAccumulator[WHITE][board->ply] = ApplySkipConnection(board, WHITE);
