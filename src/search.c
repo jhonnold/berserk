@@ -420,10 +420,17 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       UndoNullMove(board);
       data->ply--;
 
-      if (score >= beta)
-        return beta;
+      if (score >= beta) {
+        if (depth <= 10)
+          return score < TB_WIN_BOUND ? score : beta;
 
-      nullThreat = childPv.count ? childPv.moves[0] : NULL_MOVE;
+        score = Negamax(beta - 1, beta, depth - R, 0, thread, pv);
+
+        if (score >= beta)
+          return score;
+      } else {
+        nullThreat = childPv.count ? childPv.moves[0] : NULL_MOVE;
+      }
     }
 
     // Prob cut
