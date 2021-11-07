@@ -410,7 +410,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // they still can't catch up (this is usually countered by captures or mate threats)
     if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta &&
         // weiss conditional
-        HasNonPawn(board) > (depth > 8)) {
+        HasNonPawn(board) > (depth > 12)) {
       int R = 4 + depth / 6 + min((eval - beta) / 256, 3);
       R = min(depth, R); // don't go too low
 
