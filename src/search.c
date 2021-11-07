@@ -665,7 +665,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     return 0;
 
   // prevent overflows
-  if (data->ply > MAX_SEARCH_PLY - 5)
+  if (data->ply > MAX_SEARCH_PLY - 1)
     return Evaluate(board);
 
   // check the transposition table for previous info
