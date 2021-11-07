@@ -249,7 +249,9 @@ void PrintBoard(Board* board) {
   printf("\nFEN: %s\n\n", fenBuffer);
 }
 
-inline int HasNonPawn(Board* board) { return (board->piecesCounts & NON_PAWN_PIECE_MASK[board->side]) != 0; }
+inline int HasNonPawn(Board* board) { 
+  return bits(board->occupancies[board->side] ^ board->pieces[KING[board->side]] ^ board->pieces[PAWN[board->side]]);
+}
 
 inline int IsOCB(Board* board) {
   BitBoard nonBishopMaterial = board->pieces[QUEEN_WHITE] | board->pieces[QUEEN_BLACK] | board->pieces[ROOK_WHITE] |
