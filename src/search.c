@@ -421,13 +421,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       data->ply--;
 
       if (score >= beta) {
-        if (depth <= 10)
           return score < TB_WIN_BOUND ? score : beta;
-
-        score = Negamax(beta - 1, beta, depth - R, 0, thread, pv);
-
-        if (score >= beta)
-          return score;
       } else {
         nullThreat = childPv.count ? childPv.moves[0] : NULL_MOVE;
       }
@@ -671,7 +665,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     return 0;
 
   // prevent overflows
-  if (data->ply > MAX_SEARCH_PLY - 1)
+  if (data->ply > MAX_SEARCH_PLY - 5)
     return Evaluate(board);
 
   // check the transposition table for previous info
