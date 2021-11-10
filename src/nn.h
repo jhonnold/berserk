@@ -27,7 +27,7 @@ extern int32_t OUTPUT_BIAS;
 extern Weight SKIP_WEIGHTS[N_FEATURES];
 
 void ApplyFirstLayer(Board* board, Accumulator output, int perspective);
-int ApplySkipConnection(Board* board, int perspective);
+int ApplySkipConnection(Board* board);
 int ApplySecondLayer(Accumulator a1, Accumulator a2);
 
 int NNPredict(Board* board);

@@ -249,7 +249,7 @@ void PrintBoard(Board* board) {
   printf("\nFEN: %s\n\n", fenBuffer);
 }
 
-inline int HasNonPawn(Board* board) { 
+inline int HasNonPawn(Board* board) {
   return bits(board->occupancies[board->side] ^ board->pieces[KING[board->side]] ^ board->pieces[PAWN[board->side]]);
 }
 
@@ -519,18 +519,16 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    if ((piece == KING_WHITE || piece == KING_BLACK) && (start & 4) != (end & 4)) {
+    if ((piece == KING_WHITE || piece == KING_BLACK) && KingIdx(start) != KingIdx(end)) {
       if (piece == KING_WHITE) {
         ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
-        board->skipAccumulator[WHITE][board->ply] = ApplySkipConnection(board, WHITE);
-
         ApplyUpdates(board, BLACK, bUpdates);
       } else {
         ApplyUpdates(board, WHITE, wUpdates);
-
         ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
-        board->skipAccumulator[BLACK][board->ply] = ApplySkipConnection(board, BLACK);
       }
+
+      board->skipAccumulator[board->ply] = ApplySkipConnection(board);
     } else {
       ApplyUpdates(board, WHITE, wUpdates);
       ApplyUpdates(board, BLACK, bUpdates);

@@ -139,8 +139,7 @@ void* Search(void* arg) {
   board->ply = 0;
   ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
   ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
-  board->skipAccumulator[WHITE][board->ply] = ApplySkipConnection(board, WHITE);
-  board->skipAccumulator[BLACK][board->ply] = ApplySkipConnection(board, BLACK);
+  board->skipAccumulator[board->ply] = ApplySkipConnection(board);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
