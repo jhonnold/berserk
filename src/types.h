@@ -24,7 +24,7 @@
 #define MAX_MOVES 256
 #define MAX_GAME_PLY 1024
 
-#define N_FEATURES 1536
+#define N_FEATURES 768
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
