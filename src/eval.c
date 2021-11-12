@@ -29,10 +29,9 @@ Score Evaluate(Board* board) {
   if (IsMaterialDraw(board))
     return 0;
 
-  int output =
-      ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]) +
-      board->skipAccumulator[board->ply] / QUANTIZATION_PRECISION_OUT;
+  int score = OutputLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply],
+                          board->skipAccumulator[board->ply]);
 
   int scalar = 128 + board->phase;
-  return scalar * output / 128;
+  return scalar * score / 128;
 }

@@ -267,7 +267,7 @@ void UCILoop() {
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
-      int score = NNPredict(&board);
+      int score = Predict(&board);
       score = board.side == WHITE ? score : -score;
 
       for (int r = 0; r < 8; r++) {
@@ -286,7 +286,7 @@ void UCILoop() {
               printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
           } else if (board.squares[sq] < KING_WHITE) {
             popBit(board.occupancies[BOTH], sq);
-            int new = NNPredict(&board);
+            int new = Predict(&board);
             new = board.side == WHITE ? new : -new;
             int diff = score - new;
             printf("%+7d|", diff);
