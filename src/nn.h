@@ -15,24 +15,27 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "types.h"
+#include "util.h"
 
 extern uint64_t DEFAULT_NN_HASH;
 extern const int QUANTIZATION_PRECISION_IN;
 extern const int QUANTIZATION_PRECISION_OUT;
 
-extern Weight FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN];
-extern Weight HIDDEN_BIASES[N_HIDDEN];
-extern Weight HIDDEN_WEIGHTS[2 * N_HIDDEN];
+extern int16_t FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN];
+extern int16_t HIDDEN_BIASES[N_HIDDEN];
+extern int16_t HIDDEN_WEIGHTS[2 * N_HIDDEN];
 extern int32_t OUTPUT_BIAS;
-extern Weight SKIP_WEIGHTS[N_FEATURES];
+extern int16_t SKIP_WEIGHTS[N_FEATURES];
 
-void ApplyFirstLayer(Board* board, Accumulator output, int perspective);
-int ApplySkipConnection(Board* board);
-int ApplySecondLayer(Accumulator a1, Accumulator a2);
+void RefreshAccumulator(Accumulator output, Board* board, const int perspective);
+void RefreshSkipAccumulator(int* accumulator, Board* board);
+int OutputLayer(Accumulator stm, Accumulator xstm, int skip);
 
-int NNPredict(Board* board);
+int Predict(Board* board);
 void LoadDefaultNN();
 
+INLINE void AddAddition(int f, NNUpdate* updates) { updates->additions[updates->na++] = f; }
+
+INLINE void AddRemoval(int f, NNUpdate* updates) { updates->removals[updates->nr++] = f; }
+
 void ApplyUpdates(Board* board, int side, NNUpdate* updates);
-void AddAddition(int f, NNUpdate* updates);
-void AddRemoval(int f, NNUpdate* updates);
