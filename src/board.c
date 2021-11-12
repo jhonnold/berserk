@@ -42,6 +42,10 @@ const int KING[] = {KING_WHITE, KING_BLACK};
 const int PIECE_TYPE[13] = {PAWN_TYPE, PAWN_TYPE,  KNIGHT_TYPE, KNIGHT_TYPE, BISHOP_TYPE, BISHOP_TYPE, ROOK_TYPE,
                             ROOK_TYPE, QUEEN_TYPE, QUEEN_TYPE,  KING_TYPE,   KING_TYPE,   NO_PIECE / 2};
 
+const int8_t PSQT[] = {0,  1,  2,  3,  3,  2,  1,  0,  4,  5,  6,  7,  7,  6,  5,  4,  8,  9,  10, 11, 11, 10,
+                       9,  8,  12, 13, 14, 15, 15, 14, 13, 12, 16, 17, 18, 19, 19, 18, 17, 16, 20, 21, 22, 23,
+                       23, 22, 21, 20, 24, 25, 26, 27, 27, 26, 25, 24, 28, 29, 30, 31, 31, 30, 29, 28};
+
 // piece count key bit mask idx
 const uint64_t PIECE_COUNT_IDX[] = {1ULL << 0,  1ULL << 4,  1ULL << 8,  1ULL << 12, 1ULL << 16,
                                     1ULL << 20, 1ULL << 24, 1ULL << 28, 1ULL << 32, 1ULL << 36};
@@ -249,7 +253,7 @@ void PrintBoard(Board* board) {
   printf("\nFEN: %s\n\n", fenBuffer);
 }
 
-inline int HasNonPawn(Board* board) { 
+inline int HasNonPawn(Board* board) {
   return bits(board->occupancies[board->side] ^ board->pieces[KING[board->side]] ^ board->pieces[PAWN[board->side]]);
 }
 
@@ -522,15 +526,13 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     if ((piece == KING_WHITE || piece == KING_BLACK) && (start & 4) != (end & 4)) {
       if (piece == KING_WHITE) {
         ApplyFirstLayer(board, board->accumulators[WHITE][board->ply], WHITE);
-        board->skipAccumulator[WHITE][board->ply] = ApplySkipConnection(board, WHITE);
-
         ApplyUpdates(board, BLACK, bUpdates);
       } else {
         ApplyUpdates(board, WHITE, wUpdates);
-
         ApplyFirstLayer(board, board->accumulators[BLACK][board->ply], BLACK);
-        board->skipAccumulator[BLACK][board->ply] = ApplySkipConnection(board, BLACK);
       }
+
+      board->skipAccumulator[board->ply] = ApplySkipConnection(board);
     } else {
       ApplyUpdates(board, WHITE, wUpdates);
       ApplyUpdates(board, BLACK, bUpdates);

@@ -31,7 +31,7 @@ Score Evaluate(Board* board) {
 
   int output =
       ApplySecondLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]) +
-      board->skipAccumulator[board->side][board->ply] / QUANTIZATION_PRECISION_OUT;
+      board->skipAccumulator[board->ply] / QUANTIZATION_PRECISION_OUT;
 
   int scalar = 128 + board->phase;
   return scalar * output / 128;

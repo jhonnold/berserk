@@ -66,15 +66,19 @@ void ApplyFirstLayer(Board* board, Accumulator output, int perspective) {
   }
 }
 
-int ApplySkipConnection(Board* board, int perspective) {
+int ApplySkipConnection(Board* board) {
   int result = 0;
-  int kingSq = lsb(board->pieces[KING[perspective]]);
+
+  int wk = lsb(board->pieces[KING[WHITE]]);
+  int bk = lsb(board->pieces[KING[BLACK]]);
+
   BitBoard occ = board->occupancies[BOTH];
   while (occ) {
     int sq = popAndGetLsb(&occ);
     int pc = board->squares[sq];
-    int feature = FeatureIdx(pc, sq, kingSq, perspective);
-    result += SKIP_WEIGHTS[feature];
+
+    result += SKIP_WEIGHTS[FeatureIdx(pc, sq, wk, WHITE)];
+    result += SKIP_WEIGHTS[FeatureIdx(pc, sq, bk, BLACK)];
   }
 
   return result;
@@ -147,7 +151,7 @@ int NNPredict(Board* board) {
   ApplyFirstLayer(board, stm, board->side);
   ApplyFirstLayer(board, xstm, board->xside);
 
-  return ApplySecondLayer(stm, xstm) + ApplySkipConnection(board, board->side) / QUANTIZATION_PRECISION_OUT;
+  return ApplySecondLayer(stm, xstm) + ApplySkipConnection(board) / QUANTIZATION_PRECISION_OUT;
 }
 
 inline void AddAddition(int f, NNUpdate* updates) { updates->additions[updates->na++] = f; }
@@ -156,10 +160,10 @@ inline void AddRemoval(int f, NNUpdate* updates) { updates->removals[updates->nr
 
 void ApplyUpdates(Board* board, int side, NNUpdate* updates) {
   Weight* output = board->accumulators[side][board->ply];
-  int* skipOutput = &board->skipAccumulator[side][board->ply];
+  int* skipOutput = &board->skipAccumulator[board->ply];
 
   memcpy(output, board->accumulators[side][board->ply - 1], sizeof(Accumulator));
-  *skipOutput = board->skipAccumulator[side][board->ply - 1];
+  *skipOutput = board->skipAccumulator[board->ply - 1];
 
   for (int i = 0; i < updates->nr; i++) {
     for (int j = 0; j < N_HIDDEN; j++)
@@ -188,17 +192,45 @@ void LoadDefaultNN() {
 
   float* data = (float*)EmbedData + 3; // Skip the 4 byte magic and 8 byte hash
 
-  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++)
+  int max = 0;
+  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) {
     FEATURE_WEIGHTS[j] = LoadWeight(*data++, 1);
+    if (abs(FEATURE_WEIGHTS[j]) > max)
+      max = abs(FEATURE_WEIGHTS[j]);
+  }
 
-  for (int j = 0; j < N_HIDDEN; j++)
+  printf("%d\n", max);
+  max = 0;
+
+  for (int j = 0; j < N_HIDDEN; j++) {
     HIDDEN_BIASES[j] = LoadWeight(*data++, 1);
+    if (abs(HIDDEN_BIASES[j]) > max)
+      max = abs(HIDDEN_BIASES[j]);
+  }
 
-  for (int j = 0; j < N_HIDDEN * 2; j++)
+  printf("%d\n", max);
+  max = 0;
+
+  for (int j = 0; j < N_HIDDEN * 2; j++) {
     HIDDEN_WEIGHTS[j] = LoadWeight(*data++, 0);
+    if (abs(HIDDEN_WEIGHTS[j]) > max)
+      max = abs(HIDDEN_WEIGHTS[j]);
+  }
+
+  printf("%d\n", max);
+  max = 0;
 
   OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
 
-  for (int j = 0; j < N_FEATURES; j++)
+  printf("%d\n", OUTPUT_BIAS);
+  max = 0;
+
+  for (int j = 0; j < N_FEATURES; j++) {
     SKIP_WEIGHTS[j] = LoadWeight(*data++, 0);
+    if (abs(SKIP_WEIGHTS[j]) > max)
+      max = abs(SKIP_WEIGHTS[j]);
+  }
+
+  printf("%d\n", max);
+  max = 0;
 }
