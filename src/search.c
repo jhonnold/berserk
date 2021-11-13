@@ -139,7 +139,6 @@ void* Search(void* arg) {
   board->ply = 0;
   RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
   RefreshAccumulator(board->accumulators[BLACK][board->ply], board, BLACK);
-  RefreshSkipAccumulator(&board->skipAccumulator[board->ply], board);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {

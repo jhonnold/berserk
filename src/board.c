@@ -531,8 +531,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
         ApplyUpdates(board, WHITE, wUpdates);
         RefreshAccumulator(board->accumulators[BLACK][board->ply], board, BLACK);
       }
-
-      RefreshSkipAccumulator(&board->skipAccumulator[board->ply], board);
     } else {
       ApplyUpdates(board, WHITE, wUpdates);
       ApplyUpdates(board, BLACK, bUpdates);

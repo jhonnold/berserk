@@ -61,7 +61,6 @@ typedef struct {
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
 
-  int skipAccumulator[MAX_GAME_PLY];
   Accumulator* accumulators[2];
 
   int squares[64];         // piece per square

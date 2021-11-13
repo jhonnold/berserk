@@ -48,7 +48,6 @@ int16_t FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON))
 int16_t HIDDEN_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int16_t HIDDEN_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int32_t OUTPUT_BIAS;
-int16_t SKIP_WEIGHTS[N_FEATURES] __attribute__((aligned(ALIGN_ON)));
 
 inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective) {
   int kingSq = lsb(board->pieces[KING[perspective]]);
@@ -66,30 +65,12 @@ inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int 
   }
 }
 
-inline void RefreshSkipAccumulator(int* accumulator, Board* board) {
-  *accumulator = 0;
-
-  int wk = lsb(board->pieces[KING[WHITE]]);
-  int bk = lsb(board->pieces[KING[BLACK]]);
-
-  BitBoard occ = board->occupancies[BOTH];
-  while (occ) {
-    int sq = popAndGetLsb(&occ);
-    int pc = board->squares[sq];
-
-    int wf = FeatureIdx(pc, sq, wk, WHITE);
-    int bf = FeatureIdx(pc, sq, bk, BLACK);
-
-    *accumulator += SKIP_WEIGHTS[wf] + SKIP_WEIGHTS[bf];
-  }
-}
-
 #if defined(__AVX2__)
 const size_t WIDTH = sizeof(__m256i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-int OutputLayer(Accumulator stm, Accumulator xstm, int skip) {
-  int result = (OUTPUT_BIAS + skip) * QUANTIZATION_PRECISION_IN;
+int OutputLayer(Accumulator stm, Accumulator xstm) {
+  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
   const __m256i zero = _mm256_setzero_si256();
   __m256i s0 = _mm256_setzero_si256();
@@ -115,8 +96,8 @@ int OutputLayer(Accumulator stm, Accumulator xstm, int skip) {
 const size_t WIDTH = sizeof(__m128i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-int OutputLayer(Accumulator stm, Accumulator xstm, int skip) {
-  int result = (OUTPUT_BIAS + skip) * QUANTIZATION_PRECISION_IN;
+int OutputLayer(Accumulator stm, Accumulator xstm) {
+  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
   const __m128i zero = _mm_setzero_si128();
   __m128i s0 = _mm_setzero_si128();
@@ -138,8 +119,8 @@ int OutputLayer(Accumulator stm, Accumulator xstm, int skip) {
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #else
-int OutputLayer(Accumulator stm, Accumulator xstm, int skip) {
-  int result = (OUTPUT_BIAS + skip) * QUANTIZATION_PRECISION_IN;
+int OutputLayer(Accumulator stm, Accumulator xstm) {
+  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
 
   for (int i = 0; i < N_HIDDEN; i++) {
     result += max(stm[i], 0) * HIDDEN_WEIGHTS[i];
@@ -152,35 +133,25 @@ int OutputLayer(Accumulator stm, Accumulator xstm, int skip) {
 
 int Predict(Board* board) {
   Accumulator stm, xstm;
-  int skip;
 
   RefreshAccumulator(stm, board, board->side);
   RefreshAccumulator(xstm, board, board->xside);
-  RefreshSkipAccumulator(&skip, board);
 
-  return OutputLayer(stm, xstm, skip);
+  return OutputLayer(stm, xstm);
 }
 
 void ApplyUpdates(Board* board, int side, NNUpdate* updates) {
   int16_t* output = board->accumulators[side][board->ply];
-  int* skipOutput = &board->skipAccumulator[board->ply];
 
   memcpy(output, board->accumulators[side][board->ply - 1], sizeof(Accumulator));
-  *skipOutput = board->skipAccumulator[board->ply - 1];
 
-  for (int i = 0; i < updates->nr; i++) {
+  for (int i = 0; i < updates->nr; i++)
     for (int j = 0; j < N_HIDDEN; j++)
       output[j] -= FEATURE_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
 
-    *skipOutput -= SKIP_WEIGHTS[updates->removals[i]];
-  }
-
-  for (int i = 0; i < updates->na; i++) {
+  for (int i = 0; i < updates->na; i++)
     for (int j = 0; j < N_HIDDEN; j++)
       output[j] += FEATURE_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
-
-    *skipOutput += SKIP_WEIGHTS[updates->additions[i]];
-  }
 }
 
 INLINE int16_t LoadWeight(float v, int precision) { return round(v * precision); }
@@ -203,7 +174,4 @@ void LoadDefaultNN() {
     HIDDEN_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_OUT);
 
   OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
-
-  for (int j = 0; j < N_FEATURES; j++)
-    SKIP_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_OUT);
 }

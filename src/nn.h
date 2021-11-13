@@ -25,11 +25,9 @@ extern int16_t FEATURE_WEIGHTS[N_FEATURES * N_HIDDEN];
 extern int16_t HIDDEN_BIASES[N_HIDDEN];
 extern int16_t HIDDEN_WEIGHTS[2 * N_HIDDEN];
 extern int32_t OUTPUT_BIAS;
-extern int16_t SKIP_WEIGHTS[N_FEATURES];
 
 void RefreshAccumulator(Accumulator output, Board* board, const int perspective);
-void RefreshSkipAccumulator(int* accumulator, Board* board);
-int OutputLayer(Accumulator stm, Accumulator xstm, int skip);
+int OutputLayer(Accumulator stm, Accumulator xstm);
 
 int Predict(Board* board);
 void LoadDefaultNN();
