@@ -610,10 +610,15 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (score > alpha) {
         alpha = score;
 
-        // copy pv when alpha is raised
-        pv->count = childPv.count + 1;
-        pv->moves[0] = move;
-        memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
+        if (isPV) {
+          // copy pv when alpha is raised
+          pv->count = childPv.count + 1;
+          pv->moves[0] = move;
+          memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
+        } else if (data->moves[data->ply - 1] == NULL_MOVE) {
+          pv->count = 1;
+          pv->moves[0] = move;
+        }
       }
 
       // we're failing high
@@ -731,10 +736,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
       if (score > alpha) {
         alpha = score;
 
-        // copy pv
-        pv->count = childPv.count + 1;
-        pv->moves[0] = move;
-        memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
+        if (data->moves[data->ply - 1] == NULL_MOVE) {
+          // copy p
+          pv->count = 1;
+          pv->moves[0] = move;
+        }
       }
 
       // failed high
