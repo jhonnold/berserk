@@ -142,16 +142,22 @@ int Predict(Board* board) {
 
 void ApplyUpdates(Board* board, int side, NNUpdate* updates) {
   int16_t* output = board->accumulators[side][board->ply];
+  int16_t* prev = board->accumulators[side][board->ply - 1];
 
-  memcpy(output, board->accumulators[side][board->ply - 1], sizeof(Accumulator));
-
-  for (int i = 0; i < updates->nr; i++)
+  if (updates->nr) {
     for (int j = 0; j < N_HIDDEN; j++)
-      output[j] -= FEATURE_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
+      output[j] = prev[j] - FEATURE_WEIGHTS[updates->removals[0] * N_HIDDEN + j];
 
-  for (int i = 0; i < updates->na; i++)
-    for (int j = 0; j < N_HIDDEN; j++)
-      output[j] += FEATURE_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
+    for (int i = 1; i < updates->nr; i++)
+      for (int j = 0; j < N_HIDDEN; j++)
+        output[j] -= FEATURE_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
+
+    for (int i = 0; i < updates->na; i++)
+      for (int j = 0; j < N_HIDDEN; j++)
+        output[j] += FEATURE_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
+  } else {
+    memcpy(output, prev, sizeof(Accumulator));
+  }
 }
 
 INLINE int16_t LoadWeight(float v, int precision) { return round(v * precision); }
