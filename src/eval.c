@@ -16,11 +16,15 @@
 
 #include <stdio.h>
 
+#include "bits.h"
 #include "board.h"
+#include "endgame.h"
 #include "eval.h"
 #include "nn.h"
 #include "util.h"
+#include "search.h"
 
+const int MATERIAL_VALUES[5] = { 100, 325, 325, 550, 1100 };
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
 
@@ -28,6 +32,16 @@ const int MAX_PHASE = 64;
 Score Evaluate(Board* board) {
   if (IsMaterialDraw(board))
     return 0;
+
+  Score eval = UNKNOWN;
+  if (bits(board->occupancies[BOTH]) == 3) {
+    eval = EvaluateKXK(board);
+  } else if (!(board->pieces[PAWN_WHITE] | board->pieces[PAWN_BLACK])) {
+    eval = EvaluateMaterialOnlyEndgame(board);
+  }
+
+  if (eval != UNKNOWN)
+    return eval;
 
   int score = OutputLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]);
 

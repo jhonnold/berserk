@@ -26,8 +26,6 @@
 #include "transposition.h"
 #include "types.h"
 
-const int MATERIAL_VALUES[5] = { 100, 325, 325, 550, 1100 };
-
 void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->type = ALL_MOVES;
   moves->phase = HASH_MOVE;
