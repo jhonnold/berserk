@@ -182,11 +182,15 @@ void* Search(void* arg) {
           } else if (score >= beta) {
             beta = min(beta + delta, CHECKMATE);
 
-            if (abs(score) < TB_WIN_BOUND)
-              searchDepth = max(1, searchDepth - (++cfh));
+            if (abs(score) < TB_WIN_BOUND) {
+              cfh += 2;
+              searchDepth -= cfh;
+              searchDepth = max(1, searchDepth);
+            }
           } else {
             thread->scores[thread->multiPV] = score;
             thread->bestMoves[thread->multiPV] = pv->moves[0];
+
             cfh = 0;
             break;
           }
