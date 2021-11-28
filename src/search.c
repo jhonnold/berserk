@@ -183,7 +183,7 @@ void* Search(void* arg) {
             beta = min(beta + delta, CHECKMATE);
 
             if (abs(score) < TB_WIN_BOUND) {
-              cfh++;
+              cfh += 2;
               searchDepth -= cfh;
               searchDepth = max(1, searchDepth);
             }
