@@ -107,9 +107,13 @@ void ParseFen(char* fen, Board* board) {
 
   fen++;
 
-  int whiteKing = lsb(board->pieces[KING_WHITE] & RANK_1);
+  BitBoard whiteKingBackRank = board->pieces[KING_WHITE] & RANK_1;
+  BitBoard blackKingBackRank = board->pieces[KING_BLACK] & RANK_8;
+
+  int whiteKing = whiteKingBackRank ? lsb(whiteKingBackRank) : 0;
+  int blackKing = blackKingBackRank ? lsb(blackKingBackRank) : 0;
+
   int whiteKingFile = file(whiteKing);
-  int blackKing = lsb(board->pieces[KING_BLACK] & RANK_8);
   int blackKingFile = file(blackKing);
 
   while (*fen != ' ') {
