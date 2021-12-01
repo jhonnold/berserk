@@ -284,7 +284,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // drop into tactical moves only
   if (depth <= 0)
-    return Quiesce(alpha, beta, thread, pv);
+    return Quiesce(alpha, beta, thread);
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
@@ -441,7 +441,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         MakeMove(move, board);
 
         // qsearch to quickly check
-        score = -Quiesce(-probBeta, -probBeta + 1, thread, pv);
+        score = -Quiesce(-probBeta, -probBeta + 1, thread);
 
         // if it's still above our cutoff, revalidate
         if (score >= probBeta)
@@ -604,19 +604,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       bestScore = score;
       bestMove = move;
 
-      if (score > alpha) {
-        alpha = score;
-
-        if (isPV) {
-          // copy pv when alpha is raised
-          pv->count = childPv.count + 1;
-          pv->moves[0] = move;
-          memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
-        } else if (data->moves[data->ply - 1] == NULL_MOVE) {
-          pv->count = 1;
-          pv->moves[0] = move;
-        }
+      if ((isPV && score > alpha) || (isRoot && nonPrunedMoves == 1)) {
+        pv->count = childPv.count + 1;
+        pv->moves[0] = move;
+        memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
       }
+
+      if (score > alpha)
+        alpha = score;
 
       // we're failing high
       if (alpha >= beta) {
@@ -646,13 +641,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   return bestScore;
 }
 
-int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
+int Quiesce(int alpha, int beta, ThreadData* thread) {
   SearchParams* params = thread->params;
   SearchData* data = &thread->data;
   Board* board = &thread->board;
-
-  PV childPv;
-  pv->count = 0;
 
   data->nodes++;
 
@@ -721,7 +713,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
     data->moves[data->ply++] = move;
     MakeMove(move, board);
 
-    int score = -Quiesce(-beta, -alpha, thread, &childPv);
+    int score = -Quiesce(-beta, -alpha, thread);
 
     UndoMove(move, board);
     data->ply--;
@@ -730,15 +722,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread, PV* pv) {
       bestScore = score;
       bestMove = move;
 
-      if (score > alpha) {
+      if (score > alpha)
         alpha = score;
-
-        if (data->moves[data->ply - 1] == NULL_MOVE) {
-          // copy p
-          pv->count = 1;
-          pv->moves[0] = move;
-        }
-      }
 
       // failed high
       if (alpha >= beta)
