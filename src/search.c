@@ -277,7 +277,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   Move bestMove = NULL_MOVE;
   Move skipMove = data->skipMove[data->ply]; // skip used in SE (concept from SF)
-  Move nullThreat = NULL_MOVE;
   Move hashMove = NULL_MOVE;
 
   Move move;
@@ -424,11 +423,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       UndoNullMove(board);
       data->ply--;
 
-      if (score >= beta) {
+      if (score >= beta)
         return score < TB_WIN_BOUND ? score : beta;
-      } else {
-        nullThreat = childPv.count ? childPv.moves[0] : NULL_MOVE;
-      }
     }
 
     // Prob cut
@@ -567,9 +563,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         if (board->checkers) // move GAVE check
           R--;
-
-        if (MoveCapture(nullThreat) && MoveStart(move) != MoveEnd(nullThreat) && !board->checkers)
-          R++;
 
         // Reduce more on expected cut nodes
         // idea from komodo/sf, explained by Don Daily here
