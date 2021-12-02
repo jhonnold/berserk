@@ -135,7 +135,7 @@ void ScoreTacticalMoves(MoveList* moves, Board* board) {
   for (int i = 0; i < moves->nTactical; i++) {
     Move m = moves->tactical[i];
 
-    int captured = PIECE_TYPE[board->squares[MoveEnd(m)]];
+    int captured = PieceType(board->squares[MoveEnd(m)]);
     moves->sTactical[i] = GetTacticalHistory(moves->data, board, m) + MATERIAL_VALUES[captured] * 32;
   }
 }
@@ -171,8 +171,8 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
       }
 
       if (moves->seeCutoff <= 0) {
-        int attacker = PIECE_TYPE[MovePiece(m)];
-        int victim = MoveEP(m) ? PAWN_TYPE : MoveCapture(m) ? PIECE_TYPE[board->squares[MoveEnd(m)]] : -1;
+        int attacker = PieceType(MovePiece(m));
+        int victim = MoveEP(m) ? PAWN_TYPE : MoveCapture(m) ? PieceType(board->squares[MoveEnd(m)]) : -1;
 
         int see;
         if (attacker > victim && (see = SEE(board, m)) < moves->seeCutoff) {

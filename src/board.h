@@ -22,6 +22,7 @@
 
 #define NO_PIECE 12
 
+#define PieceType(pc) ((pc) >> 1)
 #define file(sq) ((sq)&7)
 #define rank(sq) ((sq) >> 3)
 #define sq(r, f) ((r)*8 + (f))
@@ -32,7 +33,6 @@ extern const int BISHOP[];
 extern const int ROOK[];
 extern const int QUEEN[];
 extern const int KING[];
-extern const int PIECE_TYPE[];
 extern const int8_t PSQT[];
 
 extern const uint64_t PIECE_COUNT_IDX[];

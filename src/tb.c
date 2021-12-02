@@ -52,7 +52,7 @@ Move TBRootProbe(Board* board) {
   int promoPieces[5] = {0, QUEEN[board->side], ROOK[board->side], BISHOP[board->side], KNIGHT[board->side]};
 
   return BuildMove(start, end, piece, promoPieces[promo], capture,
-                   PIECE_TYPE[piece] == PAWN_TYPE && abs((int)start - (int)end) == 2, ep, 0);
+                   PieceType(piece) == PAWN_TYPE && abs((int)start - (int)end) == 2, ep, 0);
 }
 
 unsigned TBProbe(Board* board) {
