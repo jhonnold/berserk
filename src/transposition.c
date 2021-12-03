@@ -34,8 +34,7 @@
 TTTable TT = {0};
 
 size_t TTInit(int mb) {
-  if (TT.mask)
-    TTFree();
+  if (TT.mask) TTFree();
 
   uint64_t keySize = (uint64_t)log2(mb) + (uint64_t)log2(MEGABYTE / sizeof(TTBucket));
 
@@ -60,8 +59,7 @@ inline void TTClear() { memset(TT.buckets, 0, (TT.mask + 1ULL) * sizeof(TTBucket
 inline void TTUpdate() { TT.age += 1; }
 
 inline int TTScore(TTEntry* e, int ply) {
-  if (e->score == UNKNOWN)
-    return UNKNOWN;
+  if (e->score == UNKNOWN) return UNKNOWN;
 
   return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
 }
@@ -99,8 +97,7 @@ inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move
     }
 
     if (entry->hash == shortHash) {
-      if (entry->depth > depth * 2 && !(flag & TT_EXACT))
-        return;
+      if (entry->depth > depth * 2 && !(flag & TT_EXACT)) return;
 
       toReplace = entry;
       break;
@@ -121,8 +118,7 @@ inline int TTFull() {
   for (int i = 0; i < c; i++) {
     TTBucket b = TT.buckets[i];
     for (int j = 0; j < BUCKET_SIZE; j++) {
-      if (b.entries[j].hash && b.entries[j].age == TT.age)
-        t++;
+      if (b.entries[j].hash && b.entries[j].age == TT.age) t++;
     }
   }
 

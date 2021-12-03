@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "eval.h"
+
 #include <stdio.h>
 
 #include "board.h"
-#include "eval.h"
 #include "nn.h"
 #include "util.h"
 
@@ -26,10 +27,9 @@ const int MAX_PHASE = 64;
 
 // Main evalution method
 Score Evaluate(Board* board) {
-  if (IsMaterialDraw(board))
-    return 0;
+  if (IsMaterialDraw(board)) return 0;
 
-  int score = OutputLayer(board->accumulators[board->side][board->ply], board->accumulators[board->xside][board->ply]);
+  int score = OutputLayer(board->accumulators[board->stm][board->ply], board->accumulators[board->xstm][board->ply]);
 
   int scalar = 128 + board->phase;
   return scalar * score / 128;

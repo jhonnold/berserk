@@ -19,19 +19,8 @@
 
 #include "types.h"
 
-extern const int MVV_LVA[12][12];
-
-extern const BitBoard PROMOTION_RANKS[];
-extern const BitBoard HOME_RANKS[];
-extern const BitBoard THIRD_RANKS[];
-extern const int PAWN_DIRECTIONS[];
-
-extern const int HASH_MOVE_SCORE;
-extern const int GOOD_CAPTURE_SCORE;
-extern const int BAD_CAPTURE_SCORE;
-extern const int KILLER1_SCORE;
-extern const int KILLER2_SCORE;
-extern const int COUNTER_SCORE;
+#define PawnDir(c) ((c) == WHITE ? N : S)
+#define PromoRank(c) ((c) == WHITE ? RANK_7 : RANK_2)
 
 void AppendMove(Move* arr, uint8_t* n, Move move);
 void GenerateAllMoves(MoveList* moveList, Board* board);

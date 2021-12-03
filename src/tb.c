@@ -14,57 +14,51 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "tb.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "board.h"
 #include "move.h"
 #include "pyrrhic/tbprobe.h"
-#include "tb.h"
-
 
 #define vf(bb) __builtin_bswap64((bb))
 
 Move TBRootProbe(Board* board) {
-  if (board->castling || bits(board->occupancies[BOTH]) > TB_LARGEST)
-    return NULL_MOVE;
+  if (board->castling || bits(OccBB(BOTH)) > TB_LARGEST) return NULL_MOVE;
 
-  unsigned results[MAX_MOVES]; // used for native support
-  unsigned res = tb_probe_root(vf(board->occupancies[WHITE]), vf(board->occupancies[BLACK]),
-                               vf(board->pieces[KING_WHITE] | board->pieces[KING_BLACK]),
-                               vf(board->pieces[QUEEN_WHITE] | board->pieces[QUEEN_BLACK]),
-                               vf(board->pieces[ROOK_WHITE] | board->pieces[ROOK_BLACK]),
-                               vf(board->pieces[BISHOP_WHITE] | board->pieces[BISHOP_BLACK]),
-                               vf(board->pieces[KNIGHT_WHITE] | board->pieces[KNIGHT_BLACK]),
-                               vf(board->pieces[PAWN_WHITE] | board->pieces[PAWN_BLACK]), board->halfMove,
-                               board->epSquare ? (board->epSquare ^ 56) : 0, board->side == WHITE ? 1 : 0, results);
+  unsigned results[MAX_MOVES];  // used for native support
+  unsigned res = tb_probe_root(
+      vf(OccBB(WHITE)), vf(OccBB(BLACK)), vf(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
+      vf(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)), vf(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
+      vf(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)), vf(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
+      vf(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)), board->halfMove, board->epSquare ? (board->epSquare ^ 56) : 0,
+      board->stm == WHITE ? 1 : 0, results);
 
-  if (res == TB_RESULT_FAILED || res == TB_RESULT_STALEMATE || res == TB_RESULT_CHECKMATE)
-    return NULL_MOVE;
+  if (res == TB_RESULT_FAILED || res == TB_RESULT_STALEMATE || res == TB_RESULT_CHECKMATE) return NULL_MOVE;
 
-  unsigned start = TB_GET_FROM(res) ^ 56;
-  unsigned end = TB_GET_TO(res) ^ 56;
+  unsigned from = TB_GET_FROM(res) ^ 56;
+  unsigned to = TB_GET_TO(res) ^ 56;
   unsigned ep = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
-  int piece = board->squares[start];
-  int capture = !!board->squares[end];
+  int piece = board->squares[from];
+  int capture = !!board->squares[to];
 
-  int promoPieces[5] = {0, QUEEN[board->side], ROOK[board->side], BISHOP[board->side], KNIGHT[board->side]};
+  int promoPieces[5] = {0, Piece(QUEEN, board->stm), Piece(ROOK, board->stm), Piece(BISHOP, board->stm),
+                        Piece(KNIGHT, board->stm)};
 
-  return BuildMove(start, end, piece, promoPieces[promo], capture,
-                   PieceType(piece) == PAWN_TYPE && abs((int)start - (int)end) == 2, ep, 0);
+  return BuildMove(from, to, piece, promoPieces[promo], capture,
+                   PieceType(piece) == PAWN && abs((int)from - (int)to) == 2, ep, 0);
 }
 
 unsigned TBProbe(Board* board) {
-  if (board->castling || board->halfMove || bits(board->occupancies[BOTH]) > TB_LARGEST)
-    return TB_RESULT_FAILED;
+  if (board->castling || board->halfMove || bits(OccBB(BOTH)) > TB_LARGEST) return TB_RESULT_FAILED;
 
-  return tb_probe_wdl(vf(board->occupancies[WHITE]), vf(board->occupancies[BLACK]),
-                      vf(board->pieces[KING_WHITE] | board->pieces[KING_BLACK]),
-                      vf(board->pieces[QUEEN_WHITE] | board->pieces[QUEEN_BLACK]),
-                      vf(board->pieces[ROOK_WHITE] | board->pieces[ROOK_BLACK]),
-                      vf(board->pieces[BISHOP_WHITE] | board->pieces[BISHOP_BLACK]),
-                      vf(board->pieces[KNIGHT_WHITE] | board->pieces[KNIGHT_BLACK]),
-                      vf(board->pieces[PAWN_WHITE] | board->pieces[PAWN_BLACK]),
-                      board->epSquare ? (board->epSquare ^ 56) : 0, board->side == WHITE ? 1 : 0);
+  return tb_probe_wdl(
+      vf(OccBB(WHITE)), vf(OccBB(BLACK)), vf(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
+      vf(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)), vf(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
+      vf(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)), vf(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
+      vf(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)), board->epSquare ? (board->epSquare ^ 56) : 0,
+      board->stm == WHITE ? 1 : 0);
 }

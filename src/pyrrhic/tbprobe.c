@@ -1508,7 +1508,7 @@ static int probe_ab(const PyrrhicPosition* pos, int alpha, int beta, int* succes
 // has an ep capture as only best move.
 // This is used in probe_dtz().
 //
-// The return value is from the point of view of the side to move:
+// The return value is from the point of view of the stm to move:
 // -2 : loss
 // -1 : loss, but draw under 50-move rule
 //  0 : draw
@@ -1602,7 +1602,7 @@ static int WdlToDtz[] = {-1, -101, 0, 101, 1};
 
 // Probe the DTZ table for a particular position.
 // If *success != 0, the probe was successful.
-// The return value is from the point of view of the side to move:
+// The return value is from the point of view of the stm to move:
 //         n < -100 : loss, but draw under 50-move rule
 // -100 <= n < -1   : loss in n ply (assuming 50-move counter == 0)
 //         0        : draw
@@ -1677,7 +1677,7 @@ int probe_dtz(PyrrhicPosition* pos, int* success) {
   if (*success >= 0)
     return WdlToDtz[wdl + 2] + ((wdl > 0) ? dtz : -dtz);
 
-  // *success < 0 means we need to probe DTZ for the other side to move.
+  // *success < 0 means we need to probe DTZ for the other stm to move.
   int best;
   if (wdl > 0) {
     best = INT32_MAX;

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "uci.h"
+
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +34,6 @@
 #include "see.h"
 #include "thread.h"
 #include "transposition.h"
-#include "uci.h"
 #include "util.h"
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -50,8 +51,7 @@ void RootMoves(SimpleMoveList* moves, Board* board) {
   InitPerftMoves(&m, board);
 
   Move mv;
-  while ((mv = NextMove(&m, board, 0)))
-    moves->moves[moves->count++] = mv;
+  while ((mv = NextMove(&m, board, 0))) moves->moves[moves->count++] = mv;
 }
 
 // uci "go" command
@@ -75,29 +75,21 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
 
-  if ((ptrChar = strstr(in, "perft")))
-    perft = atoi(ptrChar + 6);
+  if ((ptrChar = strstr(in, "perft"))) perft = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "binc")) && board->side == BLACK)
-    inc = atoi(ptrChar + 5);
+  if ((ptrChar = strstr(in, "binc")) && board->stm == BLACK) inc = atoi(ptrChar + 5);
 
-  if ((ptrChar = strstr(in, "winc")) && board->side == WHITE)
-    inc = atoi(ptrChar + 5);
+  if ((ptrChar = strstr(in, "winc")) && board->stm == WHITE) inc = atoi(ptrChar + 5);
 
-  if ((ptrChar = strstr(in, "wtime")) && board->side == WHITE)
-    time = atoi(ptrChar + 6);
+  if ((ptrChar = strstr(in, "wtime")) && board->stm == WHITE) time = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "btime")) && board->side == BLACK)
-    time = atoi(ptrChar + 6);
+  if ((ptrChar = strstr(in, "btime")) && board->stm == BLACK) time = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "movestogo")))
-    movesToGo = atoi(ptrChar + 10);
+  if ((ptrChar = strstr(in, "movestogo"))) movesToGo = atoi(ptrChar + 10);
 
-  if ((ptrChar = strstr(in, "movetime")))
-    moveTime = atoi(ptrChar + 9);
+  if ((ptrChar = strstr(in, "movetime"))) moveTime = atoi(ptrChar + 9);
 
-  if ((ptrChar = strstr(in, "depth")))
-    depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+  if ((ptrChar = strstr(in, "depth"))) depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
 
   if ((ptrChar = strstr(in, "ponder"))) {
     if (PONDER_ENABLED)
@@ -146,11 +138,9 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   }
 
   params->multiPV = min(params->multiPV, params->searchMoves ? params->searchable.count : rootMoves.count);
-  if (rootMoves.count == 1 && params->timeset)
-    params->max = min(250, params->max);
+  if (rootMoves.count == 1 && params->timeset) params->max = min(250, params->max);
 
-  if (depth <= 0)
-    params->depth = MAX_SEARCH_PLY - 1;
+  if (depth <= 0) params->depth = MAX_SEARCH_PLY - 1;
 
   printf("info string time %d start %ld alloc %d max %d depth %d timeset %d searchmoves %d\n", time, params->start,
          params->alloc, params->max, params->depth, params->timeset, params->searchable.count);
@@ -186,15 +176,13 @@ void ParsePosition(char* in, Board* board) {
 
   ptrChar = strstr(in, "moves");
 
-  if (ptrChar == NULL)
-    return;
+  if (ptrChar == NULL) return;
 
   ptrChar += 6;
 
   for (char* moves = strtok(ptrChar, " "); moves != NULL; moves = strtok(NULL, " ")) {
     Move enteredMove = ParseMove(moves, board);
-    if (!enteredMove)
-      break;
+    if (!enteredMove) break;
 
     MakeMoveUpdate(enteredMove, board, 0);
   }
@@ -216,12 +204,10 @@ void PrintUCIOptions() {
 }
 
 int ReadLine(char* in) {
-  if (fgets(in, 8192, stdin) == NULL)
-    return 0;
+  if (fgets(in, 8192, stdin) == NULL) return 0;
 
   size_t c = strcspn(in, "\r\n");
-  if (c < strlen(in))
-    in[c] = '\0';
+  if (c < strlen(in)) in[c] = '\0';
 
   return 1;
 }
@@ -239,8 +225,7 @@ void UCILoop() {
   setbuf(stdout, NULL);
 
   while (ReadLine(in)) {
-    if (in[0] == '\n')
-      continue;
+    if (in[0] == '\n') continue;
 
     if (!strncmp(in, "isready", 7)) {
       printf("readyok\n");
@@ -268,14 +253,13 @@ void UCILoop() {
       PrintBoard(&board);
     } else if (!strncmp(in, "eval", 4)) {
       int score = Predict(&board);
-      score = board.side == WHITE ? score : -score;
+      score = board.stm == WHITE ? score : -score;
 
       for (int r = 0; r < 8; r++) {
         printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
         printf("|");
         for (int f = 0; f < 16; f++) {
-          if (f == 8)
-            printf("\n|");
+          if (f == 8) printf("\n|");
 
           int sq = r * 8 + (f > 7 ? f - 8 : f);
 
@@ -284,10 +268,10 @@ void UCILoop() {
               printf("       |");
             else
               printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
-          } else if (board.squares[sq] < KING_WHITE) {
+          } else if (board.squares[sq] < WHITE_KING) {
             popBit(board.occupancies[BOTH], sq);
             int new = Predict(&board);
-            new = board.side == WHITE ? new : -new;
+            new = board.stm == WHITE ? new : -new;
             int diff = score - new;
             printf("%+7d|", diff);
             setBit(board.occupancies[BOTH], sq);

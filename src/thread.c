@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "thread.h"
+
 #include <stdlib.h>
 #include <string.h>
 
 #include "eval.h"
-#include "thread.h"
 #include "types.h"
 #include "util.h"
 
@@ -40,8 +41,8 @@ ThreadData* CreatePool(int count) {
     threads[i].idx = i;
     threads[i].threads = threads;
     threads[i].count = count;
-    threads[i].accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
-    threads[i].accumulators[BLACK] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
+    threads[i].accumulators[WHITE] = (Accumulator*)AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
+    threads[i].accumulators[BLACK] = (Accumulator*)AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
   }
 
   return threads;
@@ -104,24 +105,21 @@ void FreeThreads(ThreadData* threads) {
 // sum node counts
 uint64_t NodesSearched(ThreadData* threads) {
   uint64_t nodes = 0;
-  for (int i = 0; i < threads->count; i++)
-    nodes += threads[i].data.nodes;
+  for (int i = 0; i < threads->count; i++) nodes += threads[i].data.nodes;
 
   return nodes;
 }
 
 uint64_t TBHits(ThreadData* threads) {
   uint64_t tbhits = 0;
-  for (int i = 0; i < threads->count; i++)
-    tbhits += threads[i].data.tbhits;
+  for (int i = 0; i < threads->count; i++) tbhits += threads[i].data.tbhits;
 
   return tbhits;
 }
 
 int Seldepth(ThreadData* threads) {
   int seldepth = threads[0].data.seldepth;
-  for (int i = 1; i < threads->count; i++)
-    seldepth = max(seldepth, threads[i].data.seldepth);
+  for (int i = 1; i < threads->count; i++) seldepth = max(seldepth, threads[i].data.seldepth);
 
   return seldepth;
 }

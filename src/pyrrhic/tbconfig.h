@@ -40,6 +40,8 @@
 
 #include "../attacks.h"
 #include "../bits.h"
+#include "../search.h"
+#include "../types.h"
 
 #define PYRRHIC_POPCOUNT(x) (bits(x))
 #define PYRRHIC_LSB(x) (lsb(x))
@@ -61,6 +63,6 @@
  * Draw, and Lose. PYRRHIC_MAX_MATE_PLY should be your max search height.
  */
 #define PYRRHIC_VALUE_PAWN (100)
-#define PYRRHIC_VALUE_MATE (32000)
+#define PYRRHIC_VALUE_MATE (CHECKMATE)
 #define PYRRHIC_VALUE_DRAW (0)
-#define PYRRHIC_MAX_MATE_PLY (255)
+#define PYRRHIC_MAX_MATE_PLY (MAX_SEARCH_PLY)

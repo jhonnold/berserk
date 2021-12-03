@@ -19,6 +19,11 @@
 
 #include "types.h"
 
+#define HH(stm, m) (data->hh[stm][FromTo(m)])
+#define CH(p, m) (data->ch[PieceType(Moving(p))][To(p)][PieceType(Moving(m))][To(m)])
+#define FH(g, m) (data->fh[PieceType(Moving(g))][To(g)][PieceType(Moving(m))][To(m)])
+#define TH(p, e, c) (data->th[p][e][c])
+
 void AddKillerMove(SearchData* data, Move move);
 void AddCounterMove(SearchData* data, Move move, Move parent);
 void AddHistoryHeuristic(int* entry, int inc);

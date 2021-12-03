@@ -50,18 +50,17 @@ int16_t HIDDEN_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int32_t OUTPUT_BIAS;
 
 inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective) {
-  int kingSq = lsb(board->pieces[KING[perspective]]);
+  int kingSq = lsb(PieceBB(KING, perspective));
 
   memcpy(accumulator, HIDDEN_BIASES, sizeof(Accumulator));
 
-  BitBoard occ = board->occupancies[BOTH];
+  BitBoard occ = OccBB(BOTH);
   while (occ) {
     int sq = popAndGetLsb(&occ);
     int pc = board->squares[sq];
     int feature = FeatureIdx(pc, sq, kingSq, perspective);
 
-    for (int i = 0; i < N_HIDDEN; i++)
-      accumulator[i] += FEATURE_WEIGHTS[feature * N_HIDDEN + i];
+    for (int i = 0; i < N_HIDDEN; i++) accumulator[i] += FEATURE_WEIGHTS[feature * N_HIDDEN + i];
   }
 }
 
@@ -134,27 +133,24 @@ int OutputLayer(Accumulator stm, Accumulator xstm) {
 int Predict(Board* board) {
   Accumulator stm, xstm;
 
-  RefreshAccumulator(stm, board, board->side);
-  RefreshAccumulator(xstm, board, board->xside);
+  RefreshAccumulator(stm, board, board->stm);
+  RefreshAccumulator(xstm, board, board->xstm);
 
   return OutputLayer(stm, xstm);
 }
 
-void ApplyUpdates(Board* board, int side, NNUpdate* updates) {
-  int16_t* output = board->accumulators[side][board->ply];
-  int16_t* prev = board->accumulators[side][board->ply - 1];
+void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
+  int16_t* output = board->accumulators[stm][board->ply];
+  int16_t* prev = board->accumulators[stm][board->ply - 1];
 
   if (updates->nr) {
-    for (int j = 0; j < N_HIDDEN; j++)
-      output[j] = prev[j] - FEATURE_WEIGHTS[updates->removals[0] * N_HIDDEN + j];
+    for (int j = 0; j < N_HIDDEN; j++) output[j] = prev[j] - FEATURE_WEIGHTS[updates->removals[0] * N_HIDDEN + j];
 
     for (int i = 1; i < updates->nr; i++)
-      for (int j = 0; j < N_HIDDEN; j++)
-        output[j] -= FEATURE_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
+      for (int j = 0; j < N_HIDDEN; j++) output[j] -= FEATURE_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
 
     for (int i = 0; i < updates->na; i++)
-      for (int j = 0; j < N_HIDDEN; j++)
-        output[j] += FEATURE_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
+      for (int j = 0; j < N_HIDDEN; j++) output[j] += FEATURE_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
   } else {
     memcpy(output, prev, sizeof(Accumulator));
   }
@@ -168,16 +164,13 @@ void LoadDefaultNN() {
 
   DEFAULT_NN_HASH = *((uint64_t*)(EmbedData + 4));
 
-  float* data = (float*)EmbedData + 3; // Skip the 4 byte magic and 8 byte hash
+  float* data = (float*)EmbedData + 3;  // Skip the 4 byte magic and 8 byte hash
 
-  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++)
-    FEATURE_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_IN);
+  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) FEATURE_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_IN);
 
-  for (int j = 0; j < N_HIDDEN; j++)
-    HIDDEN_BIASES[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_IN);
+  for (int j = 0; j < N_HIDDEN; j++) HIDDEN_BIASES[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_IN);
 
-  for (int j = 0; j < N_HIDDEN * 2; j++)
-    HIDDEN_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_OUT);
+  for (int j = 0; j < N_HIDDEN * 2; j++) HIDDEN_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_OUT);
 
   OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
 }

@@ -22,17 +22,15 @@
 
 #define NO_PIECE 12
 
+#define Piece(pc, c) (((pc) << 1) + c)
 #define PieceType(pc) ((pc) >> 1)
+#define PieceBB(pc, c) (board->pieces[Piece(pc, c)])
+#define OccBB(c) (board->occupancies[c])
+
 #define file(sq) ((sq)&7)
 #define rank(sq) ((sq) >> 3)
 #define sq(r, f) ((r)*8 + (f))
 
-extern const int PAWN[];
-extern const int KNIGHT[];
-extern const int BISHOP[];
-extern const int ROOK[];
-extern const int QUEEN[];
-extern const int KING[];
 extern const int8_t PSQT[];
 
 extern const uint64_t PIECE_COUNT_IDX[];

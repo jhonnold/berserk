@@ -24,17 +24,14 @@
 #include "types.h"
 #include "util.h"
 
-
 int Perft(int depth, Board* board) {
-  if (depth == 0)
-    return 1;
+  if (depth == 0) return 1;
 
   Move move;
   MoveList moves;
   InitPerftMoves(&moves, board);
 
-  if (depth == 1)
-    return moves.nTactical + moves.nQuiets;
+  if (depth == 1) return moves.nTactical + moves.nQuiets;
 
   int nodes = 0;
   while ((move = NextMove(&moves, board, 0))) {

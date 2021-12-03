@@ -29,7 +29,6 @@
 #include "util.h"
 #include "zobrist.h"
 
-
 // Welcome to berserk
 int main(int argc, char** argv) {
   SeedRandom(0);

@@ -104,21 +104,21 @@ uint64_t pyrrhic_pieces_by_type(const PyrrhicPosition* pos, int colour, int piec
   assert(PYRRHIC_PAWN <= piece && piece <= PYRRHIC_KING);
   assert(colour == PYRRHIC_WHITE || colour == PYRRHIC_BLACK);
 
-  uint64_t side = (colour == PYRRHIC_WHITE ? pos->white : pos->black);
+  uint64_t stm = (colour == PYRRHIC_WHITE ? pos->white : pos->black);
 
   switch (piece) {
   case PYRRHIC_PAWN:
-    return pos->pawns & side;
+    return pos->pawns & stm;
   case PYRRHIC_KNIGHT:
-    return pos->knights & side;
+    return pos->knights & stm;
   case PYRRHIC_BISHOP:
-    return pos->bishops & side;
+    return pos->bishops & stm;
   case PYRRHIC_ROOK:
-    return pos->rooks & side;
+    return pos->rooks & stm;
   case PYRRHIC_QUEEN:
-    return pos->queens & side;
+    return pos->queens & stm;
   case PYRRHIC_KING:
-    return pos->kings & side;
+    return pos->kings & stm;
   default:
     assert(0);
     return 0;

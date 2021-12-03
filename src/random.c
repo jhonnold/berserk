@@ -13,9 +13,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#include <inttypes.h>
-
 #include "random.h"
+
+#include <inttypes.h>
 
 // I dunno anything about random number generators, and had a bad one for a while
 // Thanks to Martin Sedlák (author of Cheng) this one is really cool and works :)
@@ -34,8 +34,7 @@ inline uint64_t RandomUInt64() {
 void SeedRandom(uint64_t seed) {
   keys[0] = keys[1] = seed;
 
-  for (int i = 0; i < 64; i++)
-    RandomUInt64();
+  for (int i = 0; i < 64; i++) RandomUInt64();
 }
 
 // Magic's are combined to try and get one with few bits
