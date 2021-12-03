@@ -18,6 +18,7 @@
 #define BITS_H
 
 #include "types.h"
+#include "util.h"
 
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL
@@ -44,6 +45,8 @@
 #define setBit(bb, sq) ((bb) |= bit(sq))
 #define getBit(bb, sq) ((bb)&bit(sq))
 #define popBit(bb, sq) ((bb) &= ~bit(sq))
+#define flipBit(bb, sq) ((bb) ^= bit(sq))
+#define flipBits(bb, sq1, sq2) ((bb) ^= bit(sq1) ^ bit(sq2))
 #define popLsb(bb) ((bb) &= (bb)-1)
 #define lsb(bb) (__builtin_ctzll(bb))
 #define msb(bb) (63 ^ __builtin_clzll(bb))
@@ -60,6 +63,10 @@
 #define ShiftNW(bb) (((bb) & ~A_FILE) >> 9)
 #define ShiftSE(bb) (((bb) & ~H_FILE) << 9)
 
-int popAndGetLsb(BitBoard* bb);
+INLINE int popAndGetLsb(BitBoard* bb) {
+  int sq = lsb(*bb);
+  popLsb(*bb);
+  return sq;
+}
 
 #endif

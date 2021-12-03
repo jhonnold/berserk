@@ -15,15 +15,3 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "bits.h"
-
-#include <inttypes.h>
-#include <stdio.h>
-
-#include "board.h"
-#include "types.h"
-
-inline int popAndGetLsb(BitBoard* bb) {
-  int sq = lsb(*bb);
-  popLsb(*bb);
-  return sq;
-}
