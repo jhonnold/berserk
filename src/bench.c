@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "bench.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "bench.h"
 #include "board.h"
 #include "move.h"
 #include "search.h"
@@ -30,9 +31,8 @@
 // Ethereal's bench set
 const int NUM_BENCH_POSITIONS = 50;
 char* benchmarks[] = {
-  #include "bench.dat"
+#include "bench.dat"
 };
-
 
 void Bench() {
   Board board;
@@ -70,8 +70,7 @@ void Bench() {
   }
 
   int totalNodes = 0;
-  for (int i = 0; i < NUM_BENCH_POSITIONS; i++)
-    totalNodes += nodes[i];
+  for (int i = 0; i < NUM_BENCH_POSITIONS; i++) totalNodes += nodes[i];
 
   printf("\nResults: %43d nodes %8d nps\n\n", totalNodes, (int)(1000.0 * totalNodes / (totalTime + 1)));
 

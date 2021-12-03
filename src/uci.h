@@ -17,6 +17,8 @@
 #ifndef UCI_H
 #define UCI_H
 
+#include "types.h"
+
 extern int CHESS_960;
 
 void RootMoves(SimpleMoveList* moves, Board* board);

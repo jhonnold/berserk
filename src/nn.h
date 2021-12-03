@@ -36,4 +36,4 @@ INLINE void AddAddition(int f, NNUpdate* updates) { updates->additions[updates->
 
 INLINE void AddRemoval(int f, NNUpdate* updates) { updates->removals[updates->nr++] = f; }
 
-void ApplyUpdates(Board* board, int side, NNUpdate* updates);
+void ApplyUpdates(Board* board, int stm, NNUpdate* updates);

@@ -20,7 +20,7 @@
 #include "types.h"
 
 // search specific score evals
-#define UNKNOWN 32257 // this must be higher than CHECKMATE (some conditional logic relies on this)
+#define UNKNOWN 32257  // this must be higher than CHECKMATE (some conditional logic relies on this)
 #define CHECKMATE 32256
 #define MATE_BOUND 30000
 #define TB_WIN_BOUND 20000
@@ -48,7 +48,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread);
 
 void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board);
 void PrintPV(PV* pv, Board* board);
- 
+
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);
 int MoveSearchable(SearchParams* params, Move move);
 
