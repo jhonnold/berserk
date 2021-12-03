@@ -343,8 +343,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->checkersHistory[board->moveNo] = board->checkers;
   board->pinnedHistory[board->moveNo] = board->pinned;
 
-  popBit(board->pieces[piece], from);
-  setBit(board->pieces[piece], to);
+  flipBits(board->pieces[piece], from, to);
 
   board->squares[from] = NO_PIECE;
   board->squares[to] = piece;
@@ -364,7 +363,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   if (capture && !ep) {
     board->captureHistory[board->moveNo] = captured;
-    popBit(board->pieces[captured], to);
+    flipBit(board->pieces[captured], to);
 
     board->zobrist ^= ZOBRIST_PIECES[captured][to];
 
@@ -378,8 +377,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   }
 
   if (promoted) {
-    popBit(board->pieces[piece], to);
-    setBit(board->pieces[promoted], to);
+    flipBit(board->pieces[piece], to);
+    flipBit(board->pieces[promoted], to);
 
     board->squares[to] = promoted;
 
@@ -394,7 +393,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   if (ep) {
     // ep has to be handled specially since the to location won't remove the opponents pawn
-    popBit(PieceBB(PAWN, board->xstm), to - PawnDir(board->stm));
+    flipBit(PieceBB(PAWN, board->xstm), to - PawnDir(board->stm));
 
     board->squares[to - PawnDir(board->stm)] = NO_PIECE;
 
@@ -422,8 +421,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   if (castle) {
     // move the rook during a castle, the king encoding is handled automatically
     if (to == G1) {
-      popBit(PieceBB(ROOK, WHITE), board->castleRooks[0]);
-      setBit(PieceBB(ROOK, WHITE), F1);
+      flipBits(PieceBB(ROOK, WHITE), board->castleRooks[0], F1);
 
       if (board->castleRooks[0] != to) board->squares[board->castleRooks[0]] = NO_PIECE;
       board->squares[F1] = WHITE_ROOK;
@@ -436,8 +434,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       AddAddition(FeatureIdx(WHITE_ROOK, F1, wkingSq, WHITE), wUpdates);
       AddAddition(FeatureIdx(WHITE_ROOK, F1, bkingSq, BLACK), bUpdates);
     } else if (to == C1) {
-      popBit(PieceBB(ROOK, WHITE), board->castleRooks[1]);
-      setBit(PieceBB(ROOK, WHITE), D1);
+      flipBits(PieceBB(ROOK, WHITE), board->castleRooks[1], D1);
 
       if (board->castleRooks[1] != to) board->squares[board->castleRooks[1]] = NO_PIECE;
       board->squares[D1] = WHITE_ROOK;
@@ -450,8 +447,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       AddAddition(FeatureIdx(WHITE_ROOK, D1, wkingSq, WHITE), wUpdates);
       AddAddition(FeatureIdx(WHITE_ROOK, D1, bkingSq, BLACK), bUpdates);
     } else if (to == G8) {
-      popBit(PieceBB(ROOK, BLACK), board->castleRooks[2]);
-      setBit(PieceBB(ROOK, BLACK), F8);
+      flipBits(PieceBB(ROOK, BLACK), board->castleRooks[2], F8);
 
       if (board->castleRooks[2] != to) board->squares[board->castleRooks[2]] = NO_PIECE;
       board->squares[F8] = BLACK_ROOK;
@@ -464,8 +460,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       AddAddition(FeatureIdx(BLACK_ROOK, F8, wkingSq, WHITE), wUpdates);
       AddAddition(FeatureIdx(BLACK_ROOK, F8, bkingSq, BLACK), bUpdates);
     } else if (to == C8) {
-      popBit(PieceBB(ROOK, BLACK), board->castleRooks[3]);
-      setBit(PieceBB(ROOK, BLACK), D8);
+      flipBits(PieceBB(ROOK, BLACK), board->castleRooks[3], D8);
 
       if (board->castleRooks[3] != to) board->squares[board->castleRooks[3]] = NO_PIECE;
       board->squares[D8] = BLACK_ROOK;
@@ -538,15 +533,17 @@ void UndoMove(Move move, Board* board) {
   board->checkers = board->checkersHistory[board->moveNo];
   board->pinned = board->pinnedHistory[board->moveNo];
 
-  popBit(board->pieces[piece], to);
-  setBit(board->pieces[piece], from);
+  if (!promoted)
+    flipBits(board->pieces[piece], to, from);
+  else
+    flipBit(board->pieces[piece], from);
 
   board->squares[to] = NO_PIECE;
   board->squares[from] = piece;
 
   if (capture) {
     int captured = board->captureHistory[board->moveNo];
-    setBit(board->pieces[captured], to);
+    flipBit(board->pieces[captured], to);
 
     if (!ep) {
       board->squares[to] = captured;
@@ -558,7 +555,7 @@ void UndoMove(Move move, Board* board) {
   }
 
   if (promoted) {
-    popBit(board->pieces[promoted], to);
+    flipBit(board->pieces[promoted], to);
 
     board->piecesCounts -= PIECE_COUNT_IDX[promoted];
     board->piecesCounts += PIECE_COUNT_IDX[piece];
@@ -567,7 +564,7 @@ void UndoMove(Move move, Board* board) {
   }
 
   if (ep) {
-    setBit(PieceBB(PAWN, board->xstm), to - PawnDir(board->stm));
+    flipBit(PieceBB(PAWN, board->xstm), to - PawnDir(board->stm));
     board->squares[to - PawnDir(board->stm)] = Piece(PAWN, board->xstm);
 
     board->piecesCounts += PIECE_COUNT_IDX[Piece(PAWN, board->xstm)];
@@ -576,27 +573,23 @@ void UndoMove(Move move, Board* board) {
   if (castle) {
     // put the rook back
     if (to == G1) {
-      popBit(PieceBB(ROOK, WHITE), F1);
-      setBit(PieceBB(ROOK, WHITE), board->castleRooks[0]);
+      flipBits(PieceBB(ROOK, WHITE), F1, board->castleRooks[0]);
 
       if (from != F1) board->squares[F1] = NO_PIECE;
 
       board->squares[board->castleRooks[0]] = WHITE_ROOK;
     } else if (to == C1) {
-      popBit(PieceBB(ROOK, WHITE), D1);
-      setBit(PieceBB(ROOK, WHITE), board->castleRooks[1]);
+      flipBits(PieceBB(ROOK, WHITE), D1, board->castleRooks[1]);
 
       if (from != D1) board->squares[D1] = NO_PIECE;
       board->squares[board->castleRooks[1]] = WHITE_ROOK;
     } else if (to == G8) {
-      popBit(PieceBB(ROOK, BLACK), F8);
-      setBit(PieceBB(ROOK, BLACK), board->castleRooks[2]);
+      flipBits(PieceBB(ROOK, BLACK), F8, board->castleRooks[2]);
 
       if (from != F8) board->squares[F8] = NO_PIECE;
       board->squares[board->castleRooks[2]] = BLACK_ROOK;
     } else if (to == C8) {
-      popBit(PieceBB(ROOK, BLACK), D8);
-      setBit(PieceBB(ROOK, BLACK), board->castleRooks[3]);
+      flipBits(PieceBB(ROOK, BLACK), D8, board->castleRooks[3]);
 
       if (from != D8) board->squares[D8] = NO_PIECE;
       board->squares[board->castleRooks[3]] = BLACK_ROOK;
