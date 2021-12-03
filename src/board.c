@@ -38,10 +38,6 @@ const int ROOK[] = {ROOK_WHITE, ROOK_BLACK};
 const int QUEEN[] = {QUEEN_WHITE, QUEEN_BLACK};
 const int KING[] = {KING_WHITE, KING_BLACK};
 
-// way to identify pieces are the same "type" (i.e. WHITE_PAWN and BLACK_PAWN)
-const int PIECE_TYPE[13] = {PAWN_TYPE, PAWN_TYPE,  KNIGHT_TYPE, KNIGHT_TYPE, BISHOP_TYPE, BISHOP_TYPE, ROOK_TYPE,
-                            ROOK_TYPE, QUEEN_TYPE, QUEEN_TYPE,  KING_TYPE,   KING_TYPE,   NO_PIECE / 2};
-
 const int8_t PSQT[] = {0,  1,  2,  3,  3,  2,  1,  0,  4,  5,  6,  7,  7,  6,  5,  4,  8,  9,  10, 11, 11, 10,
                        9,  8,  12, 13, 14, 15, 15, 14, 13, 12, 16, 17, 18, 19, 19, 18, 17, 16, 20, 21, 22, 23,
                        23, 22, 21, 20, 24, 25, 26, 27, 27, 26, 25, 24, 28, 29, 30, 31, 31, 30, 29, 28};
@@ -86,7 +82,7 @@ void ParseFen(char* fen, Board* board) {
       setBit(board->pieces[piece], i);
       board->squares[i] = piece;
 
-      board->phase += PHASE_VALUES[PIECE_TYPE[piece]];
+      board->phase += PHASE_VALUES[PieceType(piece)];
 
       if (*fen != 'K' && *fen != 'k')
         board->piecesCounts += PIECE_COUNT_IDX[piece];
@@ -396,7 +392,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->piecesCounts -= PIECE_COUNT_IDX[captured]; // when there's a capture, we need to update our piece counts
     board->halfMove = 0;                              // reset on capture
 
-    board->phase -= PHASE_VALUES[PIECE_TYPE[captured]];
+    board->phase -= PHASE_VALUES[PieceType(captured)];
   }
 
   if (promoted) {
@@ -411,7 +407,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->piecesCounts -= PIECE_COUNT_IDX[piece];
     board->piecesCounts += PIECE_COUNT_IDX[promoted];
 
-    board->phase += PHASE_VALUES[PIECE_TYPE[promoted]];
+    board->phase += PHASE_VALUES[PieceType(promoted)];
   }
 
   if (ep) {
@@ -579,7 +575,7 @@ void UndoMove(Move move, Board* board) {
 
       board->piecesCounts += PIECE_COUNT_IDX[captured];
 
-      board->phase += PHASE_VALUES[PIECE_TYPE[captured]];
+      board->phase += PHASE_VALUES[PieceType(captured)];
     }
   }
 
@@ -589,7 +585,7 @@ void UndoMove(Move move, Board* board) {
     board->piecesCounts -= PIECE_COUNT_IDX[promoted];
     board->piecesCounts += PIECE_COUNT_IDX[piece];
 
-    board->phase -= PHASE_VALUES[PIECE_TYPE[promoted]];
+    board->phase -= PHASE_VALUES[PieceType(promoted)];
   }
 
   if (ep) {
@@ -711,11 +707,11 @@ int MoveIsLegal(Move move, Board* board) {
     return 0;
 
   // non-pawns can't promote/dp/ep
-  if ((MovePromo(move) || MoveDoublePush(move) || MoveEP(move)) && PIECE_TYPE[piece] != PAWN_TYPE)
+  if ((MovePromo(move) || MoveDoublePush(move) || MoveEP(move)) && PieceType(piece) != PAWN_TYPE)
     return 0;
 
   // non-kings can't castle
-  if (MoveCastle(move) && (PIECE_TYPE[piece] != KING_TYPE || MoveCapture(move)))
+  if (MoveCastle(move) && (PieceType(piece) != KING_TYPE || MoveCapture(move)))
     return 0;
 
   BitBoard possible = -1ULL;
@@ -725,10 +721,10 @@ int MoveIsLegal(Move move, Board* board) {
   if (board->checkers)
     possible &= GetInBetweenSquares(lsb(board->checkers), lsb(board->pieces[KING[board->side]])) | board->checkers;
 
-  if (bits(board->checkers) > 1 && PIECE_TYPE[piece] != KING_TYPE)
+  if (bits(board->checkers) > 1 && PieceType(piece) != KING_TYPE)
     return 0;
 
-  switch (PIECE_TYPE[piece]) {
+  switch (PieceType(piece)) {
   case KING_TYPE:
     if (!MoveCastle(move) && !getBit(GetKingAttacks(start), end))
       return 0;
@@ -767,7 +763,7 @@ int MoveIsLegal(Move move, Board* board) {
 
   if (MoveEP(move)) {
     if (!MoveCapture(move) || MoveDoublePush(move) || MovePromo(move) || !board->epSquare || board->epSquare != end ||
-        PIECE_TYPE[piece] != PAWN_TYPE || !getBit(GetPawnAttacks(start, board->side), board->epSquare))
+        PieceType(piece) != PAWN_TYPE || !getBit(GetPawnAttacks(start, board->side), board->epSquare))
       return 0;
   }
 
