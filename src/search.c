@@ -546,8 +546,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R -= quietHistory / 20480;
       } else {
         int th = GetTacticalHistory(data, board, move);
-
-        R = 1 - 4 * th / (abs(th) + 16384 + (8192 * isPV));
+        R = 1 - 4 * th / (abs(th) + 24576);
+        
+        R += cutnode;
       }
 
       // prevent dropping into QS, extending, or reducing all extensions
