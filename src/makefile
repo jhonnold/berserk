@@ -1,7 +1,7 @@
 CC = gcc
 SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
 EXE = berserk
-VERSION = 8-dev
+VERSION = 8
 EVALFILE = default.nn
 
 DEFS = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
@@ -18,6 +18,7 @@ endif
 
 SSSE = -mssse3 -msse3 -msse2 -msse -mpopcnt
 AVX2 = -mavx2 -mavx -mfma -msse4.1 $(SSSE)
+AVX512 = -mavx512f -mavx512bw -mavx512dq $(AVX2)
 PEXT = -mbmi2 -DUSE_PEXT
 
 all:
@@ -44,4 +45,10 @@ avx2:
 avx2-pext:
 	$(CC) $(RFLAGS) $(DEFS) $(SRC) $(LIBS) $(AVX2) $(PEXT) -o $(EXE)-$(VERSION)-x64-avx2-pext$(EXT)
 
-release: ssse pext avx2 avx2-pext
+avx512:
+	$(CC) $(RFLAGS) $(DEFS) $(SRC) $(LIBS) $(AVX512) -o $(EXE)-$(VERSION)-x64-avx512$(EXT)
+
+avx512-pext:
+	$(CC) $(RFLAGS) $(DEFS) $(SRC) $(LIBS) $(AVX512) $(PEXT) -o $(EXE)-$(VERSION)-x64-avx512-pext$(EXT)
+
+release: ssse pext avx2 avx2-pext avx512 avx512-pext
