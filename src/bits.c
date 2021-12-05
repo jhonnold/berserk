@@ -14,15 +14,4 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <inttypes.h>
-#include <stdio.h>
-
 #include "bits.h"
-#include "board.h"
-#include "types.h"
-
-inline int popAndGetLsb(BitBoard* bb) {
-  int sq = lsb(*bb);
-  popLsb(*bb);
-  return sq;
-}

@@ -103,8 +103,7 @@ void InitBetweenSquares() {
   }
 
   for (int f = 0; f < 64; f++)
-    for (int t = 0; t < f; t++)
-      BETWEEN_SQS[f][t] = BETWEEN_SQS[t][f];
+    for (int t = 0; t < f; t++) BETWEEN_SQS[f][t] = BETWEEN_SQS[t][f];
 }
 
 void InitPinnedMovementSquares() {
@@ -114,17 +113,14 @@ void InitPinnedMovementSquares() {
     for (int kSq = 0; kSq < 64; kSq++) {
       int dir = 0;
       for (int i = 0; i < 8; i++) {
-        if (dir)
-          break;
+        if (dir) break;
 
         for (int xray = kSq + dirs[i]; xray >= 0 && xray < 64; xray += dirs[i]) {
           if (dirs[i] == E || dirs[i] == SE || dirs[i] == NE)
-            if (file(xray) == 0)
-              break;
+            if (file(xray) == 0) break;
 
           if (dirs[i] == W || dirs[i] == NW || dirs[i] == SW)
-            if (file(xray) == 7)
-              break;
+            if (file(xray) == 7) break;
 
           if (xray == pSq) {
             dir = dirs[i];
@@ -138,12 +134,10 @@ void InitPinnedMovementSquares() {
           PINNED_MOVES[pSq][kSq] |= (1ULL << xray);
 
           if (dir == E || dir == SE || dir == NE)
-            if (file(xray) == 7)
-              break;
+            if (file(xray) == 7) break;
 
           if (dir == W || dir == SW || dir == NW)
-            if (file(xray) == 0)
-              break;
+            if (file(xray) == 0) break;
         }
       }
     }
@@ -182,30 +176,21 @@ BitBoard GetGeneratedKnightAttacks(int sq) {
 
   setBit(board, sq);
 
-  if ((board >> 17) & ~H_FILE)
-    attacks |= (board >> 17);
-  if ((board >> 15) & ~A_FILE)
-    attacks |= (board >> 15);
-  if ((board >> 10) & ~(G_FILE | H_FILE))
-    attacks |= (board >> 10);
-  if ((board >> 6) & ~(A_FILE | B_FILE))
-    attacks |= (board >> 6);
+  if ((board >> 17) & ~H_FILE) attacks |= (board >> 17);
+  if ((board >> 15) & ~A_FILE) attacks |= (board >> 15);
+  if ((board >> 10) & ~(G_FILE | H_FILE)) attacks |= (board >> 10);
+  if ((board >> 6) & ~(A_FILE | B_FILE)) attacks |= (board >> 6);
 
-  if ((board << 17) & ~A_FILE)
-    attacks |= (board << 17);
-  if ((board << 15) & ~H_FILE)
-    attacks |= (board << 15);
-  if ((board << 10) & ~(A_FILE | B_FILE))
-    attacks |= (board << 10);
-  if ((board << 6) & ~(G_FILE | H_FILE))
-    attacks |= (board << 6);
+  if ((board << 17) & ~A_FILE) attacks |= (board << 17);
+  if ((board << 15) & ~H_FILE) attacks |= (board << 15);
+  if ((board << 10) & ~(A_FILE | B_FILE)) attacks |= (board << 10);
+  if ((board << 6) & ~(G_FILE | H_FILE)) attacks |= (board << 6);
 
   return attacks;
 }
 
 void InitKnightAttacks() {
-  for (int i = 0; i < 64; i++)
-    KNIGHT_ATTACKS[i] = GetGeneratedKnightAttacks(i);
+  for (int i = 0; i < 64; i++) KNIGHT_ATTACKS[i] = GetGeneratedKnightAttacks(i);
 }
 
 BitBoard GetGeneratedKingAttacks(int sq) {
@@ -226,8 +211,7 @@ BitBoard GetGeneratedKingAttacks(int sq) {
 }
 
 void InitKingAttacks() {
-  for (int i = 0; i < 64; i++)
-    KING_ATTACKS[i] = GetGeneratedKingAttacks(i);
+  for (int i = 0; i < 64; i++) KING_ATTACKS[i] = GetGeneratedKingAttacks(i);
 }
 
 BitBoard GetBishopMask(int sq) {
@@ -236,21 +220,16 @@ BitBoard GetBishopMask(int sq) {
   int sr = rank(sq);
   int sf = file(sq);
 
-  for (int r = sr + 1, f = sf + 1; r <= 6 && f <= 6; r++, f++)
-    attacks |= (1ULL << (r * 8 + f));
-  for (int r = sr - 1, f = sf + 1; r >= 1 && f <= 6; r--, f++)
-    attacks |= (1ULL << (r * 8 + f));
-  for (int r = sr + 1, f = sf - 1; r <= 6 && f >= 1; r++, f--)
-    attacks |= (1ULL << (r * 8 + f));
-  for (int r = sr - 1, f = sf - 1; r >= 1 && f >= 1; r--, f--)
-    attacks |= (1ULL << (r * 8 + f));
+  for (int r = sr + 1, f = sf + 1; r <= 6 && f <= 6; r++, f++) attacks |= (1ULL << (r * 8 + f));
+  for (int r = sr - 1, f = sf + 1; r >= 1 && f <= 6; r--, f++) attacks |= (1ULL << (r * 8 + f));
+  for (int r = sr + 1, f = sf - 1; r <= 6 && f >= 1; r++, f--) attacks |= (1ULL << (r * 8 + f));
+  for (int r = sr - 1, f = sf - 1; r >= 1 && f >= 1; r--, f--) attacks |= (1ULL << (r * 8 + f));
 
   return attacks;
 }
 
 void InitBishopMasks() {
-  for (int i = 0; i < 64; i++)
-    BISHOP_MASKS[i] = GetBishopMask(i);
+  for (int i = 0; i < 64; i++) BISHOP_MASKS[i] = GetBishopMask(i);
 }
 
 BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
@@ -261,26 +240,22 @@ BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
 
   for (int r = sr + 1, f = sf + 1; r <= 7 && f <= 7; r++, f++) {
     attacks |= (1ULL << (r * 8 + f));
-    if (getBit(blockers, r * 8 + f))
-      break;
+    if (getBit(blockers, r * 8 + f)) break;
   }
 
   for (int r = sr - 1, f = sf + 1; r >= 0 && f <= 7; r--, f++) {
     attacks |= (1ULL << (r * 8 + f));
-    if (getBit(blockers, r * 8 + f))
-      break;
+    if (getBit(blockers, r * 8 + f)) break;
   }
 
   for (int r = sr + 1, f = sf - 1; r <= 7 && f >= 0; r++, f--) {
     attacks |= (1ULL << (r * 8 + f));
-    if (getBit(blockers, r * 8 + f))
-      break;
+    if (getBit(blockers, r * 8 + f)) break;
   }
 
   for (int r = sr - 1, f = sf - 1; r >= 0 && f >= 0; r--, f--) {
     attacks |= (1ULL << (r * 8 + f));
-    if (getBit(blockers, r * 8 + f))
-      break;
+    if (getBit(blockers, r * 8 + f)) break;
   }
 
   return attacks;
@@ -292,21 +267,16 @@ BitBoard GetRookMask(int sq) {
   int sr = rank(sq);
   int sf = file(sq);
 
-  for (int r = sr + 1; r <= 6; r++)
-    attacks |= (1ULL << (r * 8 + sf));
-  for (int r = sr - 1; r >= 1; r--)
-    attacks |= (1ULL << (r * 8 + sf));
-  for (int f = sf + 1; f <= 6; f++)
-    attacks |= (1ULL << (sr * 8 + f));
-  for (int f = sf - 1; f >= 1; f--)
-    attacks |= (1ULL << (sr * 8 + f));
+  for (int r = sr + 1; r <= 6; r++) attacks |= (1ULL << (r * 8 + sf));
+  for (int r = sr - 1; r >= 1; r--) attacks |= (1ULL << (r * 8 + sf));
+  for (int f = sf + 1; f <= 6; f++) attacks |= (1ULL << (sr * 8 + f));
+  for (int f = sf - 1; f >= 1; f--) attacks |= (1ULL << (sr * 8 + f));
 
   return attacks;
 }
 
 void InitRookMasks() {
-  for (int i = 0; i < 64; i++)
-    ROOK_MASKS[i] = GetRookMask(i);
+  for (int i = 0; i < 64; i++) ROOK_MASKS[i] = GetRookMask(i);
 }
 
 BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
@@ -317,26 +287,22 @@ BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
 
   for (int r = sr + 1; r <= 7; r++) {
     attacks |= (1ULL << (r * 8 + sf));
-    if (getBit(blockers, r * 8 + sf))
-      break;
+    if (getBit(blockers, r * 8 + sf)) break;
   }
 
   for (int r = sr - 1; r >= 0; r--) {
     attacks |= (1ULL << (r * 8 + sf));
-    if (getBit(blockers, r * 8 + sf))
-      break;
+    if (getBit(blockers, r * 8 + sf)) break;
   }
 
   for (int f = sf + 1; f <= 7; f++) {
     attacks |= (1ULL << (sr * 8 + f));
-    if (getBit(blockers, sr * 8 + f))
-      break;
+    if (getBit(blockers, sr * 8 + f)) break;
   }
 
   for (int f = sf - 1; f >= 0; f--) {
     attacks |= (1ULL << (sr * 8 + f));
-    if (getBit(blockers, sr * 8 + f))
-      break;
+    if (getBit(blockers, sr * 8 + f)) break;
   }
 
   return attacks;
@@ -349,8 +315,7 @@ BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
     int sq = lsb(attacks);
     popLsb(attacks);
 
-    if (idx & (1 << i))
-      occupany |= (1ULL << sq);
+    if (idx & (1 << i)) occupany |= (1ULL << sq);
   }
 
   return occupany;
@@ -373,8 +338,7 @@ uint64_t FindMagicNumber(int sq, int n, int isBishop) {
   for (int count = 0; count < 10000000; count++) {
     uint64_t magic = RandomMagic();
 
-    if (bits((mask * magic) & 0xFF00000000000000) < 6)
-      continue;
+    if (bits((mask * magic) & 0xFF00000000000000) < 6) continue;
 
     memset(usedAttacks, 0UL, sizeof(usedAttacks));
 
@@ -388,8 +352,7 @@ uint64_t FindMagicNumber(int sq, int n, int isBishop) {
         failed = 1;
     }
 
-    if (!failed)
-      return magic;
+    if (!failed) return magic;
   }
 
   printf("failed to find magic number");
@@ -397,13 +360,11 @@ uint64_t FindMagicNumber(int sq, int n, int isBishop) {
 }
 
 void InitBishopMagics() {
-  for (int i = 0; i < 64; i++)
-    BISHOP_MAGICS[i] = FindMagicNumber(i, BISHOP_RELEVANT_BITS[i], 1);
+  for (int i = 0; i < 64; i++) BISHOP_MAGICS[i] = FindMagicNumber(i, BISHOP_RELEVANT_BITS[i], 1);
 }
 
 void InitRookMagics() {
-  for (int i = 0; i < 64; i++)
-    ROOK_MAGICS[i] = FindMagicNumber(i, ROOK_RELEVANT_BITS[i], 0);
+  for (int i = 0; i < 64; i++) ROOK_MAGICS[i] = FindMagicNumber(i, ROOK_RELEVANT_BITS[i], 0);
 }
 
 void InitBishopAttacks() {
@@ -500,12 +461,11 @@ inline BitBoard GetKingAttacks(int sq) { return KING_ATTACKS[sq]; }
 
 // get a bitboard of ALL pieces attacking a given square
 inline BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
-  return (GetPawnAttacks(sq, WHITE) & board->pieces[PAWN[BLACK]]) |
-         (GetPawnAttacks(sq, BLACK) & board->pieces[PAWN[WHITE]]) |
-         (GetKnightAttacks(sq) & (board->pieces[KNIGHT[WHITE]] | board->pieces[KNIGHT[BLACK]])) |
-         (GetKingAttacks(sq) & (board->pieces[KING[WHITE]] | board->pieces[KING[BLACK]])) |
-         (GetBishopAttacks(sq, occ) & (board->pieces[BISHOP[WHITE]] | board->pieces[BISHOP[BLACK]] |
-                                       board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]])) |
-         (GetRookAttacks(sq, occ) & (board->pieces[ROOK[WHITE]] | board->pieces[ROOK[BLACK]] |
-                                     board->pieces[QUEEN[WHITE]] | board->pieces[QUEEN[BLACK]]));
+  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) | (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |
+         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |
+         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |
+         (GetBishopAttacks(sq, occ) &
+          (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) |
+         (GetRookAttacks(sq, occ) &
+          (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
 }

@@ -24,7 +24,7 @@
 #define MAX_MOVES 256
 #define MAX_GAME_PLY 1024
 
-#define N_FEATURES 1536
+#define N_FEATURES 768
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
@@ -40,34 +40,31 @@ typedef struct {
   int removals[2];
 } NNUpdate;
 
-typedef int16_t Weight;
-typedef Weight Accumulator[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+typedef int16_t Accumulator[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 
 typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
 
 typedef struct {
-  int side;     // side to move
-  int xside;    // side not to move
-  int epSquare; // en passant square (a8 or 0 is not valid so that marks no active ep)
-  int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
-  int moveNo;   // current game move number TODO: Is this still used?
-  int halfMove; // half move count for 50 move rule
+  int stm, xstm;  // stm to move
+  int epSquare;   // en passant square (a8 or 0 is not valid so that marks no active ep)
+  int castling;   // castling mask e.g. 1111 = KQkq, 1001 = Kq
+  int moveNo;     // current game move number TODO: Is this still used?
+  int halfMove;   // half move count for 50 move rule
   int ply;
   int phase;
 
-  BitBoard checkers;     // checking piece squares
-  BitBoard pinned;       // pinned pieces
-  uint64_t piecesCounts; // "material key" - pieces left on the board
-  uint64_t zobrist;      // zobrist hash of the position
+  BitBoard checkers;      // checking piece squares
+  BitBoard pinned;        // pinned pieces
+  uint64_t piecesCounts;  // "material key" - pieces left on the board
+  uint64_t zobrist;       // zobrist hash of the position
 
-  int skipAccumulator[2][MAX_GAME_PLY];
   Accumulator* accumulators[2];
 
-  int squares[64];         // piece per square
-  BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
-  BitBoard pieces[13];     // individual piece data
+  int squares[64];          // piece per square
+  BitBoard occupancies[3];  // 0 - white pieces, 1 - black pieces, 2 - both
+  BitBoard pieces[13];      // individual piece data
 
   int castleRooks[4];
   int castlingRights[64];
@@ -97,25 +94,25 @@ typedef struct {
 typedef struct {
   Score contempt;
 
-  Board* board; // reference to board
-  int ply;      // ply depth of active search
+  Board* board;  // reference to board
+  int ply;       // ply depth of active search
 
   // TODO: Put depth here as well? Just cause
-  uint64_t nodes; // node count
+  uint64_t nodes;  // node count
   uint64_t tbhits;
-  int seldepth; // seldepth count
+  int seldepth;  // seldepth count
 
-  Move skipMove[MAX_SEARCH_PLY]; // moves to skip during singular search
-  int evals[MAX_SEARCH_PLY];     // static evals at ply stack
-  Move moves[MAX_SEARCH_PLY];    // moves for ply stack
+  Move skipMove[MAX_SEARCH_PLY];  // moves to skip during singular search
+  int evals[MAX_SEARCH_PLY];      // static evals at ply stack
+  Move moves[MAX_SEARCH_PLY];     // moves for ply stack
 
-  Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply
-  Move counters[64 * 64];          // counter move butterfly table
-  int hh[2][64 * 64];              // history heuristic butterfly table (side)
-  int ch[6][64][6][64];            // counter move history table
-  int fh[6][64][6][64];            // follow up history table
+  Move killers[MAX_SEARCH_PLY][2];  // killer moves, 2 per ply
+  Move counters[64 * 64];           // counter move butterfly table
+  int hh[2][64 * 64];               // history heuristic butterfly table (stm)
+  int ch[6][64][6][64];             // counter move history table
+  int fh[6][64][6][64];             // follow up history table
 
-  int th[6][64][6]; // tactical (capture) history
+  int th[6][64][6];  // tactical (capture) history
 } SearchData;
 
 typedef struct {
@@ -215,21 +212,21 @@ enum {
 enum { N = -8, E = 1, S = 8, W = -1, NE = -7, SE = 9, SW = 7, NW = -9 };
 
 enum {
-  PAWN_WHITE,
-  PAWN_BLACK,
-  KNIGHT_WHITE,
-  KNIGHT_BLACK,
-  BISHOP_WHITE,
-  BISHOP_BLACK,
-  ROOK_WHITE,
-  ROOK_BLACK,
-  QUEEN_WHITE,
-  QUEEN_BLACK,
-  KING_WHITE,
-  KING_BLACK
+  WHITE_PAWN,
+  BLACK_PAWN,
+  WHITE_KNIGHT,
+  BLACK_KNIGHT,
+  WHITE_BISHOP,
+  BLACK_BISHOP,
+  WHITE_ROOK,
+  BLACK_ROOK,
+  WHITE_QUEEN,
+  BLACK_QUEEN,
+  WHITE_KING,
+  BLACK_KING
 };
 
-enum { PAWN_TYPE, KNIGHT_TYPE, BISHOP_TYPE, ROOK_TYPE, QUEEN_TYPE, KING_TYPE };
+enum { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
 
 enum { MG, EG };
 

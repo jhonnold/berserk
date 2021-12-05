@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "movepick.h"
+
 #include <stdio.h>
 
 #include "board.h"
@@ -21,12 +23,11 @@
 #include "history.h"
 #include "move.h"
 #include "movegen.h"
-#include "movepick.h"
 #include "see.h"
 #include "transposition.h"
 #include "types.h"
 
-const int MATERIAL_VALUES[5] = { 100, 325, 325, 550, 1100 };
+const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
 
 void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->type = ALL_MOVES;
@@ -41,7 +42,7 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->killer2 = data->killers[data->ply][1];
 
   Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
-  moves->counter = parent ? data->counters[MoveStartEnd(parent)] : NULL_MOVE;
+  moves->counter = parent ? data->counters[FromTo(parent)] : NULL_MOVE;
 
   moves->data = data;
 }
@@ -74,8 +75,7 @@ void InitPerftMoves(MoveList* moves, Board* board) {
 int GetTopIdx(int* arr, int n) {
   int m = 0;
   for (int i = m + 1; i < n; i++)
-    if (arr[i] > arr[m])
-      m = i;
+    if (arr[i] > arr[m]) m = i;
 
   return m;
 }
@@ -83,8 +83,7 @@ int GetTopIdx(int* arr, int n) {
 int GetTopReverseIdx(int* arr, int n) {
   int m = MAX_MOVES - 1;
   for (int i = m - 1; i > MAX_MOVES - n - 1; i--)
-    if (arr[i] > arr[m])
-      m = i;
+    if (arr[i] > arr[m]) m = i;
 
   return m;
 }
@@ -135,7 +134,7 @@ void ScoreTacticalMoves(MoveList* moves, Board* board) {
   for (int i = 0; i < moves->nTactical; i++) {
     Move m = moves->tactical[i];
 
-    int captured = PIECE_TYPE[board->squares[MoveEnd(m)]];
+    int captured = PieceType(board->squares[To(m)]);
     moves->sTactical[i] = GetTacticalHistory(moves->data, board, m) + MATERIAL_VALUES[captured] * 32;
   }
 }
@@ -144,124 +143,121 @@ void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = GetQuietHistory(data, m, board->side);
+    moves->sQuiet[i] = GetQuietHistory(data, m, board->stm);
   }
 }
 
 Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
   switch (moves->phase) {
-  case HASH_MOVE:
-    moves->phase = GEN_TACTICAL_MOVES;
-    if (MoveIsLegal(moves->hashMove, board))
-      return moves->hashMove;
-    // fallthrough
-  case GEN_TACTICAL_MOVES:
-    GenerateTacticalMoves(moves, board);
-    ScoreTacticalMoves(moves, board);
-    moves->phase = PLAY_GOOD_TACTICAL;
-    // fallthrough
-  case PLAY_GOOD_TACTICAL:
-    if (moves->nTactical > 0) {
-      int idx = GetTopIdx(moves->sTactical, moves->nTactical);
-      Move m = moves->tactical[idx];
+    case HASH_MOVE:
+      moves->phase = GEN_TACTICAL_MOVES;
+      if (MoveIsLegal(moves->hashMove, board)) return moves->hashMove;
+      // fallthrough
+    case GEN_TACTICAL_MOVES:
+      GenerateTacticalMoves(moves, board);
+      ScoreTacticalMoves(moves, board);
+      moves->phase = PLAY_GOOD_TACTICAL;
+      // fallthrough
+    case PLAY_GOOD_TACTICAL:
+      if (moves->nTactical > 0) {
+        int idx = GetTopIdx(moves->sTactical, moves->nTactical);
+        Move m = moves->tactical[idx];
 
-      if (m == moves->hashMove) {
-        PopGoodCapture(moves, idx);
+        if (m == moves->hashMove) {
+          PopGoodCapture(moves, idx);
+          return NextMove(moves, board, skipQuiets);
+        }
+
+        if (moves->seeCutoff <= 0) {
+          int attacker = PieceType(Moving(m));
+          int victim = IsEP(m) ? PAWN : IsCap(m) ? PieceType(board->squares[To(m)]) : -1;
+
+          int see;
+          if (attacker > victim && (see = SEE(board, m)) < moves->seeCutoff) {
+            moves->sTactical[idx] = see;
+            ShiftToBadCaptures(moves, idx);
+            return NextMove(moves, board, skipQuiets);
+          }
+        } else {
+          int see;
+          if ((see = SEE(board, m)) < moves->seeCutoff) {
+            moves->sTactical[idx] = see;
+            ShiftToBadCaptures(moves, idx);
+            return NextMove(moves, board, skipQuiets);
+          }
+        }
+
+        return PopGoodCapture(moves, idx);
+      }
+
+      if (skipQuiets) {
+        moves->phase = PLAY_BAD_TACTICAL;
         return NextMove(moves, board, skipQuiets);
       }
 
-      if (moves->seeCutoff <= 0) {
-        int attacker = PIECE_TYPE[MovePiece(m)];
-        int victim = MoveEP(m) ? PAWN_TYPE : MoveCapture(m) ? PIECE_TYPE[board->squares[MoveEnd(m)]] : -1;
-
-        int see;
-        if (attacker > victim && (see = SEE(board, m)) < moves->seeCutoff) {
-          moves->sTactical[idx] = see;
-          ShiftToBadCaptures(moves, idx);
-          return NextMove(moves, board, skipQuiets);
-        }
-      } else {
-        int see;
-        if ((see = SEE(board, m)) < moves->seeCutoff) {
-          moves->sTactical[idx] = see;
-          ShiftToBadCaptures(moves, idx);
-          return NextMove(moves, board, skipQuiets);
-        }
+      moves->phase = PLAY_KILLER_1;
+      // fallthrough
+    case PLAY_KILLER_1:
+      moves->phase = PLAY_KILLER_2;
+      if (!skipQuiets && moves->killer1 != moves->hashMove && MoveIsLegal(moves->killer1, board)) return moves->killer1;
+      // fallthrough
+    case PLAY_KILLER_2:
+      moves->phase = PLAY_COUNTER;
+      if (!skipQuiets && moves->killer2 != moves->hashMove && MoveIsLegal(moves->killer2, board)) return moves->killer2;
+      // fallthrough
+    case PLAY_COUNTER:
+      moves->phase = GEN_QUIET_MOVES;
+      if (!skipQuiets && moves->counter != moves->hashMove && moves->counter != moves->killer1 &&
+          moves->counter != moves->killer2 && MoveIsLegal(moves->counter, board))
+        return moves->counter;
+      // fallthrough
+    case GEN_QUIET_MOVES:
+      if (!skipQuiets) {
+        GenerateQuietMoves(moves, board);
+        ScoreQuietMoves(moves, board, moves->data);
       }
 
-      return PopGoodCapture(moves, idx);
-    }
+      moves->phase = PLAY_QUIETS;
+      // fallthrough
+    case PLAY_QUIETS:
+      if (moves->nQuiets > 0 && !skipQuiets) {
+        int idx = GetTopIdx(moves->sQuiet, moves->nQuiets);
+        Move m = PopQuiet(moves, idx);
 
-    if (skipQuiets) {
+        if (m == moves->hashMove || m == moves->killer1 || m == moves->killer2 || m == moves->counter)
+          return NextMove(moves, board, skipQuiets);
+
+        return m;
+      }
+
       moves->phase = PLAY_BAD_TACTICAL;
-      return NextMove(moves, board, skipQuiets);
-    }
+      // fallthrough
+    case PLAY_BAD_TACTICAL:
+      if (moves->nBadTactical > 0) {
+        Move m = PopBadCapture(moves);
 
-    moves->phase = PLAY_KILLER_1;
-    // fallthrough
-  case PLAY_KILLER_1:
-    moves->phase = PLAY_KILLER_2;
-    if (!skipQuiets && moves->killer1 != moves->hashMove && MoveIsLegal(moves->killer1, board))
-      return moves->killer1;
-    // fallthrough
-  case PLAY_KILLER_2:
-    moves->phase = PLAY_COUNTER;
-    if (!skipQuiets && moves->killer2 != moves->hashMove && MoveIsLegal(moves->killer2, board))
-      return moves->killer2;
-    // fallthrough
-  case PLAY_COUNTER:
-    moves->phase = GEN_QUIET_MOVES;
-    if (!skipQuiets && moves->counter != moves->hashMove && moves->counter != moves->killer1 &&
-        moves->counter != moves->killer2 && MoveIsLegal(moves->counter, board))
-      return moves->counter;
-    // fallthrough
-  case GEN_QUIET_MOVES:
-    if (!skipQuiets) {
-      GenerateQuietMoves(moves, board);
-      ScoreQuietMoves(moves, board, moves->data);
-    }
+        return m != moves->hashMove ? m : NextMove(moves, board, skipQuiets);
+      }
 
-    moves->phase = PLAY_QUIETS;
-    // fallthrough
-  case PLAY_QUIETS:
-    if (moves->nQuiets > 0 && !skipQuiets) {
-      int idx = GetTopIdx(moves->sQuiet, moves->nQuiets);
-      Move m = PopQuiet(moves, idx);
+      moves->phase = NO_MORE_MOVES;
+      return NULL_MOVE;
+    case PERFT_MOVES:
+      if (moves->nTactical > 0) {
+        Move m = PopGoodCapture(moves, 0);
 
-      if (m == moves->hashMove || m == moves->killer1 || m == moves->killer2 || m == moves->counter)
-        return NextMove(moves, board, skipQuiets);
+        return m;
+      }
 
-      return m;
-    }
+      if (moves->nQuiets > 0) {
+        Move m = PopQuiet(moves, 0);
 
-    moves->phase = PLAY_BAD_TACTICAL;
-    // fallthrough
-  case PLAY_BAD_TACTICAL:
-    if (moves->nBadTactical > 0) {
-      Move m = PopBadCapture(moves);
+        return m;
+      }
 
-      return m != moves->hashMove ? m : NextMove(moves, board, skipQuiets);
-    }
-
-    moves->phase = NO_MORE_MOVES;
-    return NULL_MOVE;
-  case PERFT_MOVES:
-    if (moves->nTactical > 0) {
-      Move m = PopGoodCapture(moves, 0);
-
-      return m;
-    }
-
-    if (moves->nQuiets > 0) {
-      Move m = PopQuiet(moves, 0);
-
-      return m;
-    }
-
-    moves->phase = NO_MORE_MOVES;
-    return NULL_MOVE;
-  case NO_MORE_MOVES:
-    return NULL_MOVE;
+      moves->phase = NO_MORE_MOVES;
+      return NULL_MOVE;
+    case NO_MORE_MOVES:
+      return NULL_MOVE;
   }
 
   return NULL_MOVE;
@@ -269,22 +265,22 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
 
 char* PhaseName(MoveList* list) {
   switch (list->phase) {
-  case HASH_MOVE:
-    return "HASH_MOVE";
-  case PLAY_GOOD_TACTICAL:
-    return "PLAY_GOOD_TACTICAL";
-  case PLAY_KILLER_1:
-    return "PLAY_KILLER_1";
-  case PLAY_KILLER_2:
-    return "PLAY_KILLER_2";
-  case PLAY_COUNTER:
-    return "PLAY_COUNTER";
-  case PLAY_QUIETS:
-    return "PLAY_QUIETS";
-  case PLAY_BAD_TACTICAL:
-    return "PLAY_BAD_TACTICAL";
-  default:
-    return "UNKNOWN";
+    case HASH_MOVE:
+      return "HASH_MOVE";
+    case PLAY_GOOD_TACTICAL:
+      return "PLAY_GOOD_TACTICAL";
+    case PLAY_KILLER_1:
+      return "PLAY_KILLER_1";
+    case PLAY_KILLER_2:
+      return "PLAY_KILLER_2";
+    case PLAY_COUNTER:
+      return "PLAY_COUNTER";
+    case PLAY_QUIETS:
+      return "PLAY_QUIETS";
+    case PLAY_BAD_TACTICAL:
+      return "PLAY_BAD_TACTICAL";
+    default:
+      return "UNKNOWN";
   }
 }
 

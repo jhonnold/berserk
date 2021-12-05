@@ -22,17 +22,16 @@
 
 #define NO_PIECE 12
 
+#define Piece(pc, c) (((pc) << 1) + c)
+#define PieceType(pc) ((pc) >> 1)
+#define PieceBB(pc, c) (board->pieces[Piece(pc, c)])
+#define OccBB(c) (board->occupancies[c])
+
 #define file(sq) ((sq)&7)
 #define rank(sq) ((sq) >> 3)
 #define sq(r, f) ((r)*8 + (f))
 
-extern const int PAWN[];
-extern const int KNIGHT[];
-extern const int BISHOP[];
-extern const int ROOK[];
-extern const int QUEEN[];
-extern const int KING[];
-extern const int PIECE_TYPE[];
+extern const int8_t PSQT[];
 
 extern const uint64_t PIECE_COUNT_IDX[];
 
@@ -60,17 +59,17 @@ void UndoMove(Move move, Board* board);
 int IsMoveLegal(Move move, Board* board);
 int MoveIsLegal(Move move, Board* board);
 
-INLINE int KingIdx(int k) { return !!(k & 4); }
+INLINE int KingIdx(int k, int s) { return (k & 4) == (s & 4); }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int perspective) {
   if (perspective == WHITE) {
     int pc = piece / 2 + 6 * !!(piece & 1);
 
-    return pc * 128 + KingIdx(kingsq ^ 56) * 64 + (sq ^ 56);
+    return pc * 64 + KingIdx(kingsq, sq) * 32 + PSQT[sq ^ 56];
   } else {
     int pc = piece / 2 + 6 * !(piece & 1);
 
-    return pc * 128 + KingIdx(kingsq) * 64 + sq;
+    return pc * 64 + KingIdx(kingsq, sq) * 32 + PSQT[sq];
   }
 }
 

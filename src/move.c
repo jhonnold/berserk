@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "move.h"
+
 #include <stdio.h>
 #include <string.h>
 
-#include "move.h"
 #include "movegen.h"
 #include "movepick.h"
 #include "types.h"
@@ -39,8 +40,7 @@ Move ParseMove(char* moveStr, Board* board) {
   RootMoves(&rootMoves, board);
 
   for (int i = 0; i < rootMoves.count; i++)
-    if (!strcmp(MoveToStr(rootMoves.moves[i], board), moveStr))
-      return rootMoves.moves[i];
+    if (!strcmp(MoveToStr(rootMoves.moves[i], board), moveStr)) return rootMoves.moves[i];
 
   return NULL_MOVE;
 }
@@ -48,32 +48,32 @@ Move ParseMove(char* moveStr, Board* board) {
 char* MoveToStr(Move move, Board* board) {
   static char buffer[6];
 
-  int start = MoveStart(move);
-  int end = MoveEnd(move);
+  int from = From(move);
+  int to = To(move);
 
-  if (CHESS_960 && MoveCastle(move)) {
-    switch (end) {
-    case G1:
-      end = board->castleRooks[0];
-      break;
-    case C1:
-      end = board->castleRooks[1];
-      break;
-    case G8:
-      end = board->castleRooks[2];
-      break;
-    case C8:
-      end = board->castleRooks[3];
-      break;
-    default:
-      break;
+  if (CHESS_960 && IsCas(move)) {
+    switch (to) {
+      case G1:
+        to = board->castleRooks[0];
+        break;
+      case C1:
+        to = board->castleRooks[1];
+        break;
+      case G8:
+        to = board->castleRooks[2];
+        break;
+      case C8:
+        to = board->castleRooks[3];
+        break;
+      default:
+        break;
     }
   }
 
-  if (MovePromo(move)) {
-    sprintf(buffer, "%s%s%c", SQ_TO_COORD[start], SQ_TO_COORD[end], PROMOTION_TO_CHAR[MovePromo(move)]);
+  if (Promo(move)) {
+    sprintf(buffer, "%s%s%c", SQ_TO_COORD[from], SQ_TO_COORD[to], PROMOTION_TO_CHAR[Promo(move)]);
   } else {
-    sprintf(buffer, "%s%s", SQ_TO_COORD[start], SQ_TO_COORD[end]);
+    sprintf(buffer, "%s%s", SQ_TO_COORD[from], SQ_TO_COORD[to]);
   }
 
   return buffer;
@@ -82,5 +82,5 @@ char* MoveToStr(Move move, Board* board) {
 inline int IsRecapture(SearchData* data, Move move) {
   Move parent = data->moves[data->ply - 1];
 
-  return !(MoveCapture(parent) ^ MoveCapture(move)) && MoveEnd(parent) == MoveEnd(move);
+  return !(IsCap(parent) ^ IsCap(move)) && To(parent) == To(move);
 }
