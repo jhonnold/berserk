@@ -8,7 +8,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 
 ### CCRL (40/15)
 
-#### Rank [#13](https://ccrl.chessdom.com/ccrl/4040/rating_list_pure_single_cpu.html)
+#### Rank [#5](https://ccrl.chessdom.com/ccrl/4040/rating_list_pure_single_cpu.html)
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -17,10 +17,13 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.2.0 (4CPU)| 3224    | 40/15  |
 | 4.5.1       | 3294    | 40/15  |
 | 6           | 3327    | 40/15  |
+| 6 (4CPU)    | 3395    | 40/15  |
+| 7           | 3387    | 40/15  |
+| 7 (4CPU)    | 3435    | 40/15  |
 
 ### CCRL (Blitz)
 
-#### Rank [#12](https://ccrl.chessdom.com/ccrl/404/)
+#### Rank [#14](https://ccrl.chessdom.com/ccrl/404/)
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -32,6 +35,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.4.0 (8CPU)| 3467    | 2'+1"  |
 | 6           | 3436    | 2'+1"  |
 | 6 (8CPU)    | 3559    | 2'+1"  |
+| 7           | 3488    | 2'+1"  |
 
 ### Lars No SMP
 
@@ -69,9 +73,11 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 - [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
 - [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
 - [Delta Pruning](https://www.chessprogramming.org/Delta_Pruning)
+  - The version in Berserk is a mix of Delta Pruning and Futility Pruning
 - [Reverse Futility Pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
 - [LMR](https://www.chessprogramming.org/Late_Move_Reductions)
-- [MVV-LVA](https://www.chessprogramming.org/MVV-LVA)
+- ~~[MVV-LVA](https://www.chessprogramming.org/MVV-LVA)~~
+  - Berserk uses history for sorting
 - [SEE](https://www.chessprogramming.org/Static_Exchange_Evaluation)
 - [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
 - [Countermove Heuristic](https://www.chessprogramming.org/Countermove_Heuristic)
@@ -80,27 +86,12 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
   - [Check](https://www.chessprogramming.org/Check_Extensions)
   - [Recapture](https://www.chessprogramming.org/Recapture_Extensions)
   - History
-  - Castle
 
 ### Evaluation
 
-- [Tapered](https://www.chessprogramming.org/Tapered_Eval)
-- [Material](https://www.chessprogramming.org/Material)
-- [Piece Square Tables](https://www.chessprogramming.org/Piece-Square_Tables)
-- [Mobility](https://www.chessprogramming.org/Mobility)
-- [Pawn Structure](https://www.chessprogramming.org/Pawn_Structure)
-- [King Safety](https://www.chessprogramming.org/King_Safety)
-- [Space](https://www.chessprogramming.org/Space)
-- [Piece Imbalance](https://www.chessprogramming.org/Material_Tables)
-- [Texel Tuned](https://www.chessprogramming.org/Texel's_Tuning_Method)
-
-### Future Improvements
-
-- ~~FRC Support~~
-- ~~Small Pawn NN~~
-- Piece specific EG evaluation methods
-  - Potentially small NNs for these
-- Proper KS Tuning
+- [NNUE](https://www.chessprogramming.org/NNUE)
+  - "Half KS" shallow network
+  - 2x(768 -> 512) -> 1
 
 ## Building
 
