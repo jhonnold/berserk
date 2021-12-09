@@ -390,16 +390,18 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)) eval = ttScore;
     }
 
+    BitBoard oppThreats = Threats(board, board->xstm);
+
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 6 && !skipMove && eval - 50 * (depth - (improving && !Threats(board, board->xstm))) - 10 >= beta &&
-        eval < TB_WIN_BOUND)
+    if (depth <= 6 && !skipMove && eval - 50 * (depth - (improving && !oppThreats)) - 10 >= beta && eval < TB_WIN_BOUND)
       return eval;
 
     // Null move pruning
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate threats)
-    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval - 10 * improving >= beta &&
+    if (depth >= 5 - 2 * !oppThreats && data->moves[data->ply - 1] != NULL_MOVE && !skipMove &&
+        eval - 10 * improving >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
       int R = 4 + depth / 6 + min((eval - beta) / 256, 3);
