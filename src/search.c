@@ -384,14 +384,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   data->killers[data->ply + 1][0] = NULL_MOVE;
   data->killers[data->ply + 1][1] = NULL_MOVE;
 
+  BitBoard oppThreats = Threats(board, board->xstm);
+
   if (!isPV && !board->checkers) {
     // Our TT might have a more accurate evaluation score, use this
     if (ttHit && tt->depth >= depth && ttScore != UNKNOWN) {
       if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)) eval = ttScore;
     }
-
-    BitBoard oppThreats = Threats(board, board->xstm);
-    BitBoard ownThreats = Threats(board, board->stm);
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
@@ -421,6 +420,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Prob cut
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
+    BitBoard ownThreats = Threats(board, board->stm);
     int probBeta = beta + 110;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreats && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
       InitTacticalMoves(&moves, data, 0);
@@ -448,7 +448,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move tacticals[64];
 
   int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0, skipQuiets = 0, numTacticals = 0;
-  InitAllMoves(&moves, hashMove, data);
+  InitAllMoves(&moves, hashMove, data, oppThreats);
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
     if (isRoot && MoveSearchedByMultiPV(thread, move)) continue;
@@ -461,7 +461,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     int tactical = !!IsTactical(move);
     int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
-    int quietHistory = !tactical ? GetQuietHistory(data, move, board->stm) : 0;
+    int quietHistory = !tactical ? GetQuietHistory(data, move, board->stm, oppThreats) : 0;
     int counterHist = !tactical ? GetCounterHistory(data, move) : 0;
 
     if (bestScore > -MATE_BOUND) {
@@ -590,7 +590,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // we're failing high
       if (alpha >= beta) {
         UpdateHistories(board, data, move, depth + (bestScore > beta + 100), board->stm, quiets, numQuiets, tacticals,
-                        numTacticals);
+                        numTacticals, oppThreats);
         break;
       }
     }

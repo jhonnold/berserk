@@ -17,9 +17,10 @@
 #ifndef HISTORY_H
 #define HISTORY_H
 
+#include "bits.h"
 #include "types.h"
 
-#define HH(stm, m) (data->hh[stm][FromTo(m)])
+#define HH(stm, m, threats) (data->hh[stm][threats ? lsb(threats) : 64][FromTo(m)])
 #define CH(p, m) (data->ch[PieceType(Moving(p))][To(p)][PieceType(Moving(m))][To(m)])
 #define FH(g, m) (data->fh[PieceType(Moving(g))][To(g)][PieceType(Moving(m))][To(m)])
 #define TH(p, e, c) (data->th[p][e][c])
@@ -28,8 +29,8 @@ void AddKillerMove(SearchData* data, Move move);
 void AddCounterMove(SearchData* data, Move move, Move parent);
 void AddHistoryHeuristic(int* entry, int inc);
 void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ,
-                     Move tacticals[], int nT);
-int GetQuietHistory(SearchData* data, Move move, int stm);
+                     Move tacticals[], int nT, BitBoard threats);
+int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats);
 int GetCounterHistory(SearchData* data, Move move);
 int GetTacticalHistory(SearchData* data, Board* board, Move move);
 
