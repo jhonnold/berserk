@@ -18,12 +18,44 @@
 
 #include <stdio.h>
 
+#include "attacks.h"
+#include "bits.h"
 #include "board.h"
 #include "nn.h"
 #include "util.h"
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
+
+// "Threats" logic to be utilized in search
+// idea originating in Koivisto
+BitBoard Threats(Board* board, int stm) {
+  int xstm = stm ^ 1;
+
+  BitBoard threatened = 0;
+  BitBoard opponentPieces = OccBB(xstm) & ~PieceBB(PAWN, xstm);
+
+  BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE))
+                                      : ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
+  threatened |= pawnAttacks & opponentPieces;
+
+  // remove minors
+  opponentPieces &= ~(PieceBB(KNIGHT, xstm) | PieceBB(BISHOP, xstm));
+
+  BitBoard knights = PieceBB(KNIGHT, stm);
+  while (knights) threatened |= opponentPieces & GetKnightAttacks(popAndGetLsb(&knights));
+
+  BitBoard bishops = PieceBB(BISHOP, stm);
+  while (bishops) threatened |= opponentPieces & GetBishopAttacks(popAndGetLsb(&bishops), OccBB(BOTH));
+
+  // remove rooks
+  opponentPieces &= ~PieceBB(ROOK, xstm);
+
+  BitBoard rooks = PieceBB(ROOK, stm);
+  while (rooks) threatened |= opponentPieces & GetRookAttacks(popAndGetLsb(&rooks), OccBB(BOTH));
+
+  return threatened;
+}
 
 // Main evalution method
 Score Evaluate(Board* board) {
