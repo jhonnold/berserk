@@ -17,6 +17,8 @@
 #ifndef BITS_H
 #define BITS_H
 
+#include <stdio.h>
+
 #include "types.h"
 #include "util.h"
 
@@ -67,6 +69,19 @@ INLINE int popAndGetLsb(BitBoard* bb) {
   int sq = lsb(*bb);
   popLsb(*bb);
   return sq;
+}
+
+INLINE void PrintBB(BitBoard bitboard) {
+  for (int i = 0; i < 64; i++) {
+    if ((i & 7) == 0) printf(" %d ", 8 - (i >> 3));
+
+    printf(" %d", getBit(bitboard, i) ? 1 : 0);
+
+    if ((i & 7) == 7) printf("\n");
+  }
+
+  printf("\n    a b c d e f g h\n\n");
+  printf(" Value: %" PRIu64 "\n\n", bitboard);
 }
 
 #endif

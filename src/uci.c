@@ -251,6 +251,8 @@ void UCILoop() {
       PONDERING = 0;
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
+    } else if (!strncmp(in, "threats", 7)) {
+      PrintBB(Threats(&board, board.stm));
     } else if (!strncmp(in, "eval", 4)) {
       int score = Predict(&board);
       score = board.stm == WHITE ? score : -score;
