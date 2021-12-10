@@ -28,7 +28,7 @@ const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
 
 inline int GetContempt(int score, Board* board) {
-  int contempt = 40 * score / (abs(score) + 80);
+  int contempt = 24 * score / (abs(score) + 48);
 
   return (board->phase * contempt + (MAX_PHASE - board->phase) * contempt / 2) / MAX_PHASE;
 }
