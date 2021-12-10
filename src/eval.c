@@ -28,11 +28,9 @@ const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
 
 inline int GetContempt(int score, Board* board) {
-  int contempt = (abs(score) <= 100) * score / 4 + ((score > 100) - (score < -100)) * (20 + abs(score) / 20);
-  contempt = max(-40, min(40, contempt));
+  int contempt = 40 * score / (abs(score) + 80);
 
-  int phase = board->phase;
-  return (phase * contempt + (MAX_PHASE - phase) * contempt / 2) / MAX_PHASE;
+  return (board->phase * contempt + (MAX_PHASE - board->phase) * contempt / 2) / MAX_PHASE;
 }
 
 // "Threats" logic to be utilized in search
