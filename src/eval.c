@@ -27,6 +27,14 @@
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
 
+inline int GetContempt(int score, Board* board) {
+  int contempt = (abs(score) <= 100) * score / 4 + ((score > 100) - (score < -100)) * (20 + abs(score) / 20);
+  contempt = max(-40, min(40, contempt));
+
+  int phase = board->phase;
+  return (phase * contempt + (MAX_PHASE - phase) * contempt / 2) / MAX_PHASE;
+}
+
 // "Threats" logic to be utilized in search
 // idea originating in Koivisto
 BitBoard Threats(Board* board, int stm) {
@@ -58,11 +66,13 @@ BitBoard Threats(Board* board, int stm) {
 }
 
 // Main evalution method
-Score Evaluate(Board* board) {
+Score Evaluate(Board* board, ThreadData* thread) {
   if (IsMaterialDraw(board)) return 0;
 
   int score = OutputLayer(board->accumulators[board->stm][board->ply], board->accumulators[board->xstm][board->ply]);
 
   int scalar = 128 + board->phase;
-  return scalar * score / 128;
+  score = scalar * score / 128;
+
+  return score + thread->data.contempt;
 }

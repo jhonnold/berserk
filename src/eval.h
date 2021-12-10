@@ -24,7 +24,8 @@
 extern const int PHASE_VALUES[6];
 extern const int MAX_PHASE;
 
+int GetContempt(int score, Board* board);
 BitBoard Threats(Board* board, int stm);
-Score Evaluate(Board* board);
+Score Evaluate(Board* board, ThreadData* thread);
 
 #endif
