@@ -92,7 +92,7 @@ typedef struct {
 
 // A general data object for use during search
 typedef struct {
-  int contempt;
+  int contempt, rootstm;
 
   Board* board;  // reference to board
   int ply;       // ply depth of active search
