@@ -126,6 +126,7 @@ void* Search(void* arg) {
   ThreadData* thread = (ThreadData*)arg;
   SearchParams* params = thread->params;
   SearchResults* results = thread->results;
+  SearchData* data = &thread->data;
   Board* board = &thread->board;
 
   int mainThread = !thread->idx;
@@ -138,6 +139,9 @@ void* Search(void* arg) {
   board->ply = 0;
   RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
   RefreshAccumulator(board->accumulators[BLACK][board->ply], board, BLACK);
+
+  data->rootstm = board->stm;
+  data->contempt = GetContempt(score);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
@@ -162,6 +166,8 @@ void* Search(void* arg) {
           beta = CHECKMATE;
           delta = CHECKMATE;
         }
+
+        data->contempt = GetContempt(score);
 
         while (!params->stopped) {
           // search!
@@ -295,7 +301,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       return 2 - (data->nodes & 0x3);
 
     // Prevent overflows
-    if (data->ply > MAX_SEARCH_PLY - 1) return Evaluate(board);
+    if (data->ply > MAX_SEARCH_PLY - 1) return Evaluate(board, thread);
 
     // Mate distance pruning
     alpha = max(alpha, -CHECKMATE + data->ply);
@@ -367,7 +373,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // pull previous static eval from tt - this is depth independent
   int eval;
   if (!skipMove) {
-    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board));
+    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
   } else {
     // after se, just used already determined eval
     eval = data->evals[data->ply];
@@ -422,7 +428,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // less than beta + margin, then we run a shallow search to look
     BitBoard ownThreats = Threats(board, board->stm);
     int probBeta = beta + 110;
-    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreats && !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
+    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreats &&
+        !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
       InitTacticalMoves(&moves, data, 0);
       while ((move = NextMove(&moves, board, 1))) {
         if (skipMove == move) continue;
@@ -630,7 +637,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   if (IsMaterialDraw(board) || IsRepetition(board, data->ply) || (board->halfMove > 99)) return 0;
 
   // prevent overflows
-  if (data->ply > MAX_SEARCH_PLY - 1) return Evaluate(board);
+  if (data->ply > MAX_SEARCH_PLY - 1) return Evaluate(board, thread);
 
   // check the transposition table for previous info
   int ttHit = 0, ttScore = UNKNOWN;
@@ -649,7 +656,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   int bestScore = -CHECKMATE + data->ply;
 
   // pull cached eval if it exists
-  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board));
+  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
   if (!ttHit) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 
   // can we use an improved evaluation from the tt?
