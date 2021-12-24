@@ -312,10 +312,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // we ignore the tt on singular extension searches
   int ttHit = 0;
   TTEntry* tt = skipMove ? NULL : TTProbe(&ttHit, board->zobrist);
-  if (ttHit) {
-    hashMove = tt->move;
-    ttScore = TTScore(tt, data->ply);
-  }
+  ttScore = ttHit ? TTScore(tt, data->ply) : UNKNOWN;
+  hashMove = isRoot ? thread->pvs[thread->multiPV].moves[0] : ttHit ? tt->move : NULL_MOVE;
 
   // if the TT has a value that fits our position and has been searched to an equal or greater depth, then we accept
   // this score and prune
