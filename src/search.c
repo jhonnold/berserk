@@ -139,8 +139,7 @@ void* Search(void* arg) {
   RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
   RefreshAccumulator(board->accumulators[BLACK][board->ply], board, BLACK);
 
-  data->rootstm = board->stm;
-  data->contempt = 0;
+  data->contempt[WHITE] = data->contempt[BLACK] = 0;
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
@@ -166,7 +165,7 @@ void* Search(void* arg) {
           delta = CHECKMATE;
         }
 
-        data->contempt = GetContempt(score);
+        SetContempt(data->contempt, board->stm, score);
 
         while (!params->stopped) {
           // search!

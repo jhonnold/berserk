@@ -92,8 +92,6 @@ typedef struct {
 
 // A general data object for use during search
 typedef struct {
-  int contempt, rootstm;
-
   Board* board;  // reference to board
   int ply;       // ply depth of active search
 
@@ -101,6 +99,8 @@ typedef struct {
   uint64_t nodes;  // node count
   uint64_t tbhits;
   int seldepth;  // seldepth count
+
+  int contempt[2];
 
   Move skipMove[MAX_SEARCH_PLY];  // moves to skip during singular search
   int evals[MAX_SEARCH_PLY];      // static evals at ply stack

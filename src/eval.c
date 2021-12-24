@@ -22,14 +22,17 @@
 #include "bits.h"
 #include "board.h"
 #include "nn.h"
-#include "util.h"
 #include "search.h"
+#include "util.h"
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
 
-inline int GetContempt(int score) {
-  return 40 * score / (abs(score) + 80);
+void SetContempt(int* dest, int stm, int score) {
+  int contempt = 40 * score / (abs(score) + 80);
+
+  dest[stm] = contempt;
+  dest[stm ^ 1] = -contempt;
 }
 
 // "Threats" logic to be utilized in search
@@ -69,7 +72,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (IsMaterialDraw(board)) return 0;
 
   int score = OutputLayer(board->accumulators[board->stm][board->ply], board->accumulators[board->xstm][board->ply]);
-  score += board->stm == data->rootstm ? data->contempt : -data->contempt;
+  score += data->contempt[board->stm];
 
   int scalar = 128 + board->phase;
   int scaled = scalar * score / 128;

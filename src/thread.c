@@ -20,9 +20,9 @@
 #include <string.h>
 
 #include "eval.h"
+#include "search.h"
 #include "types.h"
 #include "util.h"
-#include "search.h"
 
 void* AlignedMalloc(int size) {
   void* mem = malloc(size + ALIGN_ON + sizeof(void*));
