@@ -98,8 +98,8 @@ void ParseFen(char* fen, Board* board) {
   int whiteKing = lsb(PieceBB(KING, WHITE) & RANK_1);
   int blackKing = lsb(PieceBB(KING, BLACK) & RANK_8);
 
-  int whiteKingFile = file(whiteKing);
-  int blackKingFile = file(blackKing);
+  int whiteKingFile = File(whiteKing);
+  int blackKingFile = File(blackKing);
 
   while (*fen != ' ') {
     if (*fen == 'K') {
@@ -193,10 +193,10 @@ void BoardToFen(char* fen, Board* board) {
   *fen++ = ' ';
 
   if (board->castling) {
-    if (board->castling & 0x8) *fen++ = CHESS_960 ? 'A' + file(board->castleRooks[0]) : 'K';
-    if (board->castling & 0x4) *fen++ = CHESS_960 ? 'A' + file(board->castleRooks[1]) : 'Q';
-    if (board->castling & 0x2) *fen++ = CHESS_960 ? 'a' + file(board->castleRooks[2]) : 'k';
-    if (board->castling & 0x1) *fen++ = CHESS_960 ? 'a' + file(board->castleRooks[3]) : 'q';
+    if (board->castling & 0x8) *fen++ = CHESS_960 ? 'A' + File(board->castleRooks[0]) : 'K';
+    if (board->castling & 0x4) *fen++ = CHESS_960 ? 'A' + File(board->castleRooks[1]) : 'Q';
+    if (board->castling & 0x2) *fen++ = CHESS_960 ? 'a' + File(board->castleRooks[2]) : 'k';
+    if (board->castling & 0x1) *fen++ = CHESS_960 ? 'a' + File(board->castleRooks[3]) : 'q';
   } else {
     *fen++ = '-';
   }

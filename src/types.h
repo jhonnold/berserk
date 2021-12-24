@@ -20,8 +20,8 @@
 #include <inttypes.h>
 #include <setjmp.h>
 
-#define MAX_SEARCH_PLY INT8_MAX
-#define MAX_MOVES 256
+#define MAX_SEARCH_PLY 100
+#define MAX_MOVES 128
 #define MAX_GAME_PLY 1024
 
 #define N_FEATURES 768

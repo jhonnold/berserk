@@ -22,6 +22,7 @@
 #include "eval.h"
 #include "types.h"
 #include "util.h"
+#include "search.h"
 
 void* AlignedMalloc(int size) {
   void* mem = malloc(size + ALIGN_ON + sizeof(void*));
@@ -63,6 +64,7 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
     memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
     memset(&threads[i].data.moves, 0, sizeof(threads[i].data.moves));
+    memset(&threads[i].scores, 0, sizeof(threads[i].scores));
 
     // need full copies of the board
     memcpy(&threads[i].board, board, sizeof(Board));
