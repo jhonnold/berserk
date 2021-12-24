@@ -23,6 +23,7 @@
 #include "board.h"
 #include "nn.h"
 #include "util.h"
+#include "search.h"
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
@@ -71,5 +72,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
   score += board->stm == data->rootstm ? data->contempt : -data->contempt;
 
   int scalar = 128 + board->phase;
-  return scalar * score / 128;
+  int scaled = scalar * score / 128;
+  return min(TB_WIN_BOUND - 1, max(-TB_WIN_BOUND + 1, scaled));
 }

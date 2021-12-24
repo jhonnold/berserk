@@ -133,7 +133,6 @@ void* Search(void* arg) {
   int searchStability = 0;
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
-  int score = 0;
   int cfh = 0;
 
   board->ply = 0;
@@ -141,7 +140,7 @@ void* Search(void* arg) {
   RefreshAccumulator(board->accumulators[BLACK][board->ply], board, BLACK);
 
   data->rootstm = board->stm;
-  data->contempt = GetContempt(score);
+  data->contempt = 0;
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
@@ -153,9 +152,9 @@ void* Search(void* arg) {
         // delta is our window for search. early depths get full searches
         // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
         // vary this slightly based on the previous depths window expansion count
-        int delta;
-        int searchDepth = depth;
-        thread->depth = searchDepth;
+        int delta = WINDOW;
+        int score = thread->scores[thread->multiPV];
+        int searchDepth = thread->depth = depth;
 
         if (depth >= 5 && abs(score) <= 1000) {
           alpha = max(score - WINDOW, -CHECKMATE);
@@ -301,7 +300,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       return 2 - (data->nodes & 0x3);
 
     // Prevent overflows
-    if (data->ply > MAX_SEARCH_PLY - 1) return Evaluate(board, thread);
+    if (data->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
 
     // Mate distance pruning
     alpha = max(alpha, -CHECKMATE + data->ply);
@@ -485,6 +484,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
 
     nonPrunedMoves++;
+
+    if (isRoot && !thread->idx && GetTimeMS() - params->start > 2500)
+      printf("info depth %d multipv %d currmove %s currmovenumber %d\n", thread->depth, thread->multiPV + 1,
+             MoveToStr(move, board), nonPrunedMoves + thread->multiPV);
+
     if (!tactical)
       quiets[numQuiets++] = move;
     else
@@ -507,7 +511,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // no score failed above sBeta, so this is singular
       if (score < sBeta)
-        extension = 1 + (!isPV && score < sBeta - 50);
+        extension = 1 + (!isPV && data->ply < MAX_SEARCH_PLY - 3 && score < sBeta - 50);
       else if (sBeta >= beta)
         return sBeta;
     }
@@ -636,7 +640,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   if (IsMaterialDraw(board) || IsRepetition(board, data->ply) || (board->halfMove > 99)) return 0;
 
   // prevent overflows
-  if (data->ply > MAX_SEARCH_PLY - 1) return Evaluate(board, thread);
+  if (data->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
 
   // check the transposition table for previous info
   int ttHit = 0, ttScore = UNKNOWN;
@@ -716,15 +720,15 @@ inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta
   int hashfull = TTFull();
   int bounded = max(alpha, min(beta, score));
 
-  int printable = bounded >= MATE_BOUND    ? (CHECKMATE - bounded + 1) / 2
-                  : bounded <= -MATE_BOUND ? -(CHECKMATE + bounded) / 2
-                                           : bounded;
-  char* type = abs(bounded) >= MATE_BOUND ? "mate" : "cp";
+  int printable = bounded > MATE_BOUND    ? (CHECKMATE - bounded + 1) / 2
+                  : bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2
+                                          : bounded;
+  char* type = abs(bounded) > MATE_BOUND ? "mate" : "cp";
   char* bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
 
-  printf("info depth %d seldepth %d multipv %d score %s %d%stime %" PRId64 " nodes %" PRId64 " nps %" PRId64
-         " tbhits %" PRId64 " hashfull %d pv ",
-         depth, seldepth, multiPV, type, printable, bound, time, nodes, nps, tbhits, hashfull);
+  printf("info depth %d seldepth %d multipv %d score %s %d%snodes %" PRId64 " nps %" PRId64
+         " hashfull %d tbhits %" PRId64 " time %" PRId64 " pv ",
+         depth, seldepth, multiPV, type, printable, bound, nodes, nps, hashfull, tbhits, time);
 
   if (pv->count)
     PrintPV(pv, board);
