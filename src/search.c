@@ -156,15 +156,9 @@ void* Search(void* arg) {
         int score = thread->scores[thread->multiPV];
         int searchDepth = thread->depth = depth;
 
-        if (depth >= 5 && abs(score) <= 1000) {
-          alpha = max(score - WINDOW, -CHECKMATE);
-          beta = min(score + WINDOW, CHECKMATE);
-          delta = WINDOW;
-        } else {
-          alpha = -CHECKMATE;
-          beta = CHECKMATE;
-          delta = CHECKMATE;
-        }
+        alpha = max(score - WINDOW, -CHECKMATE);
+        beta = min(score + WINDOW, CHECKMATE);
+        delta = WINDOW;
 
         data->contempt = GetContempt(score);
 
