@@ -21,10 +21,10 @@
 
 // search specific score evals
 #define UNKNOWN 32257  // this must be higher than CHECKMATE (some conditional logic relies on this)
-#define CHECKMATE 32256
-#define MATE_BOUND 30000
-#define TB_WIN_BOUND 20000
-#define TB_WIN_SCORE 21000
+#define CHECKMATE 32200
+#define MATE_BOUND (32200 - MAX_SEARCH_PLY)
+#define TB_WIN_SCORE MATE_BOUND
+#define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
 
 // static evaluation pruning
 // capture cutoff is linear 70x
