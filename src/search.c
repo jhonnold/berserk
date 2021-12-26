@@ -474,7 +474,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!tactical) {
         if (depth < 3 && !killerOrCounter && (history < -4096 * depth || counterHistory < -2048 * depth)) continue;
 
-        if (depth < 9 && eval + 100 * depth <= alpha && history < 50000 / (1 + improving)) skipQuiets = 1;
+        if (depth < 9 && eval + 100 + 50 * depth + history / 512 <= alpha) skipQuiets = 1;
 
         if (SEE(board, move) < STATIC_PRUNE[0][depth]) continue;
       } else {
