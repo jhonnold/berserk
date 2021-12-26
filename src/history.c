@@ -84,6 +84,8 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
 }
 
 int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats) {
+  if (IsTactical(move)) return 0;
+
   int history = HH(stm, move, threats);
 
   Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
@@ -96,6 +98,8 @@ int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats) {
 }
 
 int GetCounterHistory(SearchData* data, Move move) {
+  if (IsTactical(move)) return 0;
+
   Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
   return parent ? CH(parent, move) : 0;
 }

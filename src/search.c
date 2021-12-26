@@ -450,7 +450,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move quiets[64];
   Move tacticals[64];
 
-  int totalMoves = 0, nonPrunedMoves = 0, numQuiets = 0, skipQuiets = 0, numTacticals = 0;
+  int legalMoves = 0, playedMoves = 0, numQuiets = 0, numTacticals = 0, skipQuiets = 0;
   InitAllMoves(&moves, hashMove, data, oppThreats);
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
@@ -460,33 +460,33 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // don't search this during singular
     if (skipMove == move) continue;
 
-    totalMoves++;
+    legalMoves++;
 
-    int tactical = !!IsTactical(move);
-    int specialQuiet = !tactical && (move == moves.killer1 || move == moves.killer2 || move == moves.counter);
-    int quietHistory = !tactical ? GetQuietHistory(data, move, board->stm, oppThreats) : 0;
-    int counterHist = !tactical ? GetCounterHistory(data, move) : 0;
+    int extension = 0;
+    int tactical = IsTactical(move);
+    int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
+    int history = GetQuietHistory(data, move, board->stm, oppThreats);
+    int counterHistory = GetCounterHistory(data, move);
 
     if (bestScore > -MATE_BOUND) {
-      if (totalMoves >= LMP[improving][depth]) skipQuiets = 1;
+      if (legalMoves >= LMP[improving][depth]) skipQuiets = 1;
 
-      if (!tactical && !specialQuiet && depth < 3 && quietHistory < -4096 * depth) continue;
+      if (!tactical) {
+        if (depth < 3 && !killerOrCounter && (history < -4096 * depth || counterHistory < -2048 * depth)) continue;
 
-      if (!tactical && !specialQuiet && depth < 3 && counterHist < -2048 * depth) continue;
+        if (depth < 9 && eval + 100 * depth <= alpha && history < 50000 / (1 + improving)) skipQuiets = 1;
 
-      if (!tactical && eval + 100 * depth <= alpha && depth < 9 && quietHistory < 50000 / (1 + improving))
-        skipQuiets = 1;
-
-      if (tactical && moves.phase > PLAY_GOOD_TACTICAL && SEE(board, move) < STATIC_PRUNE[1][depth]) continue;
-
-      if (!tactical && SEE(board, move) < STATIC_PRUNE[0][depth]) continue;
+        if (SEE(board, move) < STATIC_PRUNE[0][depth]) continue;
+      } else {
+        if (moves.phase > PLAY_GOOD_TACTICAL && SEE(board, move) < STATIC_PRUNE[1][depth]) continue;
+      }
     }
 
-    nonPrunedMoves++;
+    playedMoves++;
 
     if (isRoot && !thread->idx && GetTimeMS() - params->start > 2500)
       printf("info depth %d multipv %d currmove %s currmovenumber %d\n", thread->depth, thread->multiPV + 1,
-             MoveToStr(move, board), nonPrunedMoves + thread->multiPV);
+             MoveToStr(move, board), playedMoves + thread->multiPV);
 
     if (!tactical)
       quiets[numQuiets++] = move;
@@ -498,9 +498,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // and look at it more (extend). Singular is determined by checking all other
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
-    int extension = 0;
-    if (depth >= 7 && !skipMove && !isRoot && ttHit && move == tt->move && tt->depth >= depth - 3 &&
-        abs(ttScore) < TB_WIN_BOUND && (tt->flags & TT_LOWER)) {
+    if (!isRoot && depth >= 7 && ttHit && move == tt->move && tt->depth >= depth - 3 && abs(ttScore) < TB_WIN_BOUND &&
+        (tt->flags & TT_LOWER)) {
       int sBeta = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
@@ -517,24 +516,27 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 7 && ttHit && move == tt->move && abs(ttScore) < TB_WIN_BOUND && quietHistory >= 98304)
+    else if (!isRoot && depth >= 7 && ttHit && move == tt->move && abs(ttScore) < TB_WIN_BOUND && history >= 98304)
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
-    else if (isPV && !isRoot && IsRecapture(data, move))
+    else if (!isRoot && isPV && IsRecapture(data, move))
       extension = 1;
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);
 
+    // check extension applied at low depths
+    if (!extension && board->checkers && depth < 7) extension = 1;
+
     // apply extensions
-    int newDepth = depth + max(extension, (board->checkers && depth < 7));
+    int newDepth = depth + extension;
 
     // Late move reductions
     int R = 1;
-    if (depth > 2 && nonPrunedMoves > 1) {
-      R = LMR[min(depth, 63)][min(nonPrunedMoves, 63)];
+    if (depth > 2 && playedMoves > 1) {
+      R = LMR[min(depth, 63)][min(playedMoves, 63)];
 
       if (!tactical) {
         // increase reduction on non-pv
@@ -543,32 +545,30 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         // increase reduction if our eval is declining
         if (!improving) R++;
 
-        if (specialQuiet) R -= 2;
+        if (killerOrCounter) R -= 2;
 
-        if (board->checkers)  // move GAVE check
-          R--;
-
-        // Reduce more on expected cut nodes
-        // idea from komodo/sf, explained by Don Daily here
-        // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
-        // and https://www.chessprogramming.org/Node_Types
-        if (cutnode) R++;
+        // move GAVE check
+        if (board->checkers) R--;
 
         // adjust reduction based on historical score
-        R -= quietHistory / 20480;
+        R -= history / 20480;
       } else {
         int th = GetTacticalHistory(data, board, move);
         R = 1 - 4 * th / (abs(th) + 24576);
-
-        R += cutnode;
       }
+
+      // Reduce more on expected cut nodes
+      // idea from komodo/sf, explained by Don Daily here
+      // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
+      // and https://www.chessprogramming.org/Node_Types
+      if (cutnode) R++;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = min(depth - 1, max(R, 1));
     }
 
     // First move of a PV node
-    if (isPV && nonPrunedMoves == 1) {
+    if (isPV && playedMoves == 1) {
       score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv);
     } else {
       // potentially reduced search
@@ -588,7 +588,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       bestScore = score;
       bestMove = move;
 
-      if ((isPV && score > alpha) || (isRoot && nonPrunedMoves == 1)) {
+      if ((isPV && score > alpha) || (isRoot && playedMoves == 1)) {
         pv->count = childPv.count + 1;
         pv->moves[0] = move;
         memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
@@ -606,7 +606,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   // Checkmate detection using movecount
-  if (!totalMoves) return board->checkers ? -CHECKMATE + data->ply : 0;
+  if (!legalMoves) return board->checkers ? -CHECKMATE + data->ply : 0;
 
   // don't let our score inflate too high (tb)
   bestScore = min(bestScore, maxScore);
