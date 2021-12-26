@@ -30,7 +30,7 @@
 // capture cutoff is linear 70x
 // quiet cutoff is quadratic 20x^2
 #define SEE_PRUNE_CAPTURE_CUTOFF 90
-#define SEE_PRUNE_CUTOFF 20
+#define SEE_PRUNE_CUTOFF 15
 
 // delta pruning in QS
 #define DELTA_CUTOFF 150
