@@ -21,7 +21,7 @@
 
 #define NO_ENTRY 0ULL
 #define MEGABYTE 0x100000ULL
-#define BUCKET_SIZE 4
+#define BUCKET_SIZE 2
 
 typedef struct {
   uint32_t hash, move;
