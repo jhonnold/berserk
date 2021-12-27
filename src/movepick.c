@@ -42,8 +42,7 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, BitBoard thr
   moves->killer1 = data->killers[data->ply][0];
   moves->killer2 = data->killers[data->ply][1];
 
-  Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
-  moves->counter = parent ? data->counters[FromTo(parent)] : NULL_MOVE;
+  moves->counter = data->counters[FromTo(data->moves[data->ply - 1])];
 
   moves->data = data;
 }
