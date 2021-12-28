@@ -137,6 +137,7 @@ void* Search(void* arg) {
   int beta = CHECKMATE;
   int cfh = 0;
   int searchStability = 0;
+  int bestMoveChanged = 0;
 
   board->ply = 0;
   RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
@@ -235,21 +236,24 @@ void* Search(void* arg) {
           PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
       }
 
+      int sameBestMove = depth == 1 || results->bestMoves[depth] == results->bestMoves[depth - 1];  // same move?
+      if (!sameBestMove) bestMoveChanged = 1;
+
       if (!mainThread || depth < 5 || !params->timeset) continue;
 
-      int sameBestMove = results->bestMoves[depth] == results->bestMoves[depth - 1]; // same move?
-
-      int previousSearchStability = searchStability; // track stability changes
-      searchStability = sameBestMove ? min(10, searchStability + 1) : 0; // increase how stable our best move is
-      int suddenChange = previousSearchStability == 10 && !searchStability; // drop from stable to not
+      int previousSearchStability = searchStability;                         // track stability changes
+      searchStability = sameBestMove ? min(10, searchStability + 1) : 0;     // increase how stable our best move is
+      int suddenChange = previousSearchStability == 10 && !searchStability;  // drop from stable to not
       double stabilityFactor = suddenChange ? 1.5 : 1.25 - 0.05 * searchStability;
 
       double scoreDiff = results->scores[depth - 3] - results->scores[depth];
       double scoreChangeFactor = 0.10 + 0.05 * scoreDiff;
       scoreChangeFactor = max(0.5, min(1.5, scoreChangeFactor));
 
+      double fastMoveFactor = bestMoveChanged ? 1 : 0.66;
+
       long elapsed = GetTimeMS() - params->start;
-      if (elapsed > params->alloc * stabilityFactor * scoreChangeFactor) {
+      if (elapsed > params->alloc * stabilityFactor * scoreChangeFactor * fastMoveFactor) {
         params->stopped = 1;
         break;
       }
