@@ -115,6 +115,8 @@ typedef struct {
   int fh[6][64][6][64];             // follow up history table
 
   int th[6][64][6];  // tactical (capture) history
+
+  int64_t tm[64 * 64];
 } SearchData;
 
 typedef struct {
