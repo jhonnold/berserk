@@ -402,7 +402,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Null move pruning
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate threats)
-    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval - 10 * improving >= beta &&
+    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
       int R = 4 + depth / 6 + min((eval - beta) / 256, 3);
