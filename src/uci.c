@@ -70,7 +70,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   PONDERING = 0;
 
   char* ptrChar = in;
-  int perft = 0, movesToGo = 30, moveTime = -1, time = -1, inc = 0, depth = -1;
+  int perft = 0, movesToGo = 50, moveTime = -1, time = -1, inc = 0, depth = -1;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
@@ -125,12 +125,10 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     if (time != -1) {
       params->timeset = 1;
 
-      time = max(0, time - MOVE_OVERHEAD);
-      int spend = time / movesToGo + inc;
-      spend = max(1, spend);
+      time = max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
-      params->max = min(4 * spend, time * 0.9);
-      params->alloc = min(spend, params->max / 3);
+      params->alloc = time / 35.0;
+      params->max = min(time * 0.75, params->alloc * 5.5);
     } else {
       // no time control
       params->timeset = 0;
