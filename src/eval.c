@@ -66,6 +66,8 @@ BitBoard Threats(Board* board, int stm) {
   return threatened;
 }
 
+// Idea from SF to correct positions not in classical chess
+// https://tcec-chess.com/#div=frc4ld&game=27&season=21
 Score FRCCorneredBishop(Board* board) {
   static const Score v = 25;
 
