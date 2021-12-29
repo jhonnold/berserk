@@ -63,6 +63,7 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     // empty unneeded data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
     memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
+    memset(&threads[i].data.tm, 0, sizeof(threads[i].data.tm));
 
     // set the moves arr as an offset of 2
     memset(&threads[i].data.searchMoves, 0, sizeof(threads[i].data.searchMoves));

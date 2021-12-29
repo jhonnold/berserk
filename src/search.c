@@ -137,7 +137,6 @@ void* Search(void* arg) {
   int beta = CHECKMATE;
   int cfh = 0;
   int searchStability = 0;
-  int bestMoveChanged = 0;
 
   board->ply = 0;
   RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
@@ -236,24 +235,23 @@ void* Search(void* arg) {
           PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
       }
 
-      int sameBestMove = depth == 1 || results->bestMoves[depth] == results->bestMoves[depth - 1];  // same move?
-      if (!sameBestMove) bestMoveChanged = 1;
-
       if (!mainThread || depth < 5 || !params->timeset) continue;
 
-      int previousSearchStability = searchStability;                         // track stability changes
+      int sameBestMove = results->bestMoves[depth] == results->bestMoves[depth - 1];  // same move?
       searchStability = sameBestMove ? min(10, searchStability + 1) : 0;     // increase how stable our best move is
-      int suddenChange = previousSearchStability == 10 && !searchStability;  // drop from stable to not
-      double stabilityFactor = suddenChange ? 1.5 : 1.25 - 0.05 * searchStability;
+      double stabilityFactor = 1.25 - 0.05 * searchStability;
 
       double scoreDiff = results->scores[depth - 3] - results->scores[depth];
       double scoreChangeFactor = 0.10 + 0.05 * scoreDiff;
       scoreChangeFactor = max(0.5, min(1.5, scoreChangeFactor));
 
-      double fastMoveFactor = bestMoveChanged ? 1 : 0.66;
+      int64_t bestMoveNodes = data->tm[FromTo(results->bestMoves[depth])];
+      double pctNodesNotBest = 1.0 - (double)bestMoveNodes / data->nodes;
+      double nodeCountFactor = max(0.50, pctNodesNotBest * 2 + 0.4);
 
       long elapsed = GetTimeMS() - params->start;
-      if (elapsed > params->alloc * stabilityFactor * scoreChangeFactor * fastMoveFactor) {
+
+      if (elapsed > params->alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
         params->stopped = 1;
         break;
       }
@@ -458,6 +456,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   InitAllMoves(&moves, hashMove, data, oppThreats);
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
+    int64_t startingNodeCount = data->nodes;
+
     if (isRoot && MoveSearchedByMultiPV(thread, move)) continue;
     if (isRoot && !MoveSearchable(params, move)) continue;
 
@@ -587,6 +587,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     UndoMove(move, board);
     data->ply--;
+
+    if (isRoot) data->tm[FromTo(move)] += data->nodes - startingNodeCount;
 
     if (score > bestScore) {
       bestScore = score;
