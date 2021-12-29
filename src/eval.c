@@ -23,6 +23,7 @@
 #include "board.h"
 #include "nn.h"
 #include "search.h"
+#include "uci.h"
 #include "util.h"
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
@@ -65,6 +66,26 @@ BitBoard Threats(Board* board, int stm) {
   return threatened;
 }
 
+Score FRCCorneredBishop(Board* board) {
+  static const Score v = 25;
+
+  Score fix = 0;
+
+  if (getBit(PieceBB(BISHOP, WHITE), A1) && getBit(PieceBB(PAWN, WHITE), B2))
+    fix -= (3 + !!getBit(OccBB(BOTH), B3)) * v;
+
+  if (getBit(PieceBB(BISHOP, WHITE), H1) && getBit(PieceBB(PAWN, WHITE), G2))
+    fix -= (3 + !!getBit(OccBB(BOTH), G3)) * v;
+
+  if (getBit(PieceBB(BISHOP, BLACK), A8) && getBit(PieceBB(PAWN, BLACK), B7))
+    fix += (3 + !!getBit(OccBB(BOTH), B6)) * v;
+
+  if (getBit(PieceBB(BISHOP, BLACK), H8) && getBit(PieceBB(PAWN, BLACK), G7))
+    fix += (3 + !!getBit(OccBB(BOTH), G6)) * v;
+
+  return board->stm == WHITE ? fix : -fix;
+}
+
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
   SearchData* data = &thread->data;
@@ -72,6 +93,9 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (IsMaterialDraw(board)) return 0;
 
   int score = OutputLayer(board->accumulators[board->stm][board->ply], board->accumulators[board->xstm][board->ply]);
+
+  if (CHESS_960) score += FRCCorneredBishop(board);
+
   score += data->contempt[board->stm];
 
   int scalar = 128 + board->phase;
