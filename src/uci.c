@@ -252,7 +252,15 @@ void UCILoop() {
     } else if (!strncmp(in, "threats", 7)) {
       PrintBB(Threats(&board, board.stm));
     } else if (!strncmp(in, "eval", 4)) {
-      int score = Predict(&board);
+      board.ply = 0;
+
+      board.accumulators[WHITE] = threads->accumulators[WHITE];
+      board.accumulators[BLACK] = threads->accumulators[BLACK];
+
+      RefreshAccumulator(board.accumulators[WHITE][0], &board, WHITE);
+      RefreshAccumulator(board.accumulators[BLACK][0], &board, BLACK);
+
+      int score = Evaluate(&board, threads);
       score = board.stm == WHITE ? score : -score;
 
       for (int r = 0; r < 8; r++) {
@@ -270,8 +278,13 @@ void UCILoop() {
               printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
           } else if (board.squares[sq] < WHITE_KING) {
             popBit(board.occupancies[BOTH], sq);
-            int new = Predict(&board);
+            
+            RefreshAccumulator(board.accumulators[WHITE][0], &board, WHITE);
+            RefreshAccumulator(board.accumulators[BLACK][0], &board, BLACK);
+            
+            int new = Evaluate(&board, threads);
             new = board.stm == WHITE ? new : -new;
+
             int diff = score - new;
             printf("%+7d|", diff);
             setBit(board.occupancies[BOTH], sq);
