@@ -201,8 +201,8 @@ void* Search(void* arg) {
             break;
           }
 
-          // delta x 1.5
-          delta += delta / 2;
+          // delta x 1.25
+          delta += delta / 4;
         }
       }
 
