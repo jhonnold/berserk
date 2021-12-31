@@ -552,6 +552,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         // increase reduction on non-pv
         if (!isPV) R++;
 
+        // vizviz root delta idea in LMR
+        // if we've found a reasonable move already, reduce others more
         if (isPV && (beta - alpha) * 2 < data->window) R++;
 
         // increase reduction if our eval is declining
