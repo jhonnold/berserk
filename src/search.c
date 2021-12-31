@@ -242,12 +242,15 @@ void* Search(void* arg) {
       double stabilityFactor = 1.25 - 0.05 * searchStability;
 
       double scoreDiff = results->scores[depth - 3] - results->scores[depth];
-      double scoreChangeFactor = 0.10 + 0.05 * scoreDiff;
+      double scoreChangeFactor = 0.1 + 0.05 * scoreDiff;
       scoreChangeFactor = max(0.5, min(1.5, scoreChangeFactor));
 
       int64_t bestMoveNodes = data->tm[FromTo(results->bestMoves[depth])];
       double pctNodesNotBest = 1.0 - (double)bestMoveNodes / data->nodes;
-      double nodeCountFactor = max(0.50, pctNodesNotBest * 2 + 0.4);
+      double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
+
+      if (results->scores[depth] > MATE_BOUND)
+        nodeCountFactor = 0.5;
 
       long elapsed = GetTimeMS() - params->start;
 
