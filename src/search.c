@@ -171,6 +171,8 @@ void* Search(void* arg) {
         SetContempt(data->contempt, board->stm, score);
 
         while (!params->stopped) {
+          data->window = beta - alpha;
+
           // search!
           score = Negamax(alpha, beta, searchDepth, 0, thread, pv);
 
@@ -238,7 +240,7 @@ void* Search(void* arg) {
       if (!mainThread || depth < 5 || !params->timeset) continue;
 
       int sameBestMove = results->bestMoves[depth] == results->bestMoves[depth - 1];  // same move?
-      searchStability = sameBestMove ? min(10, searchStability + 1) : 0;     // increase how stable our best move is
+      searchStability = sameBestMove ? min(10, searchStability + 1) : 0;  // increase how stable our best move is
       double stabilityFactor = 1.25 - 0.05 * searchStability;
 
       double scoreDiff = results->scores[depth - 3] - results->scores[depth];
@@ -249,8 +251,7 @@ void* Search(void* arg) {
       double pctNodesNotBest = 1.0 - (double)bestMoveNodes / data->nodes;
       double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
 
-      if (results->scores[depth] > MATE_BOUND)
-        nodeCountFactor = 0.5;
+      if (results->scores[depth] > MATE_BOUND) nodeCountFactor = 0.5;
 
       long elapsed = GetTimeMS() - params->start;
 
@@ -550,6 +551,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!tactical) {
         // increase reduction on non-pv
         if (!isPV) R++;
+
+        // vizviz root delta idea in LMR
+        // if we've found a reasonable move already, reduce others more
+        if (isPV && (beta - alpha) * 2 < data->window) R++;
 
         // increase reduction if our eval is declining
         if (!improving) R++;
