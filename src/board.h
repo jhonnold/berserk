@@ -24,7 +24,7 @@
 
 #define Piece(pc, c) (((pc) << 1) + c)
 #define PieceType(pc) ((pc) >> 1)
-#define PieceBB(pc, c) (board->pieces[Piece(pc, c)])
+#define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
 #define OccBB(c) (board->occupancies[c])
 
 #define File(sq) ((sq)&7)
