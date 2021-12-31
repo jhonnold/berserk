@@ -302,7 +302,7 @@ void UCILoop() {
     } else if (!strncmp(in, "see ", 4)) {
       Move m = ParseMove(in + 4, &board);
       if (m)
-        printf("info string SEE result: %d\n", SEE(&board, m));
+        printf("info string SEE result: %d\n", SEE(&board, m, 0));
       else
         printf("info string Invalid move!\n");
     } else if (!strncmp(in, "apply ", 6)) {

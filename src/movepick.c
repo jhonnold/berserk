@@ -169,23 +169,9 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
           return NextMove(moves, board, skipQuiets);
         }
 
-        if (moves->seeCutoff <= 0) {
-          int attacker = PieceType(Moving(m));
-          int victim = IsEP(m) ? PAWN : IsCap(m) ? PieceType(board->squares[To(m)]) : -1;
-
-          int see;
-          if (attacker > victim && (see = SEE(board, m)) < moves->seeCutoff) {
-            moves->sTactical[idx] = see;
-            ShiftToBadCaptures(moves, idx);
-            return NextMove(moves, board, skipQuiets);
-          }
-        } else {
-          int see;
-          if ((see = SEE(board, m)) < moves->seeCutoff) {
-            moves->sTactical[idx] = see;
-            ShiftToBadCaptures(moves, idx);
-            return NextMove(moves, board, skipQuiets);
-          }
+        if (!SEE(board, m, moves->seeCutoff)) {
+          ShiftToBadCaptures(moves, idx);
+          return NextMove(moves, board, skipQuiets);
         }
 
         return PopGoodCapture(moves, idx);
