@@ -694,8 +694,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   Move move;
   MoveList moves;
 
-  int seeThreshold = max(0, alpha - eval - DELTA_CUTOFF);
-  InitTacticalMoves(&moves, data, seeThreshold);
+  InitTacticalMoves(&moves, data, eval <= alpha - DELTA_CUTOFF);
 
   while ((move = NextMove(&moves, board, 1))) {
     if (moves.phase > PLAY_GOOD_TACTICAL) break;
