@@ -288,7 +288,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MoveList moves;
 
   // drop into tactical moves only
-  if (depth <= 0) return Quiesce(alpha, beta, thread);
+  if (depth <= 0) {
+    if (board->checkers)
+      depth = 1;
+    else
+      return Quiesce(alpha, beta, thread);
+  }
 
   data->nodes++;
   data->seldepth = max(data->ply, data->seldepth);
@@ -533,9 +538,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);
-
-    // check extension applied at low depths
-    if (!extension && board->checkers && depth < 7) extension = 1;
 
     // apply extensions
     int newDepth = depth + extension;
