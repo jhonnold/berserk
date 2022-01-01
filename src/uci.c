@@ -71,6 +71,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 
   char* ptrChar = in;
   int perft = 0, movesToGo = 50, moveTime = -1, time = -1, inc = 0, depth = -1;
+  uint64_t nodes = -1;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
@@ -90,6 +91,8 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   if ((ptrChar = strstr(in, "movetime"))) moveTime = atoi(ptrChar + 9);
 
   if ((ptrChar = strstr(in, "depth"))) depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+
+  if ((ptrChar = strstr(in, "nodes"))) nodes = max(1, atol(ptrChar + 6));
 
   if ((ptrChar = strstr(in, "ponder"))) {
     if (PONDER_ENABLED)
@@ -115,6 +118,9 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   }
 
   params->depth = depth;
+
+  params->nodes = nodes;
+  params->hitrate = nodes > 0 ? max(1, min(1024, nodes / 1024)) : 1024;
 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
@@ -278,10 +284,10 @@ void UCILoop() {
               printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
           } else if (board.squares[sq] < WHITE_KING) {
             popBit(board.occupancies[BOTH], sq);
-            
+
             RefreshAccumulator(board.accumulators[WHITE][0], &board, WHITE);
             RefreshAccumulator(board.accumulators[BLACK][0], &board, BLACK);
-            
+
             int new = Evaluate(&board, threads);
             new = board.stm == WHITE ? new : -new;
 

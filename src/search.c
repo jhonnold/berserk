@@ -49,8 +49,7 @@ extern volatile int PONDERING;
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
-    for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = 0.1 + log(depth) * log(moves) / 2;
+    for (int moves = 1; moves < 64; moves++) LMR[depth][moves] = 0.1 + log(depth) * log(moves) / 2;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -65,11 +64,14 @@ void InitPruningAndReductionTables() {
   }
 }
 
-INLINE int StopSearch(SearchParams* params) {
-  if (!params->timeset || PONDERING) return 0;
+INLINE int StopSearch(ThreadData* thread) {
+  SearchParams* params = thread->params;
+
+  if ((!params->timeset && params->nodes <= 0) || PONDERING) return 0;
 
   long elapsed = GetTimeMS() - params->start;
-  return elapsed > params->max;
+
+  return (params->timeset && elapsed > params->max) || (params->nodes > 0 && NodesSearched(thread) >= params->nodes);
 }
 
 void* UCISearch(void* arg) {
@@ -301,7 +303,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
   // 1Mnps ~1ms
-  if (params->stopped || (!(data->nodes & 1023) && StopSearch(params))) longjmp(thread->exit, 1);
+  if (params->stopped || (data->nodes % params->hitrate == 0 && StopSearch(thread))) longjmp(thread->exit, 1);
 
   if (!isRoot) {
     // draw
@@ -648,7 +650,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
   // 1Mnps ~1ms
-  if (params->stopped || (!(data->nodes & 1023) && StopSearch(params))) longjmp(thread->exit, 1);
+  if (params->stopped || (data->nodes % params->hitrate == 0 && StopSearch(thread))) longjmp(thread->exit, 1);
 
   // draw check
   if (IsMaterialDraw(board) || IsRepetition(board, data->ply) || (board->halfMove > 99)) return 0;

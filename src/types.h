@@ -133,6 +133,10 @@ typedef struct {
   int quit;
   int multiPV;
   int searchMoves;
+
+  int hitrate;
+  uint64_t nodes;
+  
   SimpleMoveList searchable;
 } SearchParams;
 
