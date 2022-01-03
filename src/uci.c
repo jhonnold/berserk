@@ -70,7 +70,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   PONDERING = 0;
 
   char* ptrChar = in;
-  int perft = 0, movesToGo = 50, moveTime = -1, time = -1, inc = 0, depth = -1;
+  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
@@ -85,7 +85,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 
   if ((ptrChar = strstr(in, "btime")) && board->stm == BLACK) time = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "movestogo"))) movesToGo = atoi(ptrChar + 10);
+  if ((ptrChar = strstr(in, "movestogo"))) movesToGo = max(1, min(50, atoi(ptrChar + 10)));
 
   if ((ptrChar = strstr(in, "movetime"))) moveTime = atoi(ptrChar + 9);
 
@@ -125,9 +125,16 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     if (time != -1) {
       params->timeset = 1;
 
-      int total = max(1, time + movesToGo * inc - MOVE_OVERHEAD);
+      if (movesToGo == -1) {
+        int total = max(1, time + 50 * inc - MOVE_OVERHEAD);
 
-      params->alloc = min(time * 0.33, total / 20.0);
+        params->alloc = min(time * 0.33, total / 20.0);
+      } else {
+        int total = max(1, time + movesToGo * inc - MOVE_OVERHEAD);
+
+        params->alloc = min(time * 0.9, (0.9 * total) / max(1, movesToGo / 2.5));
+      }
+
       params->max = min(time * 0.75, params->alloc * 5.5);
     } else {
       // no time control
@@ -278,10 +285,10 @@ void UCILoop() {
               printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
           } else if (board.squares[sq] < WHITE_KING) {
             popBit(board.occupancies[BOTH], sq);
-            
+
             RefreshAccumulator(board.accumulators[WHITE][0], &board, WHITE);
             RefreshAccumulator(board.accumulators[BLACK][0], &board, BLACK);
-            
+
             int new = Evaluate(&board, threads);
             new = board.stm == WHITE ? new : -new;
 
