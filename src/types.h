@@ -104,9 +104,9 @@ typedef struct {
 
   int contempt[2];
 
-  Move skipMove[MAX_SEARCH_PLY];  // moves to skip during singular search
-  int evals[MAX_SEARCH_PLY];      // static evals at ply stack
-  Move searchMoves[MAX_SEARCH_PLY + 2];     // moves for ply stack
+  Move skipMove[MAX_SEARCH_PLY];         // moves to skip during singular search
+  int evals[MAX_SEARCH_PLY];             // static evals at ply stack
+  Move searchMoves[MAX_SEARCH_PLY + 2];  // moves for ply stack
 
   Move killers[MAX_SEARCH_PLY][2];  // killer moves, 2 per ply
   Move counters[64 * 64];           // counter move butterfly table

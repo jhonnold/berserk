@@ -238,7 +238,7 @@ void* Search(void* arg) {
       if (!mainThread || depth < 5 || !params->timeset) continue;
 
       int sameBestMove = results->bestMoves[depth] == results->bestMoves[depth - 1];  // same move?
-      searchStability = sameBestMove ? min(10, searchStability + 1) : 0;     // increase how stable our best move is
+      searchStability = sameBestMove ? min(10, searchStability + 1) : 0;  // increase how stable our best move is
       double stabilityFactor = 1.25 - 0.05 * searchStability;
 
       double scoreDiff = results->scores[depth - 3] - results->scores[depth];
@@ -489,8 +489,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     playedMoves++;
 
     if (isRoot && !thread->idx && GetTimeMS() - params->start > 2500)
-      printf("info depth %d multipv %d currmove %s currmovenumber %d\n", thread->depth, thread->multiPV + 1,
-             MoveToStr(move, board), playedMoves + thread->multiPV);
+      printf("info depth %d currmove %s currmovenumber %d\n", thread->depth, MoveToStr(move, board),
+             playedMoves + thread->multiPV);
 
     if (!tactical)
       quiets[numQuiets++] = move;
