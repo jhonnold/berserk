@@ -20,8 +20,8 @@
 #include <inttypes.h>
 #include <setjmp.h>
 
-#define MAX_SEARCH_PLY INT8_MAX
-#define MAX_MOVES 256
+#define MAX_SEARCH_PLY 100
+#define MAX_MOVES 128
 #define MAX_GAME_PLY 1024
 
 #define N_FEATURES 768
@@ -92,8 +92,6 @@ typedef struct {
 
 // A general data object for use during search
 typedef struct {
-  Score contempt;
-
   Board* board;  // reference to board
   int ply;       // ply depth of active search
 
@@ -102,17 +100,23 @@ typedef struct {
   uint64_t tbhits;
   int seldepth;  // seldepth count
 
+  Move* moves;
+
+  int contempt[2];
+
   Move skipMove[MAX_SEARCH_PLY];  // moves to skip during singular search
   int evals[MAX_SEARCH_PLY];      // static evals at ply stack
-  Move moves[MAX_SEARCH_PLY];     // moves for ply stack
+  Move searchMoves[MAX_SEARCH_PLY + 2];     // moves for ply stack
 
   Move killers[MAX_SEARCH_PLY][2];  // killer moves, 2 per ply
   Move counters[64 * 64];           // counter move butterfly table
-  int hh[2][64 * 64];               // history heuristic butterfly table (stm)
+  int hh[2][65][64 * 64];           // history heuristic butterfly table (stm)
   int ch[6][64][6][64];             // counter move history table
   int fh[6][64][6][64];             // follow up history table
 
   int th[6][64][6];  // tactical (capture) history
+
+  int64_t tm[64 * 64];
 } SearchData;
 
 typedef struct {
@@ -187,6 +191,8 @@ typedef struct {
   Move hashMove, killer1, killer2, counter;
   int seeCutoff;
   uint8_t type, phase, nTactical, nQuiets, nBadTactical;
+
+  BitBoard threats;
 
   Move tactical[MAX_MOVES];
   Move quiet[MAX_MOVES];

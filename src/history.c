@@ -16,6 +16,7 @@
 
 #include "history.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "board.h"
@@ -33,15 +34,15 @@ void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[F
 void AddHistoryHeuristic(int* entry, int inc) { *entry += 64 * inc - *entry * abs(inc) / 1024; }
 
 void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ,
-                     Move tacticals[], int nT) {
+                     Move tacticals[], int nT, BitBoard threats) {
   int inc = min(depth * depth, 576);
 
-  Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
-  Move grandParent = data->ply > 1 ? data->moves[data->ply - 2] : NULL_MOVE;
+  Move parent = data->moves[data->ply - 1];
+  Move grandParent = data->moves[data->ply - 2];
 
   if (!IsTactical(bestMove)) {
     AddKillerMove(data, bestMove);
-    AddHistoryHeuristic(&HH(stm, bestMove), inc);
+    AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
 
     if (parent) {
       AddCounterMove(data, bestMove, parent);
@@ -62,7 +63,7 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
       if (m != bestMove) {
-        AddHistoryHeuristic(&HH(stm, m), -inc);
+        AddHistoryHeuristic(&HH(stm, m, threats), -inc);
         if (parent) AddHistoryHeuristic(&CH(parent, m), -inc);
         if (grandParent) AddHistoryHeuristic(&FH(grandParent, m), -inc);
       }
@@ -83,21 +84,25 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
   }
 }
 
-int GetQuietHistory(SearchData* data, Move move, int stm) {
-  int history = HH(stm, move);
+int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats) {
+  if (IsTactical(move)) return 0;
 
-  Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
-  if (parent) history += CH(parent, move);
+  int history = HH(stm, move, threats);
 
-  Move grandParent = data->ply > 1 ? data->moves[data->ply - 2] : NULL_MOVE;
-  if (grandParent) history += FH(grandParent, move);
+  Move parent = data->moves[data->ply - 1];
+  history += CH(parent, move);
+
+  Move grandParent = data->moves[data->ply - 2];
+  history += FH(grandParent, move);
 
   return history;
 }
 
 int GetCounterHistory(SearchData* data, Move move) {
-  Move parent = data->ply > 0 ? data->moves[data->ply - 1] : NULL_MOVE;
-  return parent ? CH(parent, move) : 0;
+  if (IsTactical(move)) return 0;
+
+  Move parent = data->moves[data->ply - 1];
+  return CH(parent, move);
 }
 
 int GetTacticalHistory(SearchData* data, Board* board, Move m) {

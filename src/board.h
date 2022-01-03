@@ -27,9 +27,9 @@
 #define PieceBB(pc, c) (board->pieces[Piece(pc, c)])
 #define OccBB(c) (board->occupancies[c])
 
-#define file(sq) ((sq)&7)
-#define rank(sq) ((sq) >> 3)
-#define sq(r, f) ((r)*8 + (f))
+#define File(sq) ((sq)&7)
+#define Rank(sq) ((sq) >> 3)
+#define Sq(r, f) ((r)*8 + (f))
 
 extern const int8_t PSQT[];
 

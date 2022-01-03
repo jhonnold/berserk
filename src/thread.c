@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include "eval.h"
+#include "search.h"
 #include "types.h"
 #include "util.h"
 
@@ -62,7 +63,15 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     // empty unneeded data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
     memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
-    memset(&threads[i].data.moves, 0, sizeof(threads[i].data.moves));
+    memset(&threads[i].data.tm, 0, sizeof(threads[i].data.tm));
+
+    // set the moves arr as an offset of 2
+    memset(&threads[i].data.searchMoves, 0, sizeof(threads[i].data.searchMoves));
+    threads[i].data.moves = &threads[i].data.searchMoves[2];
+
+    memset(&threads[i].scores, 0, sizeof(threads[i].scores));
+    memset(&threads[i].bestMoves, 0, sizeof(threads[i].bestMoves));
+    memset(&threads[i].pvs, 0, sizeof(threads[i].pvs));
 
     // need full copies of the board
     memcpy(&threads[i].board, board, sizeof(Board));

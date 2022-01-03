@@ -74,25 +74,25 @@ void InitBetweenSquares() {
   int i;
   for (int f = 0; f < 64; f++) {
     for (int t = f + 1; t < 64; t++) {
-      if (rank(f) == rank(t)) {
+      if (Rank(f) == Rank(t)) {
         i = t + W;
         while (i > f) {
           BETWEEN_SQS[f][t] |= (1ULL << i);
           i += W;
         }
-      } else if (file(f) == file(t)) {
+      } else if (File(f) == File(t)) {
         i = t + N;
         while (i > f) {
           BETWEEN_SQS[f][t] |= (1ULL << i);
           i += N;
         }
-      } else if ((t - f) % 9 == 0 && (file(t) > file(f))) {
+      } else if ((t - f) % 9 == 0 && (File(t) > File(f))) {
         i = t + NW;
         while (i > f) {
           BETWEEN_SQS[f][t] |= (1ULL << i);
           i += NW;
         }
-      } else if ((t - f) % 7 == 0 && (file(t) < file(f))) {
+      } else if ((t - f) % 7 == 0 && (File(t) < File(f))) {
         i = t + NE;
         while (i > f) {
           BETWEEN_SQS[f][t] |= (1ULL << i);
@@ -117,10 +117,10 @@ void InitPinnedMovementSquares() {
 
         for (int xray = kSq + dirs[i]; xray >= 0 && xray < 64; xray += dirs[i]) {
           if (dirs[i] == E || dirs[i] == SE || dirs[i] == NE)
-            if (file(xray) == 0) break;
+            if (File(xray) == 0) break;
 
           if (dirs[i] == W || dirs[i] == NW || dirs[i] == SW)
-            if (file(xray) == 7) break;
+            if (File(xray) == 7) break;
 
           if (xray == pSq) {
             dir = dirs[i];
@@ -134,10 +134,10 @@ void InitPinnedMovementSquares() {
           PINNED_MOVES[pSq][kSq] |= (1ULL << xray);
 
           if (dir == E || dir == SE || dir == NE)
-            if (file(xray) == 7) break;
+            if (File(xray) == 7) break;
 
           if (dir == W || dir == SW || dir == NW)
-            if (file(xray) == 0) break;
+            if (File(xray) == 0) break;
         }
       }
     }
@@ -217,8 +217,8 @@ void InitKingAttacks() {
 BitBoard GetBishopMask(int sq) {
   BitBoard attacks = 0;
 
-  int sr = rank(sq);
-  int sf = file(sq);
+  int sr = Rank(sq);
+  int sf = File(sq);
 
   for (int r = sr + 1, f = sf + 1; r <= 6 && f <= 6; r++, f++) attacks |= (1ULL << (r * 8 + f));
   for (int r = sr - 1, f = sf + 1; r >= 1 && f <= 6; r--, f++) attacks |= (1ULL << (r * 8 + f));
@@ -235,8 +235,8 @@ void InitBishopMasks() {
 BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
-  int sr = rank(sq);
-  int sf = file(sq);
+  int sr = Rank(sq);
+  int sf = File(sq);
 
   for (int r = sr + 1, f = sf + 1; r <= 7 && f <= 7; r++, f++) {
     attacks |= (1ULL << (r * 8 + f));
@@ -264,8 +264,8 @@ BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
 BitBoard GetRookMask(int sq) {
   BitBoard attacks = 0;
 
-  int sr = rank(sq);
-  int sf = file(sq);
+  int sr = Rank(sq);
+  int sf = File(sq);
 
   for (int r = sr + 1; r <= 6; r++) attacks |= (1ULL << (r * 8 + sf));
   for (int r = sr - 1; r >= 1; r--) attacks |= (1ULL << (r * 8 + sf));
@@ -282,8 +282,8 @@ void InitRookMasks() {
 BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
-  int sr = rank(sq);
-  int sf = file(sq);
+  int sr = Rank(sq);
+  int sf = File(sq);
 
   for (int r = sr + 1; r <= 7; r++) {
     attacks |= (1ULL << (r * 8 + sf));
