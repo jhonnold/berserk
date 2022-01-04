@@ -1,47 +1,84 @@
-CC = gcc
-SRC = *.c pyrrhic/tbprobe.c noobprobe/noobprobe.c
-EXE = berserk
-VERSION = 9-dev
+# Credit to Weiss for this simple and elegant makefile
+
+# General
+EXE      = berserk
+SRC      = *.c pyrrhic/tbprobe.c noobprobe/*.c
+CC       = gcc
+VERSION  = 9-dev
 EVALFILE = default.nn
+DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
-DEFS = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
+# Defines
+SSSE   = -mssse3 -msse3 -msse2 -msse -mpopcnt
+AVX2   = -mavx2 -mavx -mfma -msse4.1 $(SSSE)
+AVX512 = -mavx512f -mavx512bw -mavx512dq $(AVX2)
+PEXT   = -DUSE_PEXT -mbmi2
 
-WFLAGS = -std=gnu17 -Wall -Wextra -Wshadow
-CFLAGS = -O3 $(WFLAGS) -g -flto -march=native
-RFLAGS = -O3 $(WFLAGS) -g -flto -static
+# Flags
+STD    = -std=gnu11
+LIBS   = -pthread -lm
+WARN   = -Wall -Wextra -Wshadow -Werror
 
-LIBS = -lm -lpthread
+FLAGS  = $(STD) $(WARN) -O3 -flto $(DEFS)
+CFLAGS = $(FLAGS) -march=native
+RFLAGS = $(FLAGS) -static
+
+# PGO
+ifneq ($(findstring gcc, $(CC)),)
+	PGODIR = "pgo"
+	PGOGEN = -fprofile-generate=$(PGODIR)
+	PGOUSE = -fprofile-use=$(PGODIR)
+else ifneq ($(findstring clang, $(CC)),)
+	PGOMERGE = llvm-profdata merge -output=weiss.profdata *.profraw
+	PGOGEN = -fprofile-instr-generate
+	PGOUSE = -fprofile-instr-use=weiss.profdata
+endif
+
+# Use pext if supported and not a ryzen 1/2 cpu
+PROPS = $(shell echo | $(CC) -march=native -E -dM -)
+ifneq ($(findstring __BMI2__, $(PROPS)),)
+	ifeq ($(findstring __znver1, $(PROPS)),)
+		ifeq ($(findstring __znver2, $(PROPS)),)
+			CFLAGS += -DUSE_PEXT
+		endif
+	endif
+endif
+
+# Try to detect windows environment by seeing
+# whether the shell filters out " or not.
+ifeq ($(shell echo "test"), "test")
+	BENCH = $(EXE) bench > nul 2>&1
+	CLEAN = rmdir /s /q $(PGODIR)
+else
+	BENCH = ./$(EXE) bench > /dev/null 2>&1
+	CLEAN = $(RM) -rf $(PGODIR)
+endif
+
+# Link winsock32 on windows for NoobBook
 ifeq ($(OS), Windows_NT)
 	LIBS += -lwsock32
 	EXT = .exe
 endif
 
-SSSE = -mssse3 -msse3 -msse2 -msse -mpopcnt
-AVX2 = -mavx2 -mavx -mfma -msse4.1 $(SSSE)
-PEXT = -mbmi2 -DUSE_PEXT
+# Compilations
+BASIC   = $(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
+RELEASE = $(CC) $(RFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
-all:
-	$(CC) $(CFLAGS) $(DEFS) $(SRC) $(LIBS) -o $(EXE)
-
+# Targets
 pgo:
-	$(CC) $(CFLAGS) -fprofile-generate $(DEFS) $(SRC) $(LIBS) -o $(EXE)
-	./$(EXE) bench
-	$(CC) $(CFLAGS) -fprofile-use $(DEFS) $(SRC) $(LIBS) -o $(EXE)
-	rm -f *.gcda
+	$(BASIC) $(PGOGEN)
+	$(BENCH)
+	$(PGOMERGE)
+	$(BASIC) $(PGOUSE)
+	$(CLEAN)
 
-clean:
-	rm -rf $(EXE)
+basic:
+	$(BASIC)
 
-ssse:
-	$(CC) $(RFLAGS) $(DEFS) $(SRC) $(LIBS) $(SSSE) -o $(EXE)-$(VERSION)-x64$(EXT)
-
-pext:
-	$(CC) $(RFLAGS) $(DEFS) $(SRC) $(LIBS) $(PEXT) -o $(EXE)-$(VERSION)-x64-pext$(EXT)
-
-avx2:
-	$(CC) $(RFLAGS) $(DEFS) $(SRC) $(LIBS) $(AVX2) -o $(EXE)-$(VERSION)-x64-avx2$(EXT)
-
-avx2-pext:
-	$(CC) $(RFLAGS) $(DEFS) $(SRC) $(LIBS) $(AVX2) $(PEXT) -o $(EXE)-$(VERSION)-x64-avx2-pext$(EXT)
-
-release: ssse pext avx2 avx2-pext
+release:
+	$(RELEASE)-$(VERSION)-x64$(EXT)
+	$(RELEASE)-$(VERSION)-x64-pext$(EXT)                  $(PEXT)
+	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        $(AVX2)
+	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   $(AVX2)   $(PEXT)
+	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)      $(AVX512)
+	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT) $(AVX512) $(PEXT)

@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__) || defined(__AVX2__)
 #include <immintrin.h>
 #elif defined(__SSE__)
 #include <xmmintrin.h>
@@ -64,7 +64,39 @@ inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int 
   }
 }
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__)
+const size_t WIDTH = sizeof(__m512i) / sizeof(int16_t);
+const size_t CHUNKS = N_HIDDEN / WIDTH;
+
+int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
+  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
+
+  const __m512i zero = _mm512_setzero_si512();
+  __m512i s0 = _mm512_setzero_si512();
+  __m512i s1 = _mm512_setzero_si512();
+
+  __m512i* stm = (__m512i*)stmAccumulator;
+  __m512i* xstm = (__m512i*)xstmAccumulator;
+  __m512i* weights = (__m512i*)OUTPUT_WEIGHTS;
+
+  for (size_t j = 0; j < CHUNKS; j++) {
+    const __m512i ac0 = _mm512_max_epi16(stm[j], zero);
+    const __m512i ac1 = _mm512_max_epi16(xstm[j], zero);
+
+    s0 = _mm512_add_epi32(s0, _mm512_madd_epi16(ac0, weights[j]));
+    s1 = _mm512_add_epi32(s1, _mm512_madd_epi16(ac1, weights[j + CHUNKS]));
+  }
+
+  const __m512i r16 = _mm512_add_epi32(s0, s1);
+  const __m256i r8 = _mm256_add_epi32(_mm512_castsi512_si256(r16), _mm512_extracti32x8_epi32(r16, 1));
+  const __m128i r4 = _mm_add_epi32(_mm256_castsi256_si128(r8), _mm256_extractf128_si256(r8, 1));
+  const __m128i r2 = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
+  const __m128i r1 = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
+
+  result += _mm_cvtsi128_si32(r1);
+  return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
+}
+#elif defined(__AVX2__)
 const size_t WIDTH = sizeof(__m256i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 

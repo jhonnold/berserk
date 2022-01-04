@@ -28,7 +28,9 @@
 #define N_HIDDEN 512
 #define N_OUTPUT 1
 
-#if defined(__AVX__)
+#if defined(__AVX512F__)
+#define ALIGN_ON 64
+#elif defined(__AVX2__)
 #define ALIGN_ON 32
 #else
 #define ALIGN_ON 16
