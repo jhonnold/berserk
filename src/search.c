@@ -133,8 +133,6 @@ void* Search(void* arg) {
   int mainThread = !thread->idx;
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
-  int cfh = 0;
-  int searchStability = 0;
 
   board->ply = 0;
   RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
@@ -144,6 +142,9 @@ void* Search(void* arg) {
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
+    int cfh = 0;
+    int searchStability = 0;
+
     // Iterative deepening
     for (int depth = 1; depth <= params->depth; depth++) {
       for (thread->multiPV = 0; thread->multiPV < params->multiPV; thread->multiPV++) {
