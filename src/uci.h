@@ -20,6 +20,7 @@
 #include "types.h"
 
 extern int CHESS_960;
+extern int CONTEMPT;
 
 void RootMoves(SimpleMoveList* moves, Board* board);
 
