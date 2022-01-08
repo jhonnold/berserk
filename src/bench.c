@@ -36,7 +36,7 @@ char* benchmarks[] = {
 
 void Bench() {
   Board board;
-  SearchParams params = {.depth = 13, .multiPV = 1};
+  SearchParams params = {.depth = 13, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
   ThreadData* threads = CreatePool(1);
 
   Move bestMoves[NUM_BENCH_POSITIONS];

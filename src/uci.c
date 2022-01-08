@@ -71,7 +71,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   PONDERING = 0;
 
   char* ptrChar = in;
-  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1;
+  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
@@ -91,6 +91,8 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   if ((ptrChar = strstr(in, "movetime"))) moveTime = atoi(ptrChar + 9);
 
   if ((ptrChar = strstr(in, "depth"))) depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+
+  if ((ptrChar = strstr(in, "nodes"))) nodes = max(1, atol(ptrChar + 6));
 
   if ((ptrChar = strstr(in, "ponder"))) {
     if (PONDER_ENABLED)
@@ -116,6 +118,12 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   }
 
   params->depth = depth;
+  params->nodes = nodes;
+
+  if (params->nodes)
+    params->hitrate = min(1000, max(1, params->nodes / 100));
+  else
+    params->hitrate = 1000;
 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
@@ -140,6 +148,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     } else {
       // no time control
       params->timeset = 0;
+      params->max = INT_MAX;
     }
   }
 

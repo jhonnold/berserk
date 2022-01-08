@@ -128,6 +128,9 @@ typedef struct {
   int alloc;
   int max;
 
+  uint64_t nodes;
+  int hitrate;
+
   int timeset;
   int depth;
   int movesToGo;

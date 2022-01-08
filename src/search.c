@@ -64,11 +64,14 @@ void InitPruningAndReductionTables() {
   }
 }
 
-INLINE int StopSearch(SearchParams* params) {
-  if (!params->timeset || PONDERING) return 0;
+INLINE int StopSearch(SearchParams* params, ThreadData* thread) {
+  if (thread->data.nodes % params->hitrate != 0) return 0;
+
+  int unlimitedSearch = !params->timeset && !params->nodes;
+  if (unlimitedSearch || PONDERING) return 0;
 
   long elapsed = GetTimeMS() - params->start;
-  return elapsed > params->max;
+  return elapsed > params->max || (params->nodes && thread->data.nodes >= params->nodes);
 }
 
 void* UCISearch(void* arg) {
@@ -272,6 +275,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   PV childPv;
   pv->count = 0;
 
+  int mainThread = !thread->idx;
   int isPV = beta - alpha != 1;  // pv node when doing a full window
   int isRoot = !data->ply;       //
   int score = -CHECKMATE;        // initially assume the worst case
@@ -301,7 +305,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
   // 1Mnps ~1ms
-  if (params->stopped || (!(data->nodes & 1023) && StopSearch(params))) longjmp(thread->exit, 1);
+  if (params->stopped || (mainThread && StopSearch(params, thread))) longjmp(thread->exit, 1);
 
   if (!isRoot) {
     // draw
@@ -643,12 +647,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   SearchData* data = &thread->data;
   Board* board = &thread->board;
 
+  int mainThread = !thread->idx;
+
   data->nodes++;
 
-  // Either mainthread has ended us OR we've run out of time
-  // this second check is more expensive and done only every 1024 nodes
-  // 1Mnps ~1ms
-  if (params->stopped || (!(data->nodes & 1023) && StopSearch(params))) longjmp(thread->exit, 1);
+  if (params->stopped || (mainThread && StopSearch(params, thread))) longjmp(thread->exit, 1);
 
   // draw check
   if (IsMaterialDraw(board) || IsRepetition(board, data->ply) || (board->halfMove > 99)) return 0;
