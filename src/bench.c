@@ -16,6 +16,7 @@
 
 #include "bench.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +37,7 @@ char* benchmarks[] = {
 
 void Bench() {
   Board board;
-  SearchParams params = {.depth = 13, .multiPV = 1};
+  SearchParams params = {.depth = 13, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
   ThreadData* threads = CreatePool(1);
 
   Move bestMoves[NUM_BENCH_POSITIONS];
