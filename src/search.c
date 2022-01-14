@@ -413,6 +413,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth <= 6 && !skipMove && eval - 50 * (depth - (improving && !oppThreats)) > beta && eval < TB_WIN_BOUND)
       return eval;
 
+    // Razoring
+    if (depth <= 3 && eval + 200 * depth <= alpha) {
+      score = Quiesce(alpha, beta, thread);
+      if (score <= alpha)
+        return score;
+    }
+
     // Null move pruning
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate threats)
