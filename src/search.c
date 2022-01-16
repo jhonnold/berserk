@@ -253,7 +253,7 @@ void* Search(void* arg) {
       double pctNodesNotBest = 1.0 - (double)bestMoveNodes / data->nodes;
       double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
 
-      if (results->scores[depth] > MATE_BOUND) nodeCountFactor = 0.5;
+      if (results->scores[depth] >= TB_WIN_BOUND) nodeCountFactor = 0.5;
 
       long elapsed = GetTimeMS() - params->start;
 
