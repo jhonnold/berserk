@@ -32,6 +32,7 @@
 #define Sq(r, f) ((r)*8 + (f))
 
 extern const int8_t PSQT[];
+extern const int16_t PC_FEATURE_OFFSET[2][12];
 
 extern const uint64_t PIECE_COUNT_IDX[];
 
@@ -62,15 +63,9 @@ int MoveIsLegal(Move move, Board* board);
 INLINE int KingIdx(int k, int s) { return (k & 4) == (s & 4); }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int perspective) {
-  if (perspective == WHITE) {
-    int pc = piece / 2 + 6 * !!(piece & 1);
-
-    return pc * 64 + KingIdx(kingsq, sq) * 32 + PSQT[sq ^ 56];
-  } else {
-    int pc = piece / 2 + 6 * !(piece & 1);
-
-    return pc * 64 + KingIdx(kingsq, sq) * 32 + PSQT[sq];
-  }
+  return PC_FEATURE_OFFSET[perspective][piece]        // Base piece offset
+         + KingIdx(kingsq, sq) * 32                   // index based on same side as king
+         + PSQT[sq ^ (56 * (perspective == WHITE))];  // convert square to half psqt
 }
 
 #endif

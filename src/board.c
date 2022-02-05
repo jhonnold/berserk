@@ -32,9 +32,45 @@
 #include "uci.h"
 #include "zobrist.h"
 
-const int8_t PSQT[] = {0,  1,  2,  3,  3,  2,  1,  0,  4,  5,  6,  7,  7,  6,  5,  4,  8,  9,  10, 11, 11, 10,
-                       9,  8,  12, 13, 14, 15, 15, 14, 13, 12, 16, 17, 18, 19, 19, 18, 17, 16, 20, 21, 22, 23,
-                       23, 22, 21, 20, 24, 25, 26, 27, 27, 26, 25, 24, 28, 29, 30, 31, 31, 30, 29, 28};
+const int8_t PSQT[] = {
+    0,  1,  2,  3,  3,  2,  1,  0,   // 1
+    4,  5,  6,  7,  7,  6,  5,  4,   // 2
+    8,  9,  10, 11, 11, 10, 9,  8,   // 3
+    12, 13, 14, 15, 15, 14, 13, 12,  // 4
+    16, 17, 18, 19, 19, 18, 17, 16,  // 5
+    20, 21, 22, 23, 23, 22, 21, 20,  // 6
+    24, 25, 26, 27, 27, 26, 25, 24,  // 7
+    28, 29, 30, 31, 31, 30, 29, 28   // 8
+};
+
+const int16_t PC_FEATURE_OFFSET[2][12] = {{
+                                              0,    // WHITE_PAWN
+                                              384,  // BLACK_PAWN
+                                              64,   // WHITE_KNIGHT
+                                              448,  // BLACK_KNIGHT
+                                              128,  // WHITE_BISHOP
+                                              512,  // BLACK_BISHOP
+                                              192,  // WHITE_ROOK
+                                              576,  // BLACK_ROOK
+                                              256,  // WHITE_QUEEN
+                                              640,  // BLACK_QUEEN
+                                              320,  // WHITE_KING
+                                              704,  // BLACK_KING
+                                          },
+                                          {
+                                              384,  // WHITE_PAWN
+                                              0,    // BLACK_PAWN
+                                              448,  // WHITE_KNIGHT
+                                              64,   // BLACK_KNIGHT
+                                              512,  // WHITE_BISHOP
+                                              128,  // BLACK_BISHOP
+                                              576,  // WHITE_ROOK
+                                              192,  // BLACK_ROOK
+                                              640,  // WHITE_QUEEN
+                                              256,  // BLACK_QUEEN
+                                              704,  // WHITE_KING
+                                              320,  // BLACK_KING
+                                          }};
 
 // piece count key bit mask idx
 const uint64_t PIECE_COUNT_IDX[] = {1ULL << 0,  1ULL << 4,  1ULL << 8,  1ULL << 12, 1ULL << 16,
