@@ -60,7 +60,7 @@ void UndoMove(Move move, Board* board);
 int IsMoveLegal(Move move, Board* board);
 int MoveIsLegal(Move move, Board* board);
 
-INLINE int KingIdx(int k, int s) { return (k & 4) == (s & 4); }
+INLINE int KingIdx(int k, int s) { return 2 * ((k & 4) == (s & 4)) + ((k & 32) == (s & 32)); }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int perspective) {
   return PC_FEATURE_OFFSET[perspective][piece]        // Base piece offset
