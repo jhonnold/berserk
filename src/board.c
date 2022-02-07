@@ -44,32 +44,32 @@ const int8_t PSQT[] = {
 };
 
 const int16_t PC_FEATURE_OFFSET[2][12] = {{
-                                              0,    // WHITE_PAWN
-                                              384,  // BLACK_PAWN
-                                              64,   // WHITE_KNIGHT
-                                              448,  // BLACK_KNIGHT
-                                              128,  // WHITE_BISHOP
-                                              512,  // BLACK_BISHOP
-                                              192,  // WHITE_ROOK
-                                              576,  // BLACK_ROOK
-                                              256,  // WHITE_QUEEN
-                                              640,  // BLACK_QUEEN
-                                              320,  // WHITE_KING
-                                              704,  // BLACK_KING
+                                              0,     // WHITE_PAWN
+                                              768,   // BLACK_PAWN
+                                              128,   // WHITE_KNIGHT
+                                              896,   // BLACK_KNIGHT
+                                              256,   // WHITE_BISHOP
+                                              1024,  // BLACK_BISHOP
+                                              384,   // WHITE_ROOK
+                                              1152,  // BLACK_ROOK
+                                              512,   // WHITE_QUEEN
+                                              1280,  // BLACK_QUEEN
+                                              640,   // WHITE_KING
+                                              1408,  // BLACK_KING
                                           },
                                           {
-                                              384,  // WHITE_PAWN
-                                              0,    // BLACK_PAWN
-                                              448,  // WHITE_KNIGHT
-                                              64,   // BLACK_KNIGHT
-                                              512,  // WHITE_BISHOP
-                                              128,  // BLACK_BISHOP
-                                              576,  // WHITE_ROOK
-                                              192,  // BLACK_ROOK
-                                              640,  // WHITE_QUEEN
-                                              256,  // BLACK_QUEEN
-                                              704,  // WHITE_KING
-                                              320,  // BLACK_KING
+                                              768,   // BLACK_PAWN
+                                              0,     // WHITE_PAWN
+                                              896,   // BLACK_KNIGHT
+                                              128,   // WHITE_KNIGHT
+                                              1024,  // BLACK_BISHOP
+                                              256,   // WHITE_BISHOP
+                                              1152,  // BLACK_ROOK
+                                              384,   // WHITE_ROOK
+                                              1280,  // BLACK_QUEEN
+                                              512,   // WHITE_QUEEN
+                                              1408,  // BLACK_KING
+                                              640,   // WHITE_KING
                                           }};
 
 // piece count key bit mask idx
@@ -529,7 +529,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    if ((piece == WHITE_KING || piece == BLACK_KING) && (from & 4) != (to & 4)) {
+    if ((piece == WHITE_KING || piece == BLACK_KING) && ((from & 4) != (to & 4) || (from & 32) != (to & 32))) {
       if (piece == WHITE_KING) {
         RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
         ApplyUpdates(board, BLACK, bUpdates);
