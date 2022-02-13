@@ -29,8 +29,8 @@
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
 
-void SetContempt(int* dest, int stm, int score) {
-  int contempt = CONTEMPT + 40 * score / (abs(score) + 120);
+void SetContempt(int* dest, int stm) {
+  int contempt = CONTEMPT;
 
   dest[stm] = contempt;
   dest[stm ^ 1] = -contempt;
