@@ -90,17 +90,22 @@ Score FRCCorneredBishop(Board* board) {
 
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
-  SearchData* data = &thread->data;
-
   if (IsMaterialDraw(board)) return 0;
 
-  int score = OutputLayer(board->accumulators[board->stm][board->ply], board->accumulators[board->xstm][board->ply]);
+  SearchData* data = &thread->data;
+  int16_t* stm = board->accumulators[board->stm][board->ply];
+  int16_t* xstm = board->accumulators[board->xstm][board->ply];
 
+  int score = OutputLayer(stm, xstm);
+
+  // sf cornered bishop in FRC
   if (CHESS_960) score += FRCCorneredBishop(board);
-
+  
+  // static contempt
   score += data->contempt[board->stm];
 
-  int scalar = 128 + board->phase;
-  int scaled = scalar * score / 128;
-  return min(TB_WIN_BOUND - 1, max(-TB_WIN_BOUND + 1, scaled));
+  // scaled based on phase [1, 1.5]
+  score = (128 + board->phase) * score / 128;
+  
+  return min(TB_WIN_BOUND - 1, max(-TB_WIN_BOUND + 1, score));
 }
