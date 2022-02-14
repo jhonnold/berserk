@@ -334,7 +334,7 @@ void UCILoop() {
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb = GetOptionIntValue(in);
       mb = max(4, min(65536, mb));
-      size_t bytesAllocated = TTInit(mb);
+      int64_t bytesAllocated = TTInit(mb);
       printf("info string set Hash to value %d (%" PRId64 " bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
