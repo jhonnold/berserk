@@ -308,8 +308,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   if (!isRoot) {
     // draw
-    if (IsRepetition(board, data->ply) || IsMaterialDraw(board) || (board->halfMove > 99))
-      return 2 - (data->nodes & 0x3);
+    if (IsDraw(board, data->ply)) return 2 - (data->nodes & 0x3);
 
     // Prevent overflows
     if (data->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
@@ -415,8 +414,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Razoring
     if (depth <= 3 && eval + 200 * depth <= alpha) {
       score = Quiesce(alpha, beta, thread);
-      if (score <= alpha)
-        return score;
+      if (score <= alpha) return score;
     }
 
     // Null move pruning
@@ -660,7 +658,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   if (params->stopped || (mainThread && StopSearch(params, thread))) longjmp(thread->exit, 1);
 
   // draw check
-  if (IsMaterialDraw(board) || IsRepetition(board, data->ply) || (board->halfMove > 99)) return 0;
+  if (IsDraw(board, data->ply)) return 0;
 
   // prevent overflows
   if (data->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);

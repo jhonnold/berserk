@@ -282,25 +282,6 @@ inline int IsOCB(Board* board) {
          bits((PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)) & DARK_SQS) == 1;
 }
 
-inline int IsMaterialDraw(Board* board) {
-  switch (board->piecesCounts) {
-    case 0x0:       // Kk
-    case 0x100:     // KNk
-    case 0x200:     // KNNk
-    case 0x1000:    // Kkn
-    case 0x2000:    // Kknn
-    case 0x1100:    // KNkn
-    case 0x10000:   // KBk
-    case 0x100000:  // Kkb
-    case 0x11000:   // KBkn
-    case 0x100100:  // KNkb
-    case 0x110000:  // KBkb
-      return 1;
-    default:
-      return 0;
-  }
-}
-
 // Reset general piece locations on the board
 inline void SetOccupancies(Board* board) {
   OccBB(WHITE) = 0;
@@ -672,6 +653,10 @@ void UndoNullMove(Board* board) {
   board->pinned = board->pinnedHistory[board->moveNo];
 }
 
+inline int IsDraw(Board* board, int ply) {
+  return IsRepetition(board, ply) || IsMaterialDraw(board) || IsFiftyMoveRule(board);
+}
+
 inline int IsRepetition(Board* board, int ply) {
   int reps = 0;
 
@@ -684,6 +669,38 @@ inline int IsRepetition(Board* board, int ply) {
       reps++;
       if (reps == 2)  // 3-fold before+including root
         return 1;
+    }
+  }
+
+  return 0;
+}
+
+inline int IsMaterialDraw(Board* board) {
+  switch (board->piecesCounts) {
+    case 0x0:       // Kk
+    case 0x100:     // KNk
+    case 0x200:     // KNNk
+    case 0x1000:    // Kkn
+    case 0x2000:    // Kknn
+    case 0x1100:    // KNkn
+    case 0x10000:   // KBk
+    case 0x100000:  // Kkb
+    case 0x11000:   // KBkn
+    case 0x100100:  // KNkb
+    case 0x110000:  // KBkb
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+inline int IsFiftyMoveRule(Board* board) {
+  if (board->halfMove > 99) {
+    if (board->checkers) {
+      SimpleMoveList moves[1];
+      RootMoves(moves, board);
+
+      return moves->count > 0;
     }
   }
 
