@@ -244,6 +244,8 @@ void* Search(void* arg) {
       searchStability = sameBestMove ? min(10, searchStability + 1) : 0;  // increase how stable our best move is
       double stabilityFactor = 1.25 - 0.05 * searchStability;
 
+      if (PONDERING) continue;
+
       double scoreDiff = results->scores[depth - 3] - results->scores[depth];
       double scoreChangeFactor = 0.1 + 0.05 * scoreDiff;
       scoreChangeFactor = max(0.5, min(1.5, scoreChangeFactor));
