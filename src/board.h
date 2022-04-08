@@ -45,11 +45,14 @@ void SetSpecialPieces(Board* board);
 void SetOccupancies(Board* board);
 
 int DoesMoveCheck(Move move, Board* board);
+
+int IsDraw(Board* board, int ply);
 int IsRepetition(Board* board, int ply);
+int IsMaterialDraw(Board* board);
+int IsFiftyMoveRule(Board* board);
 
 int HasNonPawn(Board* board);
 int IsOCB(Board* board);
-int IsMaterialDraw(Board* board);
 
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);
