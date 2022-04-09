@@ -24,7 +24,7 @@
 #include "types.h"
 #include "util.h"
 
-const int SEE_VALUE[7] = {100, 425, 425, 645, 870, 30000, 0};
+const int SEE_VALUE[7] = {100, 414, 414, 621, 1005, 30000, 0};
 
 // Static exchange evaluation using The Swap Algorithm - https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
 inline int SEE(Board* board, Move move, int threshold) {
