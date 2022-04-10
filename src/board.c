@@ -702,6 +702,8 @@ inline int IsFiftyMoveRule(Board* board) {
 
       return moves->count > 0;
     }
+
+    return 1;
   }
 
   return 0;
