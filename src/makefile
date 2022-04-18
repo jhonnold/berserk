@@ -19,7 +19,7 @@ STD    = -std=gnu11
 LIBS   = -pthread -lm
 WARN   = -Wall -Wextra -Wshadow -Werror
 
-FLAGS  = $(STD) $(WARN) -O3 -flto $(DEFS)
+FLAGS  = $(STD) $(WARN) -O3 -flto -g $(DEFS)
 CFLAGS = $(FLAGS) -march=native
 RFLAGS = $(FLAGS) -static
 
