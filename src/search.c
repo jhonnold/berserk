@@ -734,7 +734,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
 
 inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board) {
   int depth = thread->depth;
-  int seldepth = Seldepth(thread);
+  int seldepth = thread->data.seldepth;
   uint64_t nodes = NodesSearched(thread->threads);
   uint64_t tbhits = TBHits(thread->threads);
   uint64_t time = GetTimeMS() - thread->params->start;

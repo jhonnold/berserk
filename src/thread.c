@@ -125,10 +125,3 @@ uint64_t TBHits(ThreadData* threads) {
 
   return tbhits;
 }
-
-int Seldepth(ThreadData* threads) {
-  int seldepth = threads[0].data.seldepth;
-  for (int i = 1; i < threads->count; i++) seldepth = max(seldepth, threads[i].data.seldepth);
-
-  return seldepth;
-}
