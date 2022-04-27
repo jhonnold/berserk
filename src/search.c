@@ -534,6 +534,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         extension = 1 + (!isPV && score < sBeta - 50);
       else if (sBeta >= beta)
         return sBeta;
+      else if (ttScore >= beta)
+        extension = -1;
     }
 
     // history extension - if the tt move has a really good history score, extend.
