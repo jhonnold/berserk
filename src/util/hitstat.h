@@ -8,4 +8,4 @@ static uint64_t hitsum[MAX_HITCOUNT]={0};
 #define mean(counter,num) (meansum[counter]+=num,hitsum[counter]++)
 #define hit(counter,cond) (hitmap[counter][0]++,hitmap[counter][1]+=!!(cond))
 #define printhits()  for(size_t counter=0;counter<MAX_HITCOUNT;counter++){if(hitmap[counter][0]){print("\nHCounter:",counter," Total:",hitmap[counter][0]," Hits:",hitmap[counter][1],"Hit%:",hitmap[counter][1]*100.0/hitmap[counter][0]);} }puts("");
-#define printmeans() for(size_t counter=0;counter<MAX_HITCOUNT;counter++){if(hitmap[counter][0]){print("\nMCounter:",counter," Total:",hitsum[counter]," Average:",meansum[counter]/hitsum[counter]);} }puts("");
+#define printmeans() for(size_t counter=0;counter<MAX_HITCOUNT;counter++){if(hitsum[counter]){print("\nMCounter:",counter," Total:",hitsum[counter]," Average:",meansum[counter]/hitsum[counter]);} }puts("");
