@@ -40,6 +40,7 @@
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
+#include "util/hitstat.h"
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
