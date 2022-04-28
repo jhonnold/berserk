@@ -40,7 +40,6 @@
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
-#include "util/hitstat.h"
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
@@ -760,7 +759,6 @@ inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta
   else
     printf("%s\n", MoveToStr(pv->moves[0], board));
 
-   printhits();printmeans();
 }
 
 void PrintPV(PV* pv, Board* board) {
