@@ -51,7 +51,7 @@ valmax=value>valmax?value:valmax;\
 size_t curtime= __rdtsc();\
 if(curtime-mean_elapsed>HIT_COUNT_INTERVAL){mean_elapsed=curtime;\
 long double avg=meansum/meancount;\
-fprint(stderr,__FILE__,":",__LINE__,":[",stringify(value),"] ",meancount,"counts\n Min:",valmin,"Avg:",avg,"Max:",valmax,"\n");};0;})
+fprint(stderr,__FILE__,":",__LINE__,":[",stringify(value),"] ",meancount,"counts\n Min:",valmin,"Avg:",avg,"Max:",valmax,"\n");};value;})
 
 #define hit1(cond) ({;\
 static uint64_t hit_elapsed=0;\
@@ -61,7 +61,7 @@ static size_t condcount=0;\
 size_t curtime= __rdtsc();\
 if(curtime-hit_elapsed>HIT_COUNT_INTERVAL){hit_elapsed=curtime;\
 long double perc=100.0*condcount/hitcount;\
-fprint(stderr,__FILE__,":",__LINE__,":(",stringify(cond),") ",hitcount,"counts\n Hits:",condcount,"Hit%:",perc,"\n");};0;})
+fprint(stderr,__FILE__,":",__LINE__,":(",stringify(cond),") ",hitcount,"counts\n Hits:",condcount,"Hit%:",perc,"\n");};cond;})
 
 
 #define chainapplyhs_(func,arg...) merge(chainapplyhs_,argcount(arg))(func,arg)
