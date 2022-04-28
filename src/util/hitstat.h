@@ -1,22 +1,31 @@
 #pragma once
 #include "print.h"
-/* syntax:
-hit(counter_num, condition) add a hit
-count if condition is met,total++
-mean(counter_num2,value) add value to
-counter sum,record total++ value count
-printhits() and printmeans() will
-print all used counters for hits/means
+#include <x86intrin.h>
+/* zero-overhead hitcounter/meancounters
+hit(cond) record if condition was met
+mean(value) record average of value
 */
 //https://github.com/FrozenVoid/hitstat/
-#define MAX_HITCOUNT 256
-static uint64_t __attribute__((unused)) hitmap[MAX_HITCOUNT][2]={0};
-static long double __attribute__((unused)) meansum[MAX_HITCOUNT]={0};
-static uint64_t __attribute__((unused)) hitsum[MAX_HITCOUNT]={0};
-static uint8_t __attribute__((unused)) meanset_flag=0,__attribute__((unused)) hitset_flag=0;
 
-#define mean(counter,num) (meansum[counter]+=num,hitsum[counter]++,meanset_flag=1)
-#define hit(counter,cond) (hitmap[counter][0]++,hitmap[counter][1]+=!!(cond),hitset_flag=1)
-#define printhits() if(hitset_flag){ for(size_t counter=0;counter<MAX_HITCOUNT;counter++){if(hitmap[counter][0]){print("\nHCounter:",counter," Total:",hitmap[counter][0]," Hits:",hitmap[counter][1],"Hit%:",hitmap[counter][1]*100.0/hitmap[counter][0]);} }puts("");}
+#define HIT_COUNT_INTERVAL 4000000000ULL
+#define mean(value) ({;\
+static uint64_t elapsed=0;\
+static size_t meancount=0;\
+static long double meansum=0;\
+meansum+=value;meancount++;\
+size_t curtime= __rdtsc();\
+if(curtime-elapsed>HIT_COUNT_INTERVAL){elapsed=curtime;\
+long double avg=meansum/meancount;\
+print(__FILE__,":",__LINE__,":(",stringify(value),")Count:",meancount,"Average:",avg,"\n");};0;})
 
-#define printmeans() if(meanset_flag){ for(size_t counter=0;counter<MAX_HITCOUNT;counter++){if(hitsum[counter]){print("\nMCounter:",counter," Total:",hitsum[counter]," Average:",meansum[counter]/hitsum[counter]);} }puts("");}
+#define hit(cond) ({;\
+static uint64_t elapsed=0;\
+static size_t hitcount=0;\
+static size_t condcount=0;\
+;hitcount++;\
+if(cond){condcount++;};\
+size_t curtime= __rdtsc();\
+if(curtime-elapsed>HIT_COUNT_INTERVAL){elapsed=curtime;\
+double perc=100.0*condcount/hitcount;\
+print(__FILE__,":",__LINE__,":(",stringify(cond),") Total:",hitcount,"Hits:",condcount,"Hit%:",perc,"\n");};0;})
+
