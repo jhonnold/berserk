@@ -18,6 +18,7 @@
 #define UTIL_H
 
 #include "types.h"
+#include "util/hitstat.h"
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
