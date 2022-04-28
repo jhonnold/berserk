@@ -1,3 +1,4 @@
+#pragma once
 #include "print.h"
 /* syntax:
 hit(counter_num, condition) add a hit
