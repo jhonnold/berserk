@@ -758,7 +758,6 @@ inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta
     PrintPV(pv, board);
   else
     printf("%s\n", MoveToStr(pv->moves[0], board));
-
 }
 
 void PrintPV(PV* pv, Board* board) {
