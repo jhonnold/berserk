@@ -4,6 +4,16 @@
 /* zero-overhead hitcounter/meancounters
 hit(conditions...) record percent of condition==true for each condition
 mean(values...) record min/average/max of values
+examples:
+insertion: if(a>mean(d) && hit(a>b))
+will result in `if(a>d && (a>b))
+with (a>b) condition being recorded
+and (d) being sampled for min/max/avg
+collection:
+hit(a>b,b<c,d>b); will record true% of conditions in sequence
+mean(a,b,c); will record min/max/avg of a,b,c
+
+
 */
 //https://github.com/FrozenVoid/hitstat/
 
@@ -39,7 +49,7 @@ double: DBL_MIN,\
  long double: LDBL_MIN ,\
 default: 0 )
 
-#define mean1(value) ({;\
+#define mean1(valuex) ({;__auto_type   value=valuex;\
 static uint64_t mean_elapsed=0;\
 static size_t meancount=0;\
 static long double meansum=0;\
@@ -51,9 +61,9 @@ valmax=value>valmax?value:valmax;\
 size_t curtime= __rdtsc();\
 if(curtime-mean_elapsed>HIT_COUNT_INTERVAL){mean_elapsed=curtime;\
 long double avg=meansum/meancount;\
-fprint(stderr,__FILE__,":",__LINE__,":[",stringify(value),"] ",meancount,"counts\n Min:",valmin,"Avg:",avg,"Max:",valmax,"\n");};value;})
+fprint(stderr,__FILE__,":",__LINE__,":[",stringify(valuex),"] ",meancount,"counts\n Min:",valmin,"Avg:",avg,"Max:",valmax,"\n");};value;})
 
-#define hit1(cond) ({;\
+#define hit1(condx) ({;__auto_type  cond=condx;\
 static uint64_t hit_elapsed=0;\
 static size_t hitcount=0;\
 static size_t condcount=0;\
@@ -61,7 +71,7 @@ static size_t condcount=0;\
 size_t curtime= __rdtsc();\
 if(curtime-hit_elapsed>HIT_COUNT_INTERVAL){hit_elapsed=curtime;\
 long double perc=100.0*condcount/hitcount;\
-fprint(stderr,__FILE__,":",__LINE__,":(",stringify(cond),") ",hitcount,"counts\n Hits:",condcount,"Hit%:",perc,"\n");};cond;})
+fprint(stderr,__FILE__,":",__LINE__,":(",stringify(condx),") ",hitcount,"counts\n Hits:",condcount,"Hit%:",perc,"\n");};cond;})
 
 
 #define chainapplyhs_(func,arg...) merge(chainapplyhs_,argcount(arg))(func,arg)
