@@ -16,7 +16,7 @@ meansum+=value;meancount++;\
 size_t curtime= __rdtsc();\
 if(curtime-elapsed>HIT_COUNT_INTERVAL){elapsed=curtime;\
 long double avg=meansum/meancount;\
-print(__FILE__,":",__LINE__,":(",stringify(value),")Count:",meancount,"Average:",avg,"\n");};0;})
+fprint(stderr,__FILE__,":",__LINE__,":(",stringify(value),")Count:",meancount,"Average:",avg,"\n");};0;})
 
 #define hit(cond) ({;\
 static uint64_t elapsed=0;\
@@ -27,5 +27,5 @@ if(cond){condcount++;};\
 size_t curtime= __rdtsc();\
 if(curtime-elapsed>HIT_COUNT_INTERVAL){elapsed=curtime;\
 double perc=100.0*condcount/hitcount;\
-print(__FILE__,":",__LINE__,":(",stringify(cond),") Total:",hitcount,"Hits:",condcount,"Hit%:",perc,"\n");};0;})
+fprint(stderr,__FILE__,":",__LINE__,":(",stringify(cond),") Total:",hitcount,"Hits:",condcount,"Hit%:",perc,"\n");};0;})
 
