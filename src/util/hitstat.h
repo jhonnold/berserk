@@ -7,7 +7,7 @@ mean(value) record average of value
 */
 //https://github.com/FrozenVoid/hitstat/
 
-#define HIT_COUNT_INTERVAL 4000000000ULL
+#define HIT_COUNT_INTERVAL 1000000000ULL
 #define mean(value) ({;\
 static uint64_t elapsed=0;\
 static size_t meancount=0;\
@@ -25,6 +25,6 @@ static size_t condcount=0;\
 ;hitcount++;condcount+=!!(cond);\
 size_t curtime= __rdtsc();\
 if(curtime-elapsed>HIT_COUNT_INTERVAL){elapsed=curtime;\
-double perc=100.0*condcount/hitcount;\
+long double perc=100.0*condcount/hitcount;\
 fprint(stderr,__FILE__,":",__LINE__,":(",stringify(cond),") Total:",hitcount,"Hits:",condcount,"Hit%:",perc,"\n");};0;})
 
