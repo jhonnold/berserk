@@ -22,8 +22,7 @@ fprint(stderr,__FILE__,":",__LINE__,":(",stringify(value),")Count:",meancount,"A
 static uint64_t elapsed=0;\
 static size_t hitcount=0;\
 static size_t condcount=0;\
-;hitcount++;\
-if(cond){condcount++;};\
+;hitcount++;condcount+=!!(cond);\
 size_t curtime= __rdtsc();\
 if(curtime-elapsed>HIT_COUNT_INTERVAL){elapsed=curtime;\
 double perc=100.0*condcount/hitcount;\
