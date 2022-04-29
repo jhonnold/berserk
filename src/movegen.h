@@ -26,5 +26,5 @@ void AppendMove(Move* arr, uint8_t* n, Move move);
 void GenerateAllMoves(MoveList* moveList, Board* board);
 void GenerateQuietMoves(MoveList* moveList, Board* board);
 void GenerateTacticalMoves(MoveList* moveList, Board* board);
-
+#include "movegen.c"
 #endif
