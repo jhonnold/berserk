@@ -20,5 +20,5 @@
 #include "types.h"
 
 int SEE(Board* board, Move move, int threshold);
-
+#include "see.c"
 #endif
