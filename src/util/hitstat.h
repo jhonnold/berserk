@@ -19,7 +19,10 @@ mean(a,b,c); will record min/max/avg of a,b,c
 */
 //https://github.com/FrozenVoid/hitstat/
 
-#define HIT_COUNT_INTERVAL 1000000000ULL
+#define HIT_COUNT_INTERVAL  1000000000ULL
+#define MEAN_COUNT_INTERVAL 4000000000ULL
+#define COST_COUNT_INTERVAL 19000000000ULL
+
 #define meantypemax(value) _Generic((value),\
 long long unsigned int:  UINT64_MAX ,\
 long long int: INT64_MAX ,\
@@ -61,7 +64,7 @@ static typeof(value) valmax=meantypemin(value);\
 valmin=value<valmin?value:valmin;\
 valmax=value>valmax?value:valmax;\
 size_t curtime= __rdtsc();\
-if(curtime-mean_elapsed>HIT_COUNT_INTERVAL){mean_elapsed=curtime;\
+if(curtime-mean_elapsed>MEAN_COUNT_INTERVAL){mean_elapsed=curtime;\
 long double avg=meansum/meancount;\
 fprint(stderr,__FILE__,":",__LINE__,":[",stringify(valuex),"] ",meancount,"counts\n Min:",valmin,"Avg:",avg,"Max:",valmax,"\n");};value;})
 
@@ -88,7 +91,7 @@ total_calls++;size_t cyclediff=curtime-start_cycle;\
 valmin=cyclediff<valmin?cyclediff:valmin;\
 valmax=cyclediff>valmax?cyclediff:valmax;\
 total_cycles+=cyclediff;\
-if(curtime-cost_elapsed>HIT_COUNT_INTERVAL){cost_elapsed=curtime;\
+if(curtime-cost_elapsed>COST_COUNT_INTERVAL){cost_elapsed=curtime;\
 long double avg=1.0L*total_cycles/total_calls;\
 fprint(stderr,__FILE__,":",__LINE__,":{",stringify(funcx),"} ",total_calls,"calls\n Avg:",avg," cycles Min<>Max:",valmin,"<>",valmax,"cycles\n");};funcres;})
 
