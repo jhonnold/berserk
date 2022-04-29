@@ -51,5 +51,5 @@ void PrintPV(PV* pv, Board* board);
 
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);
 int MoveSearchable(SearchParams* params, Move move);
-
+#include "search.c"
 #endif
