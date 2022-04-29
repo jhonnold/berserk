@@ -21,5 +21,5 @@
 
 Move TBRootProbe(Board* board);
 unsigned TBProbe(Board* board);
-
+#include "tb.c"
 #endif
