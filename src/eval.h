@@ -27,5 +27,5 @@ extern const int MAX_PHASE;
 void SetContempt(int* dest, int stm);
 BitBoard Threats(Board* board, int stm);
 Score Evaluate(Board* board, ThreadData* thread);
-
+#include "eval.c"
 #endif
