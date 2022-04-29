@@ -16,7 +16,7 @@
 
 // NOOBPROBE IS WRITTEN BY Terje Kirstihagen (Weiss)
 // I take 0 credit for this code.
-
+#pragma once
 #include "../board.h"
 #include "../types.h"
 
@@ -25,3 +25,4 @@ extern int NOOB_DEPTH_LIMIT;
 extern int failedQueries;
 
 Move ProbeNoob(Board* board);
+#include "noobprobe.c"
