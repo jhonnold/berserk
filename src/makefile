@@ -2,7 +2,7 @@
 
 # General
 EXE      = berserk
-SRC      = *.c pyrrhic/tbprobe.c noobprobe/*.c
+SRC      = berserk.c
 CC       = gcc
 VERSION  = 9-dev
 EVALFILE = default.nn
