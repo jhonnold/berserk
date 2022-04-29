@@ -33,5 +33,5 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
 int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats);
 int GetCounterHistory(SearchData* data, Move move);
 int GetTacticalHistory(SearchData* data, Board* board, Move move);
-
+#include "history.c"
 #endif
