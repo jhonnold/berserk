@@ -32,5 +32,5 @@ int ReadLine(char* in);
 void UCILoop();
 
 int GetOptionIntValue(char* in);
-
+#include "uci.c"
 #endif
