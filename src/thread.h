@@ -25,5 +25,5 @@ void ResetThreadPool(ThreadData* threads);
 void FreeThreads(ThreadData* threads);
 uint64_t NodesSearched(ThreadData* threads);
 uint64_t TBHits(ThreadData* threads);
-
+#include "thread.c"
 #endif
