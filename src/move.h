@@ -45,5 +45,5 @@ extern const char* SQ_TO_COORD[];
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move, Board* board);
 int IsRecapture(SearchData* data, Move move);
-
+#include "move.c"
 #endif
