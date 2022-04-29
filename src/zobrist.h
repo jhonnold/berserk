@@ -26,5 +26,5 @@ extern uint64_t ZOBRIST_SIDE_KEY;
 
 void InitZobristKeys();
 uint64_t Zobrist(Board* board);
-
+#include "zobrist.c"
 #endif
