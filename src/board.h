@@ -70,5 +70,5 @@ INLINE int FeatureIdx(int piece, int sq, int kingsq, const int perspective) {
          + KingIdx(kingsq, sq) * 32                   // index based on same side as king
          + PSQT[sq ^ (56 * (perspective == WHITE))];  // convert square to half psqt
 }
-
+#include "board.c"
 #endif
