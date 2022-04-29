@@ -25,5 +25,5 @@ void InitPerftMoves(MoveList* moves, Board* board);
 Move NextMove(MoveList* moves, Board* board, int skipQuiets);
 
 void PrintMoves(Board* board, ThreadData* thread);
-
+#include "movepick.c"
 #endif
