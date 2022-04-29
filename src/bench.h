@@ -18,5 +18,5 @@
 #define BENCH_H
 
 void Bench();
-
+#include "bench.c"
 #endif
