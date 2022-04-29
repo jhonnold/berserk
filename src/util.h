@@ -28,5 +28,5 @@
 #define INLINE static inline __attribute__((always_inline))
 
 long GetTimeMS();
-
+#include "util.c"
 #endif
