@@ -219,4 +219,7 @@ int tb_probe_root_wdl(uint64_t white, uint64_t black, uint64_t kings, uint64_t q
                       uint64_t knights, uint64_t pawns, unsigned rule50, unsigned ep, bool turn, bool useRule50,
                       struct TbRootMoves* _results);
 
+
+#include "tbchess.c"
+#include "tbprobe.c"
 #endif
