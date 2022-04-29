@@ -71,5 +71,5 @@ BitBoard GetRookAttacks(int sq, BitBoard occupancy);
 BitBoard GetQueenAttacks(int sq, BitBoard occupancy);
 BitBoard GetKingAttacks(int sq);
 BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ);
-
+#include "attacks.c"
 #endif
