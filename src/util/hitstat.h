@@ -4,11 +4,13 @@
 /* zero-overhead hitcounter/meancounters
 hit(conditions...) record percent of condition==true for each condition
 mean(values...) record min/average/max of values
+cost(func(x)) record cost of function calls
 examples:
-insertion: if(a>mean(d) && hit(a>b))
-will result in `if(a>d && (a>b))
+insertion: if(a>mean(d) && hit(a>b)){cost( bigfunc(a));}
+will result in `if(a>d && (a>b)){bigfunc(a);}
 with (a>b) condition being recorded
 and (d) being sampled for min/max/avg
+and bigfunc(a) measured cost in CPU cycles
 collection:
 hit(a>b,b<c,d>b); will record true% of conditions in sequence
 mean(a,b,c); will record min/max/avg of a,b,c
@@ -70,8 +72,25 @@ static size_t condcount=0;\
 ;hitcount++;condcount+=!!(cond);\
 size_t curtime= __rdtsc();\
 if(curtime-hit_elapsed>HIT_COUNT_INTERVAL){hit_elapsed=curtime;\
-long double perc=100.0*condcount/hitcount;\
+long double perc=100.0L*condcount/hitcount;\
 fprint(stderr,__FILE__,":",__LINE__,":(",stringify(condx),") ",hitcount,"counts\n Hits:",condcount,"Hit%:",perc,"\n");};cond;})
+
+#define cost1(funcx) ({;\
+static uint64_t cost_elapsed=0;\
+ size_t start_cycle=__rdtsc();\
+;__auto_type  funcres=funcx;\
+static size_t total_cycles=0;\
+static size_t total_calls=0;\
+static typeof(total_cycles) valmin=meantypemax(total_cycles);\
+static typeof(total_cycles) valmax=meantypemin(total_cycles);\
+ size_t curtime= __rdtsc();\
+total_calls++;size_t cyclediff=curtime-start_cycle;\
+valmin=cyclediff<valmin?cyclediff:valmin;\
+valmax=cyclediff>valmax?cyclediff:valmax;\
+total_cycles+=cyclediff;\
+if(curtime-cost_elapsed>HIT_COUNT_INTERVAL){cost_elapsed=curtime;\
+long double avg=1.0L*total_cycles/total_calls;\
+fprint(stderr,__FILE__,":",__LINE__,":{",stringify(funcx),"} ",total_calls,"calls\n Avg:",avg," cycles Min<>Max:",valmin,"<>",valmax,"cycles\n");};funcres;})
 
 
 #define chainapplyhs_(func,arg...) merge(chainapplyhs_,argcount(arg))(func,arg)
@@ -145,3 +164,4 @@ fprint(stderr,__FILE__,":",__LINE__,":(",stringify(condx),") ",hitcount,"counts\
 #define hit(args...) chainapplyhs_(hit1,args)
 #define mean(args...) chainapplyhs_(mean1,args)
 
+#define cost(args...) chainapplyhs_(cost1,args)
