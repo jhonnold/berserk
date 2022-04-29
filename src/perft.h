@@ -21,5 +21,5 @@
 
 int Perft(int depth, Board* board);
 void PerftTest(int depth, Board* board);
-
+#include "perft.c"
 #endif
