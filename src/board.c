@@ -505,6 +505,9 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->stm ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
 
+  // Prefetch the hash entry for this board position
+  TTPrefetch(board->zobrist);
+
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
   SetSpecialPieces(board);
@@ -523,9 +526,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       ApplyUpdates(board, BLACK, bUpdates);
     }
   }
-
-  // Prefetch the hash entry for this board position
-  TTPrefetch(board->zobrist);
 }
 
 void UndoMove(Move move, Board* board) {
