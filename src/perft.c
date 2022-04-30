@@ -24,7 +24,7 @@
 #include "types.h"
 #include "util.h"
 
-size_t Perft(int depth, Board* board) {
+uint64_t Perft(int depth, Board* board) {
   if (depth == 0) return 1;
 
   Move move;
@@ -33,7 +33,7 @@ size_t Perft(int depth, Board* board) {
 
   if (depth == 1) return moves.nTactical + moves.nQuiets;
 
-  size_t nodes = 0;
+  uint64_t nodes = 0;
   while ((move = NextMove(&moves, board, 0))) {
     MakeMoveUpdate(move, board, 0);
     nodes += Perft(depth - 1, board);
@@ -44,7 +44,7 @@ size_t Perft(int depth, Board* board) {
 }
 
 void PerftTest(int depth, Board* board) {
-  size_t total = 0;
+  uint64_t total = 0;
 
   printf("\nRunning performance test to depth %d\n\n", depth);
 
@@ -56,7 +56,7 @@ void PerftTest(int depth, Board* board) {
 
   while ((move = NextMove(&moves, board, 0))) {
     MakeMoveUpdate(move, board, 0);
-    size_t nodes = Perft(depth - 1, board);
+    uint64_t nodes = Perft(depth - 1, board);
     UndoMove(move, board);
 
     printf("%-5s: %" PRIu64 "\n", MoveToStr(move, board), nodes);
