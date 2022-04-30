@@ -19,7 +19,7 @@
 
 #include "types.h"
 
-size_t Perft(int depth, Board* board);
+uint64_t Perft(int depth, Board* board);
 void PerftTest(int depth, Board* board);
 
 #endif
