@@ -42,14 +42,14 @@ BitBoard Threats(Board* board, int stm) {
   int xstm = stm ^ 1;
 
   BitBoard threatened = 0;
-  BitBoard opponentPieces = OccBB(xstm) & ~PieceBB(PAWN, xstm);
+  BitBoard opponentPieces = OccBB(xstm) ^ PieceBB(PAWN, xstm);
 
   BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE))
                                       : ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
   threatened |= pawnAttacks & opponentPieces;
 
   // remove minors
-  opponentPieces &= ~(PieceBB(KNIGHT, xstm) | PieceBB(BISHOP, xstm));
+  opponentPieces ^= PieceBB(KNIGHT, xstm) | PieceBB(BISHOP, xstm);
 
   BitBoard knights = PieceBB(KNIGHT, stm);
   while (knights) threatened |= opponentPieces & GetKnightAttacks(popAndGetLsb(&knights));
@@ -58,7 +58,7 @@ BitBoard Threats(Board* board, int stm) {
   while (bishops) threatened |= opponentPieces & GetBishopAttacks(popAndGetLsb(&bishops), OccBB(BOTH));
 
   // remove rooks
-  opponentPieces &= ~PieceBB(ROOK, xstm);
+  opponentPieces ^= PieceBB(ROOK, xstm);
 
   BitBoard rooks = PieceBB(ROOK, stm);
   while (rooks) threatened |= opponentPieces & GetRookAttacks(popAndGetLsb(&rooks), OccBB(BOTH));
@@ -100,12 +100,12 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   // sf cornered bishop in FRC
   if (CHESS_960) score += FRCCorneredBishop(board);
-  
+
   // static contempt
   score += data->contempt[board->stm];
 
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
-  
+
   return min(TB_WIN_BOUND - 1, max(-TB_WIN_BOUND + 1, score));
 }

@@ -183,17 +183,13 @@ void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
   int16_t* output = board->accumulators[stm][board->ply];
   int16_t* prev = board->accumulators[stm][board->ply - 1];
 
-  if (updates->nr) {
-    for (int j = 0; j < N_HIDDEN; j++) output[j] = prev[j] - INPUT_WEIGHTS[updates->removals[0] * N_HIDDEN + j];
+  for (int j = 0; j < N_HIDDEN; j++) output[j] = prev[j] - INPUT_WEIGHTS[updates->removals[0] * N_HIDDEN + j];
 
-    for (int i = 1; i < updates->nr; i++)
-      for (int j = 0; j < N_HIDDEN; j++) output[j] -= INPUT_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
+  for (int i = 1; i < updates->nr; i++)
+    for (int j = 0; j < N_HIDDEN; j++) output[j] -= INPUT_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
 
-    for (int i = 0; i < updates->na; i++)
-      for (int j = 0; j < N_HIDDEN; j++) output[j] += INPUT_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
-  } else {
-    memcpy(output, prev, sizeof(Accumulator));
-  }
+  for (int i = 0; i < updates->na; i++)
+    for (int j = 0; j < N_HIDDEN; j++) output[j] += INPUT_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
 }
 
 INLINE int32_t LoadWeight(float v, int precision) { return round(v * precision); }
