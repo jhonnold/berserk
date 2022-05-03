@@ -24,7 +24,9 @@
 extern const int CHAR_TO_PIECE[];
 extern const char* PIECE_TO_CHAR;
 extern const char* PROMOTION_TO_CHAR;
-extern const char* SQ_TO_COORD[];
+extern const char* SQ_TO_COORD[64];
+extern const int CASTLE_ROOK_DEST[64];
+extern const int CASTLING_ROOK[64];
 
 #define BuildMove(from, to, piece, promo, cap, dub, ep, castle)                                             \
   (from) | ((to) << 6) | ((piece) << 12) | ((promo) << 16) | ((cap) << 20) | ((dub) << 21) | ((ep) << 22) | \

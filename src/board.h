@@ -31,8 +31,7 @@
 #define Rank(sq) ((sq) >> 3)
 #define Sq(r, f) ((r)*8 + (f))
 
-extern const int8_t PSQT[];
-extern const int16_t PC_FEATURE_OFFSET[2][12];
+extern const int8_t PSQT[64];
 
 extern const uint64_t PIECE_COUNT_IDX[];
 
@@ -63,12 +62,32 @@ void UndoMove(Move move, Board* board);
 int IsMoveLegal(Move move, Board* board);
 int MoveIsLegal(Move move, Board* board);
 
-INLINE int KingIdx(int k, int s) { return 2 * ((k & 4) == (s & 4)) + ((k & 32) == (s & 32)); }
+INLINE int MoveRequiresRefresh(int piece, int from, int to) {
+  if (PieceType(piece) != KING) return 0;
+
+  return (from & 4) != (to & 4) || (from & 32) != (to & 32);
+}
+
+INLINE int KingQuadrant(int k, int s) {
+  int file = ~(k ^ s) & 4;
+  int rank = ~(k ^ s) & 32;
+
+  return (file >> 1) | (rank >> 5);
+}
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int perspective) {
-  return PC_FEATURE_OFFSET[perspective][piece]        // Base piece offset
-         + KingIdx(kingsq, sq) * 32                   // index based on same side as king
-         + PSQT[sq ^ (56 * (perspective == WHITE))];  // convert square to half psqt
+  int color = piece & 1;
+  int pc = PieceType(piece);
+
+  if (perspective == WHITE)
+    sq ^= 56, kingsq ^= 56;
+  else
+    color ^= 1;
+
+  return color * 6 * 4 * 32               //
+         + pc * 4 * 32                    //
+         + KingQuadrant(kingsq, sq) * 32  //
+         + PSQT[sq];
 }
 
 #endif

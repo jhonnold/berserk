@@ -32,7 +32,7 @@
 #include "uci.h"
 #include "zobrist.h"
 
-const int8_t PSQT[] = {
+const int8_t PSQT[64] = {
     0,  1,  2,  3,  3,  2,  1,  0,   // 1
     4,  5,  6,  7,  7,  6,  5,  4,   // 2
     8,  9,  10, 11, 11, 10, 9,  8,   // 3
@@ -42,35 +42,6 @@ const int8_t PSQT[] = {
     24, 25, 26, 27, 27, 26, 25, 24,  // 7
     28, 29, 30, 31, 31, 30, 29, 28   // 8
 };
-
-const int16_t PC_FEATURE_OFFSET[2][12] = {{
-                                              0,     // WHITE_PAWN
-                                              768,   // BLACK_PAWN
-                                              128,   // WHITE_KNIGHT
-                                              896,   // BLACK_KNIGHT
-                                              256,   // WHITE_BISHOP
-                                              1024,  // BLACK_BISHOP
-                                              384,   // WHITE_ROOK
-                                              1152,  // BLACK_ROOK
-                                              512,   // WHITE_QUEEN
-                                              1280,  // BLACK_QUEEN
-                                              640,   // WHITE_KING
-                                              1408,  // BLACK_KING
-                                          },
-                                          {
-                                              768,   // BLACK_PAWN
-                                              0,     // WHITE_PAWN
-                                              896,   // BLACK_KNIGHT
-                                              128,   // WHITE_KNIGHT
-                                              1024,  // BLACK_BISHOP
-                                              256,   // WHITE_BISHOP
-                                              1152,  // BLACK_ROOK
-                                              384,   // WHITE_ROOK
-                                              1280,  // BLACK_QUEEN
-                                              512,   // WHITE_QUEEN
-                                              1408,  // BLACK_KING
-                                              640,   // WHITE_KING
-                                          }};
 
 // piece count key bit mask idx
 const uint64_t PIECE_COUNT_IDX[] = {1ULL << 0,  1ULL << 4,  1ULL << 8,  1ULL << 12, 1ULL << 16,
@@ -436,60 +407,24 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   }
 
   if (castle) {
-    // move the rook during a castle, the king encoding is handled automatically
-    if (to == G1) {
-      flipBits(PieceBB(ROOK, WHITE), board->castleRooks[0], F1);
+    int rookFrom = board->castleRooks[CASTLING_ROOK[to]];
+    int rookTo = CASTLE_ROOK_DEST[to];
+    int rook = Piece(ROOK, board->stm);
 
-      if (board->castleRooks[0] != to) board->squares[board->castleRooks[0]] = NO_PIECE;
-      board->squares[F1] = WHITE_ROOK;
+    flipBits(PieceBB(ROOK, board->stm), rookFrom, rookTo);
 
-      board->zobrist ^= ZOBRIST_PIECES[WHITE_ROOK][board->castleRooks[0]];
-      board->zobrist ^= ZOBRIST_PIECES[WHITE_ROOK][F1];
+    // chess960 can have the king going where the rook started
+    // do this check to prevent accidental wipe outs
+    if (rookFrom != to) board->squares[rookFrom] = NO_PIECE;
+    board->squares[rookTo] = rook;
 
-      AddRemoval(FeatureIdx(WHITE_ROOK, board->castleRooks[0], wkingSq, WHITE), wUpdates);
-      AddRemoval(FeatureIdx(WHITE_ROOK, board->castleRooks[0], bkingSq, BLACK), bUpdates);
-      AddAddition(FeatureIdx(WHITE_ROOK, F1, wkingSq, WHITE), wUpdates);
-      AddAddition(FeatureIdx(WHITE_ROOK, F1, bkingSq, BLACK), bUpdates);
-    } else if (to == C1) {
-      flipBits(PieceBB(ROOK, WHITE), board->castleRooks[1], D1);
+    board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom];
+    board->zobrist ^= ZOBRIST_PIECES[rook][rookTo];
 
-      if (board->castleRooks[1] != to) board->squares[board->castleRooks[1]] = NO_PIECE;
-      board->squares[D1] = WHITE_ROOK;
-
-      board->zobrist ^= ZOBRIST_PIECES[WHITE_ROOK][board->castleRooks[1]];
-      board->zobrist ^= ZOBRIST_PIECES[WHITE_ROOK][D1];
-
-      AddRemoval(FeatureIdx(WHITE_ROOK, board->castleRooks[1], wkingSq, WHITE), wUpdates);
-      AddRemoval(FeatureIdx(WHITE_ROOK, board->castleRooks[1], bkingSq, BLACK), bUpdates);
-      AddAddition(FeatureIdx(WHITE_ROOK, D1, wkingSq, WHITE), wUpdates);
-      AddAddition(FeatureIdx(WHITE_ROOK, D1, bkingSq, BLACK), bUpdates);
-    } else if (to == G8) {
-      flipBits(PieceBB(ROOK, BLACK), board->castleRooks[2], F8);
-
-      if (board->castleRooks[2] != to) board->squares[board->castleRooks[2]] = NO_PIECE;
-      board->squares[F8] = BLACK_ROOK;
-
-      board->zobrist ^= ZOBRIST_PIECES[BLACK_ROOK][board->castleRooks[2]];
-      board->zobrist ^= ZOBRIST_PIECES[BLACK_ROOK][F8];
-
-      AddRemoval(FeatureIdx(BLACK_ROOK, board->castleRooks[2], wkingSq, WHITE), wUpdates);
-      AddRemoval(FeatureIdx(BLACK_ROOK, board->castleRooks[2], bkingSq, BLACK), bUpdates);
-      AddAddition(FeatureIdx(BLACK_ROOK, F8, wkingSq, WHITE), wUpdates);
-      AddAddition(FeatureIdx(BLACK_ROOK, F8, bkingSq, BLACK), bUpdates);
-    } else if (to == C8) {
-      flipBits(PieceBB(ROOK, BLACK), board->castleRooks[3], D8);
-
-      if (board->castleRooks[3] != to) board->squares[board->castleRooks[3]] = NO_PIECE;
-      board->squares[D8] = BLACK_ROOK;
-
-      board->zobrist ^= ZOBRIST_PIECES[BLACK_ROOK][board->castleRooks[3]];
-      board->zobrist ^= ZOBRIST_PIECES[BLACK_ROOK][D8];
-
-      AddRemoval(FeatureIdx(BLACK_ROOK, board->castleRooks[3], wkingSq, WHITE), wUpdates);
-      AddRemoval(FeatureIdx(BLACK_ROOK, board->castleRooks[3], bkingSq, BLACK), bUpdates);
-      AddAddition(FeatureIdx(BLACK_ROOK, D8, wkingSq, WHITE), wUpdates);
-      AddAddition(FeatureIdx(BLACK_ROOK, D8, bkingSq, BLACK), bUpdates);
-    }
+    AddRemoval(FeatureIdx(rook, rookFrom, wkingSq, WHITE), wUpdates);
+    AddRemoval(FeatureIdx(rook, rookFrom, bkingSq, BLACK), bUpdates);
+    AddAddition(FeatureIdx(rook, rookTo, wkingSq, WHITE), wUpdates);
+    AddAddition(FeatureIdx(rook, rookTo, bkingSq, BLACK), bUpdates);
   }
 
   board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
@@ -513,7 +448,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    if ((piece == WHITE_KING || piece == BLACK_KING) && ((from & 4) != (to & 4) || (from & 32) != (to & 32))) {
+    if (MoveRequiresRefresh(piece, from, to)) {
       if (piece == WHITE_KING) {
         RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
         ApplyUpdates(board, BLACK, bUpdates);
@@ -588,29 +523,13 @@ void UndoMove(Move move, Board* board) {
   }
 
   if (castle) {
-    // put the rook back
-    if (to == G1) {
-      flipBits(PieceBB(ROOK, WHITE), F1, board->castleRooks[0]);
+    int rookFrom = board->castleRooks[CASTLING_ROOK[to]];
+    int rookTo = CASTLE_ROOK_DEST[to];
+    int rook = Piece(ROOK, board->stm);
 
-      if (from != F1) board->squares[F1] = NO_PIECE;
-
-      board->squares[board->castleRooks[0]] = WHITE_ROOK;
-    } else if (to == C1) {
-      flipBits(PieceBB(ROOK, WHITE), D1, board->castleRooks[1]);
-
-      if (from != D1) board->squares[D1] = NO_PIECE;
-      board->squares[board->castleRooks[1]] = WHITE_ROOK;
-    } else if (to == G8) {
-      flipBits(PieceBB(ROOK, BLACK), F8, board->castleRooks[2]);
-
-      if (from != F8) board->squares[F8] = NO_PIECE;
-      board->squares[board->castleRooks[2]] = BLACK_ROOK;
-    } else if (to == C8) {
-      flipBits(PieceBB(ROOK, BLACK), D8, board->castleRooks[3]);
-
-      if (from != D8) board->squares[D8] = NO_PIECE;
-      board->squares[board->castleRooks[3]] = BLACK_ROOK;
-    }
+    flipBits(PieceBB(ROOK, board->stm), rookTo, rookFrom);
+    if (from != rookTo) board->squares[rookTo] = NO_PIECE;
+    board->squares[rookFrom] = rook;
   }
 
   SetOccupancies(board);

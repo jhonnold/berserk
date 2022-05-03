@@ -24,15 +24,48 @@
 #include "types.h"
 #include "uci.h"
 
-const int CHAR_TO_PIECE[] = {['P'] = 0, ['N'] = 2, ['B'] = 4, ['R'] = 6, ['Q'] = 8, ['K'] = 10,
-                             ['p'] = 1, ['n'] = 3, ['b'] = 5, ['r'] = 7, ['q'] = 9, ['k'] = 11};
 const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
+
 const char* PROMOTION_TO_CHAR = "ppnnbbrrqqkk";
-const char* SQ_TO_COORD[] = {
-    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8", "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6", "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4", "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2", "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+
+const int CHAR_TO_PIECE[] = {
+    ['P'] = WHITE_PAWN,    //
+    ['N'] = WHITE_KNIGHT,  //
+    ['B'] = WHITE_BISHOP,  //
+    ['R'] = WHITE_ROOK,    //
+    ['Q'] = WHITE_QUEEN,   //
+    ['K'] = WHITE_KING,    //
+    ['p'] = BLACK_PAWN,    //
+    ['n'] = BLACK_KNIGHT,  //
+    ['b'] = BLACK_BISHOP,  //
+    ['r'] = BLACK_ROOK,    //
+    ['q'] = BLACK_QUEEN,   //
+    ['k'] = BLACK_KING,    //
+};
+
+const char* SQ_TO_COORD[64] = {
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",  //
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",  //
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",  //
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",  //
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",  //
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",  //
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",  //
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",  //
+};
+
+const int CASTLING_ROOK[64] = {
+    [G1] = 0,
+    [C1] = 1,
+    [G8] = 2,
+    [C8] = 3,
+};
+
+const int CASTLE_ROOK_DEST[64] = {
+    [G1] = F1,
+    [C1] = D1,
+    [G8] = F8,
+    [C8] = D8,
 };
 
 Move ParseMove(char* moveStr, Board* board) {
@@ -51,24 +84,8 @@ char* MoveToStr(Move move, Board* board) {
   int from = From(move);
   int to = To(move);
 
-  if (CHESS_960 && IsCas(move)) {
-    switch (to) {
-      case G1:
-        to = board->castleRooks[0];
-        break;
-      case C1:
-        to = board->castleRooks[1];
-        break;
-      case G8:
-        to = board->castleRooks[2];
-        break;
-      case C8:
-        to = board->castleRooks[3];
-        break;
-      default:
-        break;
-    }
-  }
+  if (CHESS_960 && IsCas(move))
+    to = board->castleRooks[CASTLING_ROOK[to]];
 
   if (Promo(move)) {
     sprintf(buffer, "%s%s%c", SQ_TO_COORD[from], SQ_TO_COORD[to], PROMOTION_TO_CHAR[Promo(move)]);
