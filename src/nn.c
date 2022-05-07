@@ -37,7 +37,7 @@
 #define EVALFILE "default.nn"
 #endif
 
-uint64_t DEFAULT_NN_HASH = UINT64_MAX;
+uint64_t NN_HASH = UINT64_MAX;
 
 INCBIN(Embed, EVALFILE);
 
@@ -192,15 +192,22 @@ void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
     for (int j = 0; j < N_HIDDEN; j++) output[j] += INPUT_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
 }
 
+const size_t NETWORK_SIZE = sizeof(char) * 4 // BRKR
+  + sizeof(uint64_t) // Hash
+  + sizeof(float) * N_FEATURES * N_HIDDEN // input weights
+  + sizeof(float) * N_HIDDEN // input biases
+  + sizeof(float) * 2 * N_HIDDEN // output weights
+  + sizeof(float); // output bias
+
 INLINE int32_t LoadWeight(float v, int precision) { return round(v * precision); }
 
-void LoadDefaultNN() {
-  if (EmbedData[0] != 'B' || EmbedData[1] != 'R' || EmbedData[2] != 'K' || EmbedData[3] != 'R')
-    printf("info string Berserk was not built using a standard net, use with caution!\n");
+INLINE void CopyData(const unsigned char* in) {
+  if (in[0] != 'B' || in[1] != 'R' || in[2] != 'K' || in[3] != 'R')
+    printf("info string Berserk is not using a standard net, use with caution!\n");
 
-  DEFAULT_NN_HASH = *((uint64_t*)(EmbedData + 4));
+  NN_HASH = *((uint64_t*)(in + 4));
 
-  float* data = (float*)EmbedData + 3;  // Skip the 4 byte magic and 8 byte hash
+  float* data = (float*)in + 3;  // Skip the 4 byte magic and 8 byte hash
 
   for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) INPUT_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_IN);
 
@@ -209,4 +216,29 @@ void LoadDefaultNN() {
   for (int j = 0; j < N_HIDDEN * 2; j++) OUTPUT_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_OUT);
 
   OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
+}
+
+void LoadDefaultNN() {
+  CopyData(EmbedData);
+}
+
+int LoadNetwork(char* path) {
+  FILE* fin = fopen(path, "rb");
+  if (fin == NULL) {
+    printf("info string Unable to read file at %s\n", path);
+    return 0;
+  }
+
+  uint8_t* data = malloc(NETWORK_SIZE);
+  if (fread(data, sizeof(uint8_t), NETWORK_SIZE, fin) != NETWORK_SIZE) {
+    printf("info string Error reading file at %s\n", path);
+    return 0;
+  }
+
+  CopyData(data);
+
+  fclose(fin);
+  free(data);
+
+  return 1;
 }

@@ -205,7 +205,7 @@ void ParsePosition(char* in, Board* board) {
 }
 
 void PrintUCIOptions() {
-  printf("id name Berserk " VERSION " NN (%" PRIx64 ")\n", DEFAULT_NN_HASH);
+  printf("id name Berserk " VERSION " NN (%" PRIx64 ")\n", NN_HASH);
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 65536\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
@@ -217,6 +217,7 @@ void PrintUCIOptions() {
   printf("option name UCI_Chess960 type check default false\n");
   printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
   printf("option name Contempt type spin default 12 min -100 max 100\n");
+  printf("option name EvalFile type string default <empty>\n");
   printf("uciok\n");
 }
 
@@ -383,6 +384,18 @@ void UCILoop() {
       MOVE_OVERHEAD = min(10000, max(100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
       CONTEMPT = min(100, max(-100, GetOptionIntValue(in)));
+    } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
+      char* path = in + 30;
+      int success = 0;
+
+      if (strncmp(path, "<empty>", 7))
+        success = LoadNetwork(path);
+      else {
+        LoadDefaultNN();
+        success = 1;
+      }
+
+      if (success) printf("info string set EvalFile to value %s\n", path);
     }
   }
 }

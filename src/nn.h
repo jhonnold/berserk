@@ -18,7 +18,7 @@
 #include "types.h"
 #include "util.h"
 
-extern uint64_t DEFAULT_NN_HASH;
+extern uint64_t NN_HASH;
 extern const int QUANTIZATION_PRECISION_IN;
 extern const int QUANTIZATION_PRECISION_OUT;
 
@@ -32,6 +32,7 @@ int OutputLayer(Accumulator stm, Accumulator xstm);
 
 int Predict(Board* board);
 void LoadDefaultNN();
+int LoadNetwork(char* path);
 
 INLINE void AddAddition(int f, NNUpdate* updates) { updates->additions[updates->na++] = f; }
 
