@@ -111,24 +111,24 @@ void ParseFen(char* fen, Board* board) {
   while (*fen != ' ') {
     if (*fen == 'K') {
       board->castling |= 8;
-      board->castleRooks[0] = msb(PieceBB(ROOK, WHITE) & RANK_1);
+      board->cr[0] = msb(PieceBB(ROOK, WHITE) & RANK_1);
     } else if (*fen == 'Q') {
       board->castling |= 4;
-      board->castleRooks[1] = lsb(PieceBB(ROOK, WHITE) & RANK_1);
+      board->cr[1] = lsb(PieceBB(ROOK, WHITE) & RANK_1);
     } else if (*fen >= 'A' && *fen <= 'H') {
       int file = *fen - 'A';
       board->castling |= (file > whiteKingFile ? 8 : 4);
-      board->castleRooks[file > whiteKingFile ? 0 : 1] = A1 + file;
+      board->cr[file > whiteKingFile ? 0 : 1] = A1 + file;
     } else if (*fen == 'k') {
       board->castling |= 2;
-      board->castleRooks[2] = msb(PieceBB(ROOK, BLACK) & RANK_8);
+      board->cr[2] = msb(PieceBB(ROOK, BLACK) & RANK_8);
     } else if (*fen == 'q') {
       board->castling |= 1;
-      board->castleRooks[3] = lsb(PieceBB(ROOK, BLACK) & RANK_8);
+      board->cr[3] = lsb(PieceBB(ROOK, BLACK) & RANK_8);
     } else if (*fen >= 'a' && *fen <= 'h') {
       int file = *fen - 'a';
       board->castling |= (file > blackKingFile ? 2 : 1);
-      board->castleRooks[file > blackKingFile ? 2 : 3] = A8 + file;
+      board->cr[file > blackKingFile ? 2 : 3] = A8 + file;
     }
 
     fen++;
@@ -141,13 +141,13 @@ void ParseFen(char* fen, Board* board) {
       board->castlingRights[i] &= 3;
     else if (i == blackKing)
       board->castlingRights[i] &= 12;
-    else if (i == board->castleRooks[0] && (board->castling & 8))
+    else if (i == board->cr[0] && (board->castling & 8))
       board->castlingRights[i] ^= 8;
-    else if (i == board->castleRooks[1] && (board->castling & 4))
+    else if (i == board->cr[1] && (board->castling & 4))
       board->castlingRights[i] ^= 4;
-    else if (i == board->castleRooks[2] && (board->castling & 2))
+    else if (i == board->cr[2] && (board->castling & 2))
       board->castlingRights[i] ^= 2;
-    else if (i == board->castleRooks[3] && (board->castling & 1))
+    else if (i == board->cr[3] && (board->castling & 1))
       board->castlingRights[i] ^= 1;
   }
 
@@ -200,10 +200,10 @@ void BoardToFen(char* fen, Board* board) {
   *fen++ = ' ';
 
   if (board->castling) {
-    if (board->castling & 0x8) *fen++ = CHESS_960 ? 'A' + File(board->castleRooks[0]) : 'K';
-    if (board->castling & 0x4) *fen++ = CHESS_960 ? 'A' + File(board->castleRooks[1]) : 'Q';
-    if (board->castling & 0x2) *fen++ = CHESS_960 ? 'a' + File(board->castleRooks[2]) : 'k';
-    if (board->castling & 0x1) *fen++ = CHESS_960 ? 'a' + File(board->castleRooks[3]) : 'q';
+    if (board->castling & 0x8) *fen++ = CHESS_960 ? 'A' + File(board->cr[0]) : 'K';
+    if (board->castling & 0x4) *fen++ = CHESS_960 ? 'A' + File(board->cr[1]) : 'Q';
+    if (board->castling & 0x2) *fen++ = CHESS_960 ? 'a' + File(board->cr[2]) : 'k';
+    if (board->castling & 0x1) *fen++ = CHESS_960 ? 'a' + File(board->cr[3]) : 'q';
   } else {
     *fen++ = '-';
   }
@@ -287,7 +287,7 @@ inline void SetSpecialPieces(Board* board) {
       int sq = lsb(enemyPiece);
 
       // is something in the way
-      BitBoard blockers = GetInBetweenSquares(kingSq, sq) & OccBB(BOTH);
+      BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(BOTH);
 
       if (!blockers)
         // no? then its check
@@ -407,7 +407,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   }
 
   if (castle) {
-    int rookFrom = board->castleRooks[CASTLING_ROOK[to]];
+    int rookFrom = board->cr[CASTLING_ROOK[to]];
     int rookTo = CASTLE_ROOK_DEST[to];
     int rook = Piece(ROOK, board->stm);
 
@@ -523,7 +523,7 @@ void UndoMove(Move move, Board* board) {
   }
 
   if (castle) {
-    int rookFrom = board->castleRooks[CASTLING_ROOK[to]];
+    int rookFrom = board->cr[CASTLING_ROOK[to]];
     int rookTo = CASTLE_ROOK_DEST[to];
     int rook = Piece(ROOK, board->stm);
 
@@ -650,10 +650,10 @@ int MoveIsLegal(Move move, Board* board) {
   if (IsCas(move) && (PieceType(piece) != KING || IsCap(move))) return 0;
 
   BitBoard possible = -1ULL;
-  if (getBit(board->pinned, from)) possible &= GetPinnedMovementSquares(from, lsb(PieceBB(KING, board->stm)));
+  if (getBit(board->pinned, from)) possible &= PinnedMoves(from, lsb(PieceBB(KING, board->stm)));
 
   if (board->checkers)
-    possible &= GetInBetweenSquares(lsb(board->checkers), lsb(PieceBB(KING, board->stm))) | board->checkers;
+    possible &= BetweenSquares(lsb(board->checkers), lsb(PieceBB(KING, board->stm))) | board->checkers;
 
   if (bits(board->checkers) > 1 && PieceType(piece) != KING) return 0;
 
@@ -706,41 +706,41 @@ int MoveIsLegal(Move move, Board* board) {
     if (to == G1) {
       if (!(board->castling & 0x8)) return 0;
 
-      if (getBit(board->pinned, board->castleRooks[0])) return 0;
+      if (getBit(board->pinned, board->cr[0])) return 0;
 
       BitBoard between =
-          GetInBetweenSquares(kingSq, G1) | GetInBetweenSquares(board->castleRooks[0], F1) | bit(G1) | bit(F1);
-      if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->castleRooks[0])) & between) return 0;
+          BetweenSquares(kingSq, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
+      if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[0])) & between) return 0;
     }
 
     if (to == C1) {
       if (!(board->castling & 0x4)) return 0;
 
-      if (getBit(board->pinned, board->castleRooks[1])) return 0;
+      if (getBit(board->pinned, board->cr[1])) return 0;
 
       BitBoard between =
-          GetInBetweenSquares(kingSq, C1) | GetInBetweenSquares(board->castleRooks[1], D1) | bit(C1) | bit(D1);
-      if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->castleRooks[1])) & between) return 0;
+          BetweenSquares(kingSq, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
+      if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[1])) & between) return 0;
     }
 
     if (to == G8) {
       if (!(board->castling & 0x2)) return 0;
 
-      if (getBit(board->pinned, board->castleRooks[2])) return 0;
+      if (getBit(board->pinned, board->cr[2])) return 0;
 
       BitBoard between =
-          GetInBetweenSquares(kingSq, G8) | GetInBetweenSquares(board->castleRooks[2], F8) | bit(G8) | bit(F8);
-      if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->castleRooks[2])) & between) return 0;
+          BetweenSquares(kingSq, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
+      if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[2])) & between) return 0;
     }
 
     if (to == C8) {
       if (!(board->castling & 0x1)) return 0;
 
-      if (getBit(board->pinned, board->castleRooks[3])) return 0;
+      if (getBit(board->pinned, board->cr[3])) return 0;
 
       BitBoard between =
-          GetInBetweenSquares(kingSq, C8) | GetInBetweenSquares(board->castleRooks[3], D8) | bit(C8) | bit(D8);
-      if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->castleRooks[3])) & between) return 0;
+          BetweenSquares(kingSq, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
+      if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[3])) & between) return 0;
     }
   }
 

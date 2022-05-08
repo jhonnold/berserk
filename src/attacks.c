@@ -144,9 +144,9 @@ void InitPinnedMovementSquares() {
   }
 }
 
-inline BitBoard GetInBetweenSquares(int from, int to) { return BETWEEN_SQS[from][to]; }
+inline BitBoard BetweenSquares(int from, int to) { return BETWEEN_SQS[from][to]; }
 
-inline BitBoard GetPinnedMovementSquares(int p, int k) { return PINNED_MOVES[p][k]; }
+inline BitBoard PinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
 
 BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   BitBoard attacks = 0, board = 0;
@@ -458,6 +458,23 @@ inline BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
 }
 
 inline BitBoard GetKingAttacks(int sq) { return KING_ATTACKS[sq]; }
+
+inline BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
+  switch (type) {
+    case KNIGHT:
+      return GetKnightAttacks(sq);
+    case BISHOP:
+      return GetBishopAttacks(sq, occupancy);
+    case ROOK:
+      return GetRookAttacks(sq, occupancy);
+    case QUEEN:
+      return GetQueenAttacks(sq, occupancy);
+    case KING:
+      return GetKingAttacks(sq);
+  }
+
+  return 0;
+}
 
 // get a bitboard of ALL pieces attacking a given square
 inline BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {

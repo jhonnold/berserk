@@ -28,9 +28,8 @@ extern const char* SQ_TO_COORD[64];
 extern const int CASTLE_ROOK_DEST[64];
 extern const int CASTLING_ROOK[64];
 
-#define BuildMove(from, to, piece, promo, cap, dub, ep, castle)                                             \
-  (from) | ((to) << 6) | ((piece) << 12) | ((promo) << 16) | ((cap) << 20) | ((dub) << 21) | ((ep) << 22) | \
-      ((castle) << 23)
+#define BuildMove(from, to, piece, promo, flags) \
+  (from) | ((to) << 6) | ((piece) << 12) | ((promo) << 16) | ((flags) << 20)
 #define From(move) ((int)(move)&0x3f)
 #define To(move) (((int)(move)&0xfc0) >> 6)
 #define Moving(move) (((int)(move)&0xf000) >> 12)
