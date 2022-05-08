@@ -680,7 +680,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   }
 
   Move bestMove = NULL_MOVE;
-  int origAlpha = alpha;
   int bestScore = -CHECKMATE + data->ply;
 
   // pull cached eval if it exists
@@ -728,7 +727,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
     }
   }
 
-  int TTFlag = bestScore >= beta ? TT_LOWER : bestScore <= origAlpha ? TT_UPPER : TT_EXACT;
+  int TTFlag = bestScore >= beta ? TT_LOWER : TT_UPPER;
   TTPut(board->zobrist, 0, bestScore, TTFlag, bestMove, data->ply, data->evals[data->ply]);
 
   return bestScore;
