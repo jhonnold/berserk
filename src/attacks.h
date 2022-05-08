@@ -61,8 +61,8 @@ BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks);
 
 uint64_t FindMagicNumber(int sq, int n, int bishop);
 
-BitBoard GetInBetweenSquares(int from, int to);
-BitBoard GetPinnedMovementSquares(int p, int k);
+BitBoard BetweenSquares(int from, int to);
+BitBoard PinnedMoves(int p, int k);
 
 BitBoard GetPawnAttacks(int sq, int color);
 BitBoard GetKnightAttacks(int sq);
@@ -70,6 +70,7 @@ BitBoard GetBishopAttacks(int sq, BitBoard occupancy);
 BitBoard GetRookAttacks(int sq, BitBoard occupancy);
 BitBoard GetQueenAttacks(int sq, BitBoard occupancy);
 BitBoard GetKingAttacks(int sq);
+BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type);
 BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ);
 
 #endif

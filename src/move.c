@@ -85,7 +85,7 @@ char* MoveToStr(Move move, Board* board) {
   int to = To(move);
 
   if (CHESS_960 && IsCas(move))
-    to = board->castleRooks[CASTLING_ROOK[to]];
+    to = board->cr[CASTLING_ROOK[to]];
 
   if (Promo(move)) {
     sprintf(buffer, "%s%s%c", SQ_TO_COORD[from], SQ_TO_COORD[to], PROMOTION_TO_CHAR[Promo(move)]);

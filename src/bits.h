@@ -65,6 +65,18 @@
 #define ShiftNW(bb) (((bb) & ~A_FILE) >> 9)
 #define ShiftSE(bb) (((bb) & ~H_FILE) << 9)
 
+INLINE BitBoard ShiftPawnDir(BitBoard bb, const int c) {
+  return c == WHITE ? ShiftN(bb) : ShiftS(bb);
+}
+
+INLINE BitBoard ShiftPawnCapW(BitBoard bb, const int c) {
+  return c == WHITE ? ShiftNW(bb) : ShiftSW(bb);
+}
+
+INLINE BitBoard ShiftPawnCapE(BitBoard bb, const int c) {
+  return c == WHITE ? ShiftNE(bb) : ShiftSE(bb);
+}
+
 INLINE int popAndGetLsb(BitBoard* bb) {
   int sq = lsb(*bb);
   popLsb(*bb);

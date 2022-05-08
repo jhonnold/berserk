@@ -21,6 +21,7 @@
 
 #include "board.h"
 #include "move.h"
+#include "movegen.h"
 #include "pyrrhic/tbprobe.h"
 
 #define vf(bb) __builtin_bswap64((bb))
@@ -43,13 +44,20 @@ Move TBRootProbe(Board* board) {
   unsigned ep = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
   int piece = board->squares[from];
-  int capture = !!board->squares[to];
+  int capture = board->squares[to] != NO_PIECE;
+  int promoPiece = promo ? Piece(KING - promo, board->stm) : 0;
 
-  int promoPieces[5] = {0, Piece(QUEEN, board->stm), Piece(ROOK, board->stm), Piece(BISHOP, board->stm),
-                        Piece(KNIGHT, board->stm)};
+  int flags = QUIET;
+  if (ep)
+    flags = EP;
+  else if (capture)
+    flags = CAPTURE;
+  else if (PieceType(piece) == PAWN && (from ^ to) == 16)
+    flags = DP;
 
-  return BuildMove(from, to, piece, promoPieces[promo], capture,
-                   PieceType(piece) == PAWN && abs((int)from - (int)to) == 2, ep, 0);
+  printf("0x%08x\n", flags);
+
+  return BuildMove(from, to, piece, promoPiece, flags);
 }
 
 unsigned TBProbe(Board* board) {

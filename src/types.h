@@ -68,7 +68,7 @@ typedef struct {
   BitBoard occupancies[3];  // 0 - white pieces, 1 - black pieces, 2 - both
   BitBoard pieces[13];      // individual piece data
 
-  int castleRooks[4];
+  int cr[4];
   int castlingRights[64];
 
   // data that is hard to track, so it is "remembered" when search undoes moves
