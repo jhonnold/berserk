@@ -9,7 +9,7 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     
     steps:
     - uses: actions/checkout@v2
@@ -22,37 +22,3 @@ jobs:
         ./src/berserk bench > output
         real=$(grep 'Results:' output | grep -Po '(?<=[\s]{5})[0-9]+?(?= nodes)')
         if [[ "$bench" != "$real" ]]; then echo "got $real, expected $bench" && exit 1; fi
-  
-  bench-windows:
-    name: Bench ${{matrix.os}}
-    runs-on: ${{matrix.os}}
-    strategy:
-      matrix:
-        config:
-          - { system: mingw64, package: x86_64-gcc, compiler: gcc }
-        os: [windows-latest]
-    
-    steps:
-      - uses: actions/checkout@v2
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: ${{matrix.config.system}}
-          install: mingw-w64-${{matrix.config.package}} make git
-
-      - name: Add compiler to $PATH env
-        shell: bash
-        run: echo "PATH=$PATH:/c/msys64/${{ matrix.config.system }}/bin" >> $GITHUB_ENV
-
-      - name: Create build
-        shell: msys2 {0}
-        run: cd src && make basic
-
-      - name: Bench
-        run: |
-          bench=$(git show --summary | grep -Po '(?<=Bench: )[0-9]+?(?=$)')
-          ./src/berserk bench > output
-          real=$(grep 'Results:' output | grep -Po '(?<=[\s]{5})[0-9]+?(?= nodes)')
-          if [[ "$bench" != "$real" ]]; then echo "got $real, expected $bench" && exit 1; fi
-
-      
-      
