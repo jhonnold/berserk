@@ -33,10 +33,6 @@
 #define INCBIN_STYLE INCBIN_STYLE_CAMEL
 #include "incbin.h"
 
-#ifndef EVALFILE
-#define EVALFILE "default.nn"
-#endif
-
 uint64_t NN_HASH = UINT64_MAX;
 
 INCBIN(Embed, EVALFILE);

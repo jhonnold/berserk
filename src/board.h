@@ -32,6 +32,7 @@
 #define Sq(r, f) ((r)*8 + (f))
 
 extern const int8_t PSQT[64];
+extern const uint16_t KING_BUCKETS[64];
 
 extern const uint64_t PIECE_COUNT_IDX[];
 
@@ -65,29 +66,17 @@ int MoveIsLegal(Move move, Board* board);
 INLINE int MoveRequiresRefresh(int piece, int from, int to) {
   if (PieceType(piece) != KING) return 0;
 
-  return (from & 4) != (to & 4) || (from & 32) != (to & 32);
+  return KING_BUCKETS[from] != KING_BUCKETS[to];
 }
 
-INLINE int KingQuadrant(int k, int s) {
-  int file = ~(k ^ s) & 4;
-  int rank = ~(k ^ s) & 32;
+INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
+  int oP = 6 * ((piece ^ view) & 0x1) + PieceType(piece);
+  int oK = (7 * !(kingsq & 4)) ^ (56 * view) ^ kingsq;
+  int oSq = (7 * !(kingsq & 4)) ^ (56 * view) ^ sq;
 
-  return (file >> 1) | (rank >> 5);
-}
-
-INLINE int FeatureIdx(int piece, int sq, int kingsq, const int perspective) {
-  int color = piece & 1;
-  int pc = PieceType(piece);
-
-  if (perspective == WHITE)
-    sq ^= 56, kingsq ^= 56;
-  else
-    color ^= 1;
-
-  return color * 6 * 4 * 32               //
-         + pc * 4 * 32                    //
-         + KingQuadrant(kingsq, sq) * 32  //
-         + PSQT[sq];
+  return oP * 2 * 64 //
+    + KING_BUCKETS[oK] * 64 //
+    + oSq;
 }
 
 #endif
