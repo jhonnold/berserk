@@ -29,9 +29,9 @@ ifneq ($(findstring gcc, $(CC)),)
 	PGOGEN = -fprofile-generate=$(PGODIR)
 	PGOUSE = -fprofile-use=$(PGODIR)
 else ifneq ($(findstring clang, $(CC)),)
-	PGOMERGE = llvm-profdata merge -output=weiss.profdata *.profraw
+	PGOMERGE = llvm-profdata merge -output=berserk.profdata *.profraw
 	PGOGEN = -fprofile-instr-generate
-	PGOUSE = -fprofile-instr-use=weiss.profdata
+	PGOUSE = -fprofile-instr-use=berserk.profdata
 endif
 
 # Use pext if supported and not a ryzen 1/2 cpu

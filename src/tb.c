@@ -55,8 +55,6 @@ Move TBRootProbe(Board* board) {
   else if (PieceType(piece) == PAWN && (from ^ to) == 16)
     flags = DP;
 
-  printf("0x%08x\n", flags);
-
   return BuildMove(from, to, piece, promoPiece, flags);
 }
 
