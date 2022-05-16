@@ -90,10 +90,10 @@ int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats) {
   int history = HH(stm, move, threats);
 
   Move parent = data->moves[data->ply - 1];
-  history += CH(parent, move);
+  if (parent) history += CH(parent, move);
 
   Move grandParent = data->moves[data->ply - 2];
-  history += FH(grandParent, move);
+  if (grandParent) history += FH(grandParent, move);
 
   return history;
 }
