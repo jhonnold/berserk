@@ -49,7 +49,7 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
       AddHistoryHeuristic(&CH(parent, bestMove), inc);
     }
 
-    if (grandParent) AddHistoryHeuristic(&FH(grandParent, bestMove), inc);
+    if (grandParent) AddHistoryHeuristic(&CH(grandParent, bestMove), inc);
   } else {
     int piece = PieceType(Moving(bestMove));
     int to = To(bestMove);
@@ -65,7 +65,7 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
       if (m != bestMove) {
         AddHistoryHeuristic(&HH(stm, m, threats), -inc);
         if (parent) AddHistoryHeuristic(&CH(parent, m), -inc);
-        if (grandParent) AddHistoryHeuristic(&FH(grandParent, m), -inc);
+        if (grandParent) AddHistoryHeuristic(&CH(grandParent, m), -inc);
       }
     }
   }
@@ -93,7 +93,7 @@ int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats) {
   if (parent) history += CH(parent, move);
 
   Move grandParent = data->moves[data->ply - 2];
-  if (grandParent) history += FH(grandParent, move);
+  if (grandParent) history += CH(grandParent, move);
 
   return history;
 }

@@ -21,8 +21,7 @@
 #include "types.h"
 
 #define HH(stm, m, threats) (data->hh[stm][threats ? lsb(threats) : 64][FromTo(m)])
-#define CH(p, m) (data->ch[PieceType(Moving(p))][To(p)][PieceType(Moving(m))][To(m)])
-#define FH(g, m) (data->fh[PieceType(Moving(g))][To(g)][PieceType(Moving(m))][To(m)])
+#define CH(p, m) (data->ch[Moving(p)][To(p)][Moving(m)][To(m)])
 #define TH(p, e, c) (data->th[p][e][c])
 
 void AddKillerMove(SearchData* data, Move move);
