@@ -29,14 +29,13 @@
 
 const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
 
-void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, BitBoard threats) {
+void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data) {
   moves->type = ALL_MOVES;
   moves->phase = HASH_MOVE;
   moves->nTactical = 0;
   moves->nQuiets = 0;
   moves->nBadTactical = 0;
   moves->seeCutoff = 0;
-  moves->threats = threats;
 
   moves->hashMove = hashMove;
   moves->killer1 = data->killers[data->ply][0];
@@ -54,7 +53,6 @@ void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
   moves->nQuiets = 0;
   moves->nBadTactical = 0;
   moves->seeCutoff = cutoff;
-  moves->threats = 0;
 
   moves->hashMove = NULL_MOVE;
   moves->killer1 = NULL_MOVE;
@@ -144,7 +142,7 @@ void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = GetQuietHistory(data, m, board->stm, moves->threats);
+    moves->sQuiet[i] = GetQuietHistory(data, m, board->stm);
   }
 }
 
@@ -285,7 +283,7 @@ void PrintMoves(Board* board, ThreadData* thread) {
 
   thread->data.ply = 0;
   MoveList list = {0};
-  InitAllMoves(&list, hit ? tt->move : NULL_MOVE, &thread->data, Threats(board, board->xstm));
+  InitAllMoves(&list, hit ? tt->move : NULL_MOVE, &thread->data);
 
   int i = 1;
   Move move;

@@ -34,7 +34,7 @@ void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[F
 void AddHistoryHeuristic(int* entry, int inc) { *entry += 64 * inc - *entry * abs(inc) / 1024; }
 
 void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ,
-                     Move tacticals[], int nT, BitBoard threats) {
+                     Move tacticals[], int nT) {
   int inc = min(depth * depth, 576);
 
   Move parent = data->moves[data->ply - 1];
@@ -42,7 +42,7 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
 
   if (!IsTactical(bestMove)) {
     AddKillerMove(data, bestMove);
-    AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
+    AddHistoryHeuristic(&HH(stm, bestMove), inc);
 
     if (parent) {
       AddCounterMove(data, bestMove, parent);
@@ -63,7 +63,7 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
       if (m != bestMove) {
-        AddHistoryHeuristic(&HH(stm, m, threats), -inc);
+        AddHistoryHeuristic(&HH(stm, m), -inc);
         if (parent) AddHistoryHeuristic(&CH(parent, m), -inc);
         if (grandParent) AddHistoryHeuristic(&CH(grandParent, m), -inc);
       }
@@ -84,10 +84,10 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
   }
 }
 
-int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats) {
+int GetQuietHistory(SearchData* data, Move move, int stm) {
   if (IsTactical(move)) return 0;
 
-  int history = HH(stm, move, threats);
+  int history = HH(stm, move);
 
   Move parent = data->moves[data->ply - 1];
   if (parent) history += CH(parent, move);
