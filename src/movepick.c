@@ -285,7 +285,11 @@ void PrintMoves(Board* board, ThreadData* thread) {
 
   thread->data.ply = 0;
   MoveList list = {0};
-  InitAllMoves(&list, hit ? tt->move : NULL_MOVE, &thread->data, Threats(board, board->xstm));
+
+  Threat oppThreat;
+  Threats(&oppThreat, board, board->xstm);
+
+  InitAllMoves(&list, hit ? tt->move : NULL_MOVE, &thread->data, oppThreat.sqs);
 
   int i = 1;
   Move move;

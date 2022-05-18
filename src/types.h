@@ -49,6 +49,10 @@ typedef uint64_t BitBoard;
 typedef uint32_t Move;
 
 typedef struct {
+  BitBoard pcs, sqs;
+} Threat;
+
+typedef struct {
   int stm, xstm;  // stm to move
   int epSquare;   // en passant square (a8 or 0 is not valid so that marks no active ep)
   int castling;   // castling mask e.g. 1111 = KQkq, 1001 = Kq
