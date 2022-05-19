@@ -20,7 +20,7 @@
 #include "bits.h"
 #include "types.h"
 
-#define HH(stm, m, threats) (data->hh[stm][threats ? lsb(threats) : 64][FromTo(m)])
+#define HH(stm, m, threats) (data->hh[stm][!getBit(threats, From(m))][FromTo(m)])
 #define CH(p, m) (data->ch[Moving(p)][To(p)][Moving(m)][To(m)])
 #define TH(p, e, c) (data->th[p][e][c])
 

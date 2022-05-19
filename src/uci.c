@@ -270,7 +270,11 @@ void UCILoop() {
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "threats", 7)) {
-      PrintBB(Threats(&board, board.stm));
+      Threat threats[1];
+      Threats(threats, &board, board.stm);
+
+      PrintBB(threats->pcs);
+      PrintBB(threats->sqs);
     } else if (!strncmp(in, "eval", 4)) {
       board.ply = 0;
 

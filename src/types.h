@@ -49,6 +49,10 @@ typedef uint64_t BitBoard;
 typedef uint32_t Move;
 
 typedef struct {
+  BitBoard pcs, sqs;
+} Threat;
+
+typedef struct {
   int stm, xstm;  // stm to move
   int epSquare;   // en passant square (a8 or 0 is not valid so that marks no active ep)
   int castling;   // castling mask e.g. 1111 = KQkq, 1001 = Kq
@@ -114,7 +118,7 @@ typedef struct {
 
   Move killers[MAX_SEARCH_PLY][2];  // killer moves, 2 per ply
   Move counters[64 * 64];           // counter move butterfly table
-  int hh[2][65][64 * 64];           // history heuristic butterfly table (stm)
+  int hh[2][2][64 * 64];           // history heuristic butterfly table (stm / threatened)
   int ch[12][64][12][64];           // continuation move history table
 
   int th[6][64][6];  // tactical (capture) history
