@@ -5,7 +5,8 @@ EXE      = berserk
 SRC      = *.c pyrrhic/tbprobe.c noobprobe/*.c
 CC       = gcc
 VERSION  = 9-dev
-EVALFILE = berserk-ce3e68d5d598.nn
+MAIN_NETWORK = networks/berserk-ce3e68d5d598.nn
+EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
 # Defines
@@ -65,20 +66,25 @@ BASIC   = $(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
 RELEASE = $(CC) $(RFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
 # Targets
-pgo:
+pgo: clone-networks
 	$(BASIC) $(PGOGEN)
 	$(BENCH)
 	$(PGOMERGE)
 	$(BASIC) $(PGOUSE)
 	$(CLEAN)
 
-basic:
+basic: clone-networks
 	$(BASIC)
 
-release:
+release: clone-networks
 	$(RELEASE)-$(VERSION)-x64$(EXT)
 	$(RELEASE)-$(VERSION)-x64-pext$(EXT)                  $(PEXT)
 	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        $(AVX2)
 	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   $(AVX2)   $(PEXT)
 	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)      $(AVX512)
 	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT) $(AVX512) $(PEXT)
+
+clone-networks:
+ifeq ($(EVALFILE), $(MAIN_NETWORK))
+	git submodule update --init
+endif
