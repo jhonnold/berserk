@@ -8,7 +8,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 
 ### CCRL (40/15)
 
-#### Rank [#5](https://ccrl.chessdom.com/ccrl/4040/rating_list_pure_single_cpu.html)
+#### Rank [#4](https://ccrl.chessdom.com/ccrl/4040/rating_list_pure_single_cpu.html)
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -20,10 +20,14 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 6 (4CPU)    | 3395    | 40/15  |
 | 7           | 3387    | 40/15  |
 | 7 (4CPU)    | 3435    | 40/15  |
+| 8           | 3399    | 40/15  |
+| 8 (4CPU)    | 3453    | 40/15  |
+| 8.5.1       | 3422    | 40/15  |
+| 8.5.1 (4CPU)| 3467    | 40/15  |
 
 ### CCRL (Blitz)
 
-#### Rank [#14](https://ccrl.chessdom.com/ccrl/404/)
+#### Rank [#7](https://ccrl.chessdom.com/ccrl/404/)
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -36,10 +40,15 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 6           | 3436    | 2'+1"  |
 | 6 (8CPU)    | 3559    | 2'+1"  |
 | 7           | 3488    | 2'+1"  |
+| 7 (8CPU)    | 3600    | 2'+1"  |
+| 8           | 3518    | 2'+1"  |
+| 8 (8CPU)    | 3626    | 2'+1"  |
+| 8.5.1       | 3540    | 2'+1"  |
+| 8.5.1 (8CPU)| 3638    | 2'+1"  |
 
 ### Lars No SMP
 
-#### Rank #6
+#### Rank #2
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -54,31 +63,50 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.5.0       | 3344    | 15'    |
 | 5           | 3371    | 15'    |
 | 6           | 3446    | 15'    |
+| 7           |         | 15'    |
+| 8           |         | 15'    |
+| 8.5.1       |         | 15'    |
 
-## Features
+### Other Lists with Berserk
+
+- [CEGT](http://www.cegt.net/)
+- [Stefan Pohl Computer Chess](https://www.sp-cc.de/)
+- [FGRL](http://www.fastgm.de/)
+- [Gambit Rating List](https://rebel13.nl/grl-best-40-2.html)
+
+### Events with Berserk
+
+- [TCEC](https://tcec-chess.com/)
+- [CCC](https://www.chess.com/computer-chess-championship)
+- [Graham's Broadcasts](https://tlcv.net)
+
+## Funcational Details 
 
 ### Board Representation and Move Generation
 
 - [Bitboards](https://www.chessprogramming.org/Bitboards)
-  - In combiniation with [Magic bitboards](https://www.chessprogramming.org/Magic_Bitboards)
-- [Legal Move Gen](https://www.chessprogramming.org/Move_Generation)
-  - It is [Staged](https://www.chessprogramming.org/Move_Generation#Staged_move_generation)
+  - [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
+- [Staged Move Gen](https://www.chessprogramming.org/Move_Generation#Staged_move_generation)
 
 ### Search
 
-- [Negamax](https://www.chessprogramming.org/Negamax) and [Quiescence](https://www.chessprogramming.org/Quiescence_Search)
-- [PVS](https://www.chessprogramming.org/Principal_Variation_Search)
-- [Transposition Table](https://www.chessprogramming.org/Transposition_Table)
+- [Negamax](https://www.chessprogramming.org/Negamax)
+  - [PVS](https://www.chessprogramming.org/Principal_Variation_Search)
+- [Quiescence](https://www.chessprogramming.org/Quiescence_Search)
 - [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening)
+- [Transposition Table](https://www.chessprogramming.org/Transposition_Table)
 - [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
-- [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
-- [Delta Pruning](https://www.chessprogramming.org/Delta_Pruning)
-  - The version in Berserk is a mix of Delta Pruning and Futility Pruning
+- [Internal Iterative Reductions](https://www.talkchess.com/forum3/viewtopic.php?f=7&t=74769)
 - [Reverse Futility Pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
-- [LMR](https://www.chessprogramming.org/Late_Move_Reductions)
-- ~~[MVV-LVA](https://www.chessprogramming.org/MVV-LVA)~~
-  - Berserk uses history for sorting
+- [Razoring](https://www.chessprogramming.org/Razoring)
+- [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+- [ProbCut](https://www.chessprogramming.org/ProbCut)
+- [FutilityPruning](https://www.chessprogramming.org/Futility_Pruning)
+  - [LMP](https://www.chessprogramming.org/Futility_Pruning#MoveCountBasedPruning)
+- History Pruning
 - [SEE](https://www.chessprogramming.org/Static_Exchange_Evaluation)
+  - Static Exchange Evaluation Pruning
+- [LMR](https://www.chessprogramming.org/Late_Move_Reductions)
 - [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
 - [Countermove Heuristic](https://www.chessprogramming.org/Countermove_Heuristic)
 - [Extensions](https://www.chessprogramming.org/Extensions)
@@ -90,17 +118,19 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 ### Evaluation
 
 - [NNUE](https://www.chessprogramming.org/NNUE)
-  - "Half KS" shallow network
-  - 2x(768 -> 512) -> 1
+  - Horizontally Mirrored King Quadrant (HMKQ)
+  - 2x(1536 -> 512) -> 1
+- [Berserk FenGen](https://github.com/jhonnold/berserk/tree/fen-gen)
+- [Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)
+- ~~[Berserk Trainer](https://github.com/jhonnold/berserk-trainer)~~
+  - This has been deprecated in favor of Koivisto's trainer, but trained all networks through Berserk 8.5.1+
 
 ## Building
 
-At this time Berserk only supports gcc
-
 ```bash
 $ git clone https://github.com/jhonnold/berserk
-$ cd src
-$ make
+$ cd berserk/src
+$ make basic
 $ ./berserk
 ```
 
@@ -110,25 +140,25 @@ This engine could not be written without some influence and they are...
 
 ### Engine Influences
 
-- [chess22k](https://github.com/sandermvdb/chess22k)
-- [bbc](https://github.com/maksimKorzh/chess_programming)
-  - [youtube](https://www.youtube.com/channel/UCB9-prLkPwgvlKKqDgXhsMQ)
-- [Martin Sedlak](https://www.chessprogramming.org/Cheng)
-  - Very nice and helpful in later development of Berserk
+- [Chess22k](https://github.com/sandermvdb/chess22k)
+- [BBC](https://github.com/maksimKorzh/chess_programming)
+- [Cheng](https://www.chessprogramming.org/Cheng)
 - [Vice](https://github.com/bluefeversoft/Vice_Chess_Engine)
 - [Weiss](https://github.com/TerjeKir/weiss)
 - [Stockfish](https://github.com/official-stockfish/Stockfish)
 - [Ethereal](https://github.com/AndyGrant/Ethereal)
-  - This has been especially helpful as it introduced me to [OpenBench](https://github.com/AndyGrant/OpenBench)
-- [CPW](https://www.chessprogramming.org/Main_Page)
+- [Koivisto](https://github.com/Luecx/Koivisto)
+
 
 ### Additional Resources
 
+- [Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)
 - [Open Bench](https://github.com/AndyGrant/OpenBench)
 - [TalkChess Forum](http://talkchess.com/forum3/viewforum.php?f=7)
 - [CCRL](https://kirill-kryukov.com/chess/discussion-board/viewforum.php?f=7)
 - [JCER](https://chessengines.blogspot.com/p/rating-jcer.html)
 - [Cute Chess](https://cutechess.com/)
 - [Arena](http://www.playwitharena.de/)
-- Lars in Graham's CCRL rooms for a nice engine list
-- [Koivisto](https://github.com/Luecx/Koivisto) authors for advice and assistance on OpenBench
+- [CPW](https://www.chessprogramming.org/Main_Page)
+- Lars in Grahams Broadcast rooms
+
