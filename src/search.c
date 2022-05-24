@@ -49,7 +49,7 @@ extern volatile int PONDERING;
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
-    for (int moves = 1; moves < 64; moves++) LMR[depth][moves] = 0.1 + log(depth) * log(moves) / 2;
+    for (int moves = 1; moves < 64; moves++) LMR[depth][moves] = log(depth) * log(moves) / 2 - 0.2;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -573,6 +573,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (!improving) R++;
 
         if (killerOrCounter) R -= 2;
+
+        if (IsCap(hashMove)) R++;
 
         // move GAVE check
         if (board->checkers) R--;
