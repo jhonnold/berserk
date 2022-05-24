@@ -188,9 +188,7 @@ void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
     for (int j = 0; j < N_HIDDEN; j++) output[j] += INPUT_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
 }
 
-const size_t NETWORK_SIZE = sizeof(char) * 4 // BRKR
-  + sizeof(uint64_t) // Hash
-  + sizeof(float) * N_FEATURES * N_HIDDEN // input weights
+const size_t NETWORK_SIZE = sizeof(float) * N_FEATURES * N_HIDDEN // input weights
   + sizeof(float) * N_HIDDEN // input biases
   + sizeof(float) * 2 * N_HIDDEN // output weights
   + sizeof(float); // output bias
@@ -198,12 +196,7 @@ const size_t NETWORK_SIZE = sizeof(char) * 4 // BRKR
 INLINE int32_t LoadWeight(float v, int precision) { return round(v * precision); }
 
 INLINE void CopyData(const unsigned char* in) {
-  if (in[0] != 'B' || in[1] != 'R' || in[2] != 'K' || in[3] != 'R')
-    printf("info string Berserk is not using a standard net, use with caution!\n");
-
-  NN_HASH = *((uint64_t*)(in + 4));
-
-  float* data = (float*)in + 3;  // Skip the 4 byte magic and 8 byte hash
+  float* data = (float*)in;
 
   for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) INPUT_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_IN);
 
