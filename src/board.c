@@ -44,14 +44,14 @@ const int8_t PSQT[64] = {
 };
 
 const uint16_t KING_BUCKETS[64] = {
-    3, 3, 3, 3, 1, 1, 1, 1,  //
-    3, 3, 3, 3, 1, 1, 1, 1,  //
-    3, 3, 3, 3, 1, 1, 1, 1,  //
-    3, 3, 3, 3, 1, 1, 1, 1,  //
-    2, 2, 2, 2, 0, 0, 0, 0,  //
-    2, 2, 2, 2, 0, 0, 0, 0,  //
-    2, 2, 2, 2, 0, 0, 0, 0,  //
-    2, 2, 2, 2, 0, 0, 0, 0,  //
+    7, 7, 7, 7, 7, 7, 7, 7,  //
+    7, 7, 7, 7, 7, 7, 7, 7,  //
+    6, 6, 6, 6, 6, 6, 6, 6,  //
+    6, 6, 6, 6, 6, 6, 6, 6,  //
+    5, 5, 4, 4, 4, 4, 5, 5,  //
+    5, 5, 4, 4, 4, 4, 5, 5,  //
+    3, 2, 1, 0, 0, 1, 2, 3,  //
+    3, 2, 1, 0, 0, 1, 2, 3,  //
 };
 
 // piece count key bit mask idx
@@ -445,6 +445,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   SetOccupancies(board);
 
+  int stm = board->stm;
+
   board->moveNo++;
   board->ply++;
   board->xstm = board->stm;
@@ -459,6 +461,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
+    if (stm == BLACK) from ^= 56, to ^= 56;
+
     if (MoveRequiresRefresh(piece, from, to)) {
       if (piece == WHITE_KING) {
         RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
@@ -719,8 +723,7 @@ int MoveIsLegal(Move move, Board* board) {
 
       if (getBit(board->pinned, board->cr[0])) return 0;
 
-      BitBoard between =
-          BetweenSquares(kingSq, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
+      BitBoard between = BetweenSquares(kingSq, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
       if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[0])) & between) return 0;
     }
 
@@ -729,8 +732,7 @@ int MoveIsLegal(Move move, Board* board) {
 
       if (getBit(board->pinned, board->cr[1])) return 0;
 
-      BitBoard between =
-          BetweenSquares(kingSq, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
+      BitBoard between = BetweenSquares(kingSq, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
       if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[1])) & between) return 0;
     }
 
@@ -739,8 +741,7 @@ int MoveIsLegal(Move move, Board* board) {
 
       if (getBit(board->pinned, board->cr[2])) return 0;
 
-      BitBoard between =
-          BetweenSquares(kingSq, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
+      BitBoard between = BetweenSquares(kingSq, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
       if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[2])) & between) return 0;
     }
 
@@ -749,8 +750,7 @@ int MoveIsLegal(Move move, Board* board) {
 
       if (getBit(board->pinned, board->cr[3])) return 0;
 
-      BitBoard between =
-          BetweenSquares(kingSq, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
+      BitBoard between = BetweenSquares(kingSq, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
       if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[3])) & between) return 0;
     }
   }

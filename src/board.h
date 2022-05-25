@@ -66,6 +66,7 @@ int MoveIsLegal(Move move, Board* board);
 INLINE int MoveRequiresRefresh(int piece, int from, int to) {
   if (PieceType(piece) != KING) return 0;
 
+  if ((from & 4) != (to & 4)) return 1;
   return KING_BUCKETS[from] != KING_BUCKETS[to];
 }
 
@@ -74,9 +75,7 @@ INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
   int oK = (7 * !(kingsq & 4)) ^ (56 * view) ^ kingsq;
   int oSq = (7 * !(kingsq & 4)) ^ (56 * view) ^ sq;
 
-  return oP * 2 * 64 //
-    + KING_BUCKETS[oK] * 64 //
-    + oSq;
+  return KING_BUCKETS[oK] * 12 * 64 + oP * 64 + oSq;
 }
 
 #endif
