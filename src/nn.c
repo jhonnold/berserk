@@ -37,7 +37,7 @@ uint64_t NN_HASH = UINT64_MAX;
 
 INCBIN(Embed, EVALFILE);
 
-const int QUANTIZATION_PRECISION_IN = 32;
+const int QUANTIZATION_PRECISION_IN = 16;
 const int QUANTIZATION_PRECISION_OUT = 512;
 
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
@@ -188,10 +188,10 @@ void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
     for (int j = 0; j < N_HIDDEN; j++) output[j] += INPUT_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
 }
 
-const size_t NETWORK_SIZE = sizeof(float) * N_FEATURES * N_HIDDEN // input weights
-  + sizeof(float) * N_HIDDEN // input biases
-  + sizeof(float) * 2 * N_HIDDEN // output weights
-  + sizeof(float); // output bias
+const size_t NETWORK_SIZE = sizeof(float) * N_FEATURES * N_HIDDEN +  // input weights
+                            sizeof(float) * N_HIDDEN +               // input biases
+                            sizeof(float) * 2 * N_HIDDEN +           // output weights
+                            sizeof(float);                           // output bias
 
 INLINE int32_t LoadWeight(float v, int precision) { return round(v * precision); }
 
@@ -207,9 +207,7 @@ INLINE void CopyData(const unsigned char* in) {
   OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
 }
 
-void LoadDefaultNN() {
-  CopyData(EmbedData);
-}
+void LoadDefaultNN() { CopyData(EmbedData); }
 
 int LoadNetwork(char* path) {
   FILE* fin = fopen(path, "rb");

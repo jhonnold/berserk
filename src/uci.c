@@ -205,7 +205,7 @@ void ParsePosition(char* in, Board* board) {
 }
 
 void PrintUCIOptions() {
-  printf("id name Berserk " VERSION " NN (%" PRIx64 ")\n", NN_HASH);
+  printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 32 min 4 max 65536\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
