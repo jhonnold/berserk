@@ -65,7 +65,7 @@ const size_t WIDTH = sizeof(__m512i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
 int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
-  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
+  int result = OUTPUT_BIAS;
 
   const __m512i zero = _mm512_setzero_si512();
   __m512i s0 = _mm512_setzero_si512();
@@ -97,7 +97,7 @@ const size_t WIDTH = sizeof(__m256i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
 int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
-  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
+  int result = OUTPUT_BIAS;
 
   const __m256i zero = _mm256_setzero_si256();
   __m256i s0 = _mm256_setzero_si256();
@@ -128,7 +128,7 @@ const size_t WIDTH = sizeof(__m128i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
 int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
-  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
+  int result = OUTPUT_BIAS;
 
   const __m128i zero = _mm_setzero_si128();
   __m128i s0 = _mm_setzero_si128();
@@ -155,7 +155,7 @@ int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
 }
 #else
 int OutputLayer(Accumulator stm, Accumulator xstm) {
-  int result = OUTPUT_BIAS * QUANTIZATION_PRECISION_IN;
+  int result = OUTPUT_BIAS;
 
   for (int i = 0; i < N_HIDDEN; i++) {
     result += max(stm[i], 0) * OUTPUT_WEIGHTS[i];
@@ -188,23 +188,21 @@ void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
     for (int j = 0; j < N_HIDDEN; j++) output[j] += INPUT_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
 }
 
-const size_t NETWORK_SIZE = sizeof(float) * N_FEATURES * N_HIDDEN +  // input weights
-                            sizeof(float) * N_HIDDEN +               // input biases
-                            sizeof(float) * 2 * N_HIDDEN +           // output weights
-                            sizeof(float);                           // output bias
-
-INLINE int32_t LoadWeight(float v, int precision) { return round(v * precision); }
+const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +  // input weights
+                            sizeof(int16_t) * N_HIDDEN +               // input biases
+                            sizeof(int16_t) * 2 * N_HIDDEN +           // output weights
+                            sizeof(int32_t);                           // output bias
 
 INLINE void CopyData(const unsigned char* in) {
-  float* data = (float*)in;
+  size_t offset = 0;
 
-  for (int j = 0; j < N_FEATURES * N_HIDDEN; j++) INPUT_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_IN);
-
-  for (int j = 0; j < N_HIDDEN; j++) INPUT_BIASES[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_IN);
-
-  for (int j = 0; j < N_HIDDEN * 2; j++) OUTPUT_WEIGHTS[j] = LoadWeight(*data++, QUANTIZATION_PRECISION_OUT);
-
-  OUTPUT_BIAS = round(*data++ * QUANTIZATION_PRECISION_OUT);
+  memcpy(INPUT_WEIGHTS, &in[offset], N_FEATURES * N_HIDDEN * sizeof(int16_t));
+  offset += N_FEATURES * N_HIDDEN * sizeof(int16_t);
+  memcpy(INPUT_BIASES, &in[offset], N_HIDDEN * sizeof(int16_t));
+  offset += N_HIDDEN * sizeof(int16_t);
+  memcpy(OUTPUT_WEIGHTS, &in[offset], 2 * N_HIDDEN * sizeof(int16_t));
+  offset += 2 * N_HIDDEN * sizeof(int16_t);
+  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
 }
 
 void LoadDefaultNN() { CopyData(EmbedData); }
