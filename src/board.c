@@ -79,7 +79,8 @@ void ClearBoard(Board* board) {
 
   board->epSquare = 0;
   board->castling = 0;
-  board->moveNo = 0;
+  board->histPly = 0;
+  board->moveNo = 1;
   board->halfMove = 0;
   board->phase = 0;
 }
@@ -175,9 +176,7 @@ void ParseFen(char* fen, Board* board) {
 
   while (*fen && *fen != ' ') fen++;
 
-  int halfMove;
-  sscanf(fen, " %d", &halfMove);
-  board->halfMove = halfMove;
+  sscanf(fen, " %d %d", &board->halfMove, &board->moveNo);
 
   SetOccupancies(board);
   SetSpecialPieces(board);
@@ -334,13 +333,13 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int bkingSq = lsb(PieceBB(KING, BLACK));
 
   // store hard to recalculate values
-  board->zobristHistory[board->moveNo] = board->zobrist;
-  board->castlingHistory[board->moveNo] = board->castling;
-  board->epSquareHistory[board->moveNo] = board->epSquare;
-  board->captureHistory[board->moveNo] = NO_PIECE;  // this might get overwritten
-  board->halfMoveHistory[board->moveNo] = board->halfMove;
-  board->checkersHistory[board->moveNo] = board->checkers;
-  board->pinnedHistory[board->moveNo] = board->pinned;
+  board->zobristHistory[board->histPly] = board->zobrist;
+  board->castlingHistory[board->histPly] = board->castling;
+  board->epSquareHistory[board->histPly] = board->epSquare;
+  board->captureHistory[board->histPly] = NO_PIECE;  // this might get overwritten
+  board->halfMoveHistory[board->histPly] = board->halfMove;
+  board->checkersHistory[board->histPly] = board->checkers;
+  board->pinnedHistory[board->histPly] = board->pinned;
 
   flipBits(board->pieces[piece], from, to);
 
@@ -361,7 +360,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->halfMove++;
 
   if (capture && !ep) {
-    board->captureHistory[board->moveNo] = captured;
+    board->captureHistory[board->histPly] = captured;
     flipBit(board->pieces[captured], to);
 
     board->zobrist ^= ZOBRIST_PIECES[captured][to];
@@ -447,8 +446,9 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   int stm = board->stm;
 
-  board->moveNo++;
+  board->histPly++;
   board->ply++;
+  board->moveNo += (board->stm == BLACK);
   board->xstm = board->stm;
   board->stm ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
@@ -489,16 +489,17 @@ void UndoMove(Move move, Board* board) {
 
   board->stm = board->xstm;
   board->xstm ^= 1;
-  board->moveNo--;
+  board->histPly--;
   board->ply--;
+  board->moveNo -= (board->stm == BLACK);
 
   // reload historical values
-  board->epSquare = board->epSquareHistory[board->moveNo];
-  board->castling = board->castlingHistory[board->moveNo];
-  board->zobrist = board->zobristHistory[board->moveNo];
-  board->halfMove = board->halfMoveHistory[board->moveNo];
-  board->checkers = board->checkersHistory[board->moveNo];
-  board->pinned = board->pinnedHistory[board->moveNo];
+  board->epSquare = board->epSquareHistory[board->histPly];
+  board->castling = board->castlingHistory[board->histPly];
+  board->zobrist = board->zobristHistory[board->histPly];
+  board->halfMove = board->halfMoveHistory[board->histPly];
+  board->checkers = board->checkersHistory[board->histPly];
+  board->pinned = board->pinnedHistory[board->histPly];
 
   if (!promoted)
     flipBits(board->pieces[piece], to, from);
@@ -509,7 +510,7 @@ void UndoMove(Move move, Board* board) {
   board->squares[from] = piece;
 
   if (capture) {
-    int captured = board->captureHistory[board->moveNo];
+    int captured = board->captureHistory[board->histPly];
     flipBit(board->pieces[captured], to);
 
     if (!ep) {
@@ -551,13 +552,13 @@ void UndoMove(Move move, Board* board) {
 }
 
 void MakeNullMove(Board* board) {
-  board->zobristHistory[board->moveNo] = board->zobrist;
-  board->castlingHistory[board->moveNo] = board->castling;
-  board->epSquareHistory[board->moveNo] = board->epSquare;
-  board->captureHistory[board->moveNo] = NO_PIECE;
-  board->halfMoveHistory[board->moveNo] = board->halfMove;
-  board->checkersHistory[board->moveNo] = board->checkers;
-  board->pinnedHistory[board->moveNo] = board->pinned;
+  board->zobristHistory[board->histPly] = board->zobrist;
+  board->castlingHistory[board->histPly] = board->castling;
+  board->epSquareHistory[board->histPly] = board->epSquare;
+  board->captureHistory[board->histPly] = NO_PIECE;
+  board->halfMoveHistory[board->histPly] = board->halfMove;
+  board->checkersHistory[board->histPly] = board->checkers;
+  board->pinnedHistory[board->histPly] = board->pinned;
 
   board->halfMove++;
 
@@ -566,7 +567,7 @@ void MakeNullMove(Board* board) {
 
   board->zobrist ^= ZOBRIST_SIDE_KEY;
 
-  board->moveNo++;
+  board->histPly++;
   board->stm = board->xstm;
   board->xstm ^= 1;
 
@@ -577,14 +578,14 @@ void MakeNullMove(Board* board) {
 void UndoNullMove(Board* board) {
   board->stm = board->xstm;
   board->xstm ^= 1;
-  board->moveNo--;
+  board->histPly--;
 
-  board->zobrist = board->zobristHistory[board->moveNo];
-  board->castling = board->castlingHistory[board->moveNo];
-  board->epSquare = board->epSquareHistory[board->moveNo];
-  board->halfMove = board->halfMoveHistory[board->moveNo];
-  board->checkers = board->checkersHistory[board->moveNo];
-  board->pinned = board->pinnedHistory[board->moveNo];
+  board->zobrist = board->zobristHistory[board->histPly];
+  board->castling = board->castlingHistory[board->histPly];
+  board->epSquare = board->epSquareHistory[board->histPly];
+  board->halfMove = board->halfMoveHistory[board->histPly];
+  board->checkers = board->checkersHistory[board->histPly];
+  board->pinned = board->pinnedHistory[board->histPly];
 }
 
 inline int IsDraw(Board* board, int ply) {
@@ -595,9 +596,9 @@ inline int IsRepetition(Board* board, int ply) {
   int reps = 0;
 
   // Check as far back as the last non-reversible move
-  for (int i = board->moveNo - 2; i >= 0 && i >= board->moveNo - board->halfMove; i -= 2) {
+  for (int i = board->histPly - 2; i >= 0 && i >= board->histPly - board->halfMove; i -= 2) {
     if (board->zobristHistory[i] == board->zobrist) {
-      if (i > board->moveNo - ply)  // within our search tree
+      if (i > board->histPly - ply)  // within our search tree
         return 1;
 
       reps++;
