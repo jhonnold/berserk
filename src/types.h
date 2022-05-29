@@ -22,7 +22,6 @@
 
 #define MAX_SEARCH_PLY 100
 #define MAX_MOVES 128
-#define MAX_GAME_PLY 1024
 
 #define N_FEATURES (8 * 12 * 64)
 #define N_HIDDEN 512
@@ -56,7 +55,8 @@ typedef struct {
   int stm, xstm;  // stm to move
   int epSquare;   // en passant square (a8 or 0 is not valid so that marks no active ep)
   int castling;   // castling mask e.g. 1111 = KQkq, 1001 = Kq
-  int moveNo;     // current game move number TODO: Is this still used?
+  int histPly;
+  int moveNo;    
   int halfMove;   // half move count for 50 move rule
   int ply;
   int phase;
@@ -76,13 +76,13 @@ typedef struct {
   int castlingRights[64];
 
   // data that is hard to track, so it is "remembered" when search undoes moves
-  int castlingHistory[MAX_GAME_PLY];
-  int epSquareHistory[MAX_GAME_PLY];
-  int captureHistory[MAX_GAME_PLY];
-  int halfMoveHistory[MAX_GAME_PLY];
-  uint64_t zobristHistory[MAX_GAME_PLY];
-  BitBoard checkersHistory[MAX_GAME_PLY];
-  BitBoard pinnedHistory[MAX_GAME_PLY];
+  int castlingHistory[MAX_SEARCH_PLY + 100];
+  int epSquareHistory[MAX_SEARCH_PLY + 100];
+  int captureHistory[MAX_SEARCH_PLY + 100];
+  int halfMoveHistory[MAX_SEARCH_PLY + 100];
+  uint64_t zobristHistory[MAX_SEARCH_PLY + 100];
+  BitBoard checkersHistory[MAX_SEARCH_PLY + 100];
+  BitBoard pinnedHistory[MAX_SEARCH_PLY + 100];
 } Board;
 
 typedef struct {

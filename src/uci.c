@@ -201,6 +201,9 @@ void ParsePosition(char* in, Board* board) {
     if (!enteredMove) break;
 
     MakeMoveUpdate(enteredMove, board, 0);
+
+    if (board->halfMove == 0)
+      board->histPly = 0;
   }
 }
 
