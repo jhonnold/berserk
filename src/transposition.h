@@ -50,7 +50,7 @@ void TTFree();
 void TTClear();
 void TTUpdate();
 void TTPrefetch(uint64_t hash);
-TTEntry* TTProbe(int* hit, uint64_t hash);
+TTEntry* TTProbe(uint64_t hash);
 int TTScore(TTEntry* e, int ply);
 void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval);
 int TTFull();

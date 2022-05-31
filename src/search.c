@@ -323,14 +323,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // check the transposition table for previous info
   // we ignore the tt on singular extension searches
-  int ttHit = 0;
-  TTEntry* tt = skipMove ? NULL : TTProbe(&ttHit, board->zobrist);
-  ttScore = ttHit ? TTScore(tt, data->ply) : UNKNOWN;
-  hashMove = isRoot ? thread->pvs[thread->multiPV].moves[0] : ttHit ? tt->move : NULL_MOVE;
+  TTEntry* tt = skipMove ? NULL : TTProbe(board->zobrist);
+  ttScore = tt ? TTScore(tt, data->ply) : UNKNOWN;
+  hashMove = isRoot ? thread->pvs[thread->multiPV].moves[0] : tt ? tt->move : NULL_MOVE;
 
   // if the TT has a value that fits our position and has been searched to an equal or greater depth, then we accept
   // this score and prune
-  if (!isPV && ttHit && tt->depth >= depth && ttScore != UNKNOWN) {
+  if (!isPV && tt && tt->depth >= depth && ttScore != UNKNOWN) {
     if ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
         ((tt->flags & TT_UPPER) && ttScore <= alpha))
       return ttScore;
@@ -383,13 +382,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // pull previous static eval from tt - this is depth independent
   int eval;
   if (!skipMove) {
-    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
+    eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (tt ? tt->eval : Evaluate(board, thread));
   } else {
     // after se, just used already determined eval
     eval = data->evals[data->ply];
   }
 
-  if (!ttHit) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
+  if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 
   // getting better if eval has gone up
   int improving = !board->checkers && data->ply >= 2 &&
@@ -405,7 +404,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   if (!isPV && !board->checkers) {
     // Our TT might have a more accurate evaluation score, use this
-    if (ttHit && tt->depth >= depth && ttScore != UNKNOWN) {
+    if (tt && tt->depth >= depth && ttScore != UNKNOWN) {
       if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)) eval = ttScore;
     }
 
@@ -447,7 +446,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     Threats(&ownThreat, board, board->stm);
     int probBeta = beta + 110;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
-        !(ttHit && tt->depth >= depth - 3 && ttScore < probBeta)) {
+        !(tt && tt->depth >= depth - 3 && ttScore < probBeta)) {
       InitTacticalMoves(&moves, data, 0);
       while ((move = NextMove(&moves, board, 1))) {
         if (skipMove == move) continue;
@@ -522,7 +521,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // and look at it more (extend). Singular is determined by checking all other
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
-    if (!isRoot && depth >= 7 && ttHit && move == tt->move && tt->depth >= depth - 3 && abs(ttScore) <= 400 &&
+    if (!isRoot && depth >= 7 && tt && move == tt->move && tt->depth >= depth - 3 && abs(ttScore) <= 400 &&
         (tt->flags & TT_LOWER)) {
       int sBeta = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
@@ -542,7 +541,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 7 && ttHit && move == tt->move && abs(ttScore) <= 400 && history >= 98304)
+    else if (!isRoot && depth >= 7 && tt && move == tt->move && abs(ttScore) <= 400 && history >= 98304)
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
@@ -647,7 +646,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // save to the TT
     // TT_LOWER = we failed high, TT_UPPER = we didnt raise alpha, TT_EXACT = in
     int TTFlag = bestScore >= beta ? TT_LOWER : bestScore <= origAlpha ? TT_UPPER : TT_EXACT;
-    Move moveToStore = ttHit && TTFlag == TT_UPPER && (tt->flags & TT_LOWER) ? hashMove : bestMove;
+    Move moveToStore = tt && TTFlag == TT_UPPER && (tt->flags & TT_LOWER) ? hashMove : bestMove;
     TTPut(board->zobrist, depth, bestScore, TTFlag, moveToStore, data->ply, data->evals[data->ply]);
   }
 
@@ -672,10 +671,10 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   if (data->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
 
   // check the transposition table for previous info
-  int ttHit = 0, ttScore = UNKNOWN;
-  TTEntry* tt = TTProbe(&ttHit, board->zobrist);
+  int ttScore = UNKNOWN;
+  TTEntry* tt = TTProbe(board->zobrist);
   // TT score pruning - no depth check required since everything in QS is depth 0
-  if (ttHit) {
+  if (tt) {
     ttScore = TTScore(tt, data->ply);
 
     if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
@@ -687,13 +686,12 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   int bestScore = -CHECKMATE + data->ply;
 
   // pull cached eval if it exists
-  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (ttHit ? tt->eval : Evaluate(board, thread));
-  if (!ttHit) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
+  int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (tt ? tt->eval : Evaluate(board, thread));
+  if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
 
   // can we use an improved evaluation from the tt?
-  if (ttHit && ttScore != UNKNOWN) {
+  if (tt && ttScore != UNKNOWN)
     if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)) eval = ttScore;
-  }
 
   // stand pat
   if (!board->checkers) {

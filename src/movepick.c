@@ -272,10 +272,9 @@ char* PhaseName(MoveList* list) {
 }
 
 void PrintMoves(Board* board, ThreadData* thread) {
-  int hit = 0;
-  TTEntry* tt = TTProbe(&hit, board->zobrist);
+  TTEntry* tt = TTProbe(board->zobrist);
 
-  printf("#HM: %5s\n", hit ? MoveToStr(tt->move, board) : "N/A");
+  printf("#HM: %5s\n", tt ? MoveToStr(tt->move, board) : "N/A");
 
   Move k1 = thread->data.killers[0][0];
   Move k2 = thread->data.killers[0][1];
@@ -289,7 +288,7 @@ void PrintMoves(Board* board, ThreadData* thread) {
   Threat oppThreat;
   Threats(&oppThreat, board, board->xstm);
 
-  InitAllMoves(&list, hit ? tt->move : NULL_MOVE, &thread->data, oppThreat.sqs);
+  InitAllMoves(&list, tt ? tt->move : NULL_MOVE, &thread->data, oppThreat.sqs);
 
   int i = 1;
   Move move;

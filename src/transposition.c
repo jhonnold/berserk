@@ -66,13 +66,12 @@ inline int TTScore(TTEntry* e, int ply) {
 
 inline void TTPrefetch(uint64_t hash) { __builtin_prefetch(&TT.buckets[TT.mask & hash]); }
 
-inline TTEntry* TTProbe(int* hit, uint64_t hash) {
+inline TTEntry* TTProbe(uint64_t hash) {
   TTEntry* bucket = TT.buckets[TT.mask & hash].entries;
   uint32_t shortHash = hash >> 32;
 
   for (int i = 0; i < BUCKET_SIZE; i++)
     if (bucket[i].hash == shortHash) {
-      *hit = 1;
       bucket[i].age = TT.age;
       return &bucket[i];
     }
