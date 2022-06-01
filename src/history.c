@@ -102,7 +102,7 @@ int GetCounterHistory(SearchData* data, Move move) {
   if (IsTactical(move)) return 0;
 
   Move parent = data->moves[data->ply - 1];
-  return CH(parent, move);
+  return parent ? CH(parent, move) : 0;
 }
 
 int GetTacticalHistory(SearchData* data, Board* board, Move m) {
