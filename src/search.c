@@ -398,6 +398,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   data->skipMove[data->ply + 1] = NULL_MOVE;
   data->killers[data->ply + 1][0] = NULL_MOVE;
   data->killers[data->ply + 1][1] = NULL_MOVE;
+  data->de[data->ply] = isRoot ? 0 : data->de[data->ply - 1];
 
   Threat oppThreat;
   Threats(&oppThreat, board, board->xstm);
@@ -531,9 +532,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       data->skipMove[data->ply] = NULL_MOVE;
 
       // no score failed above sBeta, so this is singular
-      if (score < sBeta)
-        extension = 1 + (!isPV && score < sBeta - 50);
-      else if (sBeta >= beta)
+      if (score < sBeta) {
+        if (!isPV && score < sBeta - 50 && data->de[data->ply - 1] <= 6) {
+          extension = 2;
+          data->de[data->ply] = data->de[data->ply - 1] + 1;
+        } else {
+          extension = 1;
+        }
+      } else if (sBeta >= beta)
         return sBeta;
       else if (ttScore >= beta)
         extension = -1;
