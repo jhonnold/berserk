@@ -17,6 +17,8 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include <math.h>
+
 #include "types.h"
 #include "util.h"
 
@@ -30,6 +32,8 @@
 #define File(sq) ((sq)&7)
 #define Rank(sq) ((sq) >> 3)
 #define Sq(r, f) ((r)*8 + (f))
+#define Distance(a, b) max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
+#define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
 
 extern const int8_t PSQT[64];
 extern const uint16_t KING_BUCKETS[64];

@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "board.h"
+#include "endgame.h"
 #include "eval.h"
 #include "history.h"
 #include "move.h"
@@ -411,7 +412,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 6 && !skipMove && eval - 50 * (depth - (improving && !oppThreat.pcs)) > beta && eval < TB_WIN_BOUND)
+    if (depth <= 6 && !skipMove && eval - 50 * (depth - (improving && !oppThreat.pcs)) > beta && eval < WINNING_ENDGAME)
       return eval;
 
     // Razoring

@@ -14,13 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef SEE_H
-#define SEE_H
+#ifndef ENDGAME_H
+#define ENDGAME_H
 
 #include "types.h"
+#include "util.h"
 
-extern const int SEE_VALUE[7];
+#define WINNING_ENDGAME 25000
 
-int SEE(Board* board, Move move, int threshold);
+int EvaluateKnownPositions(Board* board);
+
+uint8_t GetKPKBit(uint32_t bit);
+uint32_t KPKIndex(int winningKing, int losingKing, int pawn, int stm);
+uint8_t KPKDraw(int winningSide, int winningKing, int losingKing, int pawn, int stm);
 
 #endif
