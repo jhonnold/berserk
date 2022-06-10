@@ -533,7 +533,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // no score failed above sBeta, so this is singular
       if (score < sBeta) {
-        if (!isPV && score < sBeta - 25 && data->de[data->ply - 1] <= 6) {
+        if (!isPV && score < sBeta - 35 && data->de[data->ply - 1] <= 6) {
           extension = 2;
           data->de[data->ply] = data->de[data->ply - 1] + 1;
         } else {
