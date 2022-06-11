@@ -147,7 +147,6 @@ void* Search(void* arg) {
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
-    int cfh = 0;
     int searchStability = 0;
 
     // Iterative deepening
@@ -188,20 +187,15 @@ void* Search(void* arg) {
             alpha = max(alpha - delta, -CHECKMATE);
 
             searchDepth = depth;
-            cfh = 0;
           } else if (score >= beta) {
             beta = min(beta + delta, CHECKMATE);
 
-            if (abs(score) < TB_WIN_BOUND) {
-              cfh += 2;
-              searchDepth -= cfh;
-              searchDepth = max(1, searchDepth);
-            }
+            if (abs(score) < TB_WIN_BOUND)
+              searchDepth--;
           } else {
             thread->scores[thread->multiPV] = score;
             thread->bestMoves[thread->multiPV] = pv->moves[0];
 
-            cfh = 0;
             break;
           }
 
@@ -666,6 +660,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   Board* board = &thread->board;
 
   int mainThread = !thread->idx;
+  int isPV = beta - alpha != 1;
 
   data->nodes++;
 
@@ -681,7 +676,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   int ttScore = UNKNOWN;
   TTEntry* tt = TTProbe(board->zobrist);
   // TT score pruning - no depth check required since everything in QS is depth 0
-  if (tt) {
+  if (!isPV && tt) {
     ttScore = TTScore(tt, data->ply);
 
     if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
