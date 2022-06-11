@@ -666,6 +666,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   Board* board = &thread->board;
 
   int mainThread = !thread->idx;
+  int isPV = beta - alpha != 1;
 
   data->nodes++;
 
@@ -681,7 +682,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   int ttScore = UNKNOWN;
   TTEntry* tt = TTProbe(board->zobrist);
   // TT score pruning - no depth check required since everything in QS is depth 0
-  if (tt) {
+  if (!isPV && tt) {
     ttScore = TTScore(tt, data->ply);
 
     if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
