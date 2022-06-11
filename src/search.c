@@ -147,7 +147,6 @@ void* Search(void* arg) {
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
-    int cfh = 0;
     int searchStability = 0;
 
     // Iterative deepening
@@ -188,20 +187,15 @@ void* Search(void* arg) {
             alpha = max(alpha - delta, -CHECKMATE);
 
             searchDepth = depth;
-            cfh = 0;
           } else if (score >= beta) {
             beta = min(beta + delta, CHECKMATE);
 
-            if (abs(score) < TB_WIN_BOUND) {
-              cfh += 2;
-              searchDepth -= cfh;
-              searchDepth = max(1, searchDepth);
-            }
+            if (abs(score) < TB_WIN_BOUND)
+              searchDepth--;
           } else {
             thread->scores[thread->multiPV] = score;
             thread->bestMoves[thread->multiPV] = pv->moves[0];
 
-            cfh = 0;
             break;
           }
 
