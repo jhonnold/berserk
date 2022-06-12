@@ -127,7 +127,7 @@ INLINE uint32_t KBPKIndex(int wking, int lking, int bishop, int pawn, int stm) {
   uint32_t p = (pawn >> 3) - 1;
   uint32_t b = bishop >> 1;
 
-  return (uint32_t)wking | ((uint32_t)lking << 6) | (b << 12) | (p << 17) | ((uint32_t)stm << 20);
+  return (uint32_t)wking | ((uint32_t)lking << 6) | (b << 12) | ((uint32_t)stm << 17) | (p << 18);
 }
 
 INLINE uint8_t KBPKDraw(int winningSide, int winningKing, int losingKing, int bishop, int pawn, int stm) {
