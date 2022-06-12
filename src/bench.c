@@ -32,7 +32,7 @@
 // Ethereal's bench set
 const int NUM_BENCH_POSITIONS = 50;
 char* benchmarks[] = {
-#include "bench.dat"
+#include "files/bench.csv"
 };
 
 void Bench() {
