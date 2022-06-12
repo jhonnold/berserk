@@ -72,7 +72,7 @@ INLINE int StopSearch(SearchParams* params, ThreadData* thread) {
   if (unlimitedSearch || PONDERING) return 0;
 
   long elapsed = GetTimeMS() - params->start;
-  return elapsed > params->max || (params->nodes && thread->data.nodes >= params->nodes);
+  return elapsed >= params->max || (params->nodes && thread->data.nodes >= params->nodes);
 }
 
 void* UCISearch(void* arg) {
@@ -190,8 +190,7 @@ void* Search(void* arg) {
           } else if (score >= beta) {
             beta = min(beta + delta, CHECKMATE);
 
-            if (abs(score) < TB_WIN_BOUND)
-              searchDepth--;
+            if (abs(score) < TB_WIN_BOUND) searchDepth--;
           } else {
             thread->scores[thread->multiPV] = score;
             thread->bestMoves[thread->multiPV] = pv->moves[0];
@@ -233,7 +232,15 @@ void* Search(void* arg) {
           PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
       }
 
-      if (!mainThread || depth < 5 || !params->timeset) continue;
+      if (!mainThread || !params->timeset) continue;
+
+      long elapsed = GetTimeMS() - params->start;
+
+      if (elapsed >= params->max) {
+        params->stopped = 1;
+        break;
+      } else if (depth < 5)
+        continue;
 
       int sameBestMove = results->bestMoves[depth] == results->bestMoves[depth - 1];  // same move?
       searchStability = sameBestMove ? min(10, searchStability + 1) : 0;  // increase how stable our best move is
@@ -250,8 +257,6 @@ void* Search(void* arg) {
       double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
 
       if (results->scores[depth] >= TB_WIN_BOUND) nodeCountFactor = 0.5;
-
-      long elapsed = GetTimeMS() - params->start;
 
       if (elapsed > params->alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
         params->stopped = 1;
