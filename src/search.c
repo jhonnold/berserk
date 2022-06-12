@@ -301,7 +301,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   data->nodes++;
-  data->seldepth = max(data->ply, data->seldepth);
+  data->seldepth = max(data->ply + 1, data->seldepth);
 
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
@@ -684,8 +684,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   if (!isPV && tt) {
     ttScore = TTScore(tt, data->ply);
 
-    if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
-                               ((tt->flags & TT_UPPER) && ttScore <= alpha)))
+    if (ttScore != UNKNOWN &&
+        (((tt->flags & TT_LOWER) && ttScore >= beta) || ((tt->flags & TT_UPPER) && ttScore <= alpha)))
       return ttScore;
   }
 

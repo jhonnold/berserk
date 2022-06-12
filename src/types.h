@@ -18,9 +18,11 @@
 #define TYPES_H
 
 #include <inttypes.h>
+#include <limits.h>
 #include <setjmp.h>
 
-#define MAX_SEARCH_PLY 100
+
+#define MAX_SEARCH_PLY (INT8_MAX + 1)
 #define MAX_MOVES 128
 
 #define N_FEATURES (8 * 12 * 64)
@@ -56,8 +58,8 @@ typedef struct {
   int epSquare;   // en passant square (a8 or 0 is not valid so that marks no active ep)
   int castling;   // castling mask e.g. 1111 = KQkq, 1001 = Kq
   int histPly;
-  int moveNo;    
-  int halfMove;   // half move count for 50 move rule
+  int moveNo;
+  int halfMove;  // half move count for 50 move rule
   int ply;
   int phase;
 
@@ -112,7 +114,7 @@ typedef struct {
 
   int contempt[2];
 
-  int de[MAX_SEARCH_PLY]; // double extensions
+  int de[MAX_SEARCH_PLY];  // double extensions
 
   Move skipMove[MAX_SEARCH_PLY];         // moves to skip during singular search
   int evals[MAX_SEARCH_PLY];             // static evals at ply stack
@@ -120,7 +122,7 @@ typedef struct {
 
   Move killers[MAX_SEARCH_PLY][2];  // killer moves, 2 per ply
   Move counters[64 * 64];           // counter move butterfly table
-  int hh[2][2][64 * 64];           // history heuristic butterfly table (stm / threatened)
+  int hh[2][2][64 * 64];            // history heuristic butterfly table (stm / threatened)
   int ch[12][64][12][64];           // continuation move history table
 
   int th[6][64][6];  // tactical (capture) history

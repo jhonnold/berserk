@@ -25,9 +25,12 @@
 #include "see.h"
 #include "util.h"
 
-const uint8_t kpkResults[2 * 64 * 64 * 24 / 8] = {
-#include "kpk.h"
-};
+#define INCBIN_PREFIX
+#define INCBIN_STYLE INCBIN_STYLE_CAMEL
+#include "incbin.h"
+
+INCBIN(KPK, "bitbases/KPvK.bb");
+INCBIN(KBPK, "bitbases/KBPvK.bb");
 
 INLINE int PushTogether(int sq1, int sq2) { return 70 - Distance(sq1, sq2); }
 
@@ -45,6 +48,28 @@ INLINE int MaterialValue(Board* board, const int side) {
   return staticScore;
 }
 
+// The following KPK code is modified for my use from Cheng (as is the dataset)
+INLINE uint32_t KPKIndex(int winningKing, int losingKing, int pawn, int stm) {
+  int file = File(pawn);
+  int x = file > 3 ? 7 : 0;
+
+  winningKing ^= x;
+  losingKing ^= x;
+  pawn ^= x;
+  file ^= x;
+
+  uint32_t p = (((pawn & 0x38) - 8) >> 1) | file;
+
+  return (uint32_t)winningKing | ((uint32_t)losingKing << 6) | ((uint32_t)stm << 12) | ((uint32_t)p << 13);
+}
+
+INLINE uint8_t KPKDraw(int winningSide, int winningKing, int losingKing, int pawn, int stm) {
+  uint32_t x = (winningSide == WHITE) ? 0 : 56;
+  uint32_t idx = KPKIndex(winningKing ^ x, losingKing ^ x, pawn ^ x, winningSide ^ stm);
+
+  return (uint8_t)(KPKData[idx >> 3] & (1U << (idx & 7)));
+}
+
 INLINE int EvaluateKPK(Board* board, const int winningSide) {
   const int losingSide = winningSide ^ 1;
   int score = WINNING_ENDGAME + MaterialValue(board, winningSide);
@@ -57,7 +82,6 @@ INLINE int EvaluateKPK(Board* board, const int winningSide) {
   if (KPKDraw(winningSide, winningKing, losingKing, pawn, board->stm)) return 0;
 
   score += winningSide == WHITE ? (7 - Rank(pawn)) : Rank(pawn);
-
 
   return winningSide == board->stm ? score : -score;
 }
@@ -94,6 +118,58 @@ INLINE int EvaluateKBNK(Board* board, const int winningSide) {
   return min(TB_WIN_BOUND - 1, max(-TB_WIN_BOUND + 1, score));
 }
 
+INLINE uint32_t KBPKIndex(int wking, int lking, int bishop, int pawn, int stm) {
+  int file = File(pawn);
+  int x = file > 3 ? 7 : 0;
+
+  wking ^= x, lking ^= x, bishop ^= x, pawn ^= x;
+
+  uint32_t p = (pawn >> 3) - 1;
+  uint32_t b = bishop >> 1;
+
+  return (uint32_t)wking | ((uint32_t)lking << 6) | (b << 12) | (p << 17) | ((uint32_t)stm << 20);
+}
+
+INLINE uint8_t KBPKDraw(int winningSide, int winningKing, int losingKing, int bishop, int pawn, int stm) {
+  int x = winningSide == WHITE ? 0 : 56;
+  uint32_t idx = KBPKIndex(winningKing ^ x, losingKing ^ x, bishop ^ x, pawn ^ x, winningSide ^ stm);
+
+  return !(uint8_t)(KBPKData[idx >> 3] & (1U << (idx & 7)));
+}
+
+INLINE int EvaluateKBPK(Board* board, const int winningSide) {
+  const int losingSide = winningSide ^ 1;
+
+  int pawn = lsb(PieceBB(PAWN, winningSide));
+  int promotionSq = winningSide == WHITE ? File(pawn) : A1 + File(pawn);
+  int darkPromoSq = !!getBit(DARK_SQS, promotionSq);
+  int darkBishop = !!(DARK_SQS & PieceBB(BISHOP, winningSide));
+
+  // "Winning" if not a rook pawn or have right bishop
+  if ((PieceBB(PAWN, winningSide) & ~(A_FILE | H_FILE)) || darkPromoSq == darkBishop) {
+    int score = WINNING_ENDGAME + MaterialValue(board, winningSide);
+
+    score += winningSide == WHITE ? (7 - Rank(pawn)) : Rank(pawn);
+    score = winningSide == board->stm ? score : -score;
+
+    return min(TB_WIN_BOUND - 1, max(-TB_WIN_BOUND + 1, score));
+  }
+
+  // Utilize bitbase for everything else
+  int winningKing = lsb(PieceBB(KING, winningSide));
+  int losingKing = lsb(PieceBB(KING, losingSide));
+  int bishop = lsb(PieceBB(BISHOP, winningSide));
+
+  if (KBPKDraw(winningSide, winningKing, losingKing, bishop, pawn, board->stm)) return 0;
+
+  int score = WINNING_ENDGAME + MaterialValue(board, winningSide);
+
+  score += winningSide == WHITE ? (7 - Rank(pawn)) : Rank(pawn);
+  score = winningSide == board->stm ? score : -score;
+
+  return min(TB_WIN_BOUND - 1, max(-TB_WIN_BOUND + 1, score));
+}
+
 int EvaluateKnownPositions(Board* board) {
   switch (board->piecesCounts) {
     // See IsMaterialDraw
@@ -113,10 +189,14 @@ int EvaluateKnownPositions(Board* board) {
       return EvaluateKPK(board, WHITE);
     case 0x10:  // Kpk
       return EvaluateKPK(board, BLACK);
-    case 0x10100: // KBNk
+    case 0x10100:  // KBNk
       return EvaluateKBNK(board, WHITE);
     case 0x101000:
       return EvaluateKBNK(board, BLACK);
+    case 0x10001:  // KBPk
+      return EvaluateKBPK(board, WHITE);
+    case 0x100010:  // Kkbp
+      return EvaluateKBPK(board, BLACK);
     default:
       break;
   }
@@ -127,28 +207,4 @@ int EvaluateKnownPositions(Board* board) {
     return EvaluateKXK(board, BLACK);
 
   return UNKNOWN;
-}
-
-// The following KPK code is modified for my use from Cheng (as is the dataset)
-uint8_t GetKPKBit(uint32_t bit) { return (uint8_t)(kpkResults[bit >> 3] & (1U << (bit & 7))); }
-
-uint32_t KPKIndex(int winningKing, int losingKing, int pawn, int stm) {
-  int file = File(pawn);
-  int x = file > 3 ? 7 : 0;
-
-  winningKing ^= x;
-  losingKing ^= x;
-  pawn ^= x;
-  file ^= x;
-
-  uint32_t p = (((pawn & 0x38) - 8) >> 1) | file;
-
-  return (uint32_t)winningKing | ((uint32_t)losingKing << 6) | ((uint32_t)stm << 12) | ((uint32_t)p << 13);
-}
-
-uint8_t KPKDraw(int winningSide, int winningKing, int losingKing, int pawn, int stm) {
-  uint32_t x = (winningSide == WHITE) ? 0u : 0x38u;
-  uint32_t idx = KPKIndex(winningKing ^ x, losingKing ^ x, pawn ^ x, winningSide ^ stm);
-
-  return GetKPKBit(idx);
 }

@@ -24,8 +24,4 @@
 
 int EvaluateKnownPositions(Board* board);
 
-uint8_t GetKPKBit(uint32_t bit);
-uint32_t KPKIndex(int winningKing, int losingKing, int pawn, int stm);
-uint8_t KPKDraw(int winningSide, int winningKing, int losingKing, int pawn, int stm);
-
 #endif
