@@ -21,7 +21,6 @@
 #include <limits.h>
 #include <setjmp.h>
 
-
 #define MAX_SEARCH_PLY (INT8_MAX + 1)
 #define MAX_MOVES 128
 
@@ -122,7 +121,7 @@ typedef struct {
 
   Move killers[MAX_SEARCH_PLY][2];  // killer moves, 2 per ply
   Move counters[64 * 64];           // counter move butterfly table
-  int hh[2][2][64 * 64];            // history heuristic butterfly table (stm / threatened)
+  int hh[2][2][2][64 * 64];         // history heuristic butterfly table (stm / threatened)
   int ch[12][64][12][64];           // continuation move history table
 
   int th[6][64][6];  // tactical (capture) history
