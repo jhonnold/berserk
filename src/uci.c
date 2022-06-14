@@ -284,8 +284,8 @@ void UCILoop() {
       board.accumulators[WHITE] = threads->accumulators[WHITE];
       board.accumulators[BLACK] = threads->accumulators[BLACK];
 
-      RefreshAccumulator(board.accumulators[WHITE][0], &board, WHITE);
-      RefreshAccumulator(board.accumulators[BLACK][0], &board, BLACK);
+      ResetAccumulator(board.accumulators[WHITE][0], &board, WHITE);
+      ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
 
       int score = Evaluate(&board, threads);
       score = board.stm == WHITE ? score : -score;
@@ -306,8 +306,8 @@ void UCILoop() {
           } else if (board.squares[sq] < WHITE_KING) {
             popBit(board.occupancies[BOTH], sq);
 
-            RefreshAccumulator(board.accumulators[WHITE][0], &board, WHITE);
-            RefreshAccumulator(board.accumulators[BLACK][0], &board, BLACK);
+            ResetAccumulator(board.accumulators[WHITE][0], &board, WHITE);
+            ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
 
             int new = Evaluate(&board, threads);
             new = board.stm == WHITE ? new : -new;

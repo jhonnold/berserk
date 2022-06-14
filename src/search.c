@@ -139,6 +139,7 @@ void* Search(void* arg) {
   int beta = CHECKMATE;
 
   board->ply = 0;
+  ResetRefreshTable(board);
   RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
   RefreshAccumulator(board->accumulators[BLACK][board->ply], board, BLACK);
 
