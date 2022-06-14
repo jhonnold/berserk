@@ -24,6 +24,8 @@
 #define MAX_SEARCH_PLY (INT8_MAX + 1)
 #define MAX_MOVES 128
 
+#define N_KING_BUCKETS 8
+
 #define N_FEATURES (8 * 12 * 64)
 #define N_HIDDEN 512
 #define N_OUTPUT 1
@@ -36,6 +38,12 @@
 #define ALIGN_ON 16
 #endif
 
+typedef int Score;
+typedef uint64_t BitBoard;
+typedef uint32_t Move;
+
+enum { SUB = 0, ADD = 1 };
+
 typedef struct {
   int na, nr;
   int additions[2];
@@ -44,9 +52,12 @@ typedef struct {
 
 typedef int16_t Accumulator[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 
-typedef int Score;
-typedef uint64_t BitBoard;
-typedef uint32_t Move;
+typedef struct {
+  BitBoard pcs[12];
+  Accumulator values;
+} AccumulatorKingState;
+
+typedef AccumulatorKingState AccumulatorRefreshTable[2][2 * N_KING_BUCKETS];
 
 typedef struct {
   BitBoard pcs, sqs;
@@ -68,6 +79,7 @@ typedef struct {
   uint64_t zobrist;       // zobrist hash of the position
 
   Accumulator* accumulators[2];
+  AccumulatorRefreshTable refreshTable;
 
   int squares[64];          // piece per square
   BitBoard occupancies[3];  // 0 - white pieces, 1 - black pieces, 2 - both

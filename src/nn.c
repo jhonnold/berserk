@@ -45,19 +45,17 @@ int16_t INPUT_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int32_t OUTPUT_BIAS;
 
-inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective) {
-  int kingSq = lsb(PieceBB(KING, perspective));
+INLINE void ApplyFeature(int16_t* dest, int16_t* src, int f, const int add) {
+  for (int i = 0; i < N_HIDDEN; i++) dest[i] = src[i] + (2 * add - 1) * INPUT_WEIGHTS[f * N_HIDDEN + i];
+}
 
-  memcpy(accumulator, INPUT_BIASES, sizeof(Accumulator));
+int Predict(Board* board) {
+  Accumulator stm, xstm;
 
-  BitBoard occ = OccBB(BOTH);
-  while (occ) {
-    int sq = popAndGetLsb(&occ);
-    int pc = board->squares[sq];
-    int feature = FeatureIdx(pc, sq, kingSq, perspective);
+  ResetAccumulator(stm, board, board->stm);
+  ResetAccumulator(xstm, board, board->xstm);
 
-    for (int i = 0; i < N_HIDDEN; i++) accumulator[i] += INPUT_WEIGHTS[feature * N_HIDDEN + i];
-  }
+  return OutputLayer(stm, xstm);
 }
 
 #if defined(__AVX512F__)
@@ -166,26 +164,81 @@ int OutputLayer(Accumulator stm, Accumulator xstm) {
 }
 #endif
 
-int Predict(Board* board) {
-  Accumulator stm, xstm;
+inline void ResetRefreshTable(Board* board) {
+  for (int c = WHITE; c <= BLACK; c++) {
+    for (int b = 0; b < 2 * N_KING_BUCKETS; b++) {
+      AccumulatorKingState* state = &board->refreshTable[c][b];
+      memcpy(state->values, INPUT_BIASES, sizeof(int16_t) * N_HIDDEN);
 
-  RefreshAccumulator(stm, board, board->stm);
-  RefreshAccumulator(xstm, board, board->xstm);
+      for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) state->pcs[pc] = 0;
+    }
+  }
+}
 
-  return OutputLayer(stm, xstm);
+inline void StoreAccumulatorKingState(Accumulator accumulator, Board* board, const int perspective) {
+  int kingSq = lsb(PieceBB(KING, perspective));
+  int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
+
+  AccumulatorKingState* state = &board->refreshTable[perspective][kingBucket];
+
+  memcpy(state->values, accumulator, sizeof(int16_t) * N_HIDDEN);
+  for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) state->pcs[pc] = board->pieces[pc];
+}
+
+// Refreshes an accumulator using a diff from the last known board state
+// with proper king bucketing
+inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective) {
+  int kingSq = lsb(PieceBB(KING, perspective));
+  int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
+
+  AccumulatorKingState* state = &board->refreshTable[perspective][kingBucket];
+
+  memcpy(accumulator, state->values, sizeof(int16_t) * N_HIDDEN);
+  for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+    BitBoard curr = board->pieces[pc];
+    BitBoard prev = state->pcs[pc];
+
+    BitBoard rem = prev & ~curr;
+    BitBoard add = curr & ~prev;
+
+    while (rem) {
+      int sq = popAndGetLsb(&rem);
+      ApplyFeature(accumulator, accumulator, FeatureIdx(pc, sq, kingSq, perspective), SUB);
+    }
+
+    while (add) {
+      int sq = popAndGetLsb(&add);
+      ApplyFeature(accumulator, accumulator, FeatureIdx(pc, sq, kingSq, perspective), ADD);
+    }
+  }
+
+  StoreAccumulatorKingState(accumulator, board, perspective);
+}
+
+// Resets an accumulator from pieces on the board
+inline void ResetAccumulator(Accumulator accumulator, Board* board, const int perspective) {
+  int kingSq = lsb(PieceBB(KING, perspective));
+
+  memcpy(accumulator, INPUT_BIASES, sizeof(Accumulator));
+
+  BitBoard occ = OccBB(BOTH);
+  while (occ) {
+    int sq = popAndGetLsb(&occ);
+    int pc = board->squares[sq];
+    int feature = FeatureIdx(pc, sq, kingSq, perspective);
+
+    for (int i = 0; i < N_HIDDEN; i++) accumulator[i] += INPUT_WEIGHTS[feature * N_HIDDEN + i];
+  }
 }
 
 void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
   int16_t* output = board->accumulators[stm][board->ply];
   int16_t* prev = board->accumulators[stm][board->ply - 1];
 
-  for (int j = 0; j < N_HIDDEN; j++) output[j] = prev[j] - INPUT_WEIGHTS[updates->removals[0] * N_HIDDEN + j];
+  ApplyFeature(output, prev, updates->removals[0], SUB);
+  for (int i = 1; i < updates->nr; i++) ApplyFeature(output, output, updates->removals[i], SUB);
 
-  for (int i = 1; i < updates->nr; i++)
-    for (int j = 0; j < N_HIDDEN; j++) output[j] -= INPUT_WEIGHTS[updates->removals[i] * N_HIDDEN + j];
-
-  for (int i = 0; i < updates->na; i++)
-    for (int j = 0; j < N_HIDDEN; j++) output[j] += INPUT_WEIGHTS[updates->additions[i] * N_HIDDEN + j];
+  for (int i = 0; i < updates->na; i++) ApplyFeature(output, output, updates->additions[i], ADD);
 }
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +  // input weights

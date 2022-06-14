@@ -27,15 +27,17 @@ extern int16_t INPUT_BIASES[N_HIDDEN];
 extern int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN];
 extern int32_t OUTPUT_BIAS;
 
-void RefreshAccumulator(Accumulator output, Board* board, const int perspective);
-int OutputLayer(Accumulator stm, Accumulator xstm);
-
 int Predict(Board* board);
-void LoadDefaultNN();
-int LoadNetwork(char* path);
-
-INLINE void AddAddition(int f, NNUpdate* updates) { updates->additions[updates->na++] = f; }
-
-INLINE void AddRemoval(int f, NNUpdate* updates) { updates->removals[updates->nr++] = f; }
+int OutputLayer(Accumulator stm, Accumulator xstm);
+void ResetRefreshTable(Board* board);
+void StoreAccumulatorKingState(Accumulator accumulator, Board* board, const int perspective);
+void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective);
+void ResetAccumulator(Accumulator output, Board* board, const int perspective);
 
 void ApplyUpdates(Board* board, int stm, NNUpdate* updates);
+
+INLINE void AddAddition(int f, NNUpdate* updates) { updates->additions[updates->na++] = f; }
+INLINE void AddRemoval(int f, NNUpdate* updates) { updates->removals[updates->nr++] = f; }
+
+void LoadDefaultNN();
+int LoadNetwork(char* path);
