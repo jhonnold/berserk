@@ -1,11 +1,11 @@
-name: Bench Validation
+name: Berserk Validation
 on:
   push:
   workflow_dispatch:
 
 jobs:
-  bench:
-    name: Bench ${{matrix.os}}
+  engine:
+    name: Berserk on ${{matrix.os}} with gcc-${{matrix.version}}
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -19,7 +19,8 @@ jobs:
         version: ${{matrix.version}}
         platform: x64
 
-    - uses: actions/checkout@v2
+    - name: Clone Berserk
+      uses: actions/checkout@v2
 
     - name: Compile
       run: cd src && make basic
@@ -30,3 +31,18 @@ jobs:
         ./src/berserk bench > output
         real=$(grep 'Results:' output | grep -Po '(?<=[\s]{5})[0-9]+?(?= nodes)')
         if [[ "$bench" != "$real" ]]; then echo "got $real, expected $bench" && exit 1; fi
+    
+    - name: Install Expect
+      run: sudo apt-get install -y expect
+
+    - name: Perft Test
+      run: ./tests/perft.sh
+  
+  clang-format-checking:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: RafikFarhad/clang-format-github-action@v2.1.0
+        with:
+          sources: 'src/*.c,src/*.h,src/noobprobe/*.c,src/noobprobe/*.h'
