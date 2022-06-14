@@ -169,8 +169,7 @@ inline void ResetRefreshTable(Board* board) {
     for (int b = 0; b < 2 * N_KING_BUCKETS; b++) {
       AccumulatorKingState* state = &board->refreshTable[c][b];
       memcpy(state->values, INPUT_BIASES, sizeof(int16_t) * N_HIDDEN);
-
-      for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) state->pcs[pc] = 0;
+      memset(state->pcs, 0, sizeof(BitBoard) * 12);
     }
   }
 }
