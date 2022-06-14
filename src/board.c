@@ -447,7 +447,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int stm = board->stm;
 
   board->histPly++;
-  board->ply++;
+  board->acc++;
   board->moveNo += (board->stm == BLACK);
   board->xstm = board->stm;
   board->stm ^= 1;
@@ -465,11 +465,11 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     if (MoveRequiresRefresh(piece, from, to)) {
       if (piece == WHITE_KING) {
-        RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
+        RefreshAccumulator(board->accumulators[WHITE][board->acc], board, WHITE);
         ApplyUpdates(board, BLACK, bUpdates);
       } else {
         ApplyUpdates(board, WHITE, wUpdates);
-        RefreshAccumulator(board->accumulators[BLACK][board->ply], board, BLACK);
+        RefreshAccumulator(board->accumulators[BLACK][board->acc], board, BLACK);
       }
     } else {
       ApplyUpdates(board, WHITE, wUpdates);
@@ -490,7 +490,7 @@ void UndoMove(Move move, Board* board) {
   board->stm = board->xstm;
   board->xstm ^= 1;
   board->histPly--;
-  board->ply--;
+  board->acc--;
   board->moveNo -= (board->stm == BLACK);
 
   // reload historical values

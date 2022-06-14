@@ -279,7 +279,7 @@ void UCILoop() {
       PrintBB(threats->pcs);
       PrintBB(threats->sqs);
     } else if (!strncmp(in, "eval", 4)) {
-      board.ply = 0;
+      board.acc = 0;
 
       board.accumulators[WHITE] = threads->accumulators[WHITE];
       board.accumulators[BLACK] = threads->accumulators[BLACK];

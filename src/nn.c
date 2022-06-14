@@ -231,8 +231,8 @@ inline void ResetAccumulator(Accumulator accumulator, Board* board, const int pe
 }
 
 void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
-  int16_t* output = board->accumulators[stm][board->ply];
-  int16_t* prev = board->accumulators[stm][board->ply - 1];
+  int16_t* output = board->accumulators[stm][board->acc];
+  int16_t* prev = board->accumulators[stm][board->acc - 1];
 
   ApplyFeature(output, prev, updates->removals[0], SUB);
   for (int i = 1; i < updates->nr; i++) ApplyFeature(output, output, updates->removals[i], SUB);

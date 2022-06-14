@@ -138,10 +138,10 @@ void* Search(void* arg) {
   int alpha = -CHECKMATE;
   int beta = CHECKMATE;
 
-  board->ply = 0;
+  board->acc = 0;
   ResetRefreshTable(board);
-  RefreshAccumulator(board->accumulators[WHITE][board->ply], board, WHITE);
-  RefreshAccumulator(board->accumulators[BLACK][board->ply], board, BLACK);
+  RefreshAccumulator(board->accumulators[WHITE][board->acc], board, WHITE);
+  RefreshAccumulator(board->accumulators[BLACK][board->acc], board, BLACK);
 
   data->contempt[WHITE] = data->contempt[BLACK] = 0;
   SetContempt(data->contempt, board->stm);
