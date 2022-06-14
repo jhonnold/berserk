@@ -64,14 +64,15 @@ typedef struct {
 } Threat;
 
 typedef struct {
-  int stm, xstm;  // stm to move
-  int epSquare;   // en passant square (a8 or 0 is not valid so that marks no active ep)
-  int castling;   // castling mask e.g. 1111 = KQkq, 1001 = Kq
-  int histPly;
-  int moveNo;
+  int stm;       // side to move
+  int xstm;      // not side to move
+  int acc;       // board ply for accumulator access
+  int histPly;   // ply for historical state
+  int moveNo;    // game move number
   int halfMove;  // half move count for 50 move rule
-  int ply;
-  int phase;
+  int castling;  // castling mask e.g. 1111 = KQkq, 1001 = Kq
+  int phase;     // efficiently updated phase for scaling
+  int epSquare;  // en passant square (a8 or 0 is not valid so that marks no active ep)
 
   BitBoard checkers;      // checking piece squares
   BitBoard pinned;        // pinned pieces

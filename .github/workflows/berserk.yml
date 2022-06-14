@@ -1,0 +1,48 @@
+name: Berserk Validation
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  engine:
+    name: Berserk on ${{matrix.os}} with gcc-${{matrix.version}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        version: [8, 9, 10, 11]
+    
+    steps:
+    - name: Set up GCC ${{matrix.version}}
+      uses: egor-tensin/setup-gcc@v1
+      with:
+        version: ${{matrix.version}}
+        platform: x64
+
+    - name: Clone Berserk
+      uses: actions/checkout@v2
+
+    - name: Compile
+      run: cd src && make basic
+
+    - name: Bench
+      run: |
+        bench=$(git show --summary | grep -Po '(?<=Bench: )[0-9]+?(?=$)')
+        ./src/berserk bench > output
+        real=$(grep 'Results:' output | grep -Po '(?<=[\s]{5})[0-9]+?(?= nodes)')
+        if [[ "$bench" != "$real" ]]; then echo "got $real, expected $bench" && exit 1; fi
+    
+    - name: Install Expect
+      run: sudo apt-get install -y expect
+
+    - name: Perft Test
+      run: ./tests/perft.sh
+  
+  clang-format-checking:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: RafikFarhad/clang-format-github-action@v2.1.0
+        with:
+          sources: 'src/*.c,src/*.h,src/noobprobe/*.c,src/noobprobe/*.h'
