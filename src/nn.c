@@ -121,7 +121,7 @@ int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   result += _mm_cvtsi128_si32(r1);
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
-#elif defined(__SSE__)
+#elif defined(__SSE2__)
 const size_t WIDTH = sizeof(__m128i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 

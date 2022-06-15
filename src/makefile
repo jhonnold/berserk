@@ -9,12 +9,6 @@ MAIN_NETWORK = networks/berserk-27c2bc72e784.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
-# Defines
-SSSE   = -mssse3 -msse3 -msse2 -msse -mpopcnt
-AVX2   = -mavx2 -mavx -mfma -msse4.1 $(SSSE)
-AVX512 = -mavx512f -mavx512bw -mavx512dq $(AVX2)
-PEXT   = -DUSE_PEXT -mbmi2
-
 # Flags
 STD    = -std=gnu11
 LIBS   = -pthread -lm
@@ -77,12 +71,12 @@ basic: clone-networks
 	$(BASIC)
 
 release: clone-networks
-	$(RELEASE)-$(VERSION)-x64$(EXT)
-	$(RELEASE)-$(VERSION)-x64-pext$(EXT)                  $(PEXT)
-	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        $(AVX2)
-	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   $(AVX2)   $(PEXT)
-	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)      $(AVX512)
-	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT) $(AVX512) $(PEXT)
+	$(RELEASE)-$(VERSION)-x64$(EXT)             -march=nehalem
+	strip $(EXE)-$(VERSION)-x64$(EXT)
+	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        -march=haswell
+	strip $(EXE)-$(VERSION)-x64-avx2$(EXT)
+	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   -march=haswell -DUSE_PEXT
+	strip $(EXE)-$(VERSION)-x64-avx2-pext$(EXT)
 
 clone-networks:
 ifeq ($(EVALFILE), $(MAIN_NETWORK))
