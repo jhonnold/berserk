@@ -71,11 +71,13 @@ basic: clone-networks
 	$(BASIC)
 
 release: clone-networks
-	$(RELEASE)-$(VERSION)-x64$(EXT)             -march=nehalem
+	$(RELEASE)-$(VERSION)-x64$(EXT)             -march=core2
 	strip $(EXE)-$(VERSION)-x64$(EXT)
-	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        -march=haswell
+	
+	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        -march=core-avx2
 	strip $(EXE)-$(VERSION)-x64-avx2$(EXT)
-	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   -march=haswell -DUSE_PEXT
+
+	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   -march=core-avx2 -DUSE_PEXT
 	strip $(EXE)-$(VERSION)-x64-avx2-pext$(EXT)
 
 clone-networks:
