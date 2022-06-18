@@ -438,7 +438,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       UndoNullMove(board);
       data->ply--;
 
-      if (score >= beta) return score < TB_WIN_BOUND ? score : beta;
+      if (score >= beta) return score < WINNING_ENDGAME ? score : beta;
     }
 
     // Prob cut

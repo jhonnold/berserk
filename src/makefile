@@ -4,7 +4,7 @@
 EXE      = berserk
 SRC      = *.c pyrrhic/tbprobe.c noobprobe/*.c
 CC       = gcc
-VERSION  = 9
+VERSION  = 20220618
 MAIN_NETWORK = networks/berserk-27c2bc72e784.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG

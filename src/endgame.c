@@ -76,8 +76,7 @@ INLINE int EvaluateKPK(Board* board, const int winningSide) {
 
   int winningKing = lsb(PieceBB(KING, winningSide));
   int losingKing = lsb(PieceBB(KING, losingSide));
-
-  int pawn = lsb(PieceBB(PAWN, winningSide));
+  int pawn = winningSide == WHITE ? lsb(PieceBB(PAWN, WHITE)) : msb(PieceBB(PAWN, BLACK));
 
   if (KPKDraw(winningSide, winningKing, losingKing, pawn, board->stm)) return 0;
 
@@ -140,13 +139,15 @@ INLINE uint8_t KBPKDraw(int winningSide, int winningKing, int losingKing, int bi
 INLINE int EvaluateKBPK(Board* board, const int winningSide) {
   const int losingSide = winningSide ^ 1;
 
-  int pawn = lsb(PieceBB(PAWN, winningSide));
+  int pawn = winningSide == WHITE ? lsb(PieceBB(PAWN, WHITE)) : msb(PieceBB(PAWN, BLACK));
   int promotionSq = winningSide == WHITE ? File(pawn) : A1 + File(pawn);
   int darkPromoSq = !!getBit(DARK_SQS, promotionSq);
   int darkBishop = !!(DARK_SQS & PieceBB(BISHOP, winningSide));
 
+  uint8_t files = PawnFiles(PieceBB(PAWN, winningSide));
+
   // "Winning" if not a rook pawn or have right bishop
-  if ((PieceBB(PAWN, winningSide) & ~(A_FILE | H_FILE)) || darkPromoSq == darkBishop) {
+  if ((files != 0x01 && files != 0x80) || darkPromoSq == darkBishop) {
     int score = WINNING_ENDGAME + MaterialValue(board, winningSide);
 
     score += winningSide == WHITE ? (7 - Rank(pawn)) : Rank(pawn);
@@ -187,24 +188,39 @@ int EvaluateKnownPositions(Board* board) {
       return 0;
     case 0x1:  // KPk
       return EvaluateKPK(board, WHITE);
-    case 0x10:  // Kpk
+    case 0x10:  // Kkp
       return EvaluateKPK(board, BLACK);
     case 0x10100:  // KBNk
       return EvaluateKBNK(board, WHITE);
-    case 0x101000:
+    case 0x101000:  // Kkbn
       return EvaluateKBNK(board, BLACK);
-    case 0x10001:  // KBPk
-      return EvaluateKBPK(board, WHITE);
-    case 0x100010:  // Kkbp
-      return EvaluateKBPK(board, BLACK);
     default:
       break;
   }
 
-  if (bits(OccBB(BLACK)) == 1)
+  if (bits(OccBB(BLACK)) == 1) {
+    // KBPK
+    if ((board->piecesCounts ^ 0x10000) <= 0xF) return EvaluateKBPK(board, WHITE);
+
+    // stacked rook pawns
+    if (board->piecesCounts <= 0xF) {
+      uint8_t files = PawnFiles(PieceBB(PAWN, WHITE));
+      if (files == 0x1 || files == 0x80) return EvaluateKPK(board, WHITE);
+    }
+
     return EvaluateKXK(board, WHITE);
-  else if (bits(OccBB(WHITE)) == 1)
+  } else if (bits(OccBB(WHITE)) == 1) {
+    // Kkbp
+    if ((board->piecesCounts ^ 0x100000) <= 0xF0) return EvaluateKBPK(board, BLACK);
+
+    // stacked rook pawns
+    if (board->piecesCounts <= 0xF0) {
+      uint8_t files = PawnFiles(PieceBB(PAWN, BLACK));
+      if (files == 0x1 || files == 0x80) return EvaluateKPK(board, BLACK);
+    }
+
     return EvaluateKXK(board, BLACK);
+  }
 
   return UNKNOWN;
 }
