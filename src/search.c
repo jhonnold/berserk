@@ -684,8 +684,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   if (!isPV && tt) {
     ttScore = TTScore(tt, data->ply);
 
-    if (ttScore != UNKNOWN &&
-        (((tt->flags & TT_LOWER) && ttScore >= beta) || ((tt->flags & TT_UPPER) && ttScore <= alpha)))
+    if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
+                               ((tt->flags & TT_UPPER) && ttScore <= alpha)))
       return ttScore;
   }
 
