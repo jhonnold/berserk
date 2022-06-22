@@ -174,7 +174,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 }
 
 // uci "position" command
-void ParsePosition(char* in, Board* board) {
+void ParsePosition(char* in, Board* board, ThreadData* threads) {
   in += 9;
   char* ptrChar = in;
 
@@ -192,6 +192,8 @@ void ParsePosition(char* in, Board* board) {
 
   ptrChar = strstr(in, "moves");
 
+  for (int t = 0; t < threads->count; t++) threads->data.searchMoves[0] = threads->data.searchMoves[1] = NULL_MOVE;
+
   if (ptrChar == NULL) return;
 
   ptrChar += 6;
@@ -202,8 +204,12 @@ void ParsePosition(char* in, Board* board) {
 
     MakeMoveUpdate(enteredMove, board, 0);
 
-    if (board->halfMove == 0)
-      board->histPly = 0;
+    if (board->halfMove == 0) board->histPly = 0;
+
+    for (int t = 0; t < threads->count; t++) {
+      threads->data.searchMoves[0] = threads->data.searchMoves[1];
+      threads->data.searchMoves[1] = enteredMove;
+    }
   }
 }
 
@@ -251,9 +257,9 @@ void UCILoop() {
     if (!strncmp(in, "isready", 7)) {
       printf("readyok\n");
     } else if (!strncmp(in, "position", 8)) {
-      ParsePosition(in, &board);
+      ParsePosition(in, &board, threads);
     } else if (!strncmp(in, "ucinewgame", 10)) {
-      ParsePosition("position startpos\n", &board);
+      ParsePosition("position startpos\n", &board, threads);
       TTClear();
       ResetThreadPool(threads);
       failedQueries = 0;
@@ -383,7 +389,7 @@ void UCILoop() {
       printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
       printf("info string Resetting board...\n");
 
-      ParsePosition("position startpos\n", &board);
+      ParsePosition("position startpos\n", &board, threads);
       TTClear();
       ResetThreadPool(threads);
       failedQueries = 0;
