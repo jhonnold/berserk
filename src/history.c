@@ -31,11 +31,11 @@ void AddKillerMove(SearchData* data, Move move) {
 
 void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[FromTo(parent)] = move; }
 
-void AddHistoryHeuristic(int* entry, int inc) { *entry += 64 * inc - *entry * abs(inc) / 1024; }
+void AddHistoryHeuristic(int* entry, int inc) { *entry += inc - *entry * abs(inc) / 65536; }
 
 void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ,
                      Move tacticals[], int nT, BitBoard threats) {
-  int inc = min(depth * depth, 576);
+  int inc = min(7584, 16 * depth * depth + 480 * depth - 480);
 
   Move parent = data->moves[data->ply - 1];
   Move grandParent = data->moves[data->ply - 2];
