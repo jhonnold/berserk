@@ -494,7 +494,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int counterHistory = GetCounterHistory(data, move);
 
     if (bestScore > -MATE_BOUND) {
-      if (legalMoves >= LMP[improving][depth]) skipQuiets = 1;
+      if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
 
       if (!tactical) {
         if (depth < 3 && !killerOrCounter && (history < -4096 * depth || counterHistory < -2048 * depth)) continue;

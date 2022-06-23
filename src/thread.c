@@ -67,7 +67,6 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     memset(&threads[i].data.de, 0, sizeof(threads[i].data.de));
 
     // set the moves arr as an offset of 2
-    memset(&threads[i].data.searchMoves, 0, sizeof(threads[i].data.searchMoves));
     threads[i].data.moves = &threads[i].data.searchMoves[2];
 
     memset(&threads[i].scores, 0, sizeof(threads[i].scores));
@@ -93,7 +92,7 @@ void ResetThreadPool(ThreadData* threads) {
     // empty ALL data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
     memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
-    memset(&threads[i].data.moves, 0, sizeof(threads[i].data.moves));
+    memset(&threads[i].data.searchMoves, 0, sizeof(threads[i].data.searchMoves));
     memset(&threads[i].data.killers, 0, sizeof(threads[i].data.killers));
     memset(&threads[i].data.counters, 0, sizeof(threads[i].data.counters));
     memset(&threads[i].data.hh, 0, sizeof(threads[i].data.hh));
