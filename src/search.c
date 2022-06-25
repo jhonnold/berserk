@@ -642,7 +642,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   // Checkmate detection using movecount
-  if (!legalMoves) return board->checkers ? -CHECKMATE + data->ply : 0;
+  if (!legalMoves) return skipMove ? alpha : board->checkers ? -CHECKMATE + data->ply : 0;
 
   // don't let our score inflate too high (tb)
   bestScore = min(bestScore, maxScore);
