@@ -9,7 +9,7 @@ echo "Download complete"
 
 echo "Compiling Berserk..."
 cd src
-make
+make pgo
 echo "Compilation complete..."
 
 EXE=$PWD/berserk
