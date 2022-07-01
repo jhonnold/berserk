@@ -60,15 +60,15 @@ BASIC   = $(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
 RELEASE = $(CC) $(RFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
 # Targets
-basic: clone-networks
-	$(BASIC)
-
 pgo: clone-networks
 	$(BASIC) $(PGOGEN)
 	$(BENCH)
 	$(PGOMERGE)
 	$(BASIC) $(PGOUSE)
 	$(CLEAN)
+
+basic: clone-networks
+	$(BASIC)
 
 release: clone-networks
 	$(RELEASE)-$(VERSION)-x64$(EXT)             -march=core2
