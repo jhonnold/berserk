@@ -497,7 +497,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
 
       if (!tactical) {
-        if (depth < 3 && !killerOrCounter && (history < -4096 * depth || counterHistory < -2048 * depth)) continue;
+        if (depth < 3 && !killerOrCounter && counterHistory < -2048 * depth) continue;
 
         if (depth < 9 && eval + 100 + 50 * depth + history / 512 <= alpha) skipQuiets = 1;
 
