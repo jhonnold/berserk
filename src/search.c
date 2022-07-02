@@ -491,14 +491,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int tactical = IsTactical(move);
     int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
     int history = GetQuietHistory(data, move, board->stm, oppThreat.sqs);
-    int counterHistory = GetCounterHistory(data, move);
 
     if (bestScore > -MATE_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
 
       if (!tactical) {
-        if (depth < 3 && !killerOrCounter && counterHistory < -2048 * depth) continue;
-
         if (depth < 9 && eval + 100 + 50 * depth + history / 512 <= alpha) skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][depth])) continue;
