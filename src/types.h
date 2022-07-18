@@ -27,7 +27,7 @@
 #define N_KING_BUCKETS 8
 
 #define N_FEATURES (8 * 12 * 64)
-#define N_HIDDEN 512
+#define N_HIDDEN 1024
 #define N_OUTPUT 1
 
 #if defined(__AVX512F__)
