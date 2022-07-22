@@ -567,15 +567,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         // increase reduction on non-pv
         if (!isPV) R++;
 
-        // vizviz root delta idea in LMR
-        // if we've found a reasonable move already, reduce others more
-        if (isPV && (beta - alpha) * 2 < data->window) R++;
-
         // increase reduction if our eval is declining
         if (!improving) R++;
 
+        // reduce these special quiets less
         if (killerOrCounter) R -= 2;
 
+        // less likely a non-capture is best
         if (IsCap(hashMove)) R++;
 
         // move GAVE check
