@@ -412,11 +412,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 6 && !skipMove && eval - 75 * (depth - (improving && !oppThreat.pcs)) > beta && eval < WINNING_ENDGAME)
+    if (depth <= 9 && !skipMove && eval - 75 * depth + 100 * (improving && !oppThreat.pcs) >= beta && eval >= beta &&
+        eval < WINNING_ENDGAME)
       return eval;
 
     // Razoring
-    if (depth <= 3 && eval + 200 * depth <= alpha) {
+    if (depth <= 5 && eval + 200 * depth <= alpha) {
       score = Quiesce(alpha, beta, thread);
       if (score <= alpha) return score;
     }
