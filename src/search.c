@@ -561,37 +561,32 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Late move reductions
     int R = 1;
-    if (depth > 2 && playedMoves > 1) {
+    if (depth > 2 && playedMoves > 1 && !tactical) {
       R = LMR[min(depth, 63)][min(playedMoves, 63)];
 
-      if (!tactical) {
-        // increase reduction on non-pv
-        if (!isPV) R++;
+      // increase reduction on non-pv
+      if (!isPV) R++;
 
-        // increase reduction if our eval is declining
-        if (!improving) R++;
+      // increase reduction if our eval is declining
+      if (!improving) R++;
 
-        // reduce these special quiets less
-        if (killerOrCounter) R -= 2;
+      // reduce these special quiets less
+      if (killerOrCounter) R -= 2;
 
-        // less likely a non-capture is best
-        if (IsCap(hashMove)) R++;
+      // less likely a non-capture is best
+      if (IsCap(hashMove)) R++;
 
-        // move GAVE check
-        if (board->checkers) R--;
-
-        // adjust reduction based on historical score
-        R -= history / 20480;
-      } else {
-        int th = GetTacticalHistory(data, board, move);
-        R = 1 - 4 * th / (abs(th) + 24576);
-      }
+      // move GAVE check
+      if (board->checkers) R--;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode) R++;
+
+      // adjust reduction based on historical score
+      R -= history / 20480;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = min(depth - 1, max(R, 1));
