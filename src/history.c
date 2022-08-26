@@ -53,7 +53,7 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
   } else {
     int piece = PieceType(Moving(bestMove));
     int to = To(bestMove);
-    int captured = (IsEP(bestMove) || Promo(bestMove)) ? PAWN : PieceType(board->squares[to]);
+    int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
     AddHistoryHeuristic(&TH(piece, to, captured), inc);
   }
@@ -77,7 +77,7 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
     if (m != bestMove) {
       int piece = PieceType(Moving(m));
       int to = To(m);
-      int captured = (IsEP(m) || Promo(m)) ? PAWN : PieceType(board->squares[to]);
+      int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
       AddHistoryHeuristic(&TH(piece, to, captured), -inc);
     }
@@ -108,7 +108,7 @@ int GetCounterHistory(SearchData* data, Move move) {
 int GetTacticalHistory(SearchData* data, Board* board, Move m) {
   int piece = PieceType(Moving(m));
   int to = To(m);
-  int captured = (IsEP(m) || Promo(m)) ? PAWN : PieceType(board->squares[to]);
+  int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
   return TH(piece, to, captured);
 }
