@@ -137,7 +137,7 @@ typedef struct {
   int hh[2][2][2][64 * 64];         // history heuristic butterfly table (stm / threatened)
   int ch[12][64][12][64];           // continuation move history table
 
-  int th[6][64][6];  // tactical (capture) history
+  int th[6][64][7];  // tactical (capture) history
 
   int64_t tm[64 * 64];
 } SearchData;
