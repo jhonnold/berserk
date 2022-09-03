@@ -20,9 +20,9 @@
 #include "types.h"
 
 // search specific score evals
-#define UNKNOWN 32257  // this must be higher than CHECKMATE (some conditional logic relies on this)
-#define CHECKMATE 32200
-#define MATE_BOUND (32200 - MAX_SEARCH_PLY)
+#define UNKNOWN      32257 // this must be higher than CHECKMATE (some conditional logic relies on this)
+#define CHECKMATE    32200
+#define MATE_BOUND   (32200 - MAX_SEARCH_PLY)
 #define TB_WIN_SCORE MATE_BOUND
 #define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
 
@@ -30,7 +30,7 @@
 // capture cutoff is linear 70x
 // quiet cutoff is quadratic 20x^2
 #define SEE_PRUNE_CAPTURE_CUTOFF 90
-#define SEE_PRUNE_CUTOFF 15
+#define SEE_PRUNE_CUTOFF         15
 
 // delta pruning in QS
 #define DELTA_CUTOFF 50

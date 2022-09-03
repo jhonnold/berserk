@@ -36,8 +36,12 @@ void ResetAccumulator(Accumulator output, Board* board, const int perspective);
 
 void ApplyUpdates(Board* board, int stm, NNUpdate* updates);
 
-INLINE void AddAddition(int f, NNUpdate* updates) { updates->additions[updates->na++] = f; }
-INLINE void AddRemoval(int f, NNUpdate* updates) { updates->removals[updates->nr++] = f; }
+INLINE void AddAddition(int f, NNUpdate* updates) {
+  updates->additions[updates->na++] = f;
+}
+INLINE void AddRemoval(int f, NNUpdate* updates) {
+  updates->removals[updates->nr++] = f;
+}
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);

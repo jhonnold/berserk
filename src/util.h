@@ -23,7 +23,7 @@
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
 #define stringize_(x) #x
-#define stringize(x) stringize_(x)
+#define stringize(x)  stringize_(x)
 
 #define INLINE static inline __attribute__((always_inline))
 

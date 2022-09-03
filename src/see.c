@@ -31,7 +31,7 @@ inline int SEE(Board* board, Move move, int threshold) {
   if (IsCas(move) || IsEP(move) || Promo(move)) return 1;
 
   int from = From(move);
-  int to = To(move);
+  int to   = To(move);
 
   int v = SEE_VALUE[PieceType(board->squares[to])] - threshold;
   if (v < 0) return 0;
@@ -39,10 +39,10 @@ inline int SEE(Board* board, Move move, int threshold) {
   v -= SEE_VALUE[PieceType(Moving(move))];
   if (v >= 0) return 1;
 
-  BitBoard occ = (OccBB(BOTH) ^ bit(from)) | bit(to);
+  BitBoard occ       = (OccBB(BOTH) ^ bit(from)) | bit(to);
   BitBoard attackers = AttacksToSquare(board, to, occ);
 
-  BitBoard diag = PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
+  BitBoard diag     = PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
   BitBoard straight = PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
 
   int stm = board->xstm;

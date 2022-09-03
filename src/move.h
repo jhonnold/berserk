@@ -30,18 +30,18 @@ extern const int CASTLING_ROOK[64];
 
 #define BuildMove(from, to, piece, promo, flags) \
   (from) | ((to) << 6) | ((piece) << 12) | ((promo) << 16) | ((flags) << 20)
-#define From(move) ((int)(move)&0x3f)
-#define To(move) (((int)(move)&0xfc0) >> 6)
-#define Moving(move) (((int)(move)&0xf000) >> 12)
-#define Promo(move) (((int)(move)&0xf0000) >> 16)
-#define IsCap(move) (((int)(move)&0x100000) >> 20)
-#define IsDP(move) (((int)(move)&0x200000) >> 21)
-#define IsEP(move) (((int)(move)&0x400000) >> 22)
-#define IsCas(move) (((int)(move)&0x800000) >> 23)
+#define From(move)   ((int) (move) &0x3f)
+#define To(move)     (((int) (move) &0xfc0) >> 6)
+#define Moving(move) (((int) (move) &0xf000) >> 12)
+#define Promo(move)  (((int) (move) &0xf0000) >> 16)
+#define IsCap(move)  (((int) (move) &0x100000) >> 20)
+#define IsDP(move)   (((int) (move) &0x200000) >> 21)
+#define IsEP(move)   (((int) (move) &0x400000) >> 22)
+#define IsCas(move)  (((int) (move) &0x800000) >> 23)
 // just mask the from/to bits into a single int for indexing butterfly tables
-#define FromTo(move) ((int)(move)&0xfff)
+#define FromTo(move) ((int) (move) &0xfff)
 
-#define IsTactical(move) (((int)(move)&0x1f0000) >> 16)
+#define IsTactical(move) (((int) (move) &0x1f0000) >> 16)
 
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move, Board* board);

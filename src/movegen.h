@@ -19,18 +19,18 @@
 
 #include "types.h"
 
-#define PawnDir(c) ((c) == WHITE ? N : S)
+#define PawnDir(c)   ((c) == WHITE ? N : S)
 #define PromoRank(c) ((c) == WHITE ? RANK_7 : RANK_2)
-#define DPRank(c) ((c) == WHITE ? RANK_3 : RANK_6)
+#define DPRank(c)    ((c) == WHITE ? RANK_3 : RANK_6)
 
 #define ALL -1ULL
 
 #define NO_PROMO 0
-#define QUIET 0b0000
-#define CAPTURE 0b0001
-#define EP 0b0101
-#define DP 0b0010
-#define CASTLE 0b1000
+#define QUIET    0b0000
+#define CAPTURE  0b0001
+#define EP       0b0101
+#define DP       0b0010
+#define CASTLE   0b1000
 
 #define WHITE_KS 0x8
 #define WHITE_QS 0x4

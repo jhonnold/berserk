@@ -19,9 +19,6 @@
 
 #include "types.h"
 
-extern const int BISHOP_RELEVANT_BITS[64];
-extern const int ROOK_RELEVANT_BITS[64];
-
 extern BitBoard BETWEEN_SQS[64][64];
 extern BitBoard PINNED_MOVES[64][64];
 

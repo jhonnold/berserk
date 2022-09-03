@@ -19,8 +19,8 @@
 
 #include "types.h"
 
-#define NO_ENTRY 0ULL
-#define MEGABYTE 0x100000ULL
+#define NO_ENTRY    0ULL
+#define MEGABYTE    0x100000ULL
 #define BUCKET_SIZE 2
 
 typedef struct {

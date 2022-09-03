@@ -24,15 +24,15 @@
 
 #define NO_PIECE 12
 
-#define Piece(pc, c) (((pc) << 1) + c)
-#define PieceType(pc) ((pc) >> 1)
+#define Piece(pc, c)   (((pc) << 1) + c)
+#define PieceType(pc)  ((pc) >> 1)
 #define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
-#define OccBB(c) (board->occupancies[c])
+#define OccBB(c)       (board->occupancies[c])
 
-#define File(sq) ((sq)&7)
-#define Rank(sq) ((sq) >> 3)
-#define Sq(r, f) ((r)*8 + (f))
-#define Distance(a, b) max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
+#define File(sq)        ((sq) &7)
+#define Rank(sq)        ((sq) >> 3)
+#define Sq(r, f)        ((r) *8 + (f))
+#define Distance(a, b)  max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
 #define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
 
 extern const int8_t PSQT[64];
@@ -75,8 +75,8 @@ INLINE int MoveRequiresRefresh(int piece, int from, int to) {
 }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
-  int oP = 6 * ((piece ^ view) & 0x1) + PieceType(piece);
-  int oK = (7 * !(kingsq & 4)) ^ (56 * view) ^ kingsq;
+  int oP  = 6 * ((piece ^ view) & 0x1) + PieceType(piece);
+  int oK  = (7 * !(kingsq & 4)) ^ (56 * view) ^ kingsq;
   int oSq = (7 * !(kingsq & 4)) ^ (56 * view) ^ sq;
 
   return KING_BUCKETS[oK] * 12 * 64 + oP * 64 + oSq;

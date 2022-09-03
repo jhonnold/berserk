@@ -21,14 +21,22 @@
 #include "types.h"
 
 #define HH(stm, m, threats) (data->hh[stm][!getBit(threats, From(m))][!getBit(threats, To(m))][FromTo(m)])
-#define CH(p, m) (data->ch[Moving(p)][To(p)][Moving(m)][To(m)])
-#define TH(p, e, c) (data->th[p][e][c])
+#define CH(p, m)            (data->ch[Moving(p)][To(p)][Moving(m)][To(m)])
+#define TH(p, e, c)         (data->th[p][e][c])
 
 void AddKillerMove(SearchData* data, Move move);
 void AddCounterMove(SearchData* data, Move move, Move parent);
 void AddHistoryHeuristic(int* entry, int inc);
-void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ,
-                     Move tacticals[], int nT, BitBoard threats);
+void UpdateHistories(Board* board,
+                     SearchData* data,
+                     Move bestMove,
+                     int depth,
+                     int stm,
+                     Move quiets[],
+                     int nQ,
+                     Move tacticals[],
+                     int nT,
+                     BitBoard threats);
 int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats);
 int GetCounterHistory(SearchData* data, Move move);
 int GetTacticalHistory(SearchData* data, Board* board, Move move);

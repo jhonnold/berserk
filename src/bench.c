@@ -31,7 +31,7 @@
 
 // Ethereal's bench set
 const int NUM_BENCH_POSITIONS = 50;
-char* benchmarks[] = {
+char* benchmarks[]            = {
 #include "files/bench.csv"
 };
 
@@ -59,21 +59,26 @@ void Bench() {
     times[i] = GetTimeMS() - params.start;
 
     bestMoves[i] = results.bestMoves[results.depth];
-    scores[i] = results.scores[results.depth];
-    nodes[i] = threads[0].data.nodes;
+    scores[i]    = results.scores[results.depth];
+    nodes[i]     = threads[0].data.nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 
   printf("\n\n");
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
-    printf("Bench [#%2d]: bestmove %5s score %5d %12d nodes %8d nps | %71s\n", i + 1, MoveToStr(bestMoves[i], &board),
-           scores[i], nodes[i], (int)(1000.0 * nodes[i] / (times[i] + 1)), benchmarks[i]);
+    printf("Bench [#%2d]: bestmove %5s score %5d %12d nodes %8d nps | %71s\n",
+           i + 1,
+           MoveToStr(bestMoves[i], &board),
+           scores[i],
+           nodes[i],
+           (int) (1000.0 * nodes[i] / (times[i] + 1)),
+           benchmarks[i]);
   }
 
   int totalNodes = 0;
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) totalNodes += nodes[i];
 
-  printf("\nResults: %43d nodes %8d nps\n\n", totalNodes, (int)(1000.0 * totalNodes / (totalTime + 1)));
+  printf("\nResults: %43d nodes %8d nps\n\n", totalNodes, (int) (1000.0 * totalNodes / (totalTime + 1)));
 
   free(threads);
 }

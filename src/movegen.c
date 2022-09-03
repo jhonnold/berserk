@@ -36,14 +36,14 @@ INLINE void AppendMove(Move* arr, uint8_t* n, int from, int to, int moving, int 
 
 INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opts, Board* board, const int stm) {
   const int xstm = stm ^ 1;
-  Move* arr = list->tactical;
-  uint8_t* n = &list->nTactical;
+  Move* arr      = list->tactical;
+  uint8_t* n     = &list->nTactical;
 
-  BitBoard valid = movers & PromoRank(stm);
+  BitBoard valid   = movers & PromoRank(stm);
   BitBoard targets = ShiftPawnDir(valid, stm) & ~OccBB(BOTH) & opts;
 
   while (targets) {
-    int to = popAndGetLsb(&targets);
+    int to   = popAndGetLsb(&targets);
     int from = to - PawnDir(stm);
 
     AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(QUEEN, stm), QUIET);
@@ -55,7 +55,7 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
   targets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
 
   while (targets) {
-    int to = popAndGetLsb(&targets);
+    int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
     AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(QUEEN, stm), CAPTURE);
@@ -67,7 +67,7 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
 
   while (targets) {
-    int to = popAndGetLsb(&targets);
+    int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
     AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(QUEEN, stm), CAPTURE);
@@ -79,14 +79,14 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
 
 INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts, Board* board, const int stm) {
   const int xstm = stm ^ 1;
-  Move* arr = list->tactical;
-  uint8_t* n = &list->nTactical;
+  Move* arr      = list->tactical;
+  uint8_t* n     = &list->nTactical;
 
-  BitBoard valid = movers & ~PromoRank(stm);
+  BitBoard valid   = movers & ~PromoRank(stm);
   BitBoard targets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
 
   while (targets) {
-    int to = popAndGetLsb(&targets);
+    int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
     AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, CAPTURE);
@@ -95,7 +95,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
 
   while (targets) {
-    int to = popAndGetLsb(&targets);
+    int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
     AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, CAPTURE);
@@ -107,49 +107,54 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
 
   while (pawns) {
     int from = popAndGetLsb(&pawns);
-    int to = board->epSquare;
+    int to   = board->epSquare;
 
     AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, EP);
   }
 }
 
 INLINE void GeneratePawnQuiets(MoveList* list, BitBoard movers, BitBoard opts, Board* board, const int stm) {
-  Move* arr = list->quiet;
+  Move* arr  = list->quiet;
   uint8_t* n = &list->nQuiets;
 
-  BitBoard valid = movers & ~PromoRank(stm);
-  BitBoard targets = ShiftPawnDir(valid, stm) & ~OccBB(BOTH);
+  BitBoard valid     = movers & ~PromoRank(stm);
+  BitBoard targets   = ShiftPawnDir(valid, stm) & ~OccBB(BOTH);
   BitBoard dpTargets = ShiftPawnDir(targets & DPRank(stm), stm) & ~OccBB(BOTH);
 
   targets &= opts;
   dpTargets &= opts;
 
   while (targets) {
-    int to = popAndGetLsb(&targets);
+    int to   = popAndGetLsb(&targets);
     int from = to - PawnDir(stm);
 
     AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, QUIET);
   }
 
   while (dpTargets) {
-    int to = popAndGetLsb(&dpTargets);
+    int to   = popAndGetLsb(&dpTargets);
     int from = to - PawnDir(stm) - PawnDir(stm);
 
     AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, DP);
   }
 }
 
-INLINE void GeneratePieceMoves(MoveList* list, BitBoard movers, BitBoard opts, Board* board, const int stm,
-                               const int piece, const int type) {
+INLINE void GeneratePieceMoves(MoveList* list,
+                               BitBoard movers,
+                               BitBoard opts,
+                               Board* board,
+                               const int stm,
+                               const int piece,
+                               const int type) {
   const int xstm = stm ^ 1;
-  Move* arr = type == QUIET ? list->quiet : list->tactical;
-  uint8_t* n = type == QUIET ? &list->nQuiets : &list->nTactical;
+  Move* arr      = type == QUIET ? list->quiet : list->tactical;
+  uint8_t* n     = type == QUIET ? &list->nQuiets : &list->nTactical;
 
   while (movers) {
     int from = popAndGetLsb(&movers);
 
-    BitBoard targets = (type == QUIET ? GetPieceAttacks(from, OccBB(BOTH), piece) & ~OccBB(BOTH)
-                                      : GetPieceAttacks(from, OccBB(BOTH), piece) & OccBB(xstm)) &
+    BitBoard targets = (type == QUIET ? GetPieceAttacks(from, OccBB(BOTH), piece) & ~OccBB(BOTH) :
+                                        GetPieceAttacks(from, OccBB(BOTH), piece) & OccBB(xstm)) &
                        opts;
     while (targets) {
       int to = popAndGetLsb(&targets);
@@ -160,7 +165,7 @@ INLINE void GeneratePieceMoves(MoveList* list, BitBoard movers, BitBoard opts, B
 }
 
 INLINE void GenerateCastles(MoveList* list, Board* board, const int stm) {
-  Move* arr = list->quiet;
+  Move* arr  = list->quiet;
   uint8_t* n = &list->nQuiets;
 
   if (stm == WHITE) {
@@ -204,8 +209,8 @@ INLINE void GenerateCastles(MoveList* list, Board* board, const int stm) {
 
 INLINE void GenerateMoves(MoveList* list, Board* board, const int type) {
   const int stm = board->stm;
-  Move* arr = type == QUIET ? list->quiet : list->tactical;
-  uint8_t* n = type == QUIET ? &list->nQuiets : &list->nTactical;
+  Move* arr     = type == QUIET ? list->quiet : list->tactical;
+  uint8_t* n    = type == QUIET ? &list->nQuiets : &list->nTactical;
 
   int king = lsb(PieceBB(KING, stm));
 
@@ -213,13 +218,16 @@ INLINE void GenerateMoves(MoveList* list, Board* board, const int type) {
     GeneratePieceMoves(list, PieceBB(KING, stm), ALL, board, stm, KING, type);
   else if (board->checkers) {
     BitBoard valid = ~board->pinned;
-    BitBoard opts = type == QUIET ? BetweenSquares(king, lsb(board->checkers)) : board->checkers;
+    BitBoard opts  = type == QUIET ? BetweenSquares(king, lsb(board->checkers)) : board->checkers;
 
     if (type == QUIET)
       GeneratePawnQuiets(list, PieceBB(PAWN, stm) & valid, opts, board, stm);
     else {
       GeneratePawnCaptures(list, PieceBB(PAWN, stm) & valid, opts, board, stm);
-      GeneratePawnPromotions(list, PieceBB(PAWN, stm) & valid, opts | BetweenSquares(king, lsb(board->checkers)), board,
+      GeneratePawnPromotions(list,
+                             PieceBB(PAWN, stm) & valid,
+                             opts | BetweenSquares(king, lsb(board->checkers)),
+                             board,
                              stm);
     }
 
@@ -281,15 +289,19 @@ INLINE void GenerateMoves(MoveList* list, Board* board, const int type) {
   Move* curr = arr;
   while (curr != arr + *n) {
     if ((From(*curr) == king || IsEP(*curr)) && !IsMoveLegal(*curr, board))
-      *curr = arr[--(*n)];  // overwrite this illegal move with the last move and try again
+      *curr = arr[--(*n)]; // overwrite this illegal move with the last move and try again
     else
       ++curr;
   }
 }
 
-void GenerateTacticalMoves(MoveList* list, Board* board) { GenerateMoves(list, board, !QUIET); }
+void GenerateTacticalMoves(MoveList* list, Board* board) {
+  GenerateMoves(list, board, !QUIET);
+}
 
-void GenerateQuietMoves(MoveList* list, Board* board) { GenerateMoves(list, board, QUIET); }
+void GenerateQuietMoves(MoveList* list, Board* board) {
+  GenerateMoves(list, board, QUIET);
+}
 
 void GenerateAllMoves(MoveList* list, Board* board) {
   GenerateTacticalMoves(list, board);

@@ -32,7 +32,9 @@
 INCBIN(KPK, "bitbases/KPvK.bb");
 INCBIN(KBPK, "bitbases/KBPvK.bb");
 
-INLINE int PushTogether(int sq1, int sq2) { return 70 - Distance(sq1, sq2); }
+INLINE int PushTogether(int sq1, int sq2) {
+  return 70 - Distance(sq1, sq2);
+}
 
 INLINE int PushToEdge(int sq) {
   int rankDistance = min(Rank(sq), 7 - Rank(sq));
@@ -51,7 +53,7 @@ INLINE int MaterialValue(Board* board, const int side) {
 // The following KPK code is modified for my use from Cheng (as is the dataset)
 INLINE uint32_t KPKIndex(int winningKing, int losingKing, int pawn, int stm) {
   int file = File(pawn);
-  int x = file > 3 ? 7 : 0;
+  int x    = file > 3 ? 7 : 0;
 
   winningKing ^= x;
   losingKing ^= x;
@@ -60,23 +62,23 @@ INLINE uint32_t KPKIndex(int winningKing, int losingKing, int pawn, int stm) {
 
   uint32_t p = (((pawn & 0x38) - 8) >> 1) | file;
 
-  return (uint32_t)winningKing | ((uint32_t)losingKing << 6) | ((uint32_t)stm << 12) | ((uint32_t)p << 13);
+  return (uint32_t) winningKing | ((uint32_t) losingKing << 6) | ((uint32_t) stm << 12) | ((uint32_t) p << 13);
 }
 
 INLINE uint8_t KPKDraw(int winningSide, int winningKing, int losingKing, int pawn, int stm) {
-  uint32_t x = (winningSide == WHITE) ? 0 : 56;
+  uint32_t x   = (winningSide == WHITE) ? 0 : 56;
   uint32_t idx = KPKIndex(winningKing ^ x, losingKing ^ x, pawn ^ x, winningSide ^ stm);
 
-  return (uint8_t)(KPKData[idx >> 3] & (1U << (idx & 7)));
+  return (uint8_t) (KPKData[idx >> 3] & (1U << (idx & 7)));
 }
 
 INLINE int EvaluateKPK(Board* board, const int winningSide) {
   const int losingSide = winningSide ^ 1;
-  int score = WINNING_ENDGAME + MaterialValue(board, winningSide);
+  int score            = WINNING_ENDGAME + MaterialValue(board, winningSide);
 
   int winningKing = lsb(PieceBB(KING, winningSide));
-  int losingKing = lsb(PieceBB(KING, losingSide));
-  int pawn = winningSide == WHITE ? lsb(PieceBB(PAWN, WHITE)) : msb(PieceBB(PAWN, BLACK));
+  int losingKing  = lsb(PieceBB(KING, losingSide));
+  int pawn        = winningSide == WHITE ? lsb(PieceBB(PAWN, WHITE)) : msb(PieceBB(PAWN, BLACK));
 
   if (KPKDraw(winningSide, winningKing, losingKing, pawn, board->stm)) return 0;
 
@@ -87,10 +89,10 @@ INLINE int EvaluateKPK(Board* board, const int winningSide) {
 
 INLINE int EvaluateKXK(Board* board, const int winningSide) {
   const int losingSide = winningSide ^ 1;
-  int score = WINNING_ENDGAME + MaterialValue(board, winningSide);
+  int score            = WINNING_ENDGAME + MaterialValue(board, winningSide);
 
   int winningKing = lsb(PieceBB(KING, winningSide));
-  int losingKing = lsb(PieceBB(KING, losingSide));
+  int losingKing  = lsb(PieceBB(KING, losingSide));
 
   score += PushTogether(winningKing, losingKing) + PushToEdge(losingKing);
 
@@ -100,10 +102,10 @@ INLINE int EvaluateKXK(Board* board, const int winningSide) {
 
 INLINE int EvaluateKBNK(Board* board, const int winningSide) {
   const int losingSide = winningSide ^ 1;
-  int score = WINNING_ENDGAME + MaterialValue(board, winningSide);
+  int score            = WINNING_ENDGAME + MaterialValue(board, winningSide);
 
   int winningKing = lsb(PieceBB(KING, winningSide));
-  int losingKing = lsb(PieceBB(KING, losingSide));
+  int losingKing  = lsb(PieceBB(KING, losingSide));
 
   score += PushTogether(winningKing, losingKing);
 
@@ -119,30 +121,30 @@ INLINE int EvaluateKBNK(Board* board, const int winningSide) {
 
 INLINE uint32_t KBPKIndex(int wking, int lking, int bishop, int pawn, int stm) {
   int file = File(pawn);
-  int x = file > 3 ? 7 : 0;
+  int x    = file > 3 ? 7 : 0;
 
   wking ^= x, lking ^= x, bishop ^= x, pawn ^= x;
 
   uint32_t p = (pawn >> 3) - 1;
   uint32_t b = bishop >> 1;
 
-  return (uint32_t)wking | ((uint32_t)lking << 6) | (b << 12) | ((uint32_t)stm << 17) | (p << 18);
+  return (uint32_t) wking | ((uint32_t) lking << 6) | (b << 12) | ((uint32_t) stm << 17) | (p << 18);
 }
 
 INLINE uint8_t KBPKDraw(int winningSide, int winningKing, int losingKing, int bishop, int pawn, int stm) {
-  int x = winningSide == WHITE ? 0 : 56;
+  int x        = winningSide == WHITE ? 0 : 56;
   uint32_t idx = KBPKIndex(winningKing ^ x, losingKing ^ x, bishop ^ x, pawn ^ x, winningSide ^ stm);
 
-  return !(uint8_t)(KBPKData[idx >> 3] & (1U << (idx & 7)));
+  return !(uint8_t) (KBPKData[idx >> 3] & (1U << (idx & 7)));
 }
 
 INLINE int EvaluateKBPK(Board* board, const int winningSide) {
   const int losingSide = winningSide ^ 1;
 
-  int pawn = winningSide == WHITE ? lsb(PieceBB(PAWN, WHITE)) : msb(PieceBB(PAWN, BLACK));
+  int pawn        = winningSide == WHITE ? lsb(PieceBB(PAWN, WHITE)) : msb(PieceBB(PAWN, BLACK));
   int promotionSq = winningSide == WHITE ? File(pawn) : A1 + File(pawn);
   int darkPromoSq = !!getBit(DARK_SQS, promotionSq);
-  int darkBishop = !!(DARK_SQS & PieceBB(BISHOP, winningSide));
+  int darkBishop  = !!(DARK_SQS & PieceBB(BISHOP, winningSide));
 
   uint8_t files = PawnFiles(PieceBB(PAWN, winningSide));
 
@@ -158,8 +160,8 @@ INLINE int EvaluateKBPK(Board* board, const int winningSide) {
 
   // Utilize bitbase for everything else
   int winningKing = lsb(PieceBB(KING, winningSide));
-  int losingKing = lsb(PieceBB(KING, losingSide));
-  int bishop = lsb(PieceBB(BISHOP, winningSide));
+  int losingKing  = lsb(PieceBB(KING, losingSide));
+  int bishop      = lsb(PieceBB(BISHOP, winningSide));
 
   if (KBPKDraw(winningSide, winningKing, losingKing, bishop, pawn, board->stm)) return 0;
 
@@ -174,28 +176,27 @@ INLINE int EvaluateKBPK(Board* board, const int winningSide) {
 int EvaluateKnownPositions(Board* board) {
   switch (board->piecesCounts) {
     // See IsMaterialDraw
-    case 0x0:       // Kk
-    case 0x100:     // KNk
-    case 0x200:     // KNNk
-    case 0x1000:    // Kkn
-    case 0x2000:    // Kknn
-    case 0x1100:    // KNkn
-    case 0x10000:   // KBk
-    case 0x100000:  // Kkb
-    case 0x11000:   // KBkn
-    case 0x100100:  // KNkb
-    case 0x110000:  // KBkb
+    case 0x0:      // Kk
+    case 0x100:    // KNk
+    case 0x200:    // KNNk
+    case 0x1000:   // Kkn
+    case 0x2000:   // Kknn
+    case 0x1100:   // KNkn
+    case 0x10000:  // KBk
+    case 0x100000: // Kkb
+    case 0x11000:  // KBkn
+    case 0x100100: // KNkb
+    case 0x110000: // KBkb
       return 0;
-    case 0x1:  // KPk
+    case 0x1: // KPk
       return EvaluateKPK(board, WHITE);
-    case 0x10:  // Kkp
+    case 0x10: // Kkp
       return EvaluateKPK(board, BLACK);
-    case 0x10100:  // KBNk
+    case 0x10100: // KBNk
       return EvaluateKBNK(board, WHITE);
-    case 0x101000:  // Kkbn
+    case 0x101000: // Kkbn
       return EvaluateKBNK(board, BLACK);
-    default:
-      break;
+    default: break;
   }
 
   if (bits(OccBB(BLACK)) == 1) {

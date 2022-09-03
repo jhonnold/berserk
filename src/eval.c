@@ -28,25 +28,25 @@
 #include "util.h"
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
-const int MAX_PHASE = 64;
+const int MAX_PHASE       = 64;
 
 void SetContempt(int* dest, int stm) {
   int contempt = CONTEMPT;
 
-  dest[stm] = contempt;
+  dest[stm]     = contempt;
   dest[stm ^ 1] = -contempt;
 }
 
 // "Threats" logic to be utilized in search
 // idea originating in Koivisto
 void Threats(Threat* threats, Board* board, int stm) {
-  int xstm = stm ^ 1;
+  int xstm     = stm ^ 1;
   threats->pcs = threats->sqs = 0;
 
   BitBoard opponentPieces = OccBB(xstm) ^ PieceBB(PAWN, xstm);
 
-  BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE))
-                                      : ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
+  BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
+                                        ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
   threats->sqs |= pawnAttacks;
   threats->pcs |= pawnAttacks & opponentPieces;
 
@@ -114,8 +114,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (knownEval != UNKNOWN) return knownEval;
 
   SearchData* data = &thread->data;
-  int16_t* stm = board->accumulators[board->stm][board->acc];
-  int16_t* xstm = board->accumulators[board->xstm][board->acc];
+  int16_t* stm     = board->accumulators[board->stm][board->acc];
+  int16_t* xstm    = board->accumulators[board->xstm][board->acc];
 
   int score = OutputLayer(stm, xstm);
 

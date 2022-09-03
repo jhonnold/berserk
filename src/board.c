@@ -32,31 +32,18 @@
 #include "uci.h"
 #include "zobrist.h"
 
-const int8_t PSQT[64] = {
-    0,  1,  2,  3,  3,  2,  1,  0,   // 1
-    4,  5,  6,  7,  7,  6,  5,  4,   // 2
-    8,  9,  10, 11, 11, 10, 9,  8,   // 3
-    12, 13, 14, 15, 15, 14, 13, 12,  // 4
-    16, 17, 18, 19, 19, 18, 17, 16,  // 5
-    20, 21, 22, 23, 23, 22, 21, 20,  // 6
-    24, 25, 26, 27, 27, 26, 25, 24,  // 7
-    28, 29, 30, 31, 31, 30, 29, 28   // 8
-};
-
-const uint16_t KING_BUCKETS[64] = {
-    7, 7, 7, 7, 7, 7, 7, 7,  //
-    7, 7, 7, 7, 7, 7, 7, 7,  //
-    6, 6, 6, 6, 6, 6, 6, 6,  //
-    6, 6, 6, 6, 6, 6, 6, 6,  //
-    5, 5, 4, 4, 4, 4, 5, 5,  //
-    5, 5, 4, 4, 4, 4, 5, 5,  //
-    3, 2, 1, 0, 0, 1, 2, 3,  //
-    3, 2, 1, 0, 0, 1, 2, 3,  //
-};
+const uint16_t KING_BUCKETS[64] = {7, 7, 7, 7, 7, 7, 7, 7, //
+                                   7, 7, 7, 7, 7, 7, 7, 7, //
+                                   6, 6, 6, 6, 6, 6, 6, 6, //
+                                   6, 6, 6, 6, 6, 6, 6, 6, //
+                                   5, 5, 4, 4, 4, 4, 5, 5, //
+                                   5, 5, 4, 4, 4, 4, 5, 5, //
+                                   3, 2, 1, 0, 0, 1, 2, 3, //
+                                   3, 2, 1, 0, 0, 1, 2, 3};
 
 // piece count key bit mask idx
-const uint64_t PIECE_COUNT_IDX[] = {1ULL << 0,  1ULL << 4,  1ULL << 8,  1ULL << 12, 1ULL << 16,
-                                    1ULL << 20, 1ULL << 24, 1ULL << 28, 1ULL << 32, 1ULL << 36};
+const uint64_t PIECE_COUNT_IDX[] =
+  {1ULL << 0, 1ULL << 4, 1ULL << 8, 1ULL << 12, 1ULL << 16, 1ULL << 20, 1ULL << 24, 1ULL << 28, 1ULL << 32, 1ULL << 36};
 
 const uint64_t NON_PAWN_PIECE_MASK[] = {0x0F0F0F0F00, 0xF0F0F0F000};
 
@@ -72,17 +59,17 @@ void ClearBoard(Board* board) {
   for (int i = 0; i < 64; i++) board->squares[i] = NO_PIECE;
 
   board->piecesCounts = 0ULL;
-  board->zobrist = 0ULL;
+  board->zobrist      = 0ULL;
 
-  board->stm = WHITE;
+  board->stm  = WHITE;
   board->xstm = BLACK;
 
   board->epSquare = 0;
   board->castling = 0;
-  board->histPly = 0;
-  board->moveNo = 1;
+  board->histPly  = 0;
+  board->moveNo   = 1;
   board->halfMove = 0;
-  board->phase = 0;
+  board->phase    = 0;
 }
 
 void ParseFen(char* fen, Board* board) {
@@ -90,7 +77,7 @@ void ParseFen(char* fen, Board* board) {
 
   for (int i = 0; i < 64; i++) {
     if ((*fen >= 'a' && *fen <= 'z') || (*fen >= 'A' && *fen <= 'Z')) {
-      int piece = CHAR_TO_PIECE[(int)*fen];
+      int piece = CHAR_TO_PIECE[(int) *fen];
       setBit(board->pieces[piece], i);
       board->squares[i] = piece;
 
@@ -109,7 +96,7 @@ void ParseFen(char* fen, Board* board) {
 
   fen++;
 
-  board->stm = (*fen++ == 'w' ? 0 : 1);
+  board->stm  = (*fen++ == 'w' ? 0 : 1);
   board->xstm = board->stm ^ 1;
 
   fen++;
@@ -188,14 +175,14 @@ void BoardToFen(char* fen, Board* board) {
   for (int r = 0; r < 8; r++) {
     int c = 0;
     for (int f = 0; f < 8; f++) {
-      int sq = 8 * r + f;
+      int sq    = 8 * r + f;
       int piece = board->squares[sq];
 
       if (piece != NO_PIECE) {
-        if (c) *fen++ = c + '0';  // append the amount of empty sqs
+        if (c) *fen++ = c + '0'; // append the amount of empty sqs
 
         *fen++ = PIECE_TO_CHAR[piece];
-        c = 0;
+        c      = 0;
       } else {
         c++;
       }
@@ -267,7 +254,7 @@ inline int IsOCB(Board* board) {
 inline void SetOccupancies(Board* board) {
   OccBB(WHITE) = 0;
   OccBB(BLACK) = 0;
-  OccBB(BOTH) = 0;
+  OccBB(BOTH)  = 0;
 
   for (int i = WHITE_PAWN; i <= BLACK_KING; i++) OccBB(i & 1) |= board->pieces[i];
   OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
@@ -287,7 +274,7 @@ inline void SetSpecialPieces(Board* board) {
   // for each side
   for (int kingColor = WHITE; kingColor <= BLACK; kingColor++) {
     int enemyColor = 1 - kingColor;
-    kingSq = lsb(PieceBB(KING, kingColor));
+    kingSq         = lsb(PieceBB(KING, kingColor));
 
     // get full rook/bishop rays from the king that intersect that piece type of the enemy
     BitBoard enemyPiece = ((PieceBB(BISHOP, enemyColor) | PieceBB(QUEEN, enemyColor)) & GetBishopAttacks(kingSq, 0)) |
@@ -313,38 +300,40 @@ inline void SetSpecialPieces(Board* board) {
   }
 }
 
-void MakeMove(Move move, Board* board) { MakeMoveUpdate(move, board, 1); }
+void MakeMove(Move move, Board* board) {
+  MakeMoveUpdate(move, board, 1);
+}
 
 void MakeMoveUpdate(Move move, Board* board, int update) {
   NNUpdate wUpdates[1] = {0};
   NNUpdate bUpdates[1] = {0};
 
-  int from = From(move);
-  int to = To(move);
-  int piece = Moving(move);
+  int from     = From(move);
+  int to       = To(move);
+  int piece    = Moving(move);
   int promoted = Promo(move);
-  int capture = IsCap(move);
-  int dub = IsDP(move);
-  int ep = IsEP(move);
-  int castle = IsCas(move);
+  int capture  = IsCap(move);
+  int dub      = IsDP(move);
+  int ep       = IsEP(move);
+  int castle   = IsCas(move);
   int captured = board->squares[to];
 
   int wkingSq = lsb(PieceBB(KING, WHITE));
   int bkingSq = lsb(PieceBB(KING, BLACK));
 
   // store hard to recalculate values
-  board->zobristHistory[board->histPly] = board->zobrist;
+  board->zobristHistory[board->histPly]  = board->zobrist;
   board->castlingHistory[board->histPly] = board->castling;
   board->epSquareHistory[board->histPly] = board->epSquare;
-  board->captureHistory[board->histPly] = NO_PIECE;  // this might get overwritten
+  board->captureHistory[board->histPly]  = NO_PIECE; // this might get overwritten
   board->halfMoveHistory[board->histPly] = board->halfMove;
   board->checkersHistory[board->histPly] = board->checkers;
-  board->pinnedHistory[board->histPly] = board->pinned;
+  board->pinnedHistory[board->histPly]   = board->pinned;
 
   flipBits(board->pieces[piece], from, to);
 
   board->squares[from] = NO_PIECE;
-  board->squares[to] = piece;
+  board->squares[to]   = piece;
 
   board->zobrist ^= ZOBRIST_PIECES[piece][from];
   board->zobrist ^= ZOBRIST_PIECES[piece][to];
@@ -355,7 +344,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   AddAddition(FeatureIdx(promoted ? promoted : piece, to, bkingSq, BLACK), bUpdates);
 
   if (piece == Piece(PAWN, board->stm))
-    board->halfMove = 0;  // reset on pawn move
+    board->halfMove = 0; // reset on pawn move
   else
     board->halfMove++;
 
@@ -368,8 +357,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     AddRemoval(FeatureIdx(captured, to, wkingSq, WHITE), wUpdates);
     AddRemoval(FeatureIdx(captured, to, bkingSq, BLACK), bUpdates);
 
-    board->piecesCounts -= PIECE_COUNT_IDX[captured];  // when there's a capture, we need to update our piece counts
-    board->halfMove = 0;                               // reset on capture
+    board->piecesCounts -= PIECE_COUNT_IDX[captured]; // when there's a capture, we need to update our piece counts
+    board->halfMove = 0;                              // reset on capture
 
     board->phase -= PHASE_VALUES[PieceType(captured)];
   }
@@ -401,7 +390,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     AddRemoval(FeatureIdx(Piece(PAWN, board->xstm), to - PawnDir(board->stm), bkingSq, BLACK), bUpdates);
 
     board->piecesCounts -= PIECE_COUNT_IDX[Piece(PAWN, board->xstm)];
-    board->halfMove = 0;  // this is a capture
+    board->halfMove = 0; // this is a capture
 
     // skip the phase as pawns = 0
   }
@@ -422,8 +411,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   if (castle) {
     int rookFrom = board->cr[CASTLING_ROOK[to]];
-    int rookTo = CASTLE_ROOK_DEST[to];
-    int rook = Piece(ROOK, board->stm);
+    int rookTo   = CASTLE_ROOK_DEST[to];
+    int rook     = Piece(ROOK, board->stm);
 
     flipBits(PieceBB(ROOK, board->stm), rookFrom, rookTo);
 
@@ -483,13 +472,13 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 }
 
 void UndoMove(Move move, Board* board) {
-  int from = From(move);
-  int to = To(move);
-  int piece = Moving(move);
+  int from     = From(move);
+  int to       = To(move);
+  int piece    = Moving(move);
   int promoted = Promo(move);
-  int capture = IsCap(move);
-  int ep = IsEP(move);
-  int castle = IsCas(move);
+  int capture  = IsCap(move);
+  int ep       = IsEP(move);
+  int castle   = IsCas(move);
 
   board->stm = board->xstm;
   board->xstm ^= 1;
@@ -500,17 +489,17 @@ void UndoMove(Move move, Board* board) {
   // reload historical values
   board->epSquare = board->epSquareHistory[board->histPly];
   board->castling = board->castlingHistory[board->histPly];
-  board->zobrist = board->zobristHistory[board->histPly];
+  board->zobrist  = board->zobristHistory[board->histPly];
   board->halfMove = board->halfMoveHistory[board->histPly];
   board->checkers = board->checkersHistory[board->histPly];
-  board->pinned = board->pinnedHistory[board->histPly];
+  board->pinned   = board->pinnedHistory[board->histPly];
 
   if (!promoted)
     flipBits(board->pieces[piece], to, from);
   else
     flipBit(board->pieces[piece], from);
 
-  board->squares[to] = NO_PIECE;
+  board->squares[to]   = NO_PIECE;
   board->squares[from] = piece;
 
   if (capture) {
@@ -544,8 +533,8 @@ void UndoMove(Move move, Board* board) {
 
   if (castle) {
     int rookFrom = board->cr[CASTLING_ROOK[to]];
-    int rookTo = CASTLE_ROOK_DEST[to];
-    int rook = Piece(ROOK, board->stm);
+    int rookTo   = CASTLE_ROOK_DEST[to];
+    int rook     = Piece(ROOK, board->stm);
 
     flipBits(PieceBB(ROOK, board->stm), rookTo, rookFrom);
     if (from != rookTo) board->squares[rookTo] = NO_PIECE;
@@ -556,13 +545,13 @@ void UndoMove(Move move, Board* board) {
 }
 
 void MakeNullMove(Board* board) {
-  board->zobristHistory[board->histPly] = board->zobrist;
+  board->zobristHistory[board->histPly]  = board->zobrist;
   board->castlingHistory[board->histPly] = board->castling;
   board->epSquareHistory[board->histPly] = board->epSquare;
-  board->captureHistory[board->histPly] = NO_PIECE;
+  board->captureHistory[board->histPly]  = NO_PIECE;
   board->halfMoveHistory[board->histPly] = board->halfMove;
   board->checkersHistory[board->histPly] = board->checkers;
-  board->pinnedHistory[board->histPly] = board->pinned;
+  board->pinnedHistory[board->histPly]   = board->pinned;
 
   board->halfMove++;
 
@@ -584,12 +573,12 @@ void UndoNullMove(Board* board) {
   board->xstm ^= 1;
   board->histPly--;
 
-  board->zobrist = board->zobristHistory[board->histPly];
+  board->zobrist  = board->zobristHistory[board->histPly];
   board->castling = board->castlingHistory[board->histPly];
   board->epSquare = board->epSquareHistory[board->histPly];
   board->halfMove = board->halfMoveHistory[board->histPly];
   board->checkers = board->checkersHistory[board->histPly];
-  board->pinned = board->pinnedHistory[board->histPly];
+  board->pinned   = board->pinnedHistory[board->histPly];
 }
 
 inline int IsDraw(Board* board, int ply) {
@@ -602,11 +591,11 @@ inline int IsRepetition(Board* board, int ply) {
   // Check as far back as the last non-reversible move
   for (int i = board->histPly - 2; i >= 0 && i >= board->histPly - board->halfMove; i -= 2) {
     if (board->zobristHistory[i] == board->zobrist) {
-      if (i > board->histPly - ply)  // within our search tree
+      if (i > board->histPly - ply) // within our search tree
         return 1;
 
       reps++;
-      if (reps == 2)  // 3-fold before+including root
+      if (reps == 2) // 3-fold before+including root
         return 1;
     }
   }
@@ -616,20 +605,19 @@ inline int IsRepetition(Board* board, int ply) {
 
 inline int IsMaterialDraw(Board* board) {
   switch (board->piecesCounts) {
-    case 0x0:       // Kk
-    case 0x100:     // KNk
-    case 0x200:     // KNNk
-    case 0x1000:    // Kkn
-    case 0x2000:    // Kknn
-    case 0x1100:    // KNkn
-    case 0x10000:   // KBk
-    case 0x100000:  // Kkb
-    case 0x11000:   // KBkn
-    case 0x100100:  // KNkb
-    case 0x110000:  // KBkb
+    case 0x0:      // Kk
+    case 0x100:    // KNk
+    case 0x200:    // KNNk
+    case 0x1000:   // Kkn
+    case 0x2000:   // Kknn
+    case 0x1100:   // KNkn
+    case 0x10000:  // KBk
+    case 0x100000: // Kkb
+    case 0x11000:  // KBkn
+    case 0x100100: // KNkb
+    case 0x110000: // KBkb
       return 1;
-    default:
-      return 0;
+    default: return 0;
   }
 }
 
@@ -650,8 +638,8 @@ inline int IsFiftyMoveRule(Board* board) {
 
 int MoveIsLegal(Move move, Board* board) {
   int piece = Moving(move);
-  int from = From(move);
-  int to = To(move);
+  int from  = From(move);
+  int to    = To(move);
 
   // moving piece isn't where it says it is
   if (!move || piece > BLACK_KING || (piece & 1) != board->stm || piece != board->squares[from]) return 0;
@@ -681,14 +669,10 @@ int MoveIsLegal(Move move, Board* board) {
     case KING:
       if (!IsCas(move) && !getBit(GetKingAttacks(from), to)) return 0;
       break;
-    case KNIGHT:
-      return !!getBit(GetKnightAttacks(from) & possible, to);
-    case BISHOP:
-      return !!getBit(GetBishopAttacks(from, OccBB(BOTH)) & possible, to);
-    case ROOK:
-      return !!getBit(GetRookAttacks(from, OccBB(BOTH)) & possible, to);
-    case QUEEN:
-      return !!getBit(GetQueenAttacks(from, OccBB(BOTH)) & possible, to);
+    case KNIGHT: return !!getBit(GetKnightAttacks(from) & possible, to);
+    case BISHOP: return !!getBit(GetBishopAttacks(from, OccBB(BOTH)) & possible, to);
+    case ROOK: return !!getBit(GetRookAttacks(from, OccBB(BOTH)) & possible, to);
+    case QUEEN: return !!getBit(GetQueenAttacks(from, OccBB(BOTH)) & possible, to);
     case PAWN:
       if (IsEP(move)) break;
 
@@ -768,12 +752,12 @@ int MoveIsLegal(Move move, Board* board) {
 // it is only used by move generation for king moves, castles, and ep captures
 int IsMoveLegal(Move move, Board* board) {
   int from = From(move);
-  int to = To(move);
+  int to   = To(move);
 
   if (IsEP(move)) {
     // ep is checked by just applying the move
-    int kingSq = lsb(PieceBB(KING, board->stm));
-    int captureSq = to - PawnDir(board->stm);
+    int kingSq            = lsb(PieceBB(KING, board->stm));
+    int captureSq         = to - PawnDir(board->stm);
     BitBoard newOccupancy = OccBB(BOTH);
     popBit(newOccupancy, from);
     popBit(newOccupancy, captureSq);

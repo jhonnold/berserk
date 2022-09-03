@@ -22,13 +22,13 @@
 #include <setjmp.h>
 
 #define MAX_SEARCH_PLY (INT8_MAX + 1)
-#define MAX_MOVES 128
+#define MAX_MOVES      128
 
 #define N_KING_BUCKETS 8
 
 #define N_FEATURES (8 * 12 * 64)
-#define N_HIDDEN 512
-#define N_OUTPUT 1
+#define N_HIDDEN   512
+#define N_OUTPUT   1
 
 #if defined(__AVX512F__)
 #define ALIGN_ON 64
@@ -64,27 +64,27 @@ typedef struct {
 } Threat;
 
 typedef struct {
-  int stm;       // side to move
-  int xstm;      // not side to move
-  int acc;       // board ply for accumulator access
-  int histPly;   // ply for historical state
-  int moveNo;    // game move number
-  int halfMove;  // half move count for 50 move rule
-  int castling;  // castling mask e.g. 1111 = KQkq, 1001 = Kq
-  int phase;     // efficiently updated phase for scaling
-  int epSquare;  // en passant square (a8 or 0 is not valid so that marks no active ep)
+  int stm;      // side to move
+  int xstm;     // not side to move
+  int acc;      // board ply for accumulator access
+  int histPly;  // ply for historical state
+  int moveNo;   // game move number
+  int halfMove; // half move count for 50 move rule
+  int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
+  int phase;    // efficiently updated phase for scaling
+  int epSquare; // en passant square (a8 or 0 is not valid so that marks no active ep)
 
-  BitBoard checkers;      // checking piece squares
-  BitBoard pinned;        // pinned pieces
-  uint64_t piecesCounts;  // "material key" - pieces left on the board
-  uint64_t zobrist;       // zobrist hash of the position
+  BitBoard checkers;     // checking piece squares
+  BitBoard pinned;       // pinned pieces
+  uint64_t piecesCounts; // "material key" - pieces left on the board
+  uint64_t zobrist;      // zobrist hash of the position
 
   Accumulator* accumulators[2];
   AccumulatorRefreshTable refreshTable;
 
-  int squares[64];          // piece per square
-  BitBoard occupancies[3];  // 0 - white pieces, 1 - black pieces, 2 - both
-  BitBoard pieces[13];      // individual piece data
+  int squares[64];         // piece per square
+  BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
+  BitBoard pieces[13];     // individual piece data
 
   int cr[4];
   int castlingRights[64];
@@ -114,30 +114,30 @@ typedef struct {
 typedef struct {
   int window;
 
-  Board* board;  // reference to board
-  int ply;       // ply depth of active search
+  Board* board; // reference to board
+  int ply;      // ply depth of active search
 
   // TODO: Put depth here as well? Just cause
-  uint64_t nodes;  // node count
+  uint64_t nodes; // node count
   uint64_t tbhits;
-  int seldepth;  // seldepth count
+  int seldepth; // seldepth count
 
   Move* moves;
 
   int contempt[2];
 
-  int de[MAX_SEARCH_PLY];  // double extensions
+  int de[MAX_SEARCH_PLY]; // double extensions
 
-  Move skipMove[MAX_SEARCH_PLY];         // moves to skip during singular search
-  int evals[MAX_SEARCH_PLY];             // static evals at ply stack
-  Move searchMoves[MAX_SEARCH_PLY + 2];  // moves for ply stack
+  Move skipMove[MAX_SEARCH_PLY];        // moves to skip during singular search
+  int evals[MAX_SEARCH_PLY];            // static evals at ply stack
+  Move searchMoves[MAX_SEARCH_PLY + 2]; // moves for ply stack
 
-  Move killers[MAX_SEARCH_PLY][2];  // killer moves, 2 per ply
-  Move counters[64 * 64];           // counter move butterfly table
-  int hh[2][2][2][64 * 64];         // history heuristic butterfly table (stm / threatened)
-  int ch[12][64][12][64];           // continuation move history table
+  Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply
+  Move counters[64 * 64];          // counter move butterfly table
+  int hh[2][2][2][64 * 64];        // history heuristic butterfly table (stm / threatened)
+  int ch[12][64][12][64];          // continuation move history table
 
-  int th[6][64][7];  // tactical (capture) history
+  int th[6][64][7]; // tactical (capture) history
 
   int64_t tm[64 * 64];
 } SearchData;
@@ -228,18 +228,72 @@ typedef struct {
 
 enum { WHITE, BLACK, BOTH };
 
-// clang-format off
 enum {
-  A8, B8, C8, D8, E8, F8, G8, H8,
-  A7, B7, C7, D7, E7, F7, G7, H7,
-  A6, B6, C6, D6, E6, F6, G6, H6,
-  A5, B5, C5, D5, E5, F5, G5, H5,
-  A4, B4, C4, D4, E4, F4, G4, H4,
-  A3, B3, C3, D3, E3, F3, G3, H3,
-  A2, B2, C2, D2, E2, F2, G2, H2,
-  A1, B1, C1, D1, E1, F1, G1, H1,
+  A8,
+  B8,
+  C8,
+  D8,
+  E8,
+  F8,
+  G8,
+  H8,
+  A7,
+  B7,
+  C7,
+  D7,
+  E7,
+  F7,
+  G7,
+  H7,
+  A6,
+  B6,
+  C6,
+  D6,
+  E6,
+  F6,
+  G6,
+  H6,
+  A5,
+  B5,
+  C5,
+  D5,
+  E5,
+  F5,
+  G5,
+  H5,
+  A4,
+  B4,
+  C4,
+  D4,
+  E4,
+  F4,
+  G4,
+  H4,
+  A3,
+  B3,
+  C3,
+  D3,
+  E3,
+  F3,
+  G3,
+  H3,
+  A2,
+  B2,
+  C2,
+  D2,
+  E2,
+  F2,
+  G2,
+  H2,
+  A1,
+  B1,
+  C1,
+  D1,
+  E1,
+  F1,
+  G1,
+  H1,
 };
-// clang-format on
 
 enum { N = -8, E = 1, S = 8, W = -1, NE = -7, SE = 9, SW = 7, NW = -9 };
 

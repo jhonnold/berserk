@@ -19,7 +19,9 @@
 #ifdef WIN32
 #include <windows.h>
 
-long GetTimeMS() { return GetTickCount(); }
+long GetTimeMS() {
+  return GetTickCount();
+}
 
 #else
 #include <stddef.h>

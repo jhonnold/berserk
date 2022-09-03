@@ -38,11 +38,11 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD = 300;
-int MULTI_PV = 1;
-int PONDER_ENABLED = 0;
-int CHESS_960 = 0;
-int CONTEMPT = 12;
+int MOVE_OVERHEAD      = 300;
+int MULTI_PV           = 1;
+int PONDER_ENABLED     = 0;
+int CHESS_960          = 0;
+int CONTEMPT           = 12;
 volatile int PONDERING = 0;
 
 void RootMoves(SimpleMoveList* moves, Board* board) {
@@ -59,13 +59,13 @@ void RootMoves(SimpleMoveList* moves, Board* board) {
 void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
   in += 3;
 
-  params->depth = MAX_SEARCH_PLY;
-  params->start = GetTimeMS();
-  params->timeset = 0;
-  params->stopped = 0;
-  params->quit = 0;
-  params->multiPV = MULTI_PV;
-  params->searchMoves = 0;
+  params->depth            = MAX_SEARCH_PLY;
+  params->start            = GetTimeMS();
+  params->timeset          = 0;
+  params->stopped          = 0;
+  params->quit             = 0;
+  params->multiPV          = MULTI_PV;
+  params->searchMoves      = 0;
   params->searchable.count = 0;
 
   PONDERING = 0;
@@ -128,8 +128,8 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
     params->timeset = 1;
-    params->alloc = moveTime;
-    params->max = moveTime;
+    params->alloc   = moveTime;
+    params->max     = moveTime;
   } else {
     if (time != -1) {
       params->timeset = 1;
@@ -148,7 +148,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
     } else {
       // no time control
       params->timeset = 0;
-      params->max = INT_MAX;
+      params->max     = INT_MAX;
     }
   }
 
@@ -157,14 +157,20 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 
   if (depth <= 0) params->depth = MAX_SEARCH_PLY - 1;
 
-  printf("info string time %d start %ld alloc %d max %d depth %d timeset %d searchmoves %d\n", time, params->start,
-         params->alloc, params->max, params->depth, params->timeset, params->searchable.count);
+  printf("info string time %d start %ld alloc %d max %d depth %d timeset %d searchmoves %d\n",
+         time,
+         params->start,
+         params->alloc,
+         params->max,
+         params->depth,
+         params->timeset,
+         params->searchable.count);
 
   // this MUST be freed from within the search, or else massive leak
   SearchArgs* args = malloc(sizeof(SearchArgs));
-  args->board = board;
-  args->params = params;
-  args->threads = threads;
+  args->board      = board;
+  args->params     = params;
+  args->threads    = threads;
 
   // start the search!
   pthread_t searchThread;
@@ -242,7 +248,7 @@ void UCILoop() {
   Board board;
   ParseFen(START_FEN, &board);
 
-  ThreadData* threads = CreatePool(1);
+  ThreadData* threads           = CreatePool(1);
   SearchParams searchParameters = {.quit = 0};
 
   setbuf(stdin, NULL);
@@ -262,10 +268,10 @@ void UCILoop() {
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &searchParameters, &board, threads);
     } else if (!strncmp(in, "stop", 4)) {
-      PONDERING = 0;
+      PONDERING                = 0;
       searchParameters.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
-      PONDERING = 0;
+      PONDERING             = 0;
       searchParameters.quit = 1;
       break;
     } else if (!strncmp(in, "uci", 3)) {
@@ -290,7 +296,7 @@ void UCILoop() {
       ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
 
       int score = Evaluate(&board, threads);
-      score = board.stm == WHITE ? score : -score;
+      score     = board.stm == WHITE ? score : -score;
 
       for (int r = 0; r < 8; r++) {
         printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
@@ -312,7 +318,7 @@ void UCILoop() {
             ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
 
             int new = Evaluate(&board, threads);
-            new = board.stm == WHITE ? new : -new;
+            new     = board.stm == WHITE ? new : -new;
 
             int diff = score - new;
             printf("%+7d|", diff);
@@ -342,8 +348,8 @@ void UCILoop() {
       } else
         printf("info string Invalid move!\n");
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
-      int mb = GetOptionIntValue(in);
-      mb = max(4, min(65536, mb));
+      int mb                 = GetOptionIntValue(in);
+      mb                     = max(4, min(65536, mb));
       int64_t bytesAllocated = TTInit(mb);
       printf("info string set Hash to value %d (%" PRId64 " bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
@@ -384,7 +390,7 @@ void UCILoop() {
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
       CONTEMPT = min(100, max(-100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
-      char* path = in + 30;
+      char* path  = in + 30;
       int success = 0;
 
       if (strncmp(path, "<empty>", 7))

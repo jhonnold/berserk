@@ -37,7 +37,7 @@ uint64_t NN_HASH = UINT64_MAX;
 
 INCBIN(Embed, EVALFILE);
 
-const int QUANTIZATION_PRECISION_IN = 16;
+const int QUANTIZATION_PRECISION_IN  = 16;
 const int QUANTIZATION_PRECISION_OUT = 512;
 
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
@@ -59,19 +59,19 @@ int Predict(Board* board) {
 }
 
 #if defined(__AVX512F__)
-const size_t WIDTH = sizeof(__m512i) / sizeof(int16_t);
+const size_t WIDTH  = sizeof(__m512i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
 int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m512i zero = _mm512_setzero_si512();
-  __m512i s0 = _mm512_setzero_si512();
-  __m512i s1 = _mm512_setzero_si512();
+  __m512i s0         = _mm512_setzero_si512();
+  __m512i s1         = _mm512_setzero_si512();
 
-  __m512i* stm = (__m512i*)stmAccumulator;
-  __m512i* xstm = (__m512i*)xstmAccumulator;
-  __m512i* weights = (__m512i*)OUTPUT_WEIGHTS;
+  __m512i* stm     = (__m512i*) stmAccumulator;
+  __m512i* xstm    = (__m512i*) xstmAccumulator;
+  __m512i* weights = (__m512i*) OUTPUT_WEIGHTS;
 
   for (size_t j = 0; j < CHUNKS; j++) {
     const __m512i ac0 = _mm512_max_epi16(stm[j], zero);
@@ -82,28 +82,28 @@ int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   }
 
   const __m512i r16 = _mm512_add_epi32(s0, s1);
-  const __m256i r8 = _mm256_add_epi32(_mm512_castsi512_si256(r16), _mm512_extracti32x8_epi32(r16, 1));
-  const __m128i r4 = _mm_add_epi32(_mm256_castsi256_si128(r8), _mm256_extractf128_si256(r8, 1));
-  const __m128i r2 = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
-  const __m128i r1 = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
+  const __m256i r8  = _mm256_add_epi32(_mm512_castsi512_si256(r16), _mm512_extracti32x8_epi32(r16, 1));
+  const __m128i r4  = _mm_add_epi32(_mm256_castsi256_si128(r8), _mm256_extractf128_si256(r8, 1));
+  const __m128i r2  = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
+  const __m128i r1  = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
 
   result += _mm_cvtsi128_si32(r1);
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #elif defined(__AVX2__)
-const size_t WIDTH = sizeof(__m256i) / sizeof(int16_t);
+const size_t WIDTH  = sizeof(__m256i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
 int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m256i zero = _mm256_setzero_si256();
-  __m256i s0 = _mm256_setzero_si256();
-  __m256i s1 = _mm256_setzero_si256();
+  __m256i s0         = _mm256_setzero_si256();
+  __m256i s1         = _mm256_setzero_si256();
 
-  __m256i* stm = (__m256i*)stmAccumulator;
-  __m256i* xstm = (__m256i*)xstmAccumulator;
-  __m256i* weights = (__m256i*)OUTPUT_WEIGHTS;
+  __m256i* stm     = (__m256i*) stmAccumulator;
+  __m256i* xstm    = (__m256i*) xstmAccumulator;
+  __m256i* weights = (__m256i*) OUTPUT_WEIGHTS;
 
   for (size_t j = 0; j < CHUNKS; j++) {
     const __m256i ac0 = _mm256_max_epi16(stm[j], zero);
@@ -122,19 +122,19 @@ int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #elif defined(__SSE2__)
-const size_t WIDTH = sizeof(__m128i) / sizeof(int16_t);
+const size_t WIDTH  = sizeof(__m128i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
 int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m128i zero = _mm_setzero_si128();
-  __m128i s0 = _mm_setzero_si128();
-  __m128i s1 = _mm_setzero_si128();
+  __m128i s0         = _mm_setzero_si128();
+  __m128i s1         = _mm_setzero_si128();
 
-  __m128i* stm = (__m128i*)stmAccumulator;
-  __m128i* xstm = (__m128i*)xstmAccumulator;
-  __m128i* weights = (__m128i*)OUTPUT_WEIGHTS;
+  __m128i* stm     = (__m128i*) stmAccumulator;
+  __m128i* xstm    = (__m128i*) xstmAccumulator;
+  __m128i* weights = (__m128i*) OUTPUT_WEIGHTS;
 
   for (size_t j = 0; j < N_HIDDEN / 8; j++) {
     const __m128i ac0 = _mm_max_epi16(stm[j], zero);
@@ -175,7 +175,7 @@ inline void ResetRefreshTable(Board* board) {
 }
 
 inline void StoreAccumulatorKingState(Accumulator accumulator, Board* board, const int perspective) {
-  int kingSq = lsb(PieceBB(KING, perspective));
+  int kingSq     = lsb(PieceBB(KING, perspective));
   int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
 
   AccumulatorKingState* state = &board->refreshTable[perspective][kingBucket];
@@ -187,7 +187,7 @@ inline void StoreAccumulatorKingState(Accumulator accumulator, Board* board, con
 // Refreshes an accumulator using a diff from the last known board state
 // with proper king bucketing
 inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective) {
-  int kingSq = lsb(PieceBB(KING, perspective));
+  int kingSq     = lsb(PieceBB(KING, perspective));
   int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
 
   AccumulatorKingState* state = &board->refreshTable[perspective][kingBucket];
@@ -222,8 +222,8 @@ inline void ResetAccumulator(Accumulator accumulator, Board* board, const int pe
 
   BitBoard occ = OccBB(BOTH);
   while (occ) {
-    int sq = popAndGetLsb(&occ);
-    int pc = board->squares[sq];
+    int sq      = popAndGetLsb(&occ);
+    int pc      = board->squares[sq];
     int feature = FeatureIdx(pc, sq, kingSq, perspective);
 
     for (int i = 0; i < N_HIDDEN; i++) accumulator[i] += INPUT_WEIGHTS[feature * N_HIDDEN + i];
@@ -232,7 +232,7 @@ inline void ResetAccumulator(Accumulator accumulator, Board* board, const int pe
 
 void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
   int16_t* output = board->accumulators[stm][board->acc];
-  int16_t* prev = board->accumulators[stm][board->acc - 1];
+  int16_t* prev   = board->accumulators[stm][board->acc - 1];
 
   ApplyFeature(output, prev, updates->removals[0], SUB);
   for (int i = 1; i < updates->nr; i++) ApplyFeature(output, output, updates->removals[i], SUB);
@@ -240,10 +240,10 @@ void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
   for (int i = 0; i < updates->na; i++) ApplyFeature(output, output, updates->additions[i], ADD);
 }
 
-const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +  // input weights
-                            sizeof(int16_t) * N_HIDDEN +               // input biases
-                            sizeof(int16_t) * 2 * N_HIDDEN +           // output weights
-                            sizeof(int32_t);                           // output bias
+const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights
+                            sizeof(int16_t) * N_HIDDEN +              // input biases
+                            sizeof(int16_t) * 2 * N_HIDDEN +          // output weights
+                            sizeof(int32_t);                          // output bias
 
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
@@ -257,7 +257,9 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
 }
 
-void LoadDefaultNN() { CopyData(EmbedData); }
+void LoadDefaultNN() {
+  CopyData(EmbedData);
+}
 
 int LoadNetwork(char* path) {
   FILE* fin = fopen(path, "rb");

@@ -13,12 +13,12 @@
 #define INCBIN_HDR
 #include <limits.h>
 #if defined(__AVX512BW__) || defined(__AVX512CD__) || defined(__AVX512DQ__) || defined(__AVX512ER__) || \
-    defined(__AVX512PF__) || defined(__AVX512VL__) || defined(__AVX512F__)
+  defined(__AVX512PF__) || defined(__AVX512VL__) || defined(__AVX512F__)
 #define INCBIN_ALIGNMENT_INDEX 6
 #elif defined(__AVX__) || defined(__AVX2__)
 #define INCBIN_ALIGNMENT_INDEX 5
 #elif defined(__SSE__) || defined(__SSE2__) || defined(__SSE3__) || defined(__SSSE3__) || defined(__SSE4_1__) || \
-    defined(__SSE4_2__) || defined(__neon__)
+  defined(__SSE4_2__) || defined(__neon__)
 #define INCBIN_ALIGNMENT_INDEX 4
 #elif ULONG_MAX != 0xffffffffu
 #define INCBIN_ALIGNMENT_INDEX 3
@@ -39,13 +39,13 @@
 #define INCBIN_ALIGNMENT INCBIN_CONCATENATE(INCBIN_CONCATENATE(INCBIN_ALIGN_SHIFT, _), INCBIN_ALIGNMENT_INDEX)
 
 /* Stringize */
-#define INCBIN_STR(X) #X
+#define INCBIN_STR(X)       #X
 #define INCBIN_STRINGIZE(X) INCBIN_STR(X)
 /* Concatenate */
-#define INCBIN_CAT(X, Y) X##Y
+#define INCBIN_CAT(X, Y)         X##Y
 #define INCBIN_CONCATENATE(X, Y) INCBIN_CAT(X, Y)
 /* Deferred macro expansion */
-#define INCBIN_EVAL(X) X
+#define INCBIN_EVAL(X)        X
 #define INCBIN_INVOKE(N, ...) INCBIN_EVAL(N(__VA_ARGS__))
 
 /* Green Hills uses a different directive for including binary data */
@@ -67,8 +67,8 @@
 #endif
 
 #if defined(__arm__) || /* GNU C and RealView */ \
-    defined(__arm) ||   /* Diab */               \
-    defined(_ARM)       /* ImageCraft */
+  defined(__arm) ||     /* Diab */               \
+  defined(_ARM)         /* ImageCraft */
 #define INCBIN_ARM
 #endif
 
@@ -92,10 +92,10 @@
 /* INCBIN_CONST is used by incbin.c generated files */
 #if defined(__cplusplus)
 #define INCBIN_EXTERNAL extern "C"
-#define INCBIN_CONST extern const
+#define INCBIN_CONST    extern const
 #else
 #define INCBIN_EXTERNAL extern
-#define INCBIN_CONST const
+#define INCBIN_CONST    const
 #endif
 
 /**
@@ -122,14 +122,14 @@
 
 #if defined(__APPLE__)
 /* The directives are different for Apple branded compilers */
-#define INCBIN_SECTION INCBIN_OUTPUT_SECTION "\n"
+#define INCBIN_SECTION      INCBIN_OUTPUT_SECTION "\n"
 #define INCBIN_GLOBAL(NAME) ".globl " INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME "\n"
-#define INCBIN_INT ".long "
-#define INCBIN_MANGLE "_"
-#define INCBIN_BYTE ".byte "
+#define INCBIN_INT          ".long "
+#define INCBIN_MANGLE       "_"
+#define INCBIN_BYTE         ".byte "
 #define INCBIN_TYPE(...)
 #else
-#define INCBIN_SECTION ".section " INCBIN_OUTPUT_SECTION "\n"
+#define INCBIN_SECTION      ".section " INCBIN_OUTPUT_SECTION "\n"
 #define INCBIN_GLOBAL(NAME) ".global " INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME "\n"
 #if defined(__ghs__)
 #define INCBIN_INT ".word "
@@ -224,10 +224,10 @@
 
 /* Style lookup tables */
 #define INCBIN_STYLE_0_DATA Data
-#define INCBIN_STYLE_0_END End
+#define INCBIN_STYLE_0_END  End
 #define INCBIN_STYLE_0_SIZE Size
 #define INCBIN_STYLE_1_DATA _data
-#define INCBIN_STYLE_1_END _end
+#define INCBIN_STYLE_1_END  _end
 #define INCBIN_STYLE_1_SIZE _size
 
 /* Style lookup: returning identifier */
@@ -301,17 +301,16 @@
 #ifdef _MSC_VER
 #define INCBIN(NAME, FILENAME) INCBIN_EXTERN(NAME)
 #else
-#define INCBIN(NAME, FILENAME)                                                                                       \
-  __asm__(INCBIN_SECTION INCBIN_GLOBAL_LABELS(NAME, DATA)                                                            \
-              INCBIN_ALIGN_HOST INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(             \
-                  DATA) ":\n" INCBIN_MACRO " \"" FILENAME "\"\n" INCBIN_GLOBAL_LABELS(NAME, END)                     \
-                  INCBIN_ALIGN_BYTE INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(         \
-                      END) ":\n" INCBIN_BYTE "1\n" INCBIN_GLOBAL_LABELS(NAME, SIZE)                                  \
-                      INCBIN_ALIGN_HOST INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(     \
-                          SIZE) ":\n" INCBIN_INT INCBIN_MANGLE                                                       \
-                          INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(END) " - " INCBIN_MANGLE         \
-                              INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(DATA) "\n" INCBIN_ALIGN_HOST \
-                                                                                              ".text\n");            \
+#define INCBIN(NAME, FILENAME)                                                                                         \
+  __asm__(INCBIN_SECTION INCBIN_GLOBAL_LABELS(NAME, DATA)                                                              \
+            INCBIN_ALIGN_HOST INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(                 \
+              DATA) ":\n" INCBIN_MACRO " \"" FILENAME "\"\n" INCBIN_GLOBAL_LABELS(NAME, END)                           \
+              INCBIN_ALIGN_BYTE INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(               \
+                END) ":\n" INCBIN_BYTE "1\n" INCBIN_GLOBAL_LABELS(NAME, SIZE)                                          \
+                INCBIN_ALIGN_HOST INCBIN_MANGLE INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(             \
+                  SIZE) ":\n" INCBIN_INT INCBIN_MANGLE                                                                 \
+                  INCBIN_STRINGIZE(INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(END) " - " INCBIN_MANGLE INCBIN_STRINGIZE( \
+                    INCBIN_PREFIX) #NAME INCBIN_STYLE_STRING(DATA) "\n" INCBIN_ALIGN_HOST ".text\n");                  \
   INCBIN_EXTERN(NAME)
 
 #endif

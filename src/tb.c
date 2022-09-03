@@ -29,22 +29,28 @@
 Move TBRootProbe(Board* board) {
   if (board->castling || bits(OccBB(BOTH)) > TB_LARGEST) return NULL_MOVE;
 
-  unsigned results[MAX_MOVES];  // used for native support
-  unsigned res = tb_probe_root(
-      vf(OccBB(WHITE)), vf(OccBB(BLACK)), vf(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
-      vf(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)), vf(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
-      vf(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)), vf(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
-      vf(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)), board->halfMove, board->epSquare ? (board->epSquare ^ 56) : 0,
-      board->stm == WHITE ? 1 : 0, results);
+  unsigned results[MAX_MOVES]; // used for native support
+  unsigned res = tb_probe_root(vf(OccBB(WHITE)),
+                               vf(OccBB(BLACK)),
+                               vf(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
+                               vf(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
+                               vf(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
+                               vf(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
+                               vf(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
+                               vf(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
+                               board->halfMove,
+                               board->epSquare ? (board->epSquare ^ 56) : 0,
+                               board->stm == WHITE ? 1 : 0,
+                               results);
 
   if (res == TB_RESULT_FAILED || res == TB_RESULT_STALEMATE || res == TB_RESULT_CHECKMATE) return NULL_MOVE;
 
-  unsigned from = TB_GET_FROM(res) ^ 56;
-  unsigned to = TB_GET_TO(res) ^ 56;
-  unsigned ep = TB_GET_EP(res);
+  unsigned from  = TB_GET_FROM(res) ^ 56;
+  unsigned to    = TB_GET_TO(res) ^ 56;
+  unsigned ep    = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
-  int piece = board->squares[from];
-  int capture = board->squares[to] != NO_PIECE;
+  int piece      = board->squares[from];
+  int capture    = board->squares[to] != NO_PIECE;
   int promoPiece = promo ? Piece(KING - promo, board->stm) : 0;
 
   int flags = QUIET;
@@ -61,10 +67,14 @@ Move TBRootProbe(Board* board) {
 unsigned TBProbe(Board* board) {
   if (board->castling || board->halfMove || bits(OccBB(BOTH)) > TB_LARGEST) return TB_RESULT_FAILED;
 
-  return tb_probe_wdl(
-      vf(OccBB(WHITE)), vf(OccBB(BLACK)), vf(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
-      vf(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)), vf(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
-      vf(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)), vf(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
-      vf(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)), board->epSquare ? (board->epSquare ^ 56) : 0,
-      board->stm == WHITE ? 1 : 0);
+  return tb_probe_wdl(vf(OccBB(WHITE)),
+                      vf(OccBB(BLACK)),
+                      vf(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
+                      vf(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
+                      vf(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
+                      vf(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
+                      vf(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
+                      vf(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
+                      board->epSquare ? (board->epSquare ^ 56) : 0,
+                      board->stm == WHITE ? 1 : 0);
 }

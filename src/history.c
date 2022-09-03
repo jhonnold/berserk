@@ -29,15 +29,27 @@ void AddKillerMove(SearchData* data, Move move) {
   data->killers[data->ply][0] = move;
 }
 
-void AddCounterMove(SearchData* data, Move move, Move parent) { data->counters[FromTo(parent)] = move; }
+void AddCounterMove(SearchData* data, Move move, Move parent) {
+  data->counters[FromTo(parent)] = move;
+}
 
-void AddHistoryHeuristic(int* entry, int inc) { *entry += inc - *entry * abs(inc) / 65536; }
+void AddHistoryHeuristic(int* entry, int inc) {
+  *entry += inc - *entry * abs(inc) / 65536;
+}
 
-void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, int stm, Move quiets[], int nQ,
-                     Move tacticals[], int nT, BitBoard threats) {
+void UpdateHistories(Board* board,
+                     SearchData* data,
+                     Move bestMove,
+                     int depth,
+                     int stm,
+                     Move quiets[],
+                     int nQ,
+                     Move tacticals[],
+                     int nT,
+                     BitBoard threats) {
   int inc = min(7584, 16 * depth * depth + 480 * depth - 480);
 
-  Move parent = data->moves[data->ply - 1];
+  Move parent      = data->moves[data->ply - 1];
   Move grandParent = data->moves[data->ply - 2];
 
   if (!IsTactical(bestMove)) {
@@ -51,8 +63,8 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
 
     if (grandParent) AddHistoryHeuristic(&CH(grandParent, bestMove), inc);
   } else {
-    int piece = PieceType(Moving(bestMove));
-    int to = To(bestMove);
+    int piece    = PieceType(Moving(bestMove));
+    int to       = To(bestMove);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
     AddHistoryHeuristic(&TH(piece, to, captured), inc);
@@ -75,8 +87,8 @@ void UpdateHistories(Board* board, SearchData* data, Move bestMove, int depth, i
     Move m = tacticals[i];
 
     if (m != bestMove) {
-      int piece = PieceType(Moving(m));
-      int to = To(m);
+      int piece    = PieceType(Moving(m));
+      int to       = To(m);
       int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
       AddHistoryHeuristic(&TH(piece, to, captured), -inc);
@@ -106,8 +118,8 @@ int GetCounterHistory(SearchData* data, Move move) {
 }
 
 int GetTacticalHistory(SearchData* data, Board* board, Move m) {
-  int piece = PieceType(Moving(m));
-  int to = To(m);
+  int piece    = PieceType(Moving(m));
+  int to       = To(m);
   int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
   return TH(piece, to, captured);

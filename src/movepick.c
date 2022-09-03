@@ -30,17 +30,17 @@
 const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
 
 void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, BitBoard threats) {
-  moves->type = ALL_MOVES;
-  moves->phase = HASH_MOVE;
-  moves->nTactical = 0;
-  moves->nQuiets = 0;
+  moves->type         = ALL_MOVES;
+  moves->phase        = HASH_MOVE;
+  moves->nTactical    = 0;
+  moves->nQuiets      = 0;
   moves->nBadTactical = 0;
-  moves->seeCutoff = 0;
-  moves->threats = threats;
+  moves->seeCutoff    = 0;
+  moves->threats      = threats;
 
   moves->hashMove = hashMove;
-  moves->killer1 = data->killers[data->ply][0];
-  moves->killer2 = data->killers[data->ply][1];
+  moves->killer1  = data->killers[data->ply][0];
+  moves->killer2  = data->killers[data->ply][1];
 
   moves->counter = data->counters[FromTo(data->moves[data->ply - 1])];
 
@@ -48,27 +48,27 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, BitBoard thr
 }
 
 void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
-  moves->type = TACTICAL_MOVES;
-  moves->phase = GEN_TACTICAL_MOVES;
-  moves->nTactical = 0;
-  moves->nQuiets = 0;
+  moves->type         = TACTICAL_MOVES;
+  moves->phase        = GEN_TACTICAL_MOVES;
+  moves->nTactical    = 0;
+  moves->nQuiets      = 0;
   moves->nBadTactical = 0;
-  moves->seeCutoff = cutoff;
-  moves->threats = 0;
+  moves->seeCutoff    = cutoff;
+  moves->threats      = 0;
 
   moves->hashMove = NULL_MOVE;
-  moves->killer1 = NULL_MOVE;
-  moves->killer2 = NULL_MOVE;
-  moves->counter = NULL_MOVE;
+  moves->killer1  = NULL_MOVE;
+  moves->killer2  = NULL_MOVE;
+  moves->counter  = NULL_MOVE;
 
   moves->data = data;
 }
 
 void InitPerftMoves(MoveList* moves, Board* board) {
-  moves->type = ALL_MOVES;
-  moves->phase = PERFT_MOVES;
+  moves->type      = ALL_MOVES;
+  moves->phase     = PERFT_MOVES;
   moves->nTactical = 0;
-  moves->nQuiets = 0;
+  moves->nQuiets   = 0;
 
   GenerateAllMoves(moves, board);
 }
@@ -91,13 +91,13 @@ int GetTopReverseIdx(int* arr, int n) {
 
 inline void ShiftToBadCaptures(MoveList* moves, int idx) {
   // Put the bad capture starting at the end
-  moves->tactical[MAX_MOVES - 1 - moves->nBadTactical] = moves->tactical[idx];
+  moves->tactical[MAX_MOVES - 1 - moves->nBadTactical]  = moves->tactical[idx];
   moves->sTactical[MAX_MOVES - 1 - moves->nBadTactical] = moves->sTactical[idx];
   moves->nBadTactical++;
 
   // put the last good capture here instead
   moves->nTactical--;
-  moves->tactical[idx] = moves->tactical[moves->nTactical];
+  moves->tactical[idx]  = moves->tactical[moves->nTactical];
   moves->sTactical[idx] = moves->tactical[moves->nTactical];
 }
 
@@ -105,7 +105,7 @@ inline Move PopGoodCapture(MoveList* moves, int idx) {
   Move temp = moves->tactical[idx];
 
   moves->nTactical--;
-  moves->tactical[idx] = moves->tactical[moves->nTactical];
+  moves->tactical[idx]  = moves->tactical[moves->nTactical];
   moves->sTactical[idx] = moves->sTactical[moves->nTactical];
 
   return temp;
@@ -115,7 +115,7 @@ inline Move PopQuiet(MoveList* moves, int idx) {
   Move temp = moves->quiet[idx];
 
   moves->nQuiets--;
-  moves->quiet[idx] = moves->quiet[moves->nQuiets];
+  moves->quiet[idx]  = moves->quiet[moves->nQuiets];
   moves->sQuiet[idx] = moves->sQuiet[moves->nQuiets];
 
   return temp;
@@ -125,7 +125,7 @@ inline Move PopBadCapture(MoveList* moves) {
   Move temp = moves->tactical[MAX_MOVES - 1];
 
   moves->nBadTactical--;
-  moves->tactical[MAX_MOVES - 1] = moves->tactical[MAX_MOVES - 1 - moves->nBadTactical];
+  moves->tactical[MAX_MOVES - 1]  = moves->tactical[MAX_MOVES - 1 - moves->nBadTactical];
   moves->sTactical[MAX_MOVES - 1] = moves->tactical[MAX_MOVES - 1 - moves->nBadTactical];
 
   return temp;
@@ -135,7 +135,7 @@ void ScoreTacticalMoves(MoveList* moves, Board* board) {
   for (int i = 0; i < moves->nTactical; i++) {
     Move m = moves->tactical[i];
 
-    int captured = PieceType(board->squares[To(m)]);
+    int captured        = PieceType(board->squares[To(m)]);
     moves->sTactical[i] = GetTacticalHistory(moves->data, board, m) + MATERIAL_VALUES[captured] * 32;
   }
 }
@@ -162,7 +162,7 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
     case PLAY_GOOD_TACTICAL:
       if (moves->nTactical > 0) {
         int idx = GetTopIdx(moves->sTactical, moves->nTactical);
-        Move m = moves->tactical[idx];
+        Move m  = moves->tactical[idx];
 
         if (m == moves->hashMove) {
           PopGoodCapture(moves, idx);
@@ -209,7 +209,7 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
     case PLAY_QUIETS:
       if (moves->nQuiets > 0 && !skipQuiets) {
         int idx = GetTopIdx(moves->sQuiet, moves->nQuiets);
-        Move m = PopQuiet(moves, idx);
+        Move m  = PopQuiet(moves, idx);
 
         if (m == moves->hashMove || m == moves->killer1 || m == moves->killer2 || m == moves->counter)
           return NextMove(moves, board, skipQuiets);
@@ -243,8 +243,7 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
 
       moves->phase = NO_MORE_MOVES;
       return NULL_MOVE;
-    case NO_MORE_MOVES:
-      return NULL_MOVE;
+    case NO_MORE_MOVES: return NULL_MOVE;
   }
 
   return NULL_MOVE;
@@ -252,22 +251,14 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
 
 char* PhaseName(MoveList* list) {
   switch (list->phase) {
-    case HASH_MOVE:
-      return "HASH_MOVE";
-    case PLAY_GOOD_TACTICAL:
-      return "PLAY_GOOD_TACTICAL";
-    case PLAY_KILLER_1:
-      return "PLAY_KILLER_1";
-    case PLAY_KILLER_2:
-      return "PLAY_KILLER_2";
-    case PLAY_COUNTER:
-      return "PLAY_COUNTER";
-    case PLAY_QUIETS:
-      return "PLAY_QUIETS";
-    case PLAY_BAD_TACTICAL:
-      return "PLAY_BAD_TACTICAL";
-    default:
-      return "UNKNOWN";
+    case HASH_MOVE: return "HASH_MOVE";
+    case PLAY_GOOD_TACTICAL: return "PLAY_GOOD_TACTICAL";
+    case PLAY_KILLER_1: return "PLAY_KILLER_1";
+    case PLAY_KILLER_2: return "PLAY_KILLER_2";
+    case PLAY_COUNTER: return "PLAY_COUNTER";
+    case PLAY_QUIETS: return "PLAY_QUIETS";
+    case PLAY_BAD_TACTICAL: return "PLAY_BAD_TACTICAL";
+    default: return "UNKNOWN";
   }
 }
 
@@ -283,7 +274,7 @@ void PrintMoves(Board* board, ThreadData* thread) {
   printf("#K2: %5s\n\n", k2 ? MoveToStr(k2, board) : "N/A");
 
   thread->data.ply = 0;
-  MoveList list = {0};
+  MoveList list    = {0};
 
   Threat oppThreat;
   Threats(&oppThreat, board, board->xstm);

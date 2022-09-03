@@ -32,29 +32,23 @@
 // https://www.youtube.com/channel/UCB9-prLkPwgvlKKqDgXhsMQ/videos
 // OTF is abbr for On The Fly
 
-// clang-format off
-const int BISHOP_RELEVANT_BITS[64] = {
-  6, 5, 5, 5, 5, 5, 5, 6, 
-  5, 5, 5, 5, 5, 5, 5, 5, 
-  5, 5, 7, 7, 7, 7, 5, 5, 
-  5, 5, 7, 9, 9, 7, 5, 5, 
-  5, 5, 7, 9, 9, 7, 5, 5, 
-  5, 5, 7, 7, 7, 7, 5, 5, 
-  5, 5, 5, 5, 5, 5, 5, 5, 
-  6, 5, 5, 5, 5, 5, 5, 6
-};
+const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, //
+                                      5, 5, 5, 5, 5, 5, 5, 5, //
+                                      5, 5, 7, 7, 7, 7, 5, 5, //
+                                      5, 5, 7, 9, 9, 7, 5, 5, //
+                                      5, 5, 7, 9, 9, 7, 5, 5, //
+                                      5, 5, 7, 7, 7, 7, 5, 5, //
+                                      5, 5, 5, 5, 5, 5, 5, 5, //
+                                      6, 5, 5, 5, 5, 5, 5, 6};
 
-const int ROOK_RELEVANT_BITS[64] = {
-  12, 11, 11, 11, 11, 11, 11, 12, 
-  11, 10, 10, 10, 10, 10, 10, 11,
-  11, 10, 10, 10, 10, 10, 10, 11, 
-  11, 10, 10, 10, 10, 10, 10, 11,
-  11, 10, 10, 10, 10, 10, 10, 11, 
-  11, 10, 10, 10, 10, 10, 10, 11,
-  11, 10, 10, 10, 10, 10, 10, 11, 
-  12, 11, 11, 11, 11, 11, 11, 12
-};
-// clang-format on
+const int ROOK_RELEVANT_BITS[64] = {12, 11, 11, 11, 11, 11, 11, 12, //
+                                    11, 10, 10, 10, 10, 10, 10, 11, //
+                                    11, 10, 10, 10, 10, 10, 10, 11, //
+                                    11, 10, 10, 10, 10, 10, 10, 11, //
+                                    11, 10, 10, 10, 10, 10, 10, 11, //
+                                    11, 10, 10, 10, 10, 10, 10, 11, //
+                                    11, 10, 10, 10, 10, 10, 10, 11, //
+                                    12, 11, 11, 11, 11, 11, 11, 12};
 
 BitBoard BETWEEN_SQS[64][64];
 BitBoard PINNED_MOVES[64][64];
@@ -144,9 +138,13 @@ void InitPinnedMovementSquares() {
   }
 }
 
-inline BitBoard BetweenSquares(int from, int to) { return BETWEEN_SQS[from][to]; }
+inline BitBoard BetweenSquares(int from, int to) {
+  return BETWEEN_SQS[from][to];
+}
 
-inline BitBoard PinnedMoves(int p, int k) { return PINNED_MOVES[p][k]; }
+inline BitBoard PinnedMoves(int p, int k) {
+  return PINNED_MOVES[p][k];
+}
 
 BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   BitBoard attacks = 0, board = 0;
@@ -332,7 +330,7 @@ uint64_t FindMagicNumber(int sq, int n, int isBishop) {
 
   for (int i = 0; i < numOccupancies; i++) {
     occupancies[i] = SetPieceLayoutOccupancy(i, n, mask);
-    attacks[i] = isBishop ? GetBishopAttacksOTF(sq, occupancies[i]) : GetRookAttacksOTF(sq, occupancies[i]);
+    attacks[i]     = isBishop ? GetBishopAttacksOTF(sq, occupancies[i]) : GetRookAttacksOTF(sq, occupancies[i]);
   }
 
   for (int count = 0; count < 10000000; count++) {
@@ -370,14 +368,14 @@ void InitRookMagics() {
 void InitBishopAttacks() {
   for (int sq = 0; sq < 64; sq++) {
     BitBoard mask = BISHOP_MASKS[sq];
-    int bits = BISHOP_RELEVANT_BITS[sq];
-    int n = (1 << bits);
+    int bits      = BISHOP_RELEVANT_BITS[sq];
+    int n         = (1 << bits);
 
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
 
 #ifndef USE_PEXT
-      int idx = (occupancy * BISHOP_MAGICS[sq]) >> (64 - bits);
+      int idx                 = (occupancy * BISHOP_MAGICS[sq]) >> (64 - bits);
       BISHOP_ATTACKS[sq][idx] = GetBishopAttacksOTF(sq, occupancy);
 #else
       BISHOP_ATTACKS[sq][_pext_u64(occupancy, mask)] = GetBishopAttacksOTF(sq, occupancy);
@@ -389,17 +387,17 @@ void InitBishopAttacks() {
 void InitRookAttacks() {
   for (int sq = 0; sq < 64; sq++) {
     BitBoard mask = ROOK_MASKS[sq];
-    int bits = ROOK_RELEVANT_BITS[sq];
-    int n = (1 << bits);
+    int bits      = ROOK_RELEVANT_BITS[sq];
+    int n         = (1 << bits);
 
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, mask);
 
 #ifndef USE_PEXT
-      int idx = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
+      int idx               = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
       ROOK_ATTACKS[sq][idx] = GetRookAttacksOTF(sq, occupancy);
 #else
-      ROOK_ATTACKS[sq][_pext_u64(occupancy, mask)] = GetRookAttacksOTF(sq, occupancy);
+      ROOK_ATTACKS[sq][_pext_u64(occupancy, mask)]   = GetRookAttacksOTF(sq, occupancy);
 #endif
     }
   }
@@ -425,9 +423,13 @@ void InitAttacks() {
   InitRookAttacks();
 }
 
-inline BitBoard GetPawnAttacks(int sq, int color) { return PAWN_ATTACKS[color][sq]; }
+inline BitBoard GetPawnAttacks(int sq, int color) {
+  return PAWN_ATTACKS[color][sq];
+}
 
-inline BitBoard GetKnightAttacks(int sq) { return KNIGHT_ATTACKS[sq]; }
+inline BitBoard GetKnightAttacks(int sq) {
+  return KNIGHT_ATTACKS[sq];
+}
 
 inline BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
 #ifndef USE_PEXT
@@ -457,20 +459,17 @@ inline BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
   return GetBishopAttacks(sq, occupancy) | GetRookAttacks(sq, occupancy);
 }
 
-inline BitBoard GetKingAttacks(int sq) { return KING_ATTACKS[sq]; }
+inline BitBoard GetKingAttacks(int sq) {
+  return KING_ATTACKS[sq];
+}
 
 inline BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
   switch (type) {
-    case KNIGHT:
-      return GetKnightAttacks(sq);
-    case BISHOP:
-      return GetBishopAttacks(sq, occupancy);
-    case ROOK:
-      return GetRookAttacks(sq, occupancy);
-    case QUEEN:
-      return GetQueenAttacks(sq, occupancy);
-    case KING:
-      return GetKingAttacks(sq);
+    case KNIGHT: return GetKnightAttacks(sq);
+    case BISHOP: return GetBishopAttacks(sq, occupancy);
+    case ROOK: return GetRookAttacks(sq, occupancy);
+    case QUEEN: return GetQueenAttacks(sq, occupancy);
+    case KING: return GetKingAttacks(sq);
   }
 
   return 0;
@@ -478,11 +477,12 @@ inline BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
 
 // get a bitboard of ALL pieces attacking a given square
 inline BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
-  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) | (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |
-         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |
-         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |
-         (GetBishopAttacks(sq, occ) &
-          (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) |
-         (GetRookAttacks(sq, occ) &
-          (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
+  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) |                            // White and Black Pawn atx
+         (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |                            //
+         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |    // Knights
+         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |          // Kings
+         (GetBishopAttacks(sq, occ) & (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | // Bishop + Queen
+                                       PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) | //
+         (GetRookAttacks(sq, occ) & (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) |       // Rook + Queen
+                                     PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
 }

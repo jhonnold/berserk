@@ -25,13 +25,15 @@
 #include "util.h"
 
 void* AlignedMalloc(int size) {
-  void* mem = malloc(size + ALIGN_ON + sizeof(void*));
-  void** ptr = (void**)((uintptr_t)(mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
-  ptr[-1] = mem;
+  void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
+  void** ptr = (void**) ((uintptr_t) (mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
+  ptr[-1]    = mem;
   return ptr;
 }
 
-void AlignedFree(void* ptr) { free(((void**)ptr)[-1]); }
+void AlignedFree(void* ptr) {
+  free(((void**) ptr)[-1]);
+}
 
 // initialize a pool of threads
 ThreadData* CreatePool(int count) {
@@ -39,11 +41,11 @@ ThreadData* CreatePool(int count) {
 
   for (int i = 0; i < count; i++) {
     // allow reference to one another
-    threads[i].idx = i;
-    threads[i].threads = threads;
-    threads[i].count = count;
-    threads[i].accumulators[WHITE] = (Accumulator*)AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
-    threads[i].accumulators[BLACK] = (Accumulator*)AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
+    threads[i].idx                 = i;
+    threads[i].threads             = threads;
+    threads[i].count               = count;
+    threads[i].accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
+    threads[i].accumulators[BLACK] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
   }
 
   return threads;
@@ -52,13 +54,13 @@ ThreadData* CreatePool(int count) {
 // initialize a pool prepping to start a search
 void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results) {
   for (int i = 0; i < threads->count; i++) {
-    threads[i].params = params;
+    threads[i].params  = params;
     threads[i].results = results;
 
-    threads[i].data.nodes = 0;
+    threads[i].data.nodes    = 0;
     threads[i].data.seldepth = 0;
-    threads[i].data.ply = 0;
-    threads[i].data.tbhits = 0;
+    threads[i].data.ply      = 0;
+    threads[i].data.tbhits   = 0;
 
     // empty unneeded data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
@@ -84,10 +86,10 @@ void ResetThreadPool(ThreadData* threads) {
   for (int i = 0; i < threads->count; i++) {
     threads[i].results = NULL;
 
-    threads[i].data.nodes = 0;
+    threads[i].data.nodes    = 0;
     threads[i].data.seldepth = 0;
-    threads[i].data.ply = 0;
-    threads[i].data.tbhits = 0;
+    threads[i].data.ply      = 0;
+    threads[i].data.tbhits   = 0;
 
     // empty ALL data
     memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
