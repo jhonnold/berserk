@@ -34,14 +34,7 @@ void StoreAccumulatorKingState(Accumulator accumulator, Board* board, const int 
 void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective);
 void ResetAccumulator(Accumulator output, Board* board, const int perspective);
 
-void ApplyUpdates(Board* board, int stm, NNUpdate* updates);
-
-INLINE void AddAddition(int f, NNUpdate* updates) {
-  updates->additions[updates->na++] = f;
-}
-INLINE void AddRemoval(int f, NNUpdate* updates) {
-  updates->removals[updates->nr++] = f;
-}
+void ApplyUpdates(Board* board, Move move, int captured, const int view);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);

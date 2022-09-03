@@ -305,9 +305,6 @@ void MakeMove(Move move, Board* board) {
 }
 
 void MakeMoveUpdate(Move move, Board* board, int update) {
-  NNUpdate wUpdates[1] = {0};
-  NNUpdate bUpdates[1] = {0};
-
   int from     = From(move);
   int to       = To(move);
   int piece    = Moving(move);
@@ -316,10 +313,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int dub      = IsDP(move);
   int ep       = IsEP(move);
   int castle   = IsCas(move);
-  int captured = board->squares[to];
-
-  int wkingSq = lsb(PieceBB(KING, WHITE));
-  int bkingSq = lsb(PieceBB(KING, BLACK));
+  int captured = !ep ? board->squares[to] : Piece(PAWN, board->xstm);
 
   // store hard to recalculate values
   board->zobristHistory[board->histPly]  = board->zobrist;
@@ -338,11 +332,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->zobrist ^= ZOBRIST_PIECES[piece][from];
   board->zobrist ^= ZOBRIST_PIECES[piece][to];
 
-  AddRemoval(FeatureIdx(piece, from, wkingSq, WHITE), wUpdates);
-  AddRemoval(FeatureIdx(piece, from, bkingSq, BLACK), bUpdates);
-  AddAddition(FeatureIdx(promoted ? promoted : piece, to, wkingSq, WHITE), wUpdates);
-  AddAddition(FeatureIdx(promoted ? promoted : piece, to, bkingSq, BLACK), bUpdates);
-
   if (piece == Piece(PAWN, board->stm))
     board->halfMove = 0; // reset on pawn move
   else
@@ -353,9 +342,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     flipBit(board->pieces[captured], to);
 
     board->zobrist ^= ZOBRIST_PIECES[captured][to];
-
-    AddRemoval(FeatureIdx(captured, to, wkingSq, WHITE), wUpdates);
-    AddRemoval(FeatureIdx(captured, to, bkingSq, BLACK), bUpdates);
 
     board->piecesCounts -= PIECE_COUNT_IDX[captured]; // when there's a capture, we need to update our piece counts
     board->halfMove = 0;                              // reset on capture
@@ -385,9 +371,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->squares[to - PawnDir(board->stm)] = NO_PIECE;
 
     board->zobrist ^= ZOBRIST_PIECES[Piece(PAWN, board->xstm)][to - PawnDir(board->stm)];
-
-    AddRemoval(FeatureIdx(Piece(PAWN, board->xstm), to - PawnDir(board->stm), wkingSq, WHITE), wUpdates);
-    AddRemoval(FeatureIdx(Piece(PAWN, board->xstm), to - PawnDir(board->stm), bkingSq, BLACK), bUpdates);
 
     board->piecesCounts -= PIECE_COUNT_IDX[Piece(PAWN, board->xstm)];
     board->halfMove = 0; // this is a capture
@@ -423,11 +406,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom];
     board->zobrist ^= ZOBRIST_PIECES[rook][rookTo];
-
-    AddRemoval(FeatureIdx(rook, rookFrom, wkingSq, WHITE), wUpdates);
-    AddRemoval(FeatureIdx(rook, rookFrom, bkingSq, BLACK), bUpdates);
-    AddAddition(FeatureIdx(rook, rookTo, wkingSq, WHITE), wUpdates);
-    AddAddition(FeatureIdx(rook, rookTo, bkingSq, BLACK), bUpdates);
   }
 
   board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
@@ -457,16 +435,12 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     if (stm == BLACK) from ^= 56, to ^= 56;
 
     if (MoveRequiresRefresh(piece, from, to)) {
-      if (piece == WHITE_KING) {
-        RefreshAccumulator(board->accumulators[WHITE][board->acc], board, WHITE);
-        ApplyUpdates(board, BLACK, bUpdates);
-      } else {
-        ApplyUpdates(board, WHITE, wUpdates);
-        RefreshAccumulator(board->accumulators[BLACK][board->acc], board, BLACK);
-      }
+      int colorToRefresh = piece & 1;
+      RefreshAccumulator(board->accumulators[colorToRefresh][board->acc], board, colorToRefresh);
+      ApplyUpdates(board, move, captured, !colorToRefresh);
     } else {
-      ApplyUpdates(board, WHITE, wUpdates);
-      ApplyUpdates(board, BLACK, bUpdates);
+      ApplyUpdates(board, move, captured, WHITE);
+      ApplyUpdates(board, move, captured, BLACK);
     }
   }
 }
