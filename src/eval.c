@@ -64,7 +64,7 @@ void Threats(Threat* threats, Board* board, int stm) {
   BitBoard bishops = PieceBB(BISHOP, stm);
   while (bishops) {
     BitBoard atx = GetBishopAttacks(popAndGetLsb(&bishops), OccBB(BOTH));
-    
+
     threats->sqs |= atx;
     threats->pcs |= opponentPieces & atx;
   }
@@ -81,8 +81,7 @@ void Threats(Threat* threats, Board* board, int stm) {
   }
 
   BitBoard queens = PieceBB(QUEEN, stm);
-  while (queens)
-    threats->sqs |= GetQueenAttacks(popAndGetLsb(&queens), OccBB(BOTH));
+  while (queens) threats->sqs |= GetQueenAttacks(popAndGetLsb(&queens), OccBB(BOTH));
 
   threats->sqs |= GetKingAttacks(lsb(PieceBB(KING, stm)));
 }

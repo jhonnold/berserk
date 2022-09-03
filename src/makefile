@@ -2,9 +2,9 @@
 
 # General
 EXE      = berserk
-SRC      = *.c pyrrhic/tbprobe.c noobprobe/*.c
+SRC      = *.c pyrrhic/tbprobe.c
 CC       = gcc
-VERSION  = 20220828
+VERSION  = 20220902
 MAIN_NETWORK = networks/berserk-11a8ee076cec.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
@@ -47,12 +47,6 @@ ifeq ($(shell echo "test"), "test")
 else
 	BENCH = ./$(EXE) bench > /dev/null 2>&1
 	CLEAN = $(RM) -rf $(PGODIR)
-endif
-
-# Link winsock32 on windows for NoobBook
-ifeq ($(OS), Windows_NT)
-	LIBS += -lwsock32
-	EXT = .exe
 endif
 
 # Compilations

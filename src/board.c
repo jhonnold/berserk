@@ -413,7 +413,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   if (dub) {
     int epSquare = to - PawnDir(board->stm);
-    
+
     if (GetPawnAttacks(epSquare, board->stm) & PieceBB(PAWN, board->xstm)) {
       board->epSquare = epSquare;
       board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];

@@ -8,7 +8,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 
 ### CCRL (40/15)
 
-#### Rank [#4](https://ccrl.chessdom.com/ccrl/4040/rating_list_pure_single_cpu.html)
+#### Rank [#5](https://ccrl.chessdom.com/ccrl/4040/rating_list_pure_single_cpu.html)
 
 | **Version** | **Elo** | **TC** |
 | ----------- | ------- | ------ |
@@ -24,6 +24,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 8 (4CPU)    | 3453    | 40/15  |
 | 8.5.1       | 3422    | 40/15  |
 | 8.5.1 (4CPU)| 3467    | 40/15  |
+| 9           | 3434    | 40/15  |
+| 9 (4CPU)    | 3472    | 40/15  |
 
 ### CCRL (Blitz)
 
@@ -45,6 +47,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 8 (8CPU)    | 3626    | 2'+1"  |
 | 8.5.1       | 3540    | 2'+1"  |
 | 8.5.1 (8CPU)| 3638    | 2'+1"  |
+| 9           | 3589    | 2'+1"  |
+| 9 (8 CPU)   | 3667    | 2'+1"  |
 
 ### Lars No SMP
 
@@ -63,9 +67,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 | 4.5.0       | 3344    | 15'    |
 | 5           | 3371    | 15'    |
 | 6           | 3446    | 15'    |
-| 7           |         | 15'    |
-| 8           |         | 15'    |
-| 8.5.1       |         | 15'    |
+| 9           | 3619    | 15'    |
 
 ### Other Lists with Berserk
 
@@ -118,8 +120,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 ### Evaluation
 
 - [NNUE](https://www.chessprogramming.org/NNUE)
-  - Horizontally Mirrored King Quadrant (HMKQ)
-  - 2x(1536 -> 512) -> 1
+  - Horizontally Mirrored 8 Buckets
+  - 2x(6144 -> 512) -> 1
 - [Berserk FenGen](https://github.com/jhonnold/berserk/tree/fen-gen)
 - [Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)
 - ~~[Berserk Trainer](https://github.com/jhonnold/berserk-trainer)~~

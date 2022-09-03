@@ -45,4 +45,4 @@ jobs:
       
       - uses: RafikFarhad/clang-format-github-action@v2.1.0
         with:
-          sources: 'src/*.c,src/*.h,src/noobprobe/*.c,src/noobprobe/*.h'
+          sources: 'src/*.c,src/*.h'
