@@ -26,6 +26,8 @@
 
 #include "bits.h"
 #include "board.h"
+#include "move.h"
+#include "movegen.h"
 #include "nn.h"
 #include "util.h"
 
@@ -230,14 +232,39 @@ inline void ResetAccumulator(Accumulator accumulator, Board* board, const int pe
   }
 }
 
-void ApplyUpdates(Board* board, int stm, NNUpdate* updates) {
-  int16_t* output = board->accumulators[stm][board->acc];
-  int16_t* prev   = board->accumulators[stm][board->acc - 1];
+void ApplyUpdates(Board* board, Move move, int captured, const int view) {
+  int16_t* output = board->accumulators[view][board->acc];
+  int16_t* prev   = board->accumulators[view][board->acc - 1];
 
-  ApplyFeature(output, prev, updates->removals[0], SUB);
-  for (int i = 1; i < updates->nr; i++) ApplyFeature(output, output, updates->removals[i], SUB);
+  const int king = lsb(PieceBB(KING, view));
 
-  for (int i = 0; i < updates->na; i++) ApplyFeature(output, output, updates->additions[i], ADD);
+  int f = FeatureIdx(Moving(move), From(move), king, view);
+  ApplyFeature(output, prev, f, SUB);
+
+  int endPc = !Promo(move) ? Moving(move) : Promo(move);
+  f         = FeatureIdx(endPc, To(move), king, view);
+  ApplyFeature(output, output, f, ADD);
+
+  if (IsCap(move)) {
+    int movingSide = Moving(move) & 1;
+    int capturedSq = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
+    f              = FeatureIdx(captured, capturedSq, king, view);
+
+    ApplyFeature(output, output, f, SUB);
+  }
+
+  if (IsCas(move)) {
+    int movingSide = Moving(move) & 1;
+    int rook       = Piece(ROOK, movingSide);
+
+    int rookFrom = board->cr[CASTLING_ROOK[To(move)]];
+    int rookTo   = CASTLE_ROOK_DEST[To(move)];
+
+    f = FeatureIdx(rook, rookFrom, king, view);
+    ApplyFeature(output, output, f, SUB);
+    f = FeatureIdx(rook, rookTo, king, view);
+    ApplyFeature(output, output, f, ADD);
+  }
 }
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights

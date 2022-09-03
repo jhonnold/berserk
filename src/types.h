@@ -44,12 +44,6 @@ typedef uint32_t Move;
 
 enum { SUB = 0, ADD = 1 };
 
-typedef struct {
-  int na, nr;
-  int additions[2];
-  int removals[2];
-} NNUpdate;
-
 typedef int16_t Accumulator[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 
 typedef struct {
