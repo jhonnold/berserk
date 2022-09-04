@@ -422,7 +422,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !skipMove && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + depth / 6 + min((eval - beta) / 256, 3);
+      int R = 3 + depth / 6 + min((eval - beta) / 256, 3) + !oppThreat.pcs;
       R     = min(depth, R); // don't go too low
 
       data->moves[data->ply++] = NULL_MOVE;
