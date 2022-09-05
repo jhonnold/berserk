@@ -476,17 +476,14 @@ void UndoMove(Move move, Board* board) {
   board->squares[to]   = NO_PIECE;
   board->squares[from] = piece;
 
-  if (capture) {
+  if (capture && !ep) {
     int captured = board->captureHistory[board->histPly];
     flipBit(board->pieces[captured], to);
 
-    if (!ep) {
-      board->squares[to] = captured;
+    board->squares[to] = captured;
 
-      board->piecesCounts += PIECE_COUNT_IDX[captured];
-
-      board->phase += PHASE_VALUES[PieceType(captured)];
-    }
+    board->piecesCounts += PIECE_COUNT_IDX[captured];
+    board->phase += PHASE_VALUES[PieceType(captured)];
   }
 
   if (promoted) {

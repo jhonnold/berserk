@@ -78,7 +78,7 @@ typedef struct {
 
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
-  BitBoard pieces[13];     // individual piece data
+  BitBoard pieces[12];     // individual piece data
 
   int cr[4];
   int castlingRights[64];
