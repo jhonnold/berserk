@@ -41,7 +41,7 @@ typedef struct {
   uint8_t age;
 } TTTable;
 
-enum { TT_UNKNOWN = 0, TT_LOWER = 1, TT_UPPER = 2, TT_EXACT = 4 };
+enum { TT_UNKNOWN = 0, TT_LOWER = 1, TT_UPPER = 2, TT_EXACT = 4, TT_PV = 8 };
 
 extern TTTable TT;
 
@@ -52,7 +52,7 @@ void TTUpdate();
 void TTPrefetch(uint64_t hash);
 TTEntry* TTProbe(uint64_t hash);
 int TTScore(TTEntry* e, int ply);
-void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval);
+void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv);
 int TTFull();
 
 #endif
