@@ -467,8 +467,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
-  int failLow = isPV && tt && hashMove && (tt->flags & TT_UPPER) && tt->depth >= depth;
-
   Move quiets[64];
   Move tacticals[64];
 
@@ -565,12 +563,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       R = LMR[min(depth, 63)][min(playedMoves, 63)];
 
       // increase reduction on non-pv
-      if (!isPV) R++;
+      if (!ttPv) R++;
 
       // increase reduction if our eval is declining
       if (!improving) R++;
-
-      if (!failLow && ttPv) R--;
 
       // reduce these special quiets less
       if (killerOrCounter) R -= 2;
