@@ -279,6 +279,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int maxScore   = CHECKMATE;         // best possible
   int origAlpha  = alpha;             // remember first alpha for tt storage
   int ttScore    = UNKNOWN;
+  int ttPv       = 0;
 
   Move bestMove = NULL_MOVE;
   Move skipMove = data->skipMove[data->ply]; // skip used in SE (concept from SF)
@@ -320,6 +321,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // we ignore the tt on singular extension searches
   TTEntry* tt = skipMove ? NULL : TTProbe(board->zobrist);
   ttScore     = tt ? TTScore(tt, data->ply) : UNKNOWN;
+  ttPv        = isPV || (tt && (tt->flags & TT_PV));
   hashMove    = isRoot ? thread->pvs[thread->multiPV].moves[0] : tt ? tt->move : NULL_MOVE;
 
   // if the TT has a value that fits our position and has been searched to an equal or greater depth, then we accept
@@ -355,7 +357,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // if the tablebase gives us what we want, then we accept it's score and return
       if ((flag & TT_EXACT) || ((flag & TT_LOWER) && score >= beta) || ((flag & TT_UPPER) && score <= alpha)) {
-        TTPut(board->zobrist, depth, score, flag, 0, data->ply, 0);
+        TTPut(board->zobrist, depth, score, flag, 0, data->ply, 0, ttPv);
         return score;
       }
 
@@ -383,7 +385,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     eval = data->evals[data->ply];
   }
 
-  if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
+  if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
 
   // getting better if eval has gone up
   int improving = !board->checkers && data->ply >= 2 &&
@@ -561,7 +563,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       R = LMR[min(depth, 63)][min(playedMoves, 63)];
 
       // increase reduction on non-pv
-      if (!isPV) R++;
+      if (!ttPv) R++;
 
       // increase reduction if our eval is declining
       if (!improving) R++;
@@ -648,7 +650,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // TT_LOWER = we failed high, TT_UPPER = we didnt raise alpha, TT_EXACT = in
     int TTFlag       = bestScore >= beta ? TT_LOWER : bestScore <= origAlpha ? TT_UPPER : TT_EXACT;
     Move moveToStore = tt && TTFlag == TT_UPPER && (tt->flags & TT_LOWER) ? hashMove : bestMove;
-    TTPut(board->zobrist, depth, bestScore, TTFlag, moveToStore, data->ply, data->evals[data->ply]);
+    TTPut(board->zobrist, depth, bestScore, TTFlag, moveToStore, data->ply, data->evals[data->ply], ttPv);
   }
 
   return bestScore;
@@ -661,6 +663,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
 
   int mainThread = !thread->idx;
   int isPV       = beta - alpha != 1;
+  int ttPv       = 0;
 
   data->nodes++;
 
@@ -675,6 +678,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   // check the transposition table for previous info
   int ttScore = UNKNOWN;
   TTEntry* tt = TTProbe(board->zobrist);
+  ttPv        = isPV || (tt && (tt->flags & TT_PV));
   // TT score pruning - no depth check required since everything in QS is depth 0
   if (!isPV && tt) {
     ttScore = TTScore(tt, data->ply);
@@ -689,7 +693,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
 
   // pull cached eval if it exists
   int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (tt ? tt->eval : Evaluate(board, thread));
-  if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval);
+  if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
 
   // can we use an improved evaluation from the tt?
   if (tt && ttScore != UNKNOWN)
@@ -732,7 +736,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   }
 
   int TTFlag = bestScore >= beta ? TT_LOWER : TT_UPPER;
-  TTPut(board->zobrist, 0, bestScore, TTFlag, bestMove, data->ply, data->evals[data->ply]);
+  TTPut(board->zobrist, 0, bestScore, TTFlag, bestMove, data->ply, data->evals[data->ply], ttPv);
 
   return bestScore;
 }

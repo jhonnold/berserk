@@ -87,7 +87,7 @@ inline TTEntry* TTProbe(uint64_t hash) {
   return NULL;
 }
 
-inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval) {
+inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
   TTBucket* bucket   = &TT.buckets[TT.mask & hash];
   uint32_t shortHash = hash >> 32;
   TTEntry* toReplace = bucket->entries;
@@ -96,6 +96,8 @@ inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move
     score += ply;
   else if (score < -MATE_BOUND)
     score -= ply;
+
+  if (pv) flag |= TT_PV;
 
   for (TTEntry* entry = bucket->entries; entry < bucket->entries + BUCKET_SIZE; entry++) {
     if (!entry->hash) {
