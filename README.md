@@ -71,6 +71,7 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 
 ### Other Lists with Berserk
 
+- [Ipman Chess](https://ipmanchess.yolasite.com/i9-7980xe.php)
 - [CEGT](http://www.cegt.net/)
 - [Stefan Pohl Computer Chess](https://www.sp-cc.de/)
 - [FGRL](http://www.fastgm.de/)
