@@ -47,8 +47,19 @@ int16_t INPUT_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
 int32_t OUTPUT_BIAS;
 
-INLINE void ApplyFeature(int16_t* dest, int16_t* src, int f, const int add) {
-  for (int i = 0; i < N_HIDDEN; i++) dest[i] = src[i] + (2 * add - 1) * INPUT_WEIGHTS[f * N_HIDDEN + i];
+UNROLL INLINE void ApplyFeature(int16_t* dest, int16_t* src, int f, const int add) {
+  int i = 0;
+
+  // GCC seems to want to unroll loops at a max of 256, so we write our code
+  // to accomodate this fact.
+  // https://godbolt.org/z/x4d451TYh
+  if (add) {
+    for (; i < N_HIDDEN / 2; i++) dest[i] = src[i] + INPUT_WEIGHTS[f * N_HIDDEN + i];
+    for (; i < N_HIDDEN; i++) dest[i] = src[i] + INPUT_WEIGHTS[f * N_HIDDEN + i];
+  } else {
+    for (; i < N_HIDDEN / 2; i++) dest[i] = src[i] - INPUT_WEIGHTS[f * N_HIDDEN + i];
+    for (; i < N_HIDDEN; i++) dest[i] = src[i] - INPUT_WEIGHTS[f * N_HIDDEN + i];
+  }
 }
 
 int Predict(Board* board) {
@@ -64,7 +75,7 @@ int Predict(Board* board) {
 const size_t WIDTH  = sizeof(__m512i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
+UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m512i zero = _mm512_setzero_si512();
@@ -96,7 +107,7 @@ int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
 const size_t WIDTH  = sizeof(__m256i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
+UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m256i zero = _mm256_setzero_si256();
@@ -127,7 +138,7 @@ int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
 const size_t WIDTH  = sizeof(__m128i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
+UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m128i zero = _mm_setzero_si128();
@@ -154,7 +165,7 @@ int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #else
-int OutputLayer(Accumulator stm, Accumulator xstm) {
+UNROLL int OutputLayer(Accumulator stm, Accumulator xstm) {
   int result = OUTPUT_BIAS;
 
   for (int i = 0; i < N_HIDDEN; i++) {

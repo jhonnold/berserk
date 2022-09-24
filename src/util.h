@@ -25,6 +25,7 @@
 #define stringize_(x) #x
 #define stringize(x)  stringize_(x)
 
+#define UNROLL __attribute__((optimize("unroll-loops")))
 #define INLINE static inline __attribute__((always_inline))
 
 long GetTimeMS();
