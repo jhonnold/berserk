@@ -30,13 +30,8 @@
 #define N_HIDDEN   512
 #define N_OUTPUT   1
 
-#if defined(__AVX512F__)
 #define ALIGN_ON 64
-#elif defined(__AVX2__)
-#define ALIGN_ON 32
-#else
-#define ALIGN_ON 16
-#endif
+#define ALIGN __attribute__((aligned(ALIGN_ON)))
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -44,14 +39,14 @@ typedef uint32_t Move;
 
 enum { SUB = 0, ADD = 1 };
 
-typedef int16_t Accumulator[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+typedef int16_t Accumulator[N_HIDDEN] ALIGN;
 
 typedef struct {
   BitBoard pcs[12];
   Accumulator values;
-} AccumulatorKingState;
+} ALIGN AccumulatorKingState;
 
-typedef AccumulatorKingState AccumulatorRefreshTable[2][2 * N_KING_BUCKETS];
+typedef AccumulatorKingState AccumulatorRefreshTable[2][2 * N_KING_BUCKETS] ALIGN;
 
 typedef struct {
   BitBoard pcs, sqs;

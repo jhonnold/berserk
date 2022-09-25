@@ -42,24 +42,14 @@ INCBIN(Embed, EVALFILE);
 const int QUANTIZATION_PRECISION_IN  = 16;
 const int QUANTIZATION_PRECISION_OUT = 512;
 
-int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
-int16_t INPUT_BIASES[N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
-int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN] __attribute__((aligned(ALIGN_ON)));
+int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
+int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
+int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN] ALIGN;
 int32_t OUTPUT_BIAS;
 
-UNROLL INLINE void ApplyFeature(int16_t* dest, int16_t* src, int f, const int add) {
-  int i = 0;
-
-  // GCC seems to want to unroll loops at a max of 256, so we write our code
-  // to accomodate this fact.
-  // https://godbolt.org/z/x4d451TYh
-  if (add) {
-    for (; i < N_HIDDEN / 2; i++) dest[i] = src[i] + INPUT_WEIGHTS[f * N_HIDDEN + i];
-    for (; i < N_HIDDEN; i++) dest[i] = src[i] + INPUT_WEIGHTS[f * N_HIDDEN + i];
-  } else {
-    for (; i < N_HIDDEN / 2; i++) dest[i] = src[i] - INPUT_WEIGHTS[f * N_HIDDEN + i];
-    for (; i < N_HIDDEN; i++) dest[i] = src[i] - INPUT_WEIGHTS[f * N_HIDDEN + i];
-  }
+INLINE void ApplyFeature(int16_t* dest, int16_t* src, int f, const int add) {
+  for (size_t c = 0; c < N_HIDDEN; c += 256)
+    for (size_t i = 0; i < 256; i++) dest[i + c] = src[i + c] + (2 * add - 1) * INPUT_WEIGHTS[f * N_HIDDEN + i + c];
 }
 
 int Predict(Board* board) {
@@ -75,7 +65,7 @@ int Predict(Board* board) {
 const size_t WIDTH  = sizeof(__m512i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
+int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m512i zero = _mm512_setzero_si512();
@@ -107,7 +97,7 @@ UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) 
 const size_t WIDTH  = sizeof(__m256i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
+int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m256i zero = _mm256_setzero_si256();
@@ -138,7 +128,7 @@ UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) 
 const size_t WIDTH  = sizeof(__m128i) / sizeof(int16_t);
 const size_t CHUNKS = N_HIDDEN / WIDTH;
 
-UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
+int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
   int result = OUTPUT_BIAS;
 
   const __m128i zero = _mm_setzero_si128();
@@ -165,7 +155,7 @@ UNROLL int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) 
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 #else
-UNROLL int OutputLayer(Accumulator stm, Accumulator xstm) {
+int OutputLayer(Accumulator stm, Accumulator xstm) {
   int result = OUTPUT_BIAS;
 
   for (int i = 0; i < N_HIDDEN; i++) {
@@ -177,24 +167,14 @@ UNROLL int OutputLayer(Accumulator stm, Accumulator xstm) {
 }
 #endif
 
-inline void ResetRefreshTable(Board* board) {
+void ResetRefreshTable(Board* board) {
   for (int c = WHITE; c <= BLACK; c++) {
     for (int b = 0; b < 2 * N_KING_BUCKETS; b++) {
       AccumulatorKingState* state = &board->refreshTable[c][b];
       memcpy(state->values, INPUT_BIASES, sizeof(int16_t) * N_HIDDEN);
-      memset(state->pcs, 0, sizeof(BitBoard) * 12);
+      for (int pc = WHITE_PAWN; pc < NO_PIECE; pc++) state->pcs[pc] = 0;
     }
   }
-}
-
-inline void StoreAccumulatorKingState(Accumulator accumulator, Board* board, const int perspective) {
-  int kingSq     = lsb(PieceBB(KING, perspective));
-  int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
-
-  AccumulatorKingState* state = &board->refreshTable[perspective][kingBucket];
-
-  memcpy(state->values, accumulator, sizeof(int16_t) * N_HIDDEN);
-  for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) state->pcs[pc] = board->pieces[pc];
 }
 
 // Refreshes an accumulator using a diff from the last known board state
@@ -205,7 +185,6 @@ inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int 
 
   AccumulatorKingState* state = &board->refreshTable[perspective][kingBucket];
 
-  memcpy(accumulator, state->values, sizeof(int16_t) * N_HIDDEN);
   for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
     BitBoard curr = board->pieces[pc];
     BitBoard prev = state->pcs[pc];
@@ -215,20 +194,23 @@ inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int 
 
     while (rem) {
       int sq = popAndGetLsb(&rem);
-      ApplyFeature(accumulator, accumulator, FeatureIdx(pc, sq, kingSq, perspective), SUB);
+      ApplyFeature(state->values, state->values, FeatureIdx(pc, sq, kingSq, perspective), SUB);
     }
 
     while (add) {
       int sq = popAndGetLsb(&add);
-      ApplyFeature(accumulator, accumulator, FeatureIdx(pc, sq, kingSq, perspective), ADD);
+      ApplyFeature(state->values, state->values, FeatureIdx(pc, sq, kingSq, perspective), ADD);
     }
+
+    state->pcs[pc] = curr;
   }
 
-  StoreAccumulatorKingState(accumulator, board, perspective);
+  // Copy in state
+  memcpy(accumulator, state->values, sizeof(int16_t) * N_HIDDEN);
 }
 
 // Resets an accumulator from pieces on the board
-inline void ResetAccumulator(Accumulator accumulator, Board* board, const int perspective) {
+void ResetAccumulator(Accumulator accumulator, Board* board, const int perspective) {
   int kingSq = lsb(PieceBB(KING, perspective));
 
   memcpy(accumulator, INPUT_BIASES, sizeof(Accumulator));

@@ -18,19 +18,9 @@
 #include "types.h"
 #include "util.h"
 
-extern uint64_t NN_HASH;
-extern const int QUANTIZATION_PRECISION_IN;
-extern const int QUANTIZATION_PRECISION_OUT;
-
-extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
-extern int16_t INPUT_BIASES[N_HIDDEN];
-extern int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN];
-extern int32_t OUTPUT_BIAS;
-
 int Predict(Board* board);
 int OutputLayer(Accumulator stm, Accumulator xstm);
 void ResetRefreshTable(Board* board);
-void StoreAccumulatorKingState(Accumulator accumulator, Board* board, const int perspective);
 void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective);
 void ResetAccumulator(Accumulator output, Board* board, const int perspective);
 
