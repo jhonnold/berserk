@@ -24,7 +24,7 @@
 #define MAX_SEARCH_PLY (INT8_MAX + 1)
 #define MAX_MOVES      128
 
-#define N_KING_BUCKETS 12
+#define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)
 #define N_HIDDEN   512
