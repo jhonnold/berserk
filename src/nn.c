@@ -14,15 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-
-#if defined(__AVX512F__) || defined(__AVX2__)
-#include <immintrin.h>
-#elif defined(__SSE__)
-#include <xmmintrin.h>
-#endif
 
 #include "bits.h"
 #include "board.h"
@@ -35,8 +29,6 @@
 #define INCBIN_STYLE INCBIN_STYLE_CAMEL
 #include "incbin.h"
 
-uint64_t NN_HASH = UINT64_MAX;
-
 INCBIN(Embed, EVALFILE);
 
 const int QUANTIZATION_PRECISION_IN  = 16;
@@ -47,9 +39,29 @@ int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN] ALIGN;
 int32_t OUTPUT_BIAS;
 
-INLINE void ApplyFeature(int16_t* dest, int16_t* src, int f, const int add) {
-  for (size_t c = 0; c < N_HIDDEN; c += 256)
-    for (size_t i = 0; i < 256; i++) dest[i + c] = src[i + c] + (2 * add - 1) * INPUT_WEIGHTS[f * N_HIDDEN + i + c];
+#if defined(__AVX2__)
+#define UNROLL 256
+#else
+#define UNROLL 128
+#endif
+
+INLINE void ApplyFeature(Accumulator dest, Accumulator src, int f, const int add) {
+  for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
+    for (size_t i = 0; i < UNROLL; i++) dest[i + c] = src[i + c] + (2 * add - 1) * INPUT_WEIGHTS[f * N_HIDDEN + i + c];
+}
+
+int OutputLayer(Accumulator stm, Accumulator xstm) {
+  int result = OUTPUT_BIAS;
+
+  for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
+    for (size_t i = 0; i < UNROLL; i++)
+      result += max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
+
+  for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
+    for (size_t i = 0; i < UNROLL; i++)
+      result += max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
+
+  return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
 
 int Predict(Board* board) {
@@ -60,112 +72,6 @@ int Predict(Board* board) {
 
   return OutputLayer(stm, xstm);
 }
-
-#if defined(__AVX512F__)
-const size_t WIDTH  = sizeof(__m512i) / sizeof(int16_t);
-const size_t CHUNKS = N_HIDDEN / WIDTH;
-
-int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
-  int result = OUTPUT_BIAS;
-
-  const __m512i zero = _mm512_setzero_si512();
-  __m512i s0         = _mm512_setzero_si512();
-  __m512i s1         = _mm512_setzero_si512();
-
-  __m512i* stm     = (__m512i*) stmAccumulator;
-  __m512i* xstm    = (__m512i*) xstmAccumulator;
-  __m512i* weights = (__m512i*) OUTPUT_WEIGHTS;
-
-  for (size_t j = 0; j < CHUNKS; j++) {
-    const __m512i ac0 = _mm512_max_epi16(stm[j], zero);
-    const __m512i ac1 = _mm512_max_epi16(xstm[j], zero);
-
-    s0 = _mm512_add_epi32(s0, _mm512_madd_epi16(ac0, weights[j]));
-    s1 = _mm512_add_epi32(s1, _mm512_madd_epi16(ac1, weights[j + CHUNKS]));
-  }
-
-  const __m512i r16 = _mm512_add_epi32(s0, s1);
-  const __m256i r8  = _mm256_add_epi32(_mm512_castsi512_si256(r16), _mm512_extracti32x8_epi32(r16, 1));
-  const __m128i r4  = _mm_add_epi32(_mm256_castsi256_si128(r8), _mm256_extractf128_si256(r8, 1));
-  const __m128i r2  = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
-  const __m128i r1  = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
-
-  result += _mm_cvtsi128_si32(r1);
-  return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
-}
-#elif defined(__AVX2__)
-const size_t WIDTH  = sizeof(__m256i) / sizeof(int16_t);
-const size_t CHUNKS = N_HIDDEN / WIDTH;
-
-int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
-  int result = OUTPUT_BIAS;
-
-  const __m256i zero = _mm256_setzero_si256();
-  __m256i s0         = _mm256_setzero_si256();
-  __m256i s1         = _mm256_setzero_si256();
-
-  __m256i* stm     = (__m256i*) stmAccumulator;
-  __m256i* xstm    = (__m256i*) xstmAccumulator;
-  __m256i* weights = (__m256i*) OUTPUT_WEIGHTS;
-
-  for (size_t j = 0; j < CHUNKS; j++) {
-    const __m256i ac0 = _mm256_max_epi16(stm[j], zero);
-    const __m256i ac1 = _mm256_max_epi16(xstm[j], zero);
-
-    s0 = _mm256_add_epi32(s0, _mm256_madd_epi16(ac0, weights[j]));
-    s1 = _mm256_add_epi32(s1, _mm256_madd_epi16(ac1, weights[j + CHUNKS]));
-  }
-
-  const __m256i r8 = _mm256_add_epi32(s0, s1);
-  const __m128i r4 = _mm_add_epi32(_mm256_castsi256_si128(r8), _mm256_extractf128_si256(r8, 1));
-  const __m128i r2 = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
-  const __m128i r1 = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
-
-  result += _mm_cvtsi128_si32(r1);
-  return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
-}
-#elif defined(__SSE2__)
-const size_t WIDTH  = sizeof(__m128i) / sizeof(int16_t);
-const size_t CHUNKS = N_HIDDEN / WIDTH;
-
-int OutputLayer(Accumulator stmAccumulator, Accumulator xstmAccumulator) {
-  int result = OUTPUT_BIAS;
-
-  const __m128i zero = _mm_setzero_si128();
-  __m128i s0         = _mm_setzero_si128();
-  __m128i s1         = _mm_setzero_si128();
-
-  __m128i* stm     = (__m128i*) stmAccumulator;
-  __m128i* xstm    = (__m128i*) xstmAccumulator;
-  __m128i* weights = (__m128i*) OUTPUT_WEIGHTS;
-
-  for (size_t j = 0; j < N_HIDDEN / 8; j++) {
-    const __m128i ac0 = _mm_max_epi16(stm[j], zero);
-    const __m128i ac1 = _mm_max_epi16(xstm[j], zero);
-
-    s0 = _mm_add_epi32(s0, _mm_madd_epi16(ac0, weights[j]));
-    s1 = _mm_add_epi32(s1, _mm_madd_epi16(ac1, weights[j + CHUNKS]));
-  }
-
-  const __m128i r4 = _mm_add_epi32(s0, s1);
-  const __m128i r2 = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
-  const __m128i r1 = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
-
-  result += _mm_cvtsi128_si32(r1);
-  return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
-}
-#else
-int OutputLayer(Accumulator stm, Accumulator xstm) {
-  int result = OUTPUT_BIAS;
-
-  for (int i = 0; i < N_HIDDEN; i++) {
-    result += max(stm[i], 0) * OUTPUT_WEIGHTS[i];
-    result += max(xstm[i], 0) * OUTPUT_WEIGHTS[i + N_HIDDEN];
-  }
-
-  return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
-}
-#endif
 
 void ResetRefreshTable(Board* board) {
   for (int c = WHITE; c <= BLACK; c++) {
@@ -221,7 +127,7 @@ void ResetAccumulator(Accumulator accumulator, Board* board, const int perspecti
     int pc      = board->squares[sq];
     int feature = FeatureIdx(pc, sq, kingSq, perspective);
 
-    for (int i = 0; i < N_HIDDEN; i++) accumulator[i] += INPUT_WEIGHTS[feature * N_HIDDEN + i];
+    ApplyFeature(accumulator, accumulator, feature, ADD);
   }
 }
 
