@@ -44,6 +44,7 @@ ThreadData* CreatePool(int count) {
     threads[i].idx                 = i;
     threads[i].threads             = threads;
     threads[i].count               = count;
+    threads[i].results.depth       = 0;
     threads[i].accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
     threads[i].accumulators[BLACK] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
   }
@@ -52,10 +53,13 @@ ThreadData* CreatePool(int count) {
 }
 
 // initialize a pool prepping to start a search
-void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results) {
+void InitPool(Board* board, SearchParams* params, ThreadData* threads) {
   for (int i = 0; i < threads->count; i++) {
-    threads[i].params  = params;
-    threads[i].results = results;
+    threads[i].params = params;
+
+    threads[i].results.prevScore =
+      threads[i].results.depth > 0 ? threads[i].results.scores[threads[i].results.depth] : UNKNOWN;
+    threads[i].results.depth = 0;
 
     threads[i].data.nodes    = 0;
     threads[i].data.seldepth = 0;
@@ -84,7 +88,7 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchRes
 
 void ResetThreadPool(ThreadData* threads) {
   for (int i = 0; i < threads->count; i++) {
-    threads[i].results = NULL;
+    threads[i].results.depth = 0;
 
     threads[i].data.nodes    = 0;
     threads[i].data.seldepth = 0;

@@ -20,7 +20,7 @@
 #include "types.h"
 
 ThreadData* CreatePool(int count);
-void InitPool(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results);
+void InitPool(Board* board, SearchParams* params, ThreadData* threads);
 void ResetThreadPool(ThreadData* threads);
 void FreeThreads(ThreadData* threads);
 uint64_t NodesSearched(ThreadData* threads);
