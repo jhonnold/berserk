@@ -243,9 +243,8 @@ void* Search(void* arg) {
 
       if (PONDERING) continue;
 
-      Score searchScoreDiff    = results->scores[depth - 3] - results->scores[depth];
       Score prevScoreDiff      = results->prevScore - results->scores[depth];
-      double scoreChangeFactor = 0.1 + 0.0275 * searchScoreDiff + 0.0275 * prevScoreDiff;
+      double scoreChangeFactor = 0.1 + 0.055 * prevScoreDiff;
       scoreChangeFactor        = max(0.5, min(1.5, scoreChangeFactor));
 
       int64_t bestMoveNodes  = data->tm[FromTo(results->bestMoves[depth])];
