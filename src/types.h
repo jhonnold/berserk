@@ -151,6 +151,7 @@ typedef struct {
 
 typedef struct {
   int depth;
+  Score prevScore;
   Score scores[MAX_SEARCH_PLY];
   Move bestMoves[MAX_SEARCH_PLY];
   Move ponderMoves[MAX_SEARCH_PLY];
@@ -167,7 +168,7 @@ struct ThreadData {
   jmp_buf exit;
 
   SearchParams* params;
-  SearchResults* results;
+  SearchResults results;
   SearchData data;
 
   Board board;

@@ -49,18 +49,18 @@ void Bench() {
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
     ParseFen(benchmarks[i], &board);
 
-    SearchResults results = {0};
     TTClear();
     ResetThreadPool(threads);
-    InitPool(&board, &params, threads, &results);
+    InitPool(&board, &params, threads);
 
     params.start = GetTimeMS();
-    BestMove(&board, &params, threads, &results);
+    BestMove(&board, &params, threads);
     times[i] = GetTimeMS() - params.start;
 
-    bestMoves[i] = results.bestMoves[results.depth];
-    scores[i]    = results.scores[results.depth];
-    nodes[i]     = threads[0].data.nodes;
+    SearchResults* results = &threads->results;
+    bestMoves[i]           = results->bestMoves[results->depth];
+    scores[i]              = results->scores[results->depth];
+    nodes[i]               = threads[0].data.nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 

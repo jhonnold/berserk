@@ -81,14 +81,13 @@ void* UCISearch(void* arg) {
   SearchParams* params = args->params;
   ThreadData* threads  = args->threads;
 
-  SearchResults results = {0};
-  BestMove(board, params, threads, &results);
+  BestMove(board, params, threads);
 
   free(args);
   return NULL;
 }
 
-void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchResults* results) {
+void BestMove(Board* board, SearchParams* params, ThreadData* threads) {
   Move bestMove;
   if ((bestMove = TBRootProbe(board))) {
     while (PONDERING)
@@ -97,7 +96,7 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     printf("bestmove %s\n", MoveToStr(bestMove, board));
   } else {
     pthread_t pthreads[threads->count];
-    InitPool(board, params, threads, results);
+    InitPool(board, params, threads);
 
     params->stopped = 0;
     TTUpdate();
@@ -113,6 +112,7 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
     while (PONDERING)
       ;
 
+    SearchResults* results = &threads->results;
     printf("bestmove %s", MoveToStr(results->bestMoves[results->depth], board));
     if (results->ponderMoves[results->depth])
       printf(" ponder %s", MoveToStr(results->ponderMoves[results->depth], board));
@@ -124,7 +124,7 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads, SearchRes
 void* Search(void* arg) {
   ThreadData* thread     = (ThreadData*) arg;
   SearchParams* params   = thread->params;
-  SearchResults* results = thread->results;
+  SearchResults* results = &thread->results;
   SearchData* data       = &thread->data;
   Board* board           = &thread->board;
 
@@ -243,8 +243,9 @@ void* Search(void* arg) {
 
       if (PONDERING) continue;
 
-      double scoreDiff         = results->scores[depth - 3] - results->scores[depth];
-      double scoreChangeFactor = 0.1 + 0.05 * scoreDiff;
+      Score searchScoreDiff    = results->scores[depth - 3] - results->scores[depth];
+      Score prevScoreDiff      = results->prevScore - results->scores[depth];
+      double scoreChangeFactor = 0.1 + 0.0275 * searchScoreDiff + 0.0275 * prevScoreDiff;
       scoreChangeFactor        = max(0.5, min(1.5, scoreChangeFactor));
 
       int64_t bestMoveNodes  = data->tm[FromTo(results->bestMoves[depth])];
