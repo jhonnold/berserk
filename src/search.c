@@ -389,8 +389,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
 
   // getting better if eval has gone up
-  int improving = !board->checkers && data->ply >= 2 &&
-                  (data->evals[data->ply] > data->evals[data->ply - 2] || data->evals[data->ply - 2] == UNKNOWN);
+  int improving = 0;
+  if (!board->checkers && data->ply >= 2) {
+    if (data->ply >= 4 && data->evals[data->ply - 2] == UNKNOWN) {
+      improving = data->evals[data->ply] > data->evals[data->ply - 4] || data->evals[data->ply - 4] == UNKNOWN;
+    } else {
+      improving = data->evals[data->ply] > data->evals[data->ply - 2] || data->evals[data->ply - 2] == UNKNOWN;
+    }
+  }
 
   // reset moves to moves related to 1 additional ply
   data->skipMove[data->ply + 1]   = NULL_MOVE;
