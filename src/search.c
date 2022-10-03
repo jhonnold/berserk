@@ -49,7 +49,7 @@ extern volatile int PONDERING;
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
-    for (int moves = 1; moves < 64; moves++) LMR[depth][moves] = log(depth) * log(moves) / 2 - 0.2;
+    for (int moves = 1; moves < 64; moves++) LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 0.25;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -566,8 +566,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Late move reductions
     int R = 1;
-    if (depth > 2 && playedMoves > 1 && !tactical) {
-      R = LMR[min(depth, 63)][min(playedMoves, 63)];
+    if (depth > 2 && legalMoves > 1 && !tactical) {
+      R = LMR[min(depth, 63)][min(legalMoves, 63)];
 
       // increase reduction on non-pv
       if (!ttPv) R++;
