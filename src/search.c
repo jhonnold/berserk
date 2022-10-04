@@ -526,7 +526,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // and look at it more (extend). Singular is determined by checking all other
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
-    if (!isRoot && depth >= 7 && tt && move == tt->move && tt->depth >= depth - 3 && (tt->flags & TT_LOWER)) {
+    if (!isRoot && depth >= 7 && tt && move == hashMove && tt->depth >= depth - 3 && (tt->flags & TT_LOWER)) {
       int sBeta  = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
@@ -550,7 +550,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 7 && tt && move == tt->move && history >= 98304)
+    else if (!isRoot && depth >= 7 && tt && move == hashMove && history >= 98304)
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
