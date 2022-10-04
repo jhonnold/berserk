@@ -39,7 +39,9 @@ int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN] ALIGN;
 int32_t OUTPUT_BIAS;
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__)
+#define UNROLL 512
+#elif defined(__AVX2__)
 #define UNROLL 256
 #else
 #define UNROLL 128
