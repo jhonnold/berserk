@@ -494,7 +494,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int extension       = 0;
     int tactical        = IsTactical(move);
     int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
-    int history         = GetQuietHistory(data, move, board->stm, oppThreat.sqs);
+    int history =
+      !tactical ? GetQuietHistory(data, move, board->stm, oppThreat.sqs) : GetTacticalHistory(data, board, move);
 
     if (bestScore > -MATE_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
@@ -566,7 +567,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Late move reductions
     int R = 1;
-    if (depth > 2 && legalMoves > 1 && !tactical) {
+    if (depth > 2 && legalMoves > 1 && !(ttPv && IsCap(move))) {
       R = LMR[min(depth, 63)][min(legalMoves, 63)];
 
       // increase reduction on non-pv
