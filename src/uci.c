@@ -56,7 +56,7 @@ void RootMoves(SimpleMoveList* moves, Board* board) {
 }
 
 // uci "go" command
-void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) {
+void ParseGo(char* in, SearchParams* params, Board* board) {
   in += 3;
 
   params->depth            = MAX_SEARCH_PLY;
@@ -170,7 +170,6 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
   SearchArgs* args = malloc(sizeof(SearchArgs));
   args->board      = board;
   args->params     = params;
-  args->threads    = threads;
 
   // start the search!
   pthread_t searchThread;
@@ -179,7 +178,7 @@ void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads) 
 }
 
 // uci "position" command
-void ParsePosition(char* in, Board* board, ThreadData* threads) {
+void ParsePosition(char* in, Board* board) {
   in += 9;
   char* ptrChar = in;
 
@@ -248,7 +247,7 @@ void UCILoop() {
   Board board;
   ParseFen(START_FEN, &board);
 
-  ThreadData* threads           = CreatePool(1);
+  CreatePool(1);
   SearchParams searchParameters = {.quit = 0};
 
   setbuf(stdin, NULL);
@@ -260,13 +259,13 @@ void UCILoop() {
     if (!strncmp(in, "isready", 7)) {
       printf("readyok\n");
     } else if (!strncmp(in, "position", 8)) {
-      ParsePosition(in, &board, threads);
+      ParsePosition(in, &board);
     } else if (!strncmp(in, "ucinewgame", 10)) {
-      ParsePosition("position startpos\n", &board, threads);
+      ParsePosition("position startpos\n", &board);
       TTClear();
-      ResetThreadPool(threads);
+      ResetThreadPool();
     } else if (!strncmp(in, "go", 2)) {
-      ParseGo(in, &searchParameters, &board, threads);
+      ParseGo(in, &searchParameters, &board);
     } else if (!strncmp(in, "stop", 4)) {
       PONDERING                = 0;
       searchParameters.stopped = 1;
@@ -354,8 +353,7 @@ void UCILoop() {
       printf("info string set Hash to value %d (%" PRId64 " bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
-      FreeThreads(threads);
-      threads = CreatePool(max(1, min(256, n)));
+      CreatePool(max(1, min(256, n)));
       printf("info string set Threads to value %d\n", n);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
       int success = tb_init(in + 32);
@@ -382,9 +380,9 @@ void UCILoop() {
       printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
       printf("info string Resetting board...\n");
 
-      ParsePosition("position startpos\n", &board, threads);
+      ParsePosition("position startpos\n", &board);
       TTClear();
-      ResetThreadPool(threads);
+      ResetThreadPool();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
       MOVE_OVERHEAD = min(10000, max(100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {

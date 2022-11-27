@@ -46,8 +46,6 @@ typedef struct {
   Accumulator values;
 } ALIGN AccumulatorKingState;
 
-typedef AccumulatorKingState AccumulatorRefreshTable[2][2 * N_KING_BUCKETS] ALIGN;
-
 typedef struct {
   BitBoard pcs, sqs;
 } Threat;
@@ -69,7 +67,7 @@ typedef struct {
   uint64_t zobrist;      // zobrist hash of the position
 
   Accumulator* accumulators[2];
-  AccumulatorRefreshTable refreshTable;
+  AccumulatorKingState* refreshTable[2];
 
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
@@ -163,6 +161,7 @@ struct ThreadData {
   int count, idx, multiPV, depth;
 
   Accumulator* accumulators[2];
+  AccumulatorKingState* refreshTable[2];
 
   ThreadData* threads;
   jmp_buf exit;
@@ -181,7 +180,6 @@ struct ThreadData {
 typedef struct {
   Board* board;
   SearchParams* params;
-  ThreadData* threads;
 } SearchArgs;
 
 // Move generation storage

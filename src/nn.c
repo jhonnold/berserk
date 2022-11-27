@@ -75,10 +75,10 @@ int Predict(Board* board) {
   return OutputLayer(stm, xstm);
 }
 
-void ResetRefreshTable(Board* board) {
+void ResetRefreshTable(AccumulatorKingState* refreshTable[2]) {
   for (int c = WHITE; c <= BLACK; c++) {
     for (int b = 0; b < 2 * N_KING_BUCKETS; b++) {
-      AccumulatorKingState* state = &board->refreshTable[c][b];
+      AccumulatorKingState* state = &refreshTable[c][b];
       memcpy(state->values, INPUT_BIASES, sizeof(int16_t) * N_HIDDEN);
       memset(state->pcs, 0, sizeof(BitBoard) * 12);
     }

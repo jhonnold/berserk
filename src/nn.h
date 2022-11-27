@@ -20,7 +20,7 @@
 
 int Predict(Board* board);
 int OutputLayer(Accumulator stm, Accumulator xstm);
-void ResetRefreshTable(Board* board);
+void ResetRefreshTable(AccumulatorKingState* refreshTable[2]);
 void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective);
 void ResetAccumulator(Accumulator output, Board* board, const int perspective);
 

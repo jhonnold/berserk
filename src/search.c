@@ -79,15 +79,14 @@ void* UCISearch(void* arg) {
 
   Board* board         = args->board;
   SearchParams* params = args->params;
-  ThreadData* threads  = args->threads;
 
-  BestMove(board, params, threads);
+  BestMove(board, params);
 
   free(args);
   return NULL;
 }
 
-void BestMove(Board* board, SearchParams* params, ThreadData* threads) {
+void BestMove(Board* board, SearchParams* params) {
   Move bestMove;
   if ((bestMove = TBRootProbe(board))) {
     while (PONDERING)
@@ -95,8 +94,7 @@ void BestMove(Board* board, SearchParams* params, ThreadData* threads) {
 
     printf("bestmove %s\n", MoveToStr(bestMove, board));
   } else {
-    pthread_t pthreads[threads->count];
-    InitPool(board, params, threads);
+    InitPool(board, params);
 
     params->stopped = 0;
     TTUpdate();
@@ -133,9 +131,8 @@ void* Search(void* arg) {
   int beta       = CHECKMATE;
 
   board->acc = 0;
-  ResetRefreshTable(board);
-  RefreshAccumulator(board->accumulators[WHITE][board->acc], board, WHITE);
-  RefreshAccumulator(board->accumulators[BLACK][board->acc], board, BLACK);
+  RefreshAccumulator(board->accumulators[WHITE][0], board, WHITE);
+  RefreshAccumulator(board->accumulators[BLACK][0], board, BLACK);
 
   data->contempt[WHITE] = data->contempt[BLACK] = 0;
   SetContempt(data->contempt, board->stm);
@@ -482,7 +479,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
     int64_t startingNodeCount = data->nodes;
-
+    
     if (isRoot && MoveSearchedByMultiPV(thread, move)) continue;
     if (isRoot && !MoveSearchable(params, move)) continue;
 
