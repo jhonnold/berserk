@@ -479,7 +479,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
     int64_t startingNodeCount = data->nodes;
-    // if (isRoot) data->tm[FromTo(move)] = 0;
+    if (isRoot) data->tm[FromTo(move)] = 0;
     
     if (isRoot && MoveSearchedByMultiPV(thread, move)) continue;
     if (isRoot && !MoveSearchable(params, move)) continue;
