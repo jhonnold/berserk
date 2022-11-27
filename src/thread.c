@@ -79,6 +79,8 @@ void InitPool(Board* board, SearchParams* params) {
     threads[i].data.ply      = 0;
     threads[i].data.tbhits   = 0;
 
+    memset(&threads[i].data.tm, 0, sizeof(threads[i].data.tm));
+
     // need full copies of the board
     memcpy(&threads[i].board, board, sizeof(Board));
     threads[i].board.accumulators[WHITE] = threads[i].accumulators[WHITE];
