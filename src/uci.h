@@ -24,8 +24,8 @@ extern int CONTEMPT;
 
 void RootMoves(SimpleMoveList* moves, Board* board);
 
-void ParseGo(char* in, SearchParams* params, Board* board, ThreadData* threads);
-void ParsePosition(char* in, Board* board, ThreadData* threads);
+void ParseGo(char* in, SearchParams* params, Board* board);
+void ParsePosition(char* in, Board* board);
 void PrintUCIOptions();
 
 int ReadLine(char* in);

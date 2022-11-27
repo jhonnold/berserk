@@ -38,7 +38,8 @@ char* benchmarks[]            = {
 void Bench() {
   Board board;
   SearchParams params = {.depth = 13, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
-  ThreadData* threads = CreatePool(1);
+  
+  CreatePool(1);
 
   Move bestMoves[NUM_BENCH_POSITIONS];
   int scores[NUM_BENCH_POSITIONS];
@@ -50,11 +51,11 @@ void Bench() {
     ParseFen(benchmarks[i], &board);
 
     TTClear();
-    ResetThreadPool(threads);
-    InitPool(&board, &params, threads);
+    ResetThreadPool();
+    InitPool(&board, &params);
 
     params.start = GetTimeMS();
-    BestMove(&board, &params, threads);
+    BestMove(&board, &params);
     times[i] = GetTimeMS() - params.start;
 
     SearchResults* results = &threads->results;

@@ -16,13 +16,18 @@
 
 #include "thread.h"
 
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "eval.h"
+#include "nn.h"
 #include "search.h"
 #include "types.h"
 #include "util.h"
+
+ThreadData* threads = NULL;
+pthread_t* pthreads = NULL;
 
 void* AlignedMalloc(int size) {
   void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
@@ -36,24 +41,32 @@ void AlignedFree(void* ptr) {
 }
 
 // initialize a pool of threads
-ThreadData* CreatePool(int count) {
-  ThreadData* threads = malloc(count * sizeof(ThreadData));
+void CreatePool(int count) {
+  if (threads) FreeThreads();
+  if (pthreads) free(pthreads);
+
+  threads  = calloc(count, sizeof(ThreadData));
+  pthreads = calloc(count, sizeof(pthread_t));
 
   for (int i = 0; i < count; i++) {
-    // allow reference to one another
     threads[i].idx                 = i;
-    threads[i].threads             = threads;
     threads[i].count               = count;
     threads[i].results.depth       = 0;
     threads[i].accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
     threads[i].accumulators[BLACK] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
-  }
+    threads[i].refreshTable[WHITE] =
+      (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
+    threads[i].refreshTable[BLACK] =
+      (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
 
-  return threads;
+    ResetRefreshTable(threads[i].refreshTable);
+
+    threads[i].data.moves = &threads[i].data.searchMoves[2];
+  }
 }
 
 // initialize a pool prepping to start a search
-void InitPool(Board* board, SearchParams* params, ThreadData* threads) {
+void InitPool(Board* board, SearchParams* params) {
   for (int i = 0; i < threads->count; i++) {
     threads[i].params = params;
 
@@ -66,27 +79,16 @@ void InitPool(Board* board, SearchParams* params, ThreadData* threads) {
     threads[i].data.ply      = 0;
     threads[i].data.tbhits   = 0;
 
-    // empty unneeded data
-    memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
-    memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
-    memset(&threads[i].data.tm, 0, sizeof(threads[i].data.tm));
-    memset(&threads[i].data.de, 0, sizeof(threads[i].data.de));
-
-    // set the moves arr as an offset of 2
-    threads[i].data.moves = &threads[i].data.searchMoves[2];
-
-    memset(&threads[i].scores, 0, sizeof(threads[i].scores));
-    memset(&threads[i].bestMoves, 0, sizeof(threads[i].bestMoves));
-    memset(&threads[i].pvs, 0, sizeof(threads[i].pvs));
-
     // need full copies of the board
     memcpy(&threads[i].board, board, sizeof(Board));
     threads[i].board.accumulators[WHITE] = threads[i].accumulators[WHITE];
     threads[i].board.accumulators[BLACK] = threads[i].accumulators[BLACK];
+    threads[i].board.refreshTable[WHITE] = threads[i].refreshTable[WHITE];
+    threads[i].board.refreshTable[BLACK] = threads[i].refreshTable[BLACK];
   }
 }
 
-void ResetThreadPool(ThreadData* threads) {
+void ResetThreadPool() {
   for (int i = 0; i < threads->count; i++) {
     threads[i].results.depth = 0;
 
@@ -104,27 +106,33 @@ void ResetThreadPool(ThreadData* threads) {
     memset(&threads[i].data.hh, 0, sizeof(threads[i].data.hh));
     memset(&threads[i].data.ch, 0, sizeof(threads[i].data.ch));
     memset(&threads[i].data.th, 0, sizeof(threads[i].data.th));
+
+    memset(&threads[i].scores, 0, sizeof(threads[i].scores));
+    memset(&threads[i].bestMoves, 0, sizeof(threads[i].bestMoves));
+    memset(&threads[i].pvs, 0, sizeof(threads[i].pvs));
   }
 }
 
-void FreeThreads(ThreadData* threads) {
+void FreeThreads() {
   for (int i = 0; i < threads->count; i++) {
     AlignedFree(threads[i].accumulators[WHITE]);
     AlignedFree(threads[i].accumulators[BLACK]);
+    AlignedFree(threads[i].refreshTable[WHITE]);
+    AlignedFree(threads[i].refreshTable[BLACK]);
   }
 
   free(threads);
 }
 
 // sum node counts
-uint64_t NodesSearched(ThreadData* threads) {
+uint64_t NodesSearched() {
   uint64_t nodes = 0;
   for (int i = 0; i < threads->count; i++) nodes += threads[i].data.nodes;
 
   return nodes;
 }
 
-uint64_t TBHits(ThreadData* threads) {
+uint64_t TBHits() {
   uint64_t tbhits = 0;
   for (int i = 0; i < threads->count; i++) tbhits += threads[i].data.tbhits;
 
