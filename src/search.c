@@ -479,7 +479,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
     int64_t startingNodeCount = data->nodes;
-    
+
     if (isRoot && MoveSearchedByMultiPV(thread, move)) continue;
     if (isRoot && !MoveSearchable(params, move)) continue;
 
@@ -524,7 +524,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // and look at it more (extend). Singular is determined by checking all other
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
-    if (!isRoot && depth >= 7 && tt && move == hashMove && tt->depth >= depth - 3 && (tt->flags & TT_LOWER)) {
+    if (!isRoot && depth >= 7 && tt && move == hashMove && tt->depth >= depth - 3 && (tt->flags & TT_LOWER) &&
+        abs(ttScore) < WINNING_ENDGAME) {
       int sBeta  = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
 
