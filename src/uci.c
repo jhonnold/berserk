@@ -220,7 +220,7 @@ void ParsePosition(char* in, Board* board) {
 void PrintUCIOptions() {
   printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
-  printf("option name Hash type spin default 32 min 4 max 65536\n");
+  printf("option name Hash type spin default 16 min 2 max 262144\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
@@ -247,7 +247,6 @@ void UCILoop() {
   Board board;
   ParseFen(START_FEN, &board);
 
-  CreatePool(1);
   SearchParams searchParameters = {.quit = 0};
 
   setbuf(stdin, NULL);
@@ -347,10 +346,10 @@ void UCILoop() {
       } else
         printf("info string Invalid move!\n");
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
-      int mb                 = GetOptionIntValue(in);
-      mb                     = max(4, min(65536, mb));
-      int64_t bytesAllocated = TTInit(mb);
-      printf("info string set Hash to value %d (%" PRId64 " bytes)\n", mb, bytesAllocated);
+      int mb                  = GetOptionIntValue(in);
+      mb                      = max(2, min(262144, mb));
+      uint64_t bytesAllocated = TTInit(mb);
+      printf("info string set Hash to value %d (%" PRIu64 " bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
       CreatePool(max(1, min(256, n)));

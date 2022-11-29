@@ -24,6 +24,8 @@
 extern ThreadData* threads;
 extern pthread_t* pthreads;
 
+void* AlignedMalloc(uint64_t size);
+void AlignedFree(void* ptr);
 void CreatePool(int count);
 void InitPool(Board* board, SearchParams* params);
 void ResetThreadPool();

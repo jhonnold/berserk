@@ -29,7 +29,7 @@
 ThreadData* threads = NULL;
 pthread_t* pthreads = NULL;
 
-void* AlignedMalloc(int size) {
+void* AlignedMalloc(uint64_t size) {
   void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
   void** ptr = (void**) ((uintptr_t) (mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
   ptr[-1]    = mem;

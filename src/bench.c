@@ -39,8 +39,6 @@ void Bench() {
   Board board;
   SearchParams params = {.depth = 13, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
   
-  CreatePool(1);
-
   Move bestMoves[NUM_BENCH_POSITIONS];
   int scores[NUM_BENCH_POSITIONS];
   int nodes[NUM_BENCH_POSITIONS];

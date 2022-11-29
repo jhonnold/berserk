@@ -23,6 +23,7 @@
 #include "nn.h"
 #include "random.h"
 #include "search.h"
+#include "thread.h"
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
@@ -38,7 +39,8 @@ int main(int argc, char** argv) {
   InitAttacks();
 
   LoadDefaultNN();
-  TTInit(32);
+  CreatePool(1);
+  TTInit(16);
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
