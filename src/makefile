@@ -54,25 +54,22 @@ BASIC   = $(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
 RELEASE = $(CC) $(RFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
 # Targets
-basic: clone-pyrrhic clone-networks
+basic: clone-networks
 	$(BASIC)
 
-pgo: clone-pyrrhic clone-networks
+pgo: clone-networks
 	$(BASIC) $(PGOGEN)
 	$(BENCH)
 	$(PGOMERGE)
 	$(BASIC) $(PGOUSE)
 	$(CLEAN)
 
-release: clone-pyrrhic clone-networks
+release: clone-networks
 	$(RELEASE)-$(VERSION)-x64$(EXT)             -march=core2
 	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        -march=core-avx2
 	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   -march=core-avx2                                 -DUSE_PEXT
 	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)      -march=core-avx2 -mavx512f -mavx512bw -mavx512dq
 	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT) -march=core-avx2 -mavx512f -mavx512bw -mavx512dq -DUSE_PEXT
-
-clone-pyrrhic:
-	git submodule update --init pyrrhic
 
 clone-networks:
 ifeq ($(EVALFILE), $(MAIN_NETWORK))

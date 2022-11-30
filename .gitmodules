@@ -1,6 +1,3 @@
 [submodule "src/networks"]
 	path = src/networks
 	url = https://github.com/jhonnold/berserk-networks
-[submodule "src/pyrrhic"]
-	path = src/pyrrhic
-	url = https://github.com/jhonnold/Pyrrhic
