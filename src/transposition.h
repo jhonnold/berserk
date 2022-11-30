@@ -20,7 +20,7 @@
 #include "types.h"
 
 #define NO_ENTRY    0ULL
-#define MEGABYTE    0x100000ULL
+#define MEGABYTE    (1024ull * 1024ull)
 #define BUCKET_SIZE 2
 
 typedef struct {
@@ -35,9 +35,9 @@ typedef struct {
 } TTBucket;
 
 typedef struct {
+  void* mem;
   TTBucket* buckets;
-  uint64_t mask;
-  uint64_t size;
+  uint64_t count;
   uint8_t age;
 } TTTable;
 

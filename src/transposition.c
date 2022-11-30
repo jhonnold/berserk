@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,6 +28,7 @@
 
 #include "bits.h"
 #include "search.h"
+#include "thread.h"
 #include "transposition.h"
 #include "types.h"
 
@@ -34,30 +36,53 @@
 TTTable TT = {0};
 
 size_t TTInit(int mb) {
-  if (TT.mask) TTFree();
+  if (TT.mem) TTFree();
 
-  uint64_t keySize = (uint64_t) log2(mb) + (uint64_t) log2(MEGABYTE / sizeof(TTBucket));
+  uint64_t size = (uint64_t) mb * MEGABYTE;
 
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__)
   // On Linux systems we align on 2MB boundaries and request Huge Pages
-  TT.buckets = aligned_alloc(2 * MEGABYTE, (1ULL << keySize) * sizeof(TTBucket));
-  madvise(TT.buckets, (1ULL << keySize) * sizeof(TTBucket), MADV_HUGEPAGE);
+  TT.mem     = aligned_alloc(2 * MEGABYTE, size);
+  TT.buckets = (TTBucket*) TT.mem;
+  madvise(TT.buckets, size, MADV_HUGEPAGE);
 #else
-  TT.buckets = calloc((1ULL << keySize), sizeof(TTBucket));
+  TT.mem     = AlignedMalloc(size);
+  TT.buckets = (TTBucket*) TT.mem;
 #endif
 
-  TT.mask = (1ULL << keySize) - 1ULL;
+  TT.count = size / sizeof(TTBucket);
 
   TTClear();
-  return (TT.mask + 1ULL) * sizeof(TTBucket);
+  return size;
 }
 
 void TTFree() {
-  free(TT.buckets);
+#if defined(__linux__)
+  free(TT.mem);
+#else
+  AlignedFree(TT.mem);
+#endif
+}
+
+void* TTClearPart(void* arg) {
+  // Logic for dividing the work taken from Weiss (which got from CFish)
+  ThreadData* thread = (ThreadData*) arg;
+  int idx            = thread->idx;
+  int count          = thread->count;
+
+  uint64_t size   = TT.count * sizeof(TTBucket);
+  uint64_t slice  = (size + count - 1) / count;
+  uint64_t blocks = (slice + 2 * MEGABYTE - 1) / (2 * MEGABYTE);
+  uint64_t begin  = min(size, idx * blocks * 2 * MEGABYTE);
+  uint64_t end    = min(size, begin + blocks * 2 * MEGABYTE);
+
+  memset(TT.buckets + begin / sizeof(TTBucket), 0, end - begin);
+  return NULL;
 }
 
 inline void TTClear() {
-  memset(TT.buckets, 0, (TT.mask + 1ULL) * sizeof(TTBucket));
+  for (int i = 0; i < threads->count; i++) pthread_create(&pthreads[i], NULL, TTClearPart, &threads[i]);
+  for (int i = 0; i < threads->count; i++) pthread_join(pthreads[i], NULL);
 }
 
 inline void TTUpdate() {
@@ -70,12 +95,16 @@ inline int TTScore(TTEntry* e, int ply) {
   return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
 }
 
+inline uint32_t TTIdx(uint64_t hash) {
+  return ((uint32_t) hash * (uint64_t) TT.count) >> 32;
+}
+
 inline void TTPrefetch(uint64_t hash) {
-  __builtin_prefetch(&TT.buckets[TT.mask & hash]);
+  __builtin_prefetch(&TT.buckets[TTIdx(hash)]);
 }
 
 inline TTEntry* TTProbe(uint64_t hash) {
-  TTEntry* bucket    = TT.buckets[TT.mask & hash].entries;
+  TTEntry* bucket    = TT.buckets[TTIdx(hash)].entries;
   uint32_t shortHash = hash >> 32;
 
   for (int i = 0; i < BUCKET_SIZE; i++)
@@ -88,7 +117,7 @@ inline TTEntry* TTProbe(uint64_t hash) {
 }
 
 inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
-  TTBucket* bucket   = &TT.buckets[TT.mask & hash];
+  TTBucket* bucket   = &TT.buckets[TTIdx(hash)];
   uint32_t shortHash = hash >> 32;
   TTEntry* toReplace = bucket->entries;
 
