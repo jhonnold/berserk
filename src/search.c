@@ -406,9 +406,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   if (!isPV && !board->checkers) {
     // Our TT might have a more accurate evaluation score, use this
-    if (tt && tt->depth >= depth && ttScore != UNKNOWN) {
-      if (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)) eval = ttScore;
-    }
+    if (tt && ttScore != UNKNOWN && (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER))) eval = ttScore;
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
