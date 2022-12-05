@@ -96,6 +96,8 @@ char* MoveToStr(Move move, Board* board) {
 }
 
 inline int IsRecapture(SearchData* data, Move move) {
+  if (!IsCap(move)) return 0;
+
   Move parent           = data->moves[data->ply - 1];
   Move greatGrandParent = data->ply > 2 ? data->moves[data->ply - 3] : NULL_MOVE;
 
