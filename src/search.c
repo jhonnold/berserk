@@ -603,7 +603,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // potentially reduced search
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv);
 
-      if (score > alpha && R != 1) // failed high on a reducede search, try again
+      if (score > alpha && R > 1) // failed high on a reducede search, try again
         score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv);
 
       if (score > alpha && (isRoot || score < beta)) // failed high again, do full window
