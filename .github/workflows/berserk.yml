@@ -9,7 +9,7 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-20.04]
         version: [8, 9, 10, 11]
     
     steps:
