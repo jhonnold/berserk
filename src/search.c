@@ -472,7 +472,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move quiets[64];
   Move tacticals[64];
 
-  int legalMoves = 0, playedMoves = 0, numQuiets = 0, numTacticals = 0, skipQuiets = 0;
+  int legalMoves = 0, playedMoves = 0, numQuiets = 0, numTacticals = 0, skipQuiets = 0, singularExtension = 0;
   InitAllMoves(&moves, hashMove, data, oppThreat.sqs);
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
@@ -533,6 +533,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // no score failed above sBeta, so this is singular
       if (score < sBeta) {
+        singularExtension = 1;
+
         if (!isPV && score < sBeta - 35 && data->de[data->ply - 1] <= 6) {
           extension           = 2;
           data->de[data->ply] = data->de[data->ply - 1] + 1;
@@ -591,7 +593,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       R -= history / 20480;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = min(depth - 1, max(R, 1));
+      R = min(depth - 1, max(R, !singularExtension));
     }
 
     // First move of a PV node
@@ -601,7 +603,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // potentially reduced search
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv);
 
-      if (score > alpha && R != 1) // failed high on a reducede search, try again
+      if (score > alpha && R > 1) // failed high on a reducede search, try again
         score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv);
 
       if (score > alpha && (isRoot || score < beta)) // failed high again, do full window
