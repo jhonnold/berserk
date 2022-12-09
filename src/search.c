@@ -383,7 +383,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     eval = data->evals[data->ply];
   }
 
-  if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
+  if (!tt && !skipMove && eval != UNKNOWN)
+    TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
 
   // getting better if eval has gone up
   int improving = 0;
@@ -699,7 +700,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
 
   // pull cached eval if it exists
   int eval = data->evals[data->ply] = board->checkers ? UNKNOWN : (tt ? tt->eval : Evaluate(board, thread));
-  if (!tt) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
+  if (!tt && eval != UNKNOWN) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
 
   // can we use an improved evaluation from the tt?
   if (tt && ttScore != UNKNOWN)
