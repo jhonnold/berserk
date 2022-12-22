@@ -564,10 +564,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // apply extensions
     int newDepth = depth + extension;
 
+    int doFullSearch = 0;
+
     // Late move reductions
-    int R = 1;
     if (depth > 2 && legalMoves > 1 && !(ttPv && IsCap(move))) {
-      R = LMR[min(depth, 63)][min(legalMoves, 63)];
+      int R = LMR[min(depth, 63)][min(legalMoves, 63)];
 
       // increase reduction on non-pv
       if (!ttPv) R++;
@@ -595,21 +596,18 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = min(depth - 1, max(R, !singularExtension));
-    }
 
-    // First move of a PV node
-    if (isPV && playedMoves == 1) {
-      score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv);
-    } else {
-      // potentially reduced search
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv);
 
-      if (score > alpha && R > 1) // failed high on a reducede search, try again
-        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv);
-
-      if (score > alpha && (isRoot || score < beta)) // failed high again, do full window
-        score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv);
+      doFullSearch = score > alpha && R > 1;
+    } else {
+      doFullSearch = !isPV || playedMoves > 1;
     }
+
+    if (doFullSearch) score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv);
+
+    if (isPV && (playedMoves == 1 || (score > alpha && (isRoot || score < beta))))
+      score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv);
 
     UndoMove(move, board);
     data->ply--;
