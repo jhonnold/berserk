@@ -613,34 +613,51 @@ int IsPseudoLegal(Move move, Board* board) {
   int piece  = Moving(move);
   int pcType = PieceType(piece);
 
-  if (!move || (piece & 1) != board->stm) return 0;
+  if (!move || (piece & 1) != board->stm || piece != board->squares[from]) return 0;
 
   if (IsCas(move)) {
     if (board->checkers) return 0;
 
-    MoveList moves;
-    moves.nQuiets = 0;
+    int kingsq = lsb(PieceBB(KING, board->stm));
 
-    GenerateCastles(&moves, board, board->stm);
-    for (int i = 0; i < moves.nQuiets; i++)
-      if (move == moves.quiet[i]) return 1;
+    switch (to) {
+      case G1: {
+        if (!CanCastle(WHITE_KS)) return 0;
+        BitBoard between = BetweenSquares(kingsq, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
+        if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[0])) & between) return 0;
+        break;
+      }
+      case C1: {
+        if (!CanCastle(WHITE_QS)) return 0;
+        BitBoard between = BetweenSquares(kingsq, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
+        if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[1])) & between) return 0;
+        break;
+      }
+      case G8: {
+        if (!CanCastle(BLACK_KS)) return 0;
+        BitBoard between = BetweenSquares(kingsq, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
+        if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[2])) & between) return 0;
+        break;
+      }
+      case C8: {
+        if (!CanCastle(BLACK_QS)) return 0;
+        BitBoard between = BetweenSquares(kingsq, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
+        if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[3])) & between) return 0;
+        break;
+      }
+    }
 
-    return 0;
-  } else if (Promo(move)) {
-    MoveList moves;
-    moves.nTactical = 0;
-
-    int king      = lsb(PieceBB(KING, board->stm));
-    BitBoard opts = !board->checkers ? ALL : (board->checkers | BetweenSquares(king, lsb(board->checkers)));
-
-    GeneratePawnPromotions(&moves, PieceBB(PAWN, board->stm), opts, board, board->stm);
-    for (int i = 0; i < moves.nTactical; i++)
-      if (move == moves.tactical[i]) return 1;
-
-    return 0;
+    return 1;
   }
 
-  if (piece != board->squares[from]) return 0;
+  if (Promo(move)) {
+    BitBoard goal = board->stm == WHITE ? RANK_8 : RANK_1;
+    BitBoard opts =
+      (ShiftPawnDir(bit(from), board->stm) & ~OccBB(BOTH)) | (GetPawnAttacks(from, board->stm) & OccBB(board->xstm));
+
+    return !!getBit(goal & opts, to);
+  }
+
   if (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE) return 0;
   if (!IsCap(move) && board->squares[to] != NO_PIECE) return 0;
   if (IsEP(move) && to != board->epSquare) return 0;
