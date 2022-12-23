@@ -217,7 +217,7 @@ INLINE void GenerateCastles(MoveList* list, Board* board, const int stm) {
   }
 }
 
-INLINE void GenerateMoves(MoveList* list, Board* board, const int type, const int IsPseudoLegal) {
+INLINE void GenerateMoves(MoveList* list, Board* board, const int type, const int legal) {
   const int stm = board->stm;
   Move* arr     = type == QUIET ? list->quiet : list->tactical;
   uint8_t* n    = type == QUIET ? &list->nQuiets : &list->nTactical;
@@ -257,7 +257,7 @@ INLINE void GenerateMoves(MoveList* list, Board* board, const int type, const in
     if (type == QUIET) GenerateCastles(list, board, stm);
   }
 
-  if (!IsPseudoLegal) {
+  if (legal) {
     // this is the final legality check for moves - certain move types are specifically checked here
     // king moves, castles, and EP (some crazy pins)
     Move* curr = arr;

@@ -26,7 +26,7 @@
 
 const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
 
-const char* PROMOTION_TO_CHAR = "ppnnbbrrqqkk";
+const char* PROMOTION_TO_CHAR = "--nnbbrrqq--";
 
 const int CHAR_TO_PIECE[] = {
   ['P'] = WHITE_PAWN,   //
@@ -76,6 +76,33 @@ Move ParseMove(char* moveStr, Board* board) {
     if (!strcmp(MoveToStr(rootMoves.moves[i], board), moveStr)) return rootMoves.moves[i];
 
   return NULL_MOVE;
+}
+
+char* LongMoveToStr(Move move, Board* board) {
+  static char buffer[128];
+
+  int from     = From(move);
+  int to       = To(move);
+  int piece    = Moving(move);
+  int promoted = Promo(move);
+  int capture  = IsCap(move);
+  int dub      = IsDP(move);
+  int ep       = IsEP(move);
+  int castle   = IsCas(move);
+
+  sprintf(buffer,
+          "%s %s %c %c %d %d %d %d (%s)",
+          SQ_TO_COORD[from],
+          SQ_TO_COORD[to],
+          PIECE_TO_CHAR[piece],
+          PROMOTION_TO_CHAR[promoted],
+          capture,
+          dub,
+          ep,
+          castle,
+          MoveToStr(move, board));
+
+  return buffer;
 }
 
 char* MoveToStr(Move move, Board* board) {

@@ -16,6 +16,7 @@
 
 #include "board.h"
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -626,9 +627,7 @@ int IsPseudoLegal(Move move, Board* board) {
       if (move == moves.quiet[i]) return 1;
 
     return 0;
-  }
-
-  if (Promo(move)) {
+  } else if (Promo(move)) {
     MoveList moves;
     moves.nTactical = 0;
 
@@ -642,20 +641,24 @@ int IsPseudoLegal(Move move, Board* board) {
     return 0;
   }
 
-  if (piece != board->squares[from] || (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE)) return 0;
-
-  if (IsEP(move) && !board->epSquare) return 0;
-
+  if (piece != board->squares[from]) return 0;
+  if (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE) return 0;
+  if (IsEP(move) && to != board->epSquare) return 0;
   if (getBit(OccBB(board->stm), to)) return 0;
 
   if (pcType == PAWN) {
     if (getBit(RANK_1 | RANK_8, to)) return 0;
 
-    if (!(getBit(GetPawnAttacks(from, board->stm) & OccBB(board->xstm), to) ||
-          (from + PawnDir(board->stm) == to && !getBit(OccBB(BOTH), to)) ||
-          (from + 2 * PawnDir(board->stm) == to && !getBit(OccBB(BOTH), to) &&
-           !getBit(OccBB(BOTH), from + PawnDir(board->stm)) && (from ^ (56 * board->stm)) == 6)))
-      return 0;
+    if (!IsEP(move)) {
+      if (!(GetPawnAttacks(from, board->stm) & OccBB(board->xstm) & bit(to))         // capture
+          && !((from + PawnDir(board->stm) == to) && board->squares[to] == NO_PIECE) // single push
+          && !((from + 2 * PawnDir(board->stm) == to)                                // double push
+               && board->squares[to] == NO_PIECE                                     //
+               && board->squares[to - PawnDir(board->stm)] == NO_PIECE               //
+               && (Rank(from ^ (56 * board->stm)) == 6)                              //
+               ))
+        return 0;
+    }
   } else if (!getBit(GetPieceAttacks(from, OccBB(BOTH), pcType), to)) {
     return 0;
   }
@@ -671,121 +674,16 @@ int IsPseudoLegal(Move move, Board* board) {
   return 1;
 }
 
-int MoveIsLegal(Move move, Board* board) {
-  int piece = Moving(move);
-  int from  = From(move);
-  int to    = To(move);
-
-  // moving piece isn't where it says it is
-  if (!move || piece > BLACK_KING || (piece & 1) != board->stm || piece != board->squares[from]) return 0;
-
-  // can't capture our own piece unless castling
-  if (board->squares[to] != NO_PIECE && !IsCas(move) && (!IsCap(move) || (board->squares[to] & 1) == board->stm))
-    return 0;
-
-  // can't capture air
-  if (IsCap(move) && board->squares[to] == NO_PIECE && !IsEP(move)) return 0;
-
-  // non-pawns can't promote/dp/ep
-  if ((Promo(move) || IsDP(move) || IsEP(move)) && PieceType(piece) != PAWN) return 0;
-
-  // non-kings can't castle
-  if (IsCas(move) && (PieceType(piece) != KING || IsCap(move))) return 0;
-
-  BitBoard possible = -1ULL;
-  if (getBit(board->pinned, from)) possible &= PinnedMoves(from, lsb(PieceBB(KING, board->stm)));
-
-  if (board->checkers)
-    possible &= BetweenSquares(lsb(board->checkers), lsb(PieceBB(KING, board->stm))) | board->checkers;
-
-  if (bits(board->checkers) > 1 && PieceType(piece) != KING) return 0;
-
-  switch (PieceType(piece)) {
-    case KING:
-      if (!IsCas(move) && !getBit(GetKingAttacks(from), to)) return 0;
-      break;
-    case KNIGHT: return !!getBit(GetKnightAttacks(from) & possible, to);
-    case BISHOP: return !!getBit(GetBishopAttacks(from, OccBB(BOTH)) & possible, to);
-    case ROOK: return !!getBit(GetRookAttacks(from, OccBB(BOTH)) & possible, to);
-    case QUEEN: return !!getBit(GetQueenAttacks(from, OccBB(BOTH)) & possible, to);
-    case PAWN:
-      if (IsEP(move)) break;
-
-      BitBoard atx = GetPawnAttacks(from, board->stm);
-      BitBoard adv = board->stm == WHITE ? ShiftN(bit(from)) : ShiftS(bit(from));
-      adv &= ~OccBB(BOTH);
-
-      if (Promo(move))
-        return !!getBit((board->stm == WHITE ? RANK_8 : RANK_1) & ((atx & OccBB(board->xstm)) | adv) & possible, to) &&
-               Promo(move) >= WHITE_KNIGHT && Promo(move) <= BLACK_QUEEN && (Promo(move) & 1) == board->stm &&
-               !IsDP(move);
-
-      adv |= board->stm == WHITE ? ShiftN(adv & RANK_3) : ShiftS(adv & RANK_6);
-      adv &= ~OccBB(BOTH);
-
-      return !!getBit((board->stm == WHITE ? ~RANK_8 : ~RANK_1) & ((atx & OccBB(board->xstm)) | adv) & possible, to) &&
-             IsDP(move) == (abs(from - to) == 16);
-  }
-
-  if (IsEP(move)) {
-    if (!IsCap(move) || IsDP(move) || Promo(move) || !board->epSquare || board->epSquare != to ||
-        PieceType(piece) != PAWN || !getBit(GetPawnAttacks(from, board->stm), board->epSquare))
-      return 0;
-  }
-
-  if (IsCas(move)) {
-    if (board->checkers) return 0;
-
-    int kingSq = lsb(PieceBB(KING, board->stm));
-
-    if (from != kingSq) return 0;
-
-    if ((board->stm == WHITE && to != G1 && to != C1) || (board->stm == BLACK && to != G8 && to != C8)) return 0;
-
-    if (to == G1) {
-      if (!(board->castling & 0x8)) return 0;
-
-      if (getBit(board->pinned, board->cr[0])) return 0;
-
-      BitBoard between = BetweenSquares(kingSq, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
-      if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[0])) & between) return 0;
-    }
-
-    if (to == C1) {
-      if (!(board->castling & 0x4)) return 0;
-
-      if (getBit(board->pinned, board->cr[1])) return 0;
-
-      BitBoard between = BetweenSquares(kingSq, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
-      if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[1])) & between) return 0;
-    }
-
-    if (to == G8) {
-      if (!(board->castling & 0x2)) return 0;
-
-      if (getBit(board->pinned, board->cr[2])) return 0;
-
-      BitBoard between = BetweenSquares(kingSq, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
-      if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[2])) & between) return 0;
-    }
-
-    if (to == C8) {
-      if (!(board->castling & 0x1)) return 0;
-
-      if (getBit(board->pinned, board->cr[3])) return 0;
-
-      BitBoard between = BetweenSquares(kingSq, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
-      if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[3])) & between) return 0;
-    }
-  }
-
-  // this is a legality checker for ep/king/castles (used by movegen)
-  return IsLegal(move, board);
-}
-
 // this is NOT a legality checker for ALL moves
 // it is only used by move generation for king moves, castles, and ep captures
 int IsLegal(Move move, Board* board) {
+  if (!IsPseudoLegal(move, board)) {
+    PrintBoard(board);
+    printf("%s\n", LongMoveToStr(move, board));
+    
+    return IsPseudoLegal(move, board);
+  }
+
   int from   = From(move);
   int to     = To(move);
   int kingSq = lsb(PieceBB(KING, board->stm));

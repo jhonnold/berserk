@@ -7,7 +7,7 @@ CC       = gcc
 VERSION  = 20221222
 MAIN_NETWORK = networks/berserk-c982d9682d4e.nn
 EVALFILE = $(MAIN_NETWORK)
-DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
+DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" # -DNDEBUG
 
 # Flags
 STD    = -std=gnu11
