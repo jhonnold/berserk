@@ -716,39 +716,37 @@ int MoveIsLegal(Move move, Board* board) {
   }
 
   // this is a legality checker for ep/king/castles (used by movegen)
-  return IsMoveLegal(move, board);
+  return IsLegal(move, board);
 }
 
 // this is NOT a legality checker for ALL moves
 // it is only used by move generation for king moves, castles, and ep captures
-int IsMoveLegal(Move move, Board* board) {
-  int from = From(move);
-  int to   = To(move);
+int IsLegal(Move move, Board* board) {
+  int from   = From(move);
+  int to     = To(move);
+  int kingSq = lsb(PieceBB(KING, board->stm));
 
   if (IsEP(move)) {
     // ep is checked by just applying the move
-    int kingSq            = lsb(PieceBB(KING, board->stm));
-    int captureSq         = to - PawnDir(board->stm);
-    BitBoard newOccupancy = OccBB(BOTH);
-    popBit(newOccupancy, from);
-    popBit(newOccupancy, captureSq);
-    setBit(newOccupancy, to);
-
+    int captureSq = to - PawnDir(board->stm);
+    BitBoard occ  = (OccBB(BOTH) ^ bit(from) ^ bit(captureSq)) | bit(to);
     // EP can only be illegal due to crazy discover checks
-    return !(GetBishopAttacks(kingSq, newOccupancy) & (PieceBB(BISHOP, board->xstm) | PieceBB(QUEEN, board->xstm))) &&
-           !(GetRookAttacks(kingSq, newOccupancy) & (PieceBB(ROOK, board->xstm) | PieceBB(QUEEN, board->xstm)));
-  } else if (IsCas(move)) {
-    int step = (to > from) ? -1 : 1;
-
-    // pieces in-between have been checked, now check that it's not castling through or into check
-    for (int i = to; i != from; i += step) {
-      if (AttacksToSquare(board, i, OccBB(BOTH)) & OccBB(board->xstm)) return 0;
-    }
-
-    return 1;
-  } else if (Moving(move) >= WHITE_KING) {
-    return !(AttacksToSquare(board, to, OccBB(BOTH) ^ PieceBB(KING, board->stm)) & OccBB(board->xstm));
+    return !(GetBishopAttacks(kingSq, occ) & (PieceBB(BISHOP, board->xstm) | PieceBB(QUEEN, board->xstm))) &&
+           !(GetRookAttacks(kingSq, occ) & (PieceBB(ROOK, board->xstm) | PieceBB(QUEEN, board->xstm)));
   }
 
-  return 1;
+  if (IsCas(move)) {
+    int step = to > from ? -1 : 1;
+
+    // pieces in-between have been checked, now check that it's not castling through or into check
+    for (int i = to; i != from; i += step)
+      if (AttacksToSquare(board, i, OccBB(BOTH)) & OccBB(board->xstm)) return 0;
+
+    return !CHESS_960 || !getBit(board->pinned, To(move));
+  }
+
+  if (PieceType(Moving(move)) == KING)
+    return !(AttacksToSquare(board, to, OccBB(BOTH) ^ PieceBB(KING, board->stm)) & OccBB(board->xstm));
+
+  return !getBit(board->pinned, from) || getBit(PinnedMoves(from, kingSq), to);
 }
