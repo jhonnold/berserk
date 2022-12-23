@@ -12,10 +12,10 @@ DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 # Flags
 STD    = -std=gnu11
 LIBS   = -pthread -lm
-WARN   = -Wall -Wextra -Wshadow -Werror
+WARN   = -Wall -Wextra -Wshadow
 
 FLAGS  = $(STD) $(WARN) -O3 -flto -g $(DEFS)
-CFLAGS = $(FLAGS) -march=native
+CFLAGS = $(FLAGS) -march=native -fsanitize=address -fsanitize=undefined
 RFLAGS = $(FLAGS) -static
 
 # PGO
