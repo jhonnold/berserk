@@ -613,12 +613,15 @@ int IsPseudoLegal(Move move, Board* board) {
   int piece  = Moving(move);
   int pcType = PieceType(piece);
 
+  if (!move || (piece & 1) != board->stm) return 0;
+
   if (IsCas(move)) {
     if (board->checkers) return 0;
 
     MoveList moves;
-    GenerateCastles(&moves, board, board->stm);
+    moves.nQuiets = 0;
 
+    GenerateCastles(&moves, board, board->stm);
     for (int i = 0; i < moves.nQuiets; i++)
       if (move == moves.quiet[i]) return 1;
 
@@ -627,18 +630,22 @@ int IsPseudoLegal(Move move, Board* board) {
 
   if (Promo(move)) {
     MoveList moves;
+    moves.nTactical = 0;
 
-    int king = lsb(PieceBB(KING, board->stm));
+    int king      = lsb(PieceBB(KING, board->stm));
     BitBoard opts = !board->checkers ? ALL : (board->checkers | BetweenSquares(king, lsb(board->checkers)));
-    GeneratePawnPromotions(&moves, PieceBB(PAWN, board->stm), opts, board, board->stm);
 
+    GeneratePawnPromotions(&moves, PieceBB(PAWN, board->stm), opts, board, board->stm);
     for (int i = 0; i < moves.nTactical; i++)
       if (move == moves.tactical[i]) return 1;
 
     return 0;
   }
 
-  if (piece == NO_PIECE || piece != board->squares[from] || (piece & 1) != board->stm) return 0;
+  if (piece != board->squares[from] || (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE)) return 0;
+
+  if (IsEP(move) && !board->epSquare) return 0;
+
   if (getBit(OccBB(board->stm), to)) return 0;
 
   if (pcType == PAWN) {
