@@ -15,7 +15,7 @@ LIBS   = -pthread -lm
 WARN   = -Wall -Wextra -Wshadow
 
 FLAGS  = $(STD) $(WARN) -O3 -flto -g $(DEFS)
-CFLAGS = $(FLAGS) -march=native -fsanitize=address -fsanitize=undefined
+CFLAGS = $(FLAGS) -march=native
 RFLAGS = $(FLAGS) -static
 
 # PGO
