@@ -563,6 +563,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     data->moves[data->ply++] = move;
     MakeMove(move, board);
 
+    int kingsq = lsb(PieceBB(KING, board->xstm));
+    if (AttacksToSquare(board, kingsq, OccBB(BOTH)) & OccBB(board->stm)) {
+      UndoMove(move, board);
+      PrintBoard(board);
+      printf("Attempted to make illegal move %s\n", MoveToStr(move, board));
+      continue;
+    }
+
     // apply extensions
     int newDepth = depth + extension;
 
@@ -727,6 +735,14 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
 
     data->moves[data->ply++] = move;
     MakeMove(move, board);
+
+    int kingsq = lsb(PieceBB(KING, board->xstm));
+    if (AttacksToSquare(board, kingsq, OccBB(BOTH)) & OccBB(board->stm)) {
+      UndoMove(move, board);
+      PrintBoard(board);
+      printf("Attempted to make illegal move %s\n", MoveToStr(move, board));
+      continue;
+    }
 
     int score = -Quiesce(-beta, -alpha, thread);
 
