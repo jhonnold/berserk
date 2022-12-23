@@ -643,6 +643,7 @@ int IsPseudoLegal(Move move, Board* board) {
 
   if (piece != board->squares[from]) return 0;
   if (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE) return 0;
+  if (!IsCap(move) && board->squares[to] != NO_PIECE) return 0;
   if (IsEP(move) && to != board->epSquare) return 0;
   if (getBit(OccBB(board->stm), to)) return 0;
 
@@ -668,7 +669,8 @@ int IsPseudoLegal(Move move, Board* board) {
 
     int kingsq                 = lsb(PieceBB(KING, board->stm));
     BitBoard blocksAndCaptures = board->checkers | BetweenSquares(kingsq, lsb(board->checkers));
-    if (!getBit(blocksAndCaptures, to)) return 0;
+    int to2                    = IsEP(move) ? to - PawnDir(board->stm) : to;
+    if (!getBit(blocksAndCaptures, to2)) return 0;
   }
 
   return 1;
@@ -677,13 +679,6 @@ int IsPseudoLegal(Move move, Board* board) {
 // this is NOT a legality checker for ALL moves
 // it is only used by move generation for king moves, castles, and ep captures
 int IsLegal(Move move, Board* board) {
-  if (!IsPseudoLegal(move, board)) {
-    PrintBoard(board);
-    printf("%s\n", LongMoveToStr(move, board));
-    
-    return IsPseudoLegal(move, board);
-  }
-
   int from   = From(move);
   int to     = To(move);
   int kingSq = lsb(PieceBB(KING, board->stm));
