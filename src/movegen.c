@@ -16,7 +16,6 @@
 
 #include "movegen.h"
 
-#include <assert.h>
 #include <stdio.h>
 
 void GenerateTacticalMoves(MoveList* list, Board* board) {

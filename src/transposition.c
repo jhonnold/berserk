@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <assert.h>
 #include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
