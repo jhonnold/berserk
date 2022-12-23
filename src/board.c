@@ -607,6 +607,63 @@ inline int IsFiftyMoveRule(Board* board) {
   return 0;
 }
 
+int IsPseudoLegal(Move move, Board* board) {
+  int from   = From(move);
+  int to     = To(move);
+  int piece  = Moving(move);
+  int pcType = PieceType(piece);
+
+  if (IsCas(move)) {
+    if (board->checkers) return 0;
+
+    MoveList moves;
+    GenerateCastles(&moves, board, board->stm);
+
+    for (int i = 0; i < moves.nQuiets; i++)
+      if (move == moves.quiet[i]) return 1;
+
+    return 0;
+  }
+
+  if (Promo(move)) {
+    MoveList moves;
+
+    int king = lsb(PieceBB(KING, board->stm));
+    BitBoard opts = !board->checkers ? ALL : (board->checkers | BetweenSquares(king, lsb(board->checkers)));
+    GeneratePawnPromotions(&moves, PieceBB(PAWN, board->stm), opts, board, board->stm);
+
+    for (int i = 0; i < moves.nTactical; i++)
+      if (move == moves.tactical[i]) return 1;
+
+    return 0;
+  }
+
+  if (piece == NO_PIECE || piece != board->squares[from] || (piece & 1) != board->stm) return 0;
+  if (getBit(OccBB(board->stm), to)) return 0;
+
+  if (pcType == PAWN) {
+    if (getBit(RANK_1 | RANK_8, to)) return 0;
+
+    if (!(getBit(GetPawnAttacks(from, board->stm) & OccBB(board->xstm), to) ||
+          (from + PawnDir(board->stm) == to && !getBit(OccBB(BOTH), to)) ||
+          (from + 2 * PawnDir(board->stm) == to && !getBit(OccBB(BOTH), to) &&
+           !getBit(OccBB(BOTH), from + PawnDir(board->stm)) && (from ^ (56 * board->stm)) == 6)))
+      return 0;
+  } else if (!getBit(GetPieceAttacks(from, OccBB(BOTH), pcType), to)) {
+    return 0;
+  }
+
+  if (board->checkers && pcType != KING) {
+    if (bits(board->checkers) > 1) return 0;
+
+    int kingsq                 = lsb(PieceBB(KING, board->stm));
+    BitBoard blocksAndCaptures = board->checkers | BetweenSquares(kingsq, lsb(board->checkers));
+    if (!getBit(blocksAndCaptures, to)) return 0;
+  }
+
+  return 1;
+}
+
 int MoveIsLegal(Move move, Board* board) {
   int piece = Moving(move);
   int from  = From(move);
