@@ -651,11 +651,15 @@ int IsPseudoLegal(Move move, Board* board) {
   }
 
   if (Promo(move)) {
-    BitBoard goal = board->stm == WHITE ? RANK_8 : RANK_1;
+    if (bits(board->checkers) > 1) return 0;
+
+    int king       = lsb(PieceBB(KING, board->stm));
+    BitBoard valid = board->checkers ? (board->checkers | BetweenSquares(king, lsb(board->checkers))) : ALL;
+    BitBoard goal  = board->stm == WHITE ? RANK_8 : RANK_1;
     BitBoard opts =
       (ShiftPawnDir(bit(from), board->stm) & ~OccBB(BOTH)) | (GetPawnAttacks(from, board->stm) & OccBB(board->xstm));
 
-    return !!getBit(goal & opts, to);
+    return !!getBit(goal & opts & valid, to);
   }
 
   if (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE) return 0;
