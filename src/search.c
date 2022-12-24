@@ -16,7 +16,6 @@
 
 #include "search.h"
 
-#include <assert.h>
 #include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
@@ -452,6 +451,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       InitTacticalMoves(&moves, data, 0);
       while ((move = NextMove(&moves, board, 1))) {
         if (skipMove == move) continue;
+        if (!IsLegal(move, board)) continue;
 
         data->moves[data->ply++] = move;
         MakeMove(move, board);
@@ -484,6 +484,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // don't search this during singular
     if (skipMove == move) continue;
+
+    if (!IsLegal(move, board)) continue;
 
     legalMoves++;
 
@@ -719,6 +721,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread) {
   InitTacticalMoves(&moves, data, eval <= alpha - DELTA_CUTOFF);
 
   while ((move = NextMove(&moves, board, 1))) {
+    if (!IsLegal(move, board)) continue;
+
     if (moves.phase > PLAY_GOOD_TACTICAL) break;
 
     data->moves[data->ply++] = move;

@@ -607,148 +607,123 @@ inline int IsFiftyMoveRule(Board* board) {
   return 0;
 }
 
-int MoveIsLegal(Move move, Board* board) {
-  int piece = Moving(move);
-  int from  = From(move);
-  int to    = To(move);
+int IsPseudoLegal(Move move, Board* board) {
+  int from   = From(move);
+  int to     = To(move);
+  int piece  = Moving(move);
+  int pcType = PieceType(piece);
 
-  // moving piece isn't where it says it is
-  if (!move || piece > BLACK_KING || (piece & 1) != board->stm || piece != board->squares[from]) return 0;
-
-  // can't capture our own piece unless castling
-  if (board->squares[to] != NO_PIECE && !IsCas(move) && (!IsCap(move) || (board->squares[to] & 1) == board->stm))
-    return 0;
-
-  // can't capture air
-  if (IsCap(move) && board->squares[to] == NO_PIECE && !IsEP(move)) return 0;
-
-  // non-pawns can't promote/dp/ep
-  if ((Promo(move) || IsDP(move) || IsEP(move)) && PieceType(piece) != PAWN) return 0;
-
-  // non-kings can't castle
-  if (IsCas(move) && (PieceType(piece) != KING || IsCap(move))) return 0;
-
-  BitBoard possible = -1ULL;
-  if (getBit(board->pinned, from)) possible &= PinnedMoves(from, lsb(PieceBB(KING, board->stm)));
-
-  if (board->checkers)
-    possible &= BetweenSquares(lsb(board->checkers), lsb(PieceBB(KING, board->stm))) | board->checkers;
-
-  if (bits(board->checkers) > 1 && PieceType(piece) != KING) return 0;
-
-  switch (PieceType(piece)) {
-    case KING:
-      if (!IsCas(move) && !getBit(GetKingAttacks(from), to)) return 0;
-      break;
-    case KNIGHT: return !!getBit(GetKnightAttacks(from) & possible, to);
-    case BISHOP: return !!getBit(GetBishopAttacks(from, OccBB(BOTH)) & possible, to);
-    case ROOK: return !!getBit(GetRookAttacks(from, OccBB(BOTH)) & possible, to);
-    case QUEEN: return !!getBit(GetQueenAttacks(from, OccBB(BOTH)) & possible, to);
-    case PAWN:
-      if (IsEP(move)) break;
-
-      BitBoard atx = GetPawnAttacks(from, board->stm);
-      BitBoard adv = board->stm == WHITE ? ShiftN(bit(from)) : ShiftS(bit(from));
-      adv &= ~OccBB(BOTH);
-
-      if (Promo(move))
-        return !!getBit((board->stm == WHITE ? RANK_8 : RANK_1) & ((atx & OccBB(board->xstm)) | adv) & possible, to) &&
-               Promo(move) >= WHITE_KNIGHT && Promo(move) <= BLACK_QUEEN && (Promo(move) & 1) == board->stm &&
-               !IsDP(move);
-
-      adv |= board->stm == WHITE ? ShiftN(adv & RANK_3) : ShiftS(adv & RANK_6);
-      adv &= ~OccBB(BOTH);
-
-      return !!getBit((board->stm == WHITE ? ~RANK_8 : ~RANK_1) & ((atx & OccBB(board->xstm)) | adv) & possible, to) &&
-             IsDP(move) == (abs(from - to) == 16);
-  }
-
-  if (IsEP(move)) {
-    if (!IsCap(move) || IsDP(move) || Promo(move) || !board->epSquare || board->epSquare != to ||
-        PieceType(piece) != PAWN || !getBit(GetPawnAttacks(from, board->stm), board->epSquare))
-      return 0;
-  }
+  if (!move || (piece & 1) != board->stm || piece != board->squares[from]) return 0;
 
   if (IsCas(move)) {
     if (board->checkers) return 0;
 
-    int kingSq = lsb(PieceBB(KING, board->stm));
+    int kingsq = lsb(PieceBB(KING, board->stm));
 
-    if (from != kingSq) return 0;
-
-    if ((board->stm == WHITE && to != G1 && to != C1) || (board->stm == BLACK && to != G8 && to != C8)) return 0;
-
-    if (to == G1) {
-      if (!(board->castling & 0x8)) return 0;
-
-      if (getBit(board->pinned, board->cr[0])) return 0;
-
-      BitBoard between = BetweenSquares(kingSq, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
-      if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[0])) & between) return 0;
+    switch (to) {
+      case G1: {
+        if (!CanCastle(WHITE_KS)) return 0;
+        BitBoard between = BetweenSquares(kingsq, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
+        if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[0])) & between) return 0;
+        break;
+      }
+      case C1: {
+        if (!CanCastle(WHITE_QS)) return 0;
+        BitBoard between = BetweenSquares(kingsq, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
+        if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[1])) & between) return 0;
+        break;
+      }
+      case G8: {
+        if (!CanCastle(BLACK_KS)) return 0;
+        BitBoard between = BetweenSquares(kingsq, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
+        if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[2])) & between) return 0;
+        break;
+      }
+      case C8: {
+        if (!CanCastle(BLACK_QS)) return 0;
+        BitBoard between = BetweenSquares(kingsq, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
+        if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[3])) & between) return 0;
+        break;
+      }
     }
 
-    if (to == C1) {
-      if (!(board->castling & 0x4)) return 0;
-
-      if (getBit(board->pinned, board->cr[1])) return 0;
-
-      BitBoard between = BetweenSquares(kingSq, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
-      if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[1])) & between) return 0;
-    }
-
-    if (to == G8) {
-      if (!(board->castling & 0x2)) return 0;
-
-      if (getBit(board->pinned, board->cr[2])) return 0;
-
-      BitBoard between = BetweenSquares(kingSq, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
-      if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[2])) & between) return 0;
-    }
-
-    if (to == C8) {
-      if (!(board->castling & 0x1)) return 0;
-
-      if (getBit(board->pinned, board->cr[3])) return 0;
-
-      BitBoard between = BetweenSquares(kingSq, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
-      if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[3])) & between) return 0;
-    }
+    return 1;
   }
 
-  // this is a legality checker for ep/king/castles (used by movegen)
-  return IsMoveLegal(move, board);
+  if (Promo(move)) {
+    if (bits(board->checkers) > 1) return 0;
+
+    int king       = lsb(PieceBB(KING, board->stm));
+    BitBoard valid = board->checkers ? (board->checkers | BetweenSquares(king, lsb(board->checkers))) : ALL;
+    BitBoard goal  = board->stm == WHITE ? RANK_8 : RANK_1;
+    BitBoard opts =
+      (ShiftPawnDir(bit(from), board->stm) & ~OccBB(BOTH)) | (GetPawnAttacks(from, board->stm) & OccBB(board->xstm));
+
+    return !!getBit(goal & opts & valid, to);
+  }
+
+  if (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE) return 0;
+  if (!IsCap(move) && board->squares[to] != NO_PIECE) return 0;
+  if (IsEP(move) && to != board->epSquare) return 0;
+  if (getBit(OccBB(board->stm), to)) return 0;
+
+  if (pcType == PAWN) {
+    if (getBit(RANK_1 | RANK_8, to)) return 0;
+
+    if (!IsEP(move)) {
+      if (!(GetPawnAttacks(from, board->stm) & OccBB(board->xstm) & bit(to))         // capture
+          && !((from + PawnDir(board->stm) == to) && board->squares[to] == NO_PIECE) // single push
+          && !((from + 2 * PawnDir(board->stm) == to)                                // double push
+               && board->squares[to] == NO_PIECE                                     //
+               && board->squares[to - PawnDir(board->stm)] == NO_PIECE               //
+               && (Rank(from ^ (56 * board->stm)) == 6)                              //
+               ))
+        return 0;
+    }
+  } else if (!getBit(GetPieceAttacks(from, OccBB(BOTH), pcType), to)) {
+    return 0;
+  }
+
+  if (board->checkers && pcType != KING) {
+    if (bits(board->checkers) > 1) return 0;
+
+    int kingsq                 = lsb(PieceBB(KING, board->stm));
+    BitBoard blocksAndCaptures = board->checkers | BetweenSquares(kingsq, lsb(board->checkers));
+    int to2                    = IsEP(move) ? to - PawnDir(board->stm) : to;
+    if (!getBit(blocksAndCaptures, to2)) return 0;
+  }
+
+  return 1;
 }
 
 // this is NOT a legality checker for ALL moves
 // it is only used by move generation for king moves, castles, and ep captures
-int IsMoveLegal(Move move, Board* board) {
-  int from = From(move);
-  int to   = To(move);
+int IsLegal(Move move, Board* board) {
+  int from   = From(move);
+  int to     = To(move);
+  int kingSq = lsb(PieceBB(KING, board->stm));
 
   if (IsEP(move)) {
     // ep is checked by just applying the move
-    int kingSq            = lsb(PieceBB(KING, board->stm));
-    int captureSq         = to - PawnDir(board->stm);
-    BitBoard newOccupancy = OccBB(BOTH);
-    popBit(newOccupancy, from);
-    popBit(newOccupancy, captureSq);
-    setBit(newOccupancy, to);
-
+    int captureSq = to - PawnDir(board->stm);
+    BitBoard occ  = (OccBB(BOTH) ^ bit(from) ^ bit(captureSq)) | bit(to);
     // EP can only be illegal due to crazy discover checks
-    return !(GetBishopAttacks(kingSq, newOccupancy) & (PieceBB(BISHOP, board->xstm) | PieceBB(QUEEN, board->xstm))) &&
-           !(GetRookAttacks(kingSq, newOccupancy) & (PieceBB(ROOK, board->xstm) | PieceBB(QUEEN, board->xstm)));
-  } else if (IsCas(move)) {
-    int step = (to > from) ? -1 : 1;
-
-    // pieces in-between have been checked, now check that it's not castling through or into check
-    for (int i = to; i != from; i += step) {
-      if (AttacksToSquare(board, i, OccBB(BOTH)) & OccBB(board->xstm)) return 0;
-    }
-
-    return 1;
-  } else if (Moving(move) >= WHITE_KING) {
-    return !(AttacksToSquare(board, to, OccBB(BOTH) ^ PieceBB(KING, board->stm)) & OccBB(board->xstm));
+    return !(GetBishopAttacks(kingSq, occ) & (PieceBB(BISHOP, board->xstm) | PieceBB(QUEEN, board->xstm))) &&
+           !(GetRookAttacks(kingSq, occ) & (PieceBB(ROOK, board->xstm) | PieceBB(QUEEN, board->xstm)));
   }
 
-  return 1;
+  if (IsCas(move)) {
+    int step = to > from ? -1 : 1;
+
+    // pieces in-between have been checked, now check that it's not castling through or into check
+    for (int i = to; i != from; i += step)
+      if (AttacksToSquare(board, i, OccBB(BOTH)) & OccBB(board->xstm)) return 0;
+
+    return !CHESS_960 || !getBit(board->pinned, To(move));
+  }
+
+  if (PieceType(Moving(move)) == KING)
+    return !(AttacksToSquare(board, to, OccBB(BOTH) ^ PieceBB(KING, board->stm)) & OccBB(board->xstm));
+
+  return !getBit(board->pinned, from) || getBit(PinnedMoves(from, kingSq), to);
 }

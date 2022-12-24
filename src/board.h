@@ -64,8 +64,8 @@ void MakeMove(Move move, Board* board);
 void MakeMoveUpdate(Move move, Board* board, int update);
 void UndoMove(Move move, Board* board);
 
-int IsMoveLegal(Move move, Board* board);
-int MoveIsLegal(Move move, Board* board);
+int IsPseudoLegal(Move move, Board* board);
+int IsLegal(Move move, Board* board);
 
 INLINE int MoveRequiresRefresh(int piece, int from, int to) {
   if (PieceType(piece) != KING) return 0;

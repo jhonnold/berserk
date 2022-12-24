@@ -152,7 +152,7 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
   switch (moves->phase) {
     case HASH_MOVE:
       moves->phase = GEN_TACTICAL_MOVES;
-      if (MoveIsLegal(moves->hashMove, board)) return moves->hashMove;
+      if (IsPseudoLegal(moves->hashMove, board)) return moves->hashMove;
       // fallthrough
     case GEN_TACTICAL_MOVES:
       GenerateTacticalMoves(moves, board);
@@ -186,16 +186,16 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
       // fallthrough
     case PLAY_KILLER_1:
       moves->phase = PLAY_KILLER_2;
-      if (!skipQuiets && moves->killer1 != moves->hashMove && MoveIsLegal(moves->killer1, board)) return moves->killer1;
+      if (!skipQuiets && moves->killer1 != moves->hashMove && IsPseudoLegal(moves->killer1, board)) return moves->killer1;
       // fallthrough
     case PLAY_KILLER_2:
       moves->phase = PLAY_COUNTER;
-      if (!skipQuiets && moves->killer2 != moves->hashMove && MoveIsLegal(moves->killer2, board)) return moves->killer2;
+      if (!skipQuiets && moves->killer2 != moves->hashMove && IsPseudoLegal(moves->killer2, board)) return moves->killer2;
       // fallthrough
     case PLAY_COUNTER:
       moves->phase = GEN_QUIET_MOVES;
       if (!skipQuiets && moves->counter != moves->hashMove && moves->counter != moves->killer1 &&
-          moves->counter != moves->killer2 && MoveIsLegal(moves->counter, board))
+          moves->counter != moves->killer2 && IsPseudoLegal(moves->counter, board))
         return moves->counter;
       // fallthrough
     case GEN_QUIET_MOVES:

@@ -45,6 +45,7 @@ extern const int CASTLING_ROOK[64];
 
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move, Board* board);
+char* LongMoveToStr(Move move, Board* board);
 int IsRecapture(SearchData* data, Move move);
 
 #endif
