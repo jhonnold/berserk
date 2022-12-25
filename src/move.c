@@ -122,11 +122,11 @@ char* MoveToStr(Move move, Board* board) {
   return buffer;
 }
 
-inline int IsRecapture(SearchStack* ss, SearchData* data, Move move) {
+inline int IsRecapture(SearchStack* ss, Move move) {
   if (!IsCap(move)) return 0;
 
-  Move parent           = data->moves[ss->ply - 1];
-  Move greatGrandParent = ss->ply > 2 ? data->moves[ss->ply - 3] : NULL_MOVE;
+  Move parent           = (ss - 1)->move;
+  Move greatGrandParent = ss->ply > 2 ? (ss - 3)->move : NULL_MOVE;
 
   return (IsCap(parent) && To(parent) == To(move)) || (IsCap(greatGrandParent) && To(greatGrandParent) == To(move));
 }

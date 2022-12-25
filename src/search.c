@@ -424,13 +424,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Null move pruning
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate threats)
-    if (depth >= 3 && data->moves[ss->ply - 1] != NULL_MOVE && !ss->skip && eval >= beta &&
+    if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
       int R = 4 + depth / 6 + min((eval - beta) / 256, 3) + !oppThreat.pcs;
       R     = min(depth, R); // don't go too low
 
-      data->moves[ss->ply] = NULL_MOVE;
+      ss->move = NULL_MOVE;
       MakeNullMove(board);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
@@ -453,7 +453,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (ss->skip == move) continue;
         if (!IsLegal(move, board)) continue;
 
-        data->moves[ss->ply] = move;
+        ss->move = move;
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -556,10 +556,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
-    else if (!isRoot && isPV && IsRecapture(ss, data, move))
+    else if (!isRoot && isPV && IsRecapture(ss, move))
       extension = 1;
 
-    data->moves[ss->ply] = move;
+    ss->move = move;
     MakeMove(move, board);
 
     // apply extensions
@@ -724,7 +724,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     if (moves.phase > PLAY_GOOD_TACTICAL) break;
 
-    data->moves[ss->ply] = move;
+    ss->move = move;
     MakeMove(move, board);
 
     int score = -Quiesce(-beta, -alpha, thread, ss + 1);

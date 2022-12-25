@@ -60,8 +60,6 @@ void CreatePool(int count) {
       (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
 
     ResetRefreshTable(threads[i].refreshTable);
-
-    threads[i].data.moves = &threads[i].data.searchMoves[2];
   }
 }
 
@@ -98,7 +96,6 @@ void ResetThreadPool() {
     threads[i].data.tbhits   = 0;
 
     // empty ALL data
-    memset(&threads[i].data.searchMoves, 0, sizeof(threads[i].data.searchMoves));
     memset(&threads[i].data.counters, 0, sizeof(threads[i].data.counters));
     memset(&threads[i].data.hh, 0, sizeof(threads[i].data.hh));
     memset(&threads[i].data.ch, 0, sizeof(threads[i].data.ch));

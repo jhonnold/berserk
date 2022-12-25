@@ -42,10 +42,10 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, SearchStack*
   moves->killer1  = ss->killers[0];
   moves->killer2  = ss->killers[1];
 
-  moves->counter = data->counters[FromTo(data->moves[ss->ply - 1])];
+  moves->counter = data->counters[FromTo((ss - 1)->move)];
 
   moves->data = data;
-  moves->ss = ss;
+  moves->ss   = ss;
 }
 
 void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {

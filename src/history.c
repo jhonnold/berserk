@@ -51,8 +51,8 @@ void UpdateHistories(Board* board,
                      BitBoard threats) {
   int inc = min(7584, 16 * depth * depth + 480 * depth - 480);
 
-  Move parent      = data->moves[ss->ply - 1];
-  Move grandParent = data->moves[ss->ply - 2];
+  Move parent      = (ss - 1)->move;
+  Move grandParent = (ss - 2)->move;
 
   if (!IsTactical(bestMove)) {
     AddKillerMove(ss, bestMove);
@@ -103,10 +103,10 @@ int GetQuietHistory(SearchStack* ss, SearchData* data, Move move, int stm, BitBo
 
   int history = HH(stm, move, threats);
 
-  Move parent = data->moves[ss->ply - 1];
+  Move parent = (ss - 1)->move;
   if (parent) history += CH(parent, move);
 
-  Move grandParent = data->moves[ss->ply - 2];
+  Move grandParent = (ss - 2)->move;
   if (grandParent) history += CH(grandParent, move);
 
   return history;

@@ -110,11 +110,7 @@ typedef struct {
   uint64_t tbhits;
   int seldepth; // seldepth count
 
-  Move* moves;
-
   int contempt[2];
-
-  Move searchMoves[MAX_SEARCH_PLY + 2]; // moves for ply stack
 
   Move counters[64 * 64];          // counter move butterfly table
   int hh[2][2][2][64 * 64];        // history heuristic butterfly table (stm / threatened)
