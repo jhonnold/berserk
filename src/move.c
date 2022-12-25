@@ -123,10 +123,7 @@ char* MoveToStr(Move move, Board* board) {
 }
 
 inline int IsRecapture(SearchStack* ss, Move move) {
-  if (!IsCap(move)) return 0;
-
-  Move parent           = (ss - 1)->move;
-  Move greatGrandParent = ss->ply > 2 ? (ss - 3)->move : NULL_MOVE;
-
-  return (IsCap(parent) && To(parent) == To(move)) || (IsCap(greatGrandParent) && To(greatGrandParent) == To(move));
+  return IsCap(move) &&                                                //
+         ((IsCap((ss - 1)->move) && To((ss - 1)->move) == To(move)) || //
+          (IsCap((ss - 3)->move) && To((ss - 3)->move) == To(move)));
 }

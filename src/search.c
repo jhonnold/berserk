@@ -124,11 +124,11 @@ void* Search(void* arg) {
   SearchResults* results = &thread->results;
   Board* board           = &thread->board;
 
-  SearchStack searchStack[MAX_SEARCH_PLY + 3];
-  SearchStack* ss = searchStack + 3;
-  memset(searchStack, 0, 4 * sizeof(SearchStack));
+  SearchStack searchStack[MAX_SEARCH_PLY + 4];
+  SearchStack* ss = searchStack + 4;
+  memset(searchStack, 0, 5 * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++) (ss + i)->ply = i;
-  for (size_t i = 1; i <= 3; i++) (ss - i)->ch = &thread->ch[WHITE_PAWN][A1];
+  for (size_t i = 1; i <= 4; i++) (ss - i)->ch = &thread->ch[WHITE_PAWN][A1];
 
   int mainThread = !thread->idx;
   int alpha      = -CHECKMATE;
@@ -429,7 +429,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       R     = min(depth, R); // don't go too low
 
       ss->move = NULL_MOVE;
-      ss->ch = &thread->ch[WHITE_PAWN][A1];
+      ss->ch   = &thread->ch[WHITE_PAWN][A1];
       MakeNullMove(board);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
@@ -453,7 +453,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (!IsLegal(move, board)) continue;
 
         ss->move = move;
-        ss->ch = &thread->ch[Moving(move)][To(move)];
+        ss->ch   = &thread->ch[Moving(move)][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -491,8 +491,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int extension       = 0;
     int tactical        = IsTactical(move);
     int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
-    int history =
-      !tactical ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) : GetTacticalHistory(thread, board, move);
+    int history         = !tactical ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
+                                      GetTacticalHistory(thread, board, move);
 
     if (bestScore > -MATE_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
@@ -560,7 +560,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       extension = 1;
 
     ss->move = move;
-    ss->ch = &thread->ch[Moving(move)][To(move)];
+    ss->ch   = &thread->ch[Moving(move)][To(move)];
     MakeMove(move, board);
 
     // apply extensions
@@ -725,7 +725,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     if (moves.phase > PLAY_GOOD_TACTICAL) break;
 
     ss->move = move;
-    ss->ch = &thread->ch[Moving(move)][To(move)];
+    ss->ch   = &thread->ch[Moving(move)][To(move)];
     MakeMove(move, board);
 
     int score = -Quiesce(-beta, -alpha, thread, ss + 1);
