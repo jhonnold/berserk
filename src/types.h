@@ -119,7 +119,6 @@ typedef struct {
 
   int contempt[2];
 
-  int de[MAX_SEARCH_PLY];               // double extensions
   Move searchMoves[MAX_SEARCH_PLY + 2]; // moves for ply stack
 
   Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply

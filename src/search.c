@@ -402,7 +402,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->skip                  = NULL_MOVE;
   data->killers[data->ply + 1][0] = NULL_MOVE;
   data->killers[data->ply + 1][1] = NULL_MOVE;
-  data->de[data->ply]             = isRoot ? 0 : data->de[data->ply - 1];
+  ss->de                          = (ss - 1)->de;
 
   Threat oppThreat;
   Threats(&oppThreat, board, board->xstm);
@@ -541,9 +541,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (score < sBeta) {
         singularExtension = 1;
 
-        if (!isPV && score < sBeta - 35 && data->de[data->ply - 1] <= 6) {
-          extension           = 2;
-          data->de[data->ply] = data->de[data->ply - 1] + 1;
+        if (!isPV && score < sBeta - 35 && ss->de <= 6) {
+          extension = 2;
+          ss->de    = (ss - 1)->de + 1;
         } else {
           extension = 1;
         }
