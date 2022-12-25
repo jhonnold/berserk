@@ -31,7 +31,7 @@
 #define N_OUTPUT   1
 
 #define ALIGN_ON 64
-#define ALIGN __attribute__((aligned(ALIGN_ON)))
+#define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -97,6 +97,12 @@ typedef struct {
   Move moves[MAX_SEARCH_PLY];
 } PV;
 
+typedef struct {
+  int ply, staticEval, de;
+  Move move, skip;
+  Move killers[2];
+} SearchStack;
+
 // A general data object for use during search
 typedef struct {
   int window;
@@ -113,10 +119,7 @@ typedef struct {
 
   int contempt[2];
 
-  int de[MAX_SEARCH_PLY]; // double extensions
-
-  Move skipMove[MAX_SEARCH_PLY];        // moves to skip during singular search
-  int evals[MAX_SEARCH_PLY];            // static evals at ply stack
+  int de[MAX_SEARCH_PLY];               // double extensions
   Move searchMoves[MAX_SEARCH_PLY + 2]; // moves for ply stack
 
   Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply
