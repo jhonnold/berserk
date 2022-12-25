@@ -297,7 +297,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   data->nodes++;
-  data->seldepth = max(data->ply + 1, data->seldepth);
+  data->seldepth = max(ss->ply + 1, data->seldepth);
 
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
@@ -306,21 +306,21 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   if (!isRoot) {
     // draw
-    if (IsDraw(board, data->ply)) return 2 - (data->nodes & 0x3);
+    if (IsDraw(board, ss->ply)) return 2 - (data->nodes & 0x3);
 
     // Prevent overflows
-    if (data->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
+    if (ss->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
 
     // Mate distance pruning
-    alpha = max(alpha, -CHECKMATE + data->ply);
-    beta  = min(beta, CHECKMATE - data->ply - 1);
+    alpha = max(alpha, -CHECKMATE + ss->ply);
+    beta  = min(beta, CHECKMATE - ss->ply - 1);
     if (alpha >= beta) return alpha;
   }
 
   // check the transposition table for previous info
   // we ignore the tt on singular extension searches
   TTEntry* tt = ss->skip ? NULL : TTProbe(board->zobrist);
-  ttScore     = tt ? TTScore(tt, data->ply) : UNKNOWN;
+  ttScore     = tt ? TTScore(tt, ss->ply) : UNKNOWN;
   ttPv        = isPV || (tt && (tt->flags & TT_PV));
   hashMove    = isRoot ? thread->pvs[thread->multiPV].moves[0] : tt ? tt->move : NULL_MOVE;
 
@@ -342,11 +342,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       int flag;
       switch (tbResult) {
         case TB_WIN:
-          score = TB_WIN_SCORE - data->ply;
+          score = TB_WIN_SCORE - ss->ply;
           flag  = TT_LOWER;
           break;
         case TB_LOSS:
-          score = -TB_WIN_SCORE + data->ply;
+          score = -TB_WIN_SCORE + ss->ply;
           flag  = TT_UPPER;
           break;
         default:
@@ -357,7 +357,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // if the tablebase gives us what we want, then we accept it's score and return
       if ((flag & TT_EXACT) || ((flag & TT_LOWER) && score >= beta) || ((flag & TT_UPPER) && score <= alpha)) {
-        TTPut(board->zobrist, depth, score, flag, 0, data->ply, 0, ttPv);
+        TTPut(board->zobrist, depth, score, flag, 0, ss->ply, 0, ttPv);
         return score;
       }
 
@@ -386,12 +386,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   if (!tt && !ss->skip && eval != UNKNOWN)
-    TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
+    TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, eval, ttPv);
 
   // getting better if eval has gone up
   int improving = 0;
-  if (!board->checkers && data->ply >= 2) {
-    if (data->ply >= 4 && (ss - 2)->staticEval == UNKNOWN) {
+  if (!board->checkers && ss->ply >= 2) {
+    if (ss->ply >= 4 && (ss - 2)->staticEval == UNKNOWN) {
       improving = ss->staticEval > (ss - 4)->staticEval || (ss - 4)->staticEval == UNKNOWN;
     } else {
       improving = ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == UNKNOWN;
@@ -426,19 +426,18 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Null move pruning
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate threats)
-    if (depth >= 3 && data->moves[data->ply - 1] != NULL_MOVE && !ss->skip && eval >= beta &&
+    if (depth >= 3 && data->moves[ss->ply - 1] != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
       int R = 4 + depth / 6 + min((eval - beta) / 256, 3) + !oppThreat.pcs;
       R     = min(depth, R); // don't go too low
 
-      data->moves[data->ply++] = NULL_MOVE;
+      data->moves[ss->ply] = NULL_MOVE;
       MakeNullMove(board);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
 
       UndoNullMove(board);
-      data->ply--;
 
       if (score >= beta) return score < WINNING_ENDGAME ? score : beta;
     }
@@ -456,7 +455,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (ss->skip == move) continue;
         if (!IsLegal(move, board)) continue;
 
-        data->moves[data->ply++] = move;
+        data->moves[ss->ply] = move;
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -466,7 +465,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (score >= probBeta) score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv, ss + 1);
 
         UndoMove(move, board);
-        data->ply--;
 
         if (score >= probBeta) return score;
       }
@@ -496,7 +494,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int tactical        = IsTactical(move);
     int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
     int history =
-      !tactical ? GetQuietHistory(data, move, board->stm, oppThreat.sqs) : GetTacticalHistory(data, board, move);
+      !tactical ? GetQuietHistory(ss, data, move, board->stm, oppThreat.sqs) : GetTacticalHistory(data, board, move);
 
     if (bestScore > -MATE_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
@@ -560,10 +558,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
-    else if (!isRoot && isPV && IsRecapture(data, move))
+    else if (!isRoot && isPV && IsRecapture(ss, data, move))
       extension = 1;
 
-    data->moves[data->ply++] = move;
+    data->moves[ss->ply] = move;
     MakeMove(move, board);
 
     // apply extensions
@@ -615,7 +613,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv, ss + 1);
 
     UndoMove(move, board);
-    data->ply--;
 
     if (isRoot) data->tm[FromTo(move)] += data->nodes - startingNodeCount;
 
@@ -650,7 +647,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   // Checkmate detection using movecount
-  if (!legalMoves) return ss->skip ? alpha : board->checkers ? -CHECKMATE + data->ply : 0;
+  if (!legalMoves) return ss->skip ? alpha : board->checkers ? -CHECKMATE + ss->ply : 0;
 
   // don't let our score inflate too high (tb)
   bestScore = min(bestScore, maxScore);
@@ -661,7 +658,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // TT_LOWER = we failed high, TT_UPPER = we didnt raise alpha, TT_EXACT = in
     int TTFlag       = bestScore >= beta ? TT_LOWER : bestScore <= origAlpha ? TT_UPPER : TT_EXACT;
     Move moveToStore = tt && TTFlag == TT_UPPER && (tt->flags & TT_LOWER) ? hashMove : bestMove;
-    TTPut(board->zobrist, depth, bestScore, TTFlag, moveToStore, data->ply, ss->staticEval, ttPv);
+    TTPut(board->zobrist, depth, bestScore, TTFlag, moveToStore, ss->ply, ss->staticEval, ttPv);
   }
 
   return bestScore;
@@ -681,10 +678,10 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   if (params->stopped || (mainThread && StopSearch(params, thread))) longjmp(thread->exit, 1);
 
   // draw check
-  if (IsDraw(board, data->ply)) return 0;
+  if (IsDraw(board, ss->ply)) return 0;
 
   // prevent overflows
-  if (data->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
+  if (ss->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
 
   // check the transposition table for previous info
   int ttScore = UNKNOWN;
@@ -692,7 +689,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   ttPv        = isPV || (tt && (tt->flags & TT_PV));
   // TT score pruning - no depth check required since everything in QS is depth 0
   if (!isPV && tt) {
-    ttScore = TTScore(tt, data->ply);
+    ttScore = TTScore(tt, ss->ply);
 
     if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
                                ((tt->flags & TT_UPPER) && ttScore <= alpha)))
@@ -700,11 +697,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   }
 
   Move bestMove = NULL_MOVE;
-  int bestScore = -CHECKMATE + data->ply;
+  int bestScore = -CHECKMATE + ss->ply;
 
   // pull cached eval if it exists
   int eval = ss->staticEval = board->checkers ? UNKNOWN : (tt ? tt->eval : Evaluate(board, thread));
-  if (!tt && eval != UNKNOWN) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, data->ply, eval, ttPv);
+  if (!tt && eval != UNKNOWN) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, eval, ttPv);
 
   // can we use an improved evaluation from the tt?
   if (tt && ttScore != UNKNOWN)
@@ -729,13 +726,12 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     if (moves.phase > PLAY_GOOD_TACTICAL) break;
 
-    data->moves[data->ply++] = move;
+    data->moves[ss->ply] = move;
     MakeMove(move, board);
 
     int score = -Quiesce(-beta, -alpha, thread, ss + 1);
 
     UndoMove(move, board);
-    data->ply--;
 
     if (score > bestScore) {
       bestScore = score;
@@ -749,7 +745,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   }
 
   int TTFlag = bestScore >= beta ? TT_LOWER : TT_UPPER;
-  TTPut(board->zobrist, 0, bestScore, TTFlag, bestMove, data->ply, ss->staticEval, ttPv);
+  TTPut(board->zobrist, 0, bestScore, TTFlag, bestMove, ss->ply, ss->staticEval, ttPv);
 
   return bestScore;
 }

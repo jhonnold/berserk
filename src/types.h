@@ -108,7 +108,6 @@ typedef struct {
   int window;
 
   Board* board; // reference to board
-  int ply;      // ply depth of active search
 
   // TODO: Put depth here as well? Just cause
   uint64_t nodes; // node count
@@ -203,6 +202,7 @@ enum {
 
 typedef struct {
   SearchData* data;
+  SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
   int seeCutoff;
   uint8_t type, phase, nTactical, nQuiets, nBadTactical;

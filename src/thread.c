@@ -76,7 +76,6 @@ void InitPool(Board* board, SearchParams* params) {
 
     threads[i].data.nodes    = 0;
     threads[i].data.seldepth = 0;
-    threads[i].data.ply      = 0;
     threads[i].data.tbhits   = 0;
 
     memset(&threads[i].data.tm, 0, sizeof(threads[i].data.tm));
@@ -96,7 +95,6 @@ void ResetThreadPool() {
 
     threads[i].data.nodes    = 0;
     threads[i].data.seldepth = 0;
-    threads[i].data.ply      = 0;
     threads[i].data.tbhits   = 0;
 
     // empty ALL data

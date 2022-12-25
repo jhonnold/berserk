@@ -38,8 +38,7 @@ void UpdateHistories(Board* board,
                      Move tacticals[],
                      int nT,
                      BitBoard threats);
-int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats);
-int GetCounterHistory(SearchData* data, Move move);
+int GetQuietHistory(SearchStack* ss, SearchData* data, Move move, int stm, BitBoard threats);
 int GetTacticalHistory(SearchData* data, Board* board, Move move);
 
 #endif

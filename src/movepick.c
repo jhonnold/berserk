@@ -42,9 +42,10 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, SearchStack*
   moves->killer1  = ss->killers[0];
   moves->killer2  = ss->killers[1];
 
-  moves->counter = data->counters[FromTo(data->moves[data->ply - 1])];
+  moves->counter = data->counters[FromTo(data->moves[ss->ply - 1])];
 
   moves->data = data;
+  moves->ss = ss;
 }
 
 void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
@@ -144,7 +145,7 @@ void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = GetQuietHistory(data, m, board->stm, moves->threats);
+    moves->sQuiet[i] = GetQuietHistory(moves->ss, data, m, board->stm, moves->threats);
   }
 }
 
