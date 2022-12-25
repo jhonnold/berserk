@@ -263,7 +263,6 @@ void* Search(void* arg) {
 
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
   SearchParams* params = thread->params;
-  SearchData* data     = &thread->data;
   Board* board         = &thread->board;
 
   PV childPv;
@@ -446,7 +445,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int probBeta = beta + 110;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && tt->depth >= depth - 3 && ttScore < probBeta)) {
-      InitTacticalMoves(&moves, data, 0);
+      InitTacticalMoves(&moves, thread, 0);
       while ((move = NextMove(&moves, board, 1))) {
         if (ss->skip == move) continue;
         if (!IsLegal(move, board)) continue;
@@ -471,7 +470,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move tacticals[64];
 
   int legalMoves = 0, playedMoves = 0, numQuiets = 0, numTacticals = 0, skipQuiets = 0, singularExtension = 0;
-  InitAllMoves(&moves, hashMove, data, ss, oppThreat.sqs);
+  InitAllMoves(&moves, hashMove, thread, ss, oppThreat.sqs);
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
     uint64_t startingNodeCount = thread->nodes;
@@ -490,7 +489,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int tactical        = IsTactical(move);
     int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
     int history =
-      !tactical ? GetQuietHistory(ss, data, move, board->stm, oppThreat.sqs) : GetTacticalHistory(data, board, move);
+      !tactical ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) : GetTacticalHistory(thread, board, move);
 
     if (bestScore > -MATE_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
@@ -628,7 +627,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (alpha >= beta) {
         UpdateHistories(board,
                         ss,
-                        data,
+                        thread,
                         move,
                         depth + (bestScore > beta + 100),
                         board->stm,
@@ -662,7 +661,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
 int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   SearchParams* params = thread->params;
-  SearchData* data     = &thread->data;
   Board* board         = &thread->board;
 
   int mainThread = !thread->idx;
@@ -715,7 +713,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   Move move;
   MoveList moves;
 
-  InitTacticalMoves(&moves, data, eval <= alpha - DELTA_CUTOFF);
+  InitTacticalMoves(&moves, thread, eval <= alpha - DELTA_CUTOFF);
 
   while ((move = NextMove(&moves, board, 1))) {
     if (!IsLegal(move, board)) continue;

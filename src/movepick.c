@@ -29,7 +29,7 @@
 
 const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
 
-void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, SearchStack* ss, BitBoard threats) {
+void InitAllMoves(MoveList* moves, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats) {
   moves->type         = ALL_MOVES;
   moves->phase        = HASH_MOVE;
   moves->nTactical    = 0;
@@ -42,13 +42,13 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, SearchStack*
   moves->killer1  = ss->killers[0];
   moves->killer2  = ss->killers[1];
 
-  moves->counter = data->counters[FromTo((ss - 1)->move)];
+  moves->counter = thread->counters[FromTo((ss - 1)->move)];
 
-  moves->data = data;
+  moves->thread = thread;
   moves->ss   = ss;
 }
 
-void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
+void InitTacticalMoves(MoveList* moves, ThreadData* thread, int cutoff) {
   moves->type         = TACTICAL_MOVES;
   moves->phase        = GEN_TACTICAL_MOVES;
   moves->nTactical    = 0;
@@ -62,7 +62,7 @@ void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
   moves->killer2  = NULL_MOVE;
   moves->counter  = NULL_MOVE;
 
-  moves->data = data;
+  moves->thread = thread;
 }
 
 void InitPerftMoves(MoveList* moves, Board* board) {
@@ -137,15 +137,15 @@ void ScoreTacticalMoves(MoveList* moves, Board* board) {
     Move m = moves->tactical[i];
 
     int captured        = PieceType(board->squares[To(m)]);
-    moves->sTactical[i] = GetTacticalHistory(moves->data, board, m) + MATERIAL_VALUES[captured] * 32;
+    moves->sTactical[i] = GetTacticalHistory(moves->thread, board, m) + MATERIAL_VALUES[captured] * 32;
   }
 }
 
-void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
+void ScoreQuietMoves(MoveList* moves, Board* board, ThreadData* thread) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = GetQuietHistory(moves->ss, data, m, board->stm, moves->threats);
+    moves->sQuiet[i] = GetQuietHistory(moves->ss, thread, m, board->stm, moves->threats);
   }
 }
 
@@ -204,7 +204,7 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
     case GEN_QUIET_MOVES:
       if (!skipQuiets) {
         GenerateQuietMoves(moves, board);
-        ScoreQuietMoves(moves, board, moves->data);
+        ScoreQuietMoves(moves, board, moves->thread);
       }
 
       moves->phase = PLAY_QUIETS;

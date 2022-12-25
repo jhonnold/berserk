@@ -30,8 +30,8 @@ void AddKillerMove(SearchStack* ss, Move move) {
   }
 }
 
-void AddCounterMove(SearchData* data, Move move, Move parent) {
-  data->counters[FromTo(parent)] = move;
+void AddCounterMove(ThreadData* thread, Move move, Move parent) {
+  thread->counters[FromTo(parent)] = move;
 }
 
 void AddHistoryHeuristic(int* entry, int inc) {
@@ -40,7 +40,7 @@ void AddHistoryHeuristic(int* entry, int inc) {
 
 void UpdateHistories(Board* board,
                      SearchStack* ss,
-                     SearchData* data,
+                     ThreadData* thread,
                      Move bestMove,
                      int depth,
                      int stm,
@@ -59,7 +59,7 @@ void UpdateHistories(Board* board,
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
 
     if (parent) {
-      AddCounterMove(data, bestMove, parent);
+      AddCounterMove(thread, bestMove, parent);
       AddHistoryHeuristic(&CH(parent, bestMove), inc);
     }
 
@@ -98,7 +98,7 @@ void UpdateHistories(Board* board,
   }
 }
 
-int GetQuietHistory(SearchStack* ss, SearchData* data, Move move, int stm, BitBoard threats) {
+int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats) {
   if (IsTactical(move)) return 0;
 
   int history = HH(stm, move, threats);
@@ -112,7 +112,7 @@ int GetQuietHistory(SearchStack* ss, SearchData* data, Move move, int stm, BitBo
   return history;
 }
 
-int GetTacticalHistory(SearchData* data, Board* board, Move m) {
+int GetTacticalHistory(ThreadData* thread, Board* board, Move m) {
   int piece    = PieceType(Moving(m));
   int to       = To(m);
   int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);

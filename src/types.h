@@ -103,15 +103,6 @@ typedef struct {
   Move killers[2];
 } SearchStack;
 
-// A general data object for use during search
-typedef struct {
-  Move counters[64 * 64];   // counter move butterfly table
-  int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
-  int ch[12][64][12][64];   // continuation move history table
-
-  int th[6][64][7]; // tactical (capture) history
-} SearchData;
-
 typedef struct {
   long start;
   int alloc;
@@ -152,7 +143,6 @@ struct ThreadData {
 
   SearchParams* params;
   SearchResults results;
-  SearchData data;
   Board board;
 
   uint64_t nodeCounts[64 * 64];
@@ -162,6 +152,11 @@ struct ThreadData {
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];
   PV pvs[MAX_MOVES];
+
+  Move counters[64 * 64];   // counter move butterfly table
+  int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
+  int ch[12][64][12][64];   // continuation move history table
+  int th[6][64][7];         // tactical (capture) history
 };
 
 typedef struct {
@@ -188,7 +183,7 @@ enum {
 };
 
 typedef struct {
-  SearchData* data;
+  ThreadData* thread;
   SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
   int seeCutoff;

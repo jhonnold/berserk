@@ -20,16 +20,16 @@
 #include "bits.h"
 #include "types.h"
 
-#define HH(stm, m, threats) (data->hh[stm][!getBit(threats, From(m))][!getBit(threats, To(m))][FromTo(m)])
-#define CH(p, m)            (data->ch[Moving(p)][To(p)][Moving(m)][To(m)])
-#define TH(p, e, c)         (data->th[p][e][c])
+#define HH(stm, m, threats) (thread->hh[stm][!getBit(threats, From(m))][!getBit(threats, To(m))][FromTo(m)])
+#define CH(p, m)            (thread->ch[Moving(p)][To(p)][Moving(m)][To(m)])
+#define TH(p, e, c)         (thread->th[p][e][c])
 
 void AddKillerMove(SearchStack* ss, Move move);
-void AddCounterMove(SearchData* data, Move move, Move parent);
+void AddCounterMove(ThreadData* thread, Move move, Move parent);
 void AddHistoryHeuristic(int* entry, int inc);
 void UpdateHistories(Board* board,
                      SearchStack* ss,
-                     SearchData* data,
+                     ThreadData* thread,
                      Move bestMove,
                      int depth,
                      int stm,
@@ -38,7 +38,7 @@ void UpdateHistories(Board* board,
                      Move tacticals[],
                      int nT,
                      BitBoard threats);
-int GetQuietHistory(SearchStack* ss, SearchData* data, Move move, int stm, BitBoard threats);
-int GetTacticalHistory(SearchData* data, Board* board, Move move);
+int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats);
+int GetTacticalHistory(ThreadData* thread, Board* board, Move move);
 
 #endif

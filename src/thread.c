@@ -91,10 +91,10 @@ void ResetThreadPool() {
     threads[i].results.depth = 0;
 
     // empty ALL data
-    memset(&threads[i].data.counters, 0, sizeof(threads[i].data.counters));
-    memset(&threads[i].data.hh, 0, sizeof(threads[i].data.hh));
-    memset(&threads[i].data.ch, 0, sizeof(threads[i].data.ch));
-    memset(&threads[i].data.th, 0, sizeof(threads[i].data.th));
+    memset(&threads[i].counters, 0, sizeof(threads[i].counters));
+    memset(&threads[i].hh, 0, sizeof(threads[i].hh));
+    memset(&threads[i].ch, 0, sizeof(threads[i].ch));
+    memset(&threads[i].th, 0, sizeof(threads[i].th));
 
     memset(&threads[i].scores, 0, sizeof(threads[i].scores));
     memset(&threads[i].bestMoves, 0, sizeof(threads[i].bestMoves));
