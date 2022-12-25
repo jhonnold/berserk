@@ -23,10 +23,11 @@
 #include "move.h"
 #include "util.h"
 
-void AddKillerMove(SearchData* data, Move move) {
-  if (data->killers[data->ply][0] != move) data->killers[data->ply][1] = data->killers[data->ply][0];
-
-  data->killers[data->ply][0] = move;
+void AddKillerMove(SearchStack* ss, Move move) {
+  if (ss->killers[0] != move) {
+    ss->killers[1] = ss->killers[0];
+    ss->killers[0] = move;
+  }
 }
 
 void AddCounterMove(SearchData* data, Move move, Move parent) {
@@ -38,6 +39,7 @@ void AddHistoryHeuristic(int* entry, int inc) {
 }
 
 void UpdateHistories(Board* board,
+                     SearchStack* ss,
                      SearchData* data,
                      Move bestMove,
                      int depth,
@@ -53,7 +55,7 @@ void UpdateHistories(Board* board,
   Move grandParent = data->moves[data->ply - 2];
 
   if (!IsTactical(bestMove)) {
-    AddKillerMove(data, bestMove);
+    AddKillerMove(ss, bestMove);
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
 
     if (parent) {

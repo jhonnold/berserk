@@ -330,8 +330,6 @@ void UCILoop() {
       printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 
       printf("Score: %dcp (white)\n", score);
-    } else if (!strncmp(in, "moves", 5)) {
-      PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {
       Move m = ParseMove(in + 4, &board);
       if (m)

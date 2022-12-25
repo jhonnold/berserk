@@ -24,10 +24,11 @@
 #define CH(p, m)            (data->ch[Moving(p)][To(p)][Moving(m)][To(m)])
 #define TH(p, e, c)         (data->th[p][e][c])
 
-void AddKillerMove(SearchData* data, Move move);
+void AddKillerMove(SearchStack* ss, Move move);
 void AddCounterMove(SearchData* data, Move move, Move parent);
 void AddHistoryHeuristic(int* entry, int inc);
 void UpdateHistories(Board* board,
+                     SearchStack* ss,
                      SearchData* data,
                      Move bestMove,
                      int depth,

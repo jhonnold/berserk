@@ -101,7 +101,6 @@ void ResetThreadPool() {
 
     // empty ALL data
     memset(&threads[i].data.searchMoves, 0, sizeof(threads[i].data.searchMoves));
-    memset(&threads[i].data.killers, 0, sizeof(threads[i].data.killers));
     memset(&threads[i].data.counters, 0, sizeof(threads[i].data.counters));
     memset(&threads[i].data.hh, 0, sizeof(threads[i].data.hh));
     memset(&threads[i].data.ch, 0, sizeof(threads[i].data.ch));

@@ -127,7 +127,7 @@ void* Search(void* arg) {
 
   SearchStack searchStack[MAX_SEARCH_PLY + 3];
   SearchStack* ss = searchStack + 3;
-  memset(searchStack, 0, 3 * sizeof(SearchStack));
+  memset(searchStack, 0, 4 * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++) (ss + i)->ply = i;
 
   int mainThread = !thread->idx;
@@ -399,10 +399,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   // reset moves to moves related to 1 additional ply
-  (ss + 1)->skip                  = NULL_MOVE;
-  data->killers[data->ply + 1][0] = NULL_MOVE;
-  data->killers[data->ply + 1][1] = NULL_MOVE;
-  ss->de                          = (ss - 1)->de;
+  (ss + 1)->skip       = NULL_MOVE;
+  (ss + 1)->killers[0] = NULL_MOVE;
+  (ss + 1)->killers[1] = NULL_MOVE;
+  ss->de               = (ss - 1)->de;
 
   Threat oppThreat;
   Threats(&oppThreat, board, board->xstm);
@@ -477,7 +477,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move tacticals[64];
 
   int legalMoves = 0, playedMoves = 0, numQuiets = 0, numTacticals = 0, skipQuiets = 0, singularExtension = 0;
-  InitAllMoves(&moves, hashMove, data, oppThreat.sqs);
+  InitAllMoves(&moves, hashMove, data, ss, oppThreat.sqs);
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
     int64_t startingNodeCount = data->nodes;
@@ -634,6 +634,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // we're failing high
       if (alpha >= beta) {
         UpdateHistories(board,
+                        ss,
                         data,
                         move,
                         depth + (bestScore > beta + 100),
