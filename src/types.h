@@ -105,11 +105,9 @@ typedef struct {
 
 // A general data object for use during search
 typedef struct {
-  int contempt[2];
-
-  Move counters[64 * 64];          // counter move butterfly table
-  int hh[2][2][2][64 * 64];        // history heuristic butterfly table (stm / threatened)
-  int ch[12][64][12][64];          // continuation move history table
+  Move counters[64 * 64];   // counter move butterfly table
+  int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
+  int ch[12][64][12][64];   // continuation move history table
 
   int th[6][64][7]; // tactical (capture) history
 } SearchData;
@@ -156,8 +154,10 @@ struct ThreadData {
   SearchResults results;
   SearchData data;
   Board board;
-  
+
   uint64_t nodeCounts[64 * 64];
+
+  int contempt[2];
 
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];

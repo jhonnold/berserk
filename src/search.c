@@ -122,7 +122,6 @@ void* Search(void* arg) {
   ThreadData* thread     = (ThreadData*) arg;
   SearchParams* params   = thread->params;
   SearchResults* results = &thread->results;
-  SearchData* data       = &thread->data;
   Board* board           = &thread->board;
 
   SearchStack searchStack[MAX_SEARCH_PLY + 3];
@@ -138,8 +137,7 @@ void* Search(void* arg) {
   RefreshAccumulator(board->accumulators[WHITE][0], board, WHITE);
   RefreshAccumulator(board->accumulators[BLACK][0], board, BLACK);
 
-  data->contempt[WHITE] = data->contempt[BLACK] = 0;
-  SetContempt(data->contempt, board->stm);
+  SetContempt(thread->contempt, board->stm);
 
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
