@@ -117,8 +117,6 @@ typedef struct {
   int ch[12][64][12][64];          // continuation move history table
 
   int th[6][64][7]; // tactical (capture) history
-
-  int64_t tm[64 * 64];
 } SearchData;
 
 typedef struct {
@@ -161,8 +159,9 @@ struct ThreadData {
   SearchParams* params;
   SearchResults results;
   SearchData data;
-
   Board board;
+
+  uint64_t nodeCounts[64 * 64];
 
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];

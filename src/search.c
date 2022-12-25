@@ -247,7 +247,7 @@ void* Search(void* arg) {
       double scoreChangeFactor = 0.1 + 0.0275 * searchScoreDiff + 0.0275 * prevScoreDiff;
       scoreChangeFactor        = max(0.5, min(1.5, scoreChangeFactor));
 
-      int64_t bestMoveNodes  = data->tm[FromTo(results->bestMoves[depth])];
+      uint64_t bestMoveNodes  = thread->nodeCounts[FromTo(results->bestMoves[depth])];
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / data->nodes;
       double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
 
@@ -612,7 +612,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     UndoMove(move, board);
 
-    if (isRoot) data->tm[FromTo(move)] += data->nodes - startingNodeCount;
+    if (isRoot) thread->nodeCounts[FromTo(move)] += data->nodes - startingNodeCount;
 
     if (score > bestScore) {
       bestScore = score;
