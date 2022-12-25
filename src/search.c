@@ -168,8 +168,6 @@ void* Search(void* arg) {
         }
 
         while (!params->stopped) {
-          data->window = beta - alpha;
-
           // search!
           score = Negamax(alpha, beta, searchDepth, 0, thread, pv, ss);
 
