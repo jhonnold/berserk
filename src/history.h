@@ -21,7 +21,6 @@
 #include "types.h"
 
 #define HH(stm, m, threats) (thread->hh[stm][!getBit(threats, From(m))][!getBit(threats, To(m))][FromTo(m)])
-#define CH(p, m)            (thread->ch[Moving(p)][To(p)][Moving(m)][To(m)])
 #define TH(p, e, c)         (thread->th[p][e][c])
 
 void AddKillerMove(SearchStack* ss, Move move);

@@ -97,8 +97,11 @@ typedef struct {
   Move moves[MAX_SEARCH_PLY];
 } PV;
 
+typedef int PieceTo[12][64];
+
 typedef struct {
   int ply, staticEval, de;
+  PieceTo* ch;
   Move move, skip;
   Move killers[2];
 } SearchStack;
@@ -128,6 +131,7 @@ typedef struct {
   Move bestMoves[MAX_SEARCH_PLY];
   Move ponderMoves[MAX_SEARCH_PLY];
 } SearchResults;
+
 
 typedef struct ThreadData ThreadData;
 
