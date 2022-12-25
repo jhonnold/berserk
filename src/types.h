@@ -105,8 +105,6 @@ typedef struct {
 
 // A general data object for use during search
 typedef struct {
-  Board* board; // reference to board
-
   // TODO: Put depth here as well? Just cause
   uint64_t nodes; // node count
   uint64_t tbhits;
