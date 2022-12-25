@@ -105,11 +105,6 @@ typedef struct {
 
 // A general data object for use during search
 typedef struct {
-  // TODO: Put depth here as well? Just cause
-  uint64_t nodes; // node count
-  uint64_t tbhits;
-  int seldepth; // seldepth count
-
   int contempt[2];
 
   Move counters[64 * 64];          // counter move butterfly table
@@ -148,7 +143,8 @@ typedef struct {
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int count, idx, multiPV, depth;
+  int count, idx, multiPV, depth, seldepth;
+  uint64_t nodes, tbhits;
 
   Accumulator* accumulators[2];
   AccumulatorKingState* refreshTable[2];
@@ -160,7 +156,7 @@ struct ThreadData {
   SearchResults results;
   SearchData data;
   Board board;
-
+  
   uint64_t nodeCounts[64 * 64];
 
   Score scores[MAX_MOVES];

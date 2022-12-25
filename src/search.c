@@ -64,13 +64,13 @@ void InitPruningAndReductionTables() {
 }
 
 INLINE int StopSearch(SearchParams* params, ThreadData* thread) {
-  if (thread->data.nodes % params->hitrate != 0) return 0;
+  if (thread->nodes % params->hitrate != 0) return 0;
 
   int unlimitedSearch = !params->timeset && !params->nodes;
   if (unlimitedSearch || PONDERING) return 0;
 
   long elapsed = GetTimeMS() - params->start;
-  return elapsed >= params->max || (params->nodes && thread->data.nodes >= params->nodes);
+  return elapsed >= params->max || (params->nodes && thread->nodes >= params->nodes);
 }
 
 void* UCISearch(void* arg) {
@@ -247,8 +247,8 @@ void* Search(void* arg) {
       double scoreChangeFactor = 0.1 + 0.0275 * searchScoreDiff + 0.0275 * prevScoreDiff;
       scoreChangeFactor        = max(0.5, min(1.5, scoreChangeFactor));
 
-      uint64_t bestMoveNodes  = thread->nodeCounts[FromTo(results->bestMoves[depth])];
-      double pctNodesNotBest = 1.0 - (double) bestMoveNodes / data->nodes;
+      uint64_t bestMoveNodes = thread->nodeCounts[FromTo(results->bestMoves[depth])];
+      double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
       double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
 
       if (results->scores[depth] >= TB_WIN_BOUND) nodeCountFactor = 0.5;
@@ -294,8 +294,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       return Quiesce(alpha, beta, thread, ss);
   }
 
-  data->nodes++;
-  data->seldepth = max(ss->ply + 1, data->seldepth);
+  thread->nodes++;
+  thread->seldepth = max(ss->ply + 1, thread->seldepth);
 
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
@@ -304,7 +304,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   if (!isRoot) {
     // draw
-    if (IsDraw(board, ss->ply)) return 2 - (data->nodes & 0x3);
+    if (IsDraw(board, ss->ply)) return 2 - (thread->nodes & 0x3);
 
     // Prevent overflows
     if (ss->ply >= MAX_SEARCH_PLY - 1) return board->checkers ? 0 : Evaluate(board, thread);
@@ -335,7 +335,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
-      data->tbhits++;
+      thread->tbhits++;
 
       int flag;
       switch (tbResult) {
@@ -476,7 +476,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   InitAllMoves(&moves, hashMove, data, ss, oppThreat.sqs);
 
   while ((move = NextMove(&moves, board, skipQuiets))) {
-    int64_t startingNodeCount = data->nodes;
+    uint64_t startingNodeCount = thread->nodes;
 
     if (isRoot && MoveSearchedByMultiPV(thread, move)) continue;
     if (isRoot && !MoveSearchable(params, move)) continue;
@@ -612,7 +612,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     UndoMove(move, board);
 
-    if (isRoot) thread->nodeCounts[FromTo(move)] += data->nodes - startingNodeCount;
+    if (isRoot) thread->nodeCounts[FromTo(move)] += thread->nodes - startingNodeCount;
 
     if (score > bestScore) {
       bestScore = score;
@@ -671,7 +671,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   int isPV       = beta - alpha != 1;
   int ttPv       = 0;
 
-  data->nodes++;
+  thread->nodes++;
 
   if (params->stopped || (mainThread && StopSearch(params, thread))) longjmp(thread->exit, 1);
 
@@ -750,7 +750,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
 inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board) {
   int depth       = thread->depth;
-  int seldepth    = thread->data.seldepth;
+  int seldepth    = thread->seldepth;
   uint64_t nodes  = NodesSearched(thread->threads);
   uint64_t tbhits = TBHits(thread->threads);
   uint64_t time   = GetTimeMS() - thread->params->start;

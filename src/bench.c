@@ -38,10 +38,10 @@ char* benchmarks[]            = {
 void Bench() {
   Board board;
   SearchParams params = {.depth = 13, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
-  
+
   Move bestMoves[NUM_BENCH_POSITIONS];
   int scores[NUM_BENCH_POSITIONS];
-  int nodes[NUM_BENCH_POSITIONS];
+  uint64_t nodes[NUM_BENCH_POSITIONS];
   long times[NUM_BENCH_POSITIONS];
 
   long startTime = GetTimeMS();
@@ -59,13 +59,13 @@ void Bench() {
     SearchResults* results = &threads->results;
     bestMoves[i]           = results->bestMoves[results->depth];
     scores[i]              = results->scores[results->depth];
-    nodes[i]               = threads[0].data.nodes;
+    nodes[i]               = threads[0].nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 
   printf("\n\n");
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
-    printf("Bench [#%2d]: bestmove %5s score %5d %12d nodes %8d nps | %71s\n",
+    printf("Bench [#%2d]: bestmove %5s score %5d %12" PRIu64 " nodes %8d nps | %71s\n",
            i + 1,
            MoveToStr(bestMoves[i], &board),
            scores[i],
@@ -74,10 +74,10 @@ void Bench() {
            benchmarks[i]);
   }
 
-  int totalNodes = 0;
+  uint64_t totalNodes = 0;
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) totalNodes += nodes[i];
 
-  printf("\nResults: %43d nodes %8d nps\n\n", totalNodes, (int) (1000.0 * totalNodes / (totalTime + 1)));
+  printf("\nResults: %43" PRIu64 " nodes %8d nps\n\n", totalNodes, (int) (1000.0 * totalNodes / (totalTime + 1)));
 
   free(threads);
 }
