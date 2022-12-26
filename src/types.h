@@ -142,7 +142,6 @@ struct ThreadData {
   Accumulator* accumulators[2];
   AccumulatorKingState* refreshTable[2];
 
-  ThreadData* threads;
   jmp_buf exit;
 
   SearchParams* params;
