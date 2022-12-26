@@ -44,7 +44,10 @@ int main(int argc, char** argv) {
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
-    Bench();
+    int depth = DEFAULT_BENCH_DEPTH;
+    if (argc > 2) depth = max(1, atoi(argv[2]));
+
+    Bench(depth);
   } else {
     UCILoop();
   }

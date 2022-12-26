@@ -42,10 +42,10 @@ endif
 # Try to detect windows environment by seeing
 # whether the shell filters out " or not.
 ifeq ($(shell echo "test"), "test")
-	BENCH = $(EXE) bench > nul 2>&1
+	BENCH = $(EXE) bench 12 > nul 2>&1
 	CLEAN = rmdir /s /q $(PGODIR)
 else
-	BENCH = ./$(EXE) bench > /dev/null 2>&1
+	BENCH = ./$(EXE) bench 12 > /dev/null 2>&1
 	CLEAN = $(RM) -rf $(PGODIR)
 endif
 

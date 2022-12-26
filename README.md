@@ -4,80 +4,21 @@
 
 A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://lichess.org/@/BerserkEngine)!
 
-## Elo History
+## Strength
 
-### CCRL (40/15)
+### Rating Lists + Elo
 
-#### Rank [#5](https://ccrl.chessdom.com/ccrl/4040/rating_list_pure_single_cpu.html)
+Many websites use an [Elo rating system](https://en.wikipedia.org/wiki/Elo_rating_system) to present relative skill amongst engines.
+Below is a list of many chess engine lists throughout the web (*variance in Elo is due to different conditions for each list*)
 
-| **Version** | **Elo** | **TC** |
-| ----------- | ------- | ------ |
-| 3.2.1       | 2935    | 40/15  |
-| 4.2.0       | 3131    | 40/15  |
-| 4.2.0 (4CPU)| 3224    | 40/15  |
-| 4.5.1       | 3294    | 40/15  |
-| 6           | 3327    | 40/15  |
-| 6 (4CPU)    | 3395    | 40/15  |
-| 7           | 3387    | 40/15  |
-| 7 (4CPU)    | 3435    | 40/15  |
-| 8           | 3399    | 40/15  |
-| 8 (4CPU)    | 3453    | 40/15  |
-| 8.5.1       | 3422    | 40/15  |
-| 8.5.1 (4CPU)| 3467    | 40/15  |
-| 9           | 3434    | 40/15  |
-| 9 (4CPU)    | 3472    | 40/15  |
+* [CCRL 40/15](https://ccrl.chessdom.com/ccrl/4040/) - **3477 4CPU, 3433 1CPU**
+* [CCRL 40/2](https://ccrl.chessdom.com/ccrl/404/) - **3651 4CPU, 3578 1CPU**
+* [IpMan Chess](https://ipmanchess.yolasite.com/i9-7980xe.php) - **3422 1CPU**
+* [CEGT](http://www.cegt.net/40_4_Ratinglist/40_4_single/rangliste.html) - **3532 1CPU**
+* [SPCC](https://www.sp-cc.de/) - **3659 1CPU**
+* [FGRL](www.fastgm.de/60-0.60.html) - **3518 1CPU**
 
-### CCRL (Blitz)
-
-#### Rank [#7](https://ccrl.chessdom.com/ccrl/404/)
-
-| **Version** | **Elo** | **TC** |
-| ----------- | ------- | ------ |
-| 1.2.2       | 2160    | 2'+1"  |
-| 2.0.0       | 2546    | 2'+1"  |
-| 3.2.0       | 2896    | 2'+1"  |
-| 4.1.0       | 3117    | 2'+1"  |
-| 4.4.0       | 3316    | 2'+1"  |
-| 4.4.0 (8CPU)| 3467    | 2'+1"  |
-| 6           | 3436    | 2'+1"  |
-| 6 (8CPU)    | 3559    | 2'+1"  |
-| 7           | 3488    | 2'+1"  |
-| 7 (8CPU)    | 3600    | 2'+1"  |
-| 8           | 3518    | 2'+1"  |
-| 8 (8CPU)    | 3626    | 2'+1"  |
-| 8.5.1       | 3540    | 2'+1"  |
-| 8.5.1 (8CPU)| 3638    | 2'+1"  |
-| 9           | 3589    | 2'+1"  |
-| 9 (8 CPU)   | 3667    | 2'+1"  |
-
-### Lars No SMP
-
-#### Rank #2
-
-| **Version** | **Elo** | **TC** |
-| ----------- | ------- | ------ |
-| 2.0.0       | ~2600   | 15'    |
-| 3.0.0       | 2818    | 15'    |
-| 3.2.0       | 2901    | 15'    |
-| 4.0.0       | 3027    | 15'    |
-| 4.1.0       | 3085    | 15'    |
-| 4.2.0       | 3143    | 15'    |
-| 4.3.0       | 3248    | 15'    |
-| 4.4.0       | 3314    | 15'    |
-| 4.5.0       | 3344    | 15'    |
-| 5           | 3371    | 15'    |
-| 6           | 3446    | 15'    |
-| 9           | 3619    | 15'    |
-
-### Other Lists with Berserk
-
-- [Ipman Chess](https://ipmanchess.yolasite.com/i9-7980xe.php)
-- [CEGT](http://www.cegt.net/)
-- [Stefan Pohl Computer Chess](https://www.sp-cc.de/)
-- [FGRL](http://www.fastgm.de/)
-- [Gambit Rating List](https://rebel13.nl/grl-best-40-2.html)
-
-### Events with Berserk
+### Tournaments/Events with Berserk
 
 - [TCEC](https://tcec-chess.com/)
 - [CCC](https://www.chess.com/computer-chess-championship)
@@ -121,8 +62,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 ### Evaluation
 
 - [NNUE](https://www.chessprogramming.org/NNUE)
-  - Horizontally Mirrored 8 Buckets
-  - 2x(6144 -> 512) -> 1
+  - Horizontally Mirrored 16 Buckets
+  - 2x(12288 -> 512) -> 1
 - [Berserk FenGen](https://github.com/jhonnold/berserk/tree/fen-gen)
 - [Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)
 - ~~[Berserk Trainer](https://github.com/jhonnold/berserk-trainer)~~
@@ -143,20 +84,18 @@ This engine could not be written without some influence and they are...
 
 ### Engine Influences
 
-- [Chess22k](https://github.com/sandermvdb/chess22k)
-- [BBC](https://github.com/maksimKorzh/chess_programming)
-- [Cheng](https://www.chessprogramming.org/Cheng)
-- [Vice](https://github.com/bluefeversoft/Vice_Chess_Engine)
-- [Weiss](https://github.com/TerjeKir/weiss)
 - [Stockfish](https://github.com/official-stockfish/Stockfish)
 - [Ethereal](https://github.com/AndyGrant/Ethereal)
 - [Koivisto](https://github.com/Luecx/Koivisto)
-
+- [Weiss](https://github.com/TerjeKir/weiss)
+- [Chess22k](https://github.com/sandermvdb/chess22k)
+- [BBC](https://github.com/maksimKorzh/chess_programming)
+- [Cheng](https://www.chessprogramming.org/Cheng)
 
 ### Additional Resources
 
 - [Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)
-- [Open Bench](https://github.com/AndyGrant/OpenBench)
+- [OpenBench](https://github.com/AndyGrant/OpenBench)
 - [TalkChess Forum](http://talkchess.com/forum3/viewforum.php?f=7)
 - [CCRL](https://kirill-kryukov.com/chess/discussion-board/viewforum.php?f=7)
 - [JCER](https://chessengines.blogspot.com/p/rating-jcer.html)

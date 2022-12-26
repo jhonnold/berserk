@@ -35,9 +35,9 @@ char* benchmarks[]            = {
 #include "files/bench.csv"
 };
 
-void Bench() {
+void Bench(int depth) {
   Board board;
-  SearchParams params = {.depth = 13, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
+  SearchParams params = {.depth = depth, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
 
   Move bestMoves[NUM_BENCH_POSITIONS];
   int scores[NUM_BENCH_POSITIONS];
