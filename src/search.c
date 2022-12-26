@@ -757,8 +757,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board) {
   int depth       = thread->depth;
   int seldepth    = thread->seldepth;
-  uint64_t nodes  = NodesSearched(thread->threads);
-  uint64_t tbhits = TBHits(thread->threads);
+  uint64_t nodes  = NodesSearched();
+  uint64_t tbhits = TBHits();
   uint64_t time   = GetTimeMS() - thread->params->start;
   uint64_t nps    = 1000 * nodes / max(time, 1);
   int hashfull    = TTFull();
