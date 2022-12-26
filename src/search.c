@@ -444,7 +444,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // less than beta + margin, then we run a shallow search to look
     Threat ownThreat;
     Threats(&ownThreat, board, board->stm);
-    int probBeta = beta + 110;
+    int probBeta = beta + 110 - 30 * improving;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && tt->depth >= depth - 3 && ttScore < probBeta)) {
       InitTacticalMoves(&moves, thread, 0);
