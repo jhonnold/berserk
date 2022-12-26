@@ -400,6 +400,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->killers[1] = NULL_MOVE;
   ss->de               = (ss - 1)->de;
 
+  int inCheck = !!board->checkers;
+
   Threat oppThreat;
   Threats(&oppThreat, board, board->xstm);
 
@@ -444,7 +446,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // less than beta + margin, then we run a shallow search to look
     Threat ownThreat;
     Threats(&ownThreat, board, board->stm);
-    int probBeta = beta + 110;
+    int probBeta = beta + 110 - 30 * improving;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && tt->depth >= depth - 3 && ttScore < probBeta)) {
       InitTacticalMoves(&moves, thread, 0);
@@ -587,11 +589,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // move GAVE check
       if (board->checkers) R--;
 
+      // Ethereal king evasions
+      if (inCheck && PieceType(Moving(move)) == KING) R++;
+
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
       // and https://www.chessprogramming.org/Node_Types
-      if (cutnode && !tactical) R++;
+      if (cutnode) R++;
 
       // adjust reduction based on historical score
       R -= history / 20480;

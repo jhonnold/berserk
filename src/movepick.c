@@ -42,10 +42,10 @@ void InitAllMoves(MoveList* moves, Move hashMove, ThreadData* thread, SearchStac
   moves->killer1  = ss->killers[0];
   moves->killer2  = ss->killers[1];
 
-  moves->counter = thread->counters[FromTo((ss - 1)->move)];
+  moves->counter = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
   moves->thread = thread;
-  moves->ss   = ss;
+  moves->ss     = ss;
 }
 
 void InitTacticalMoves(MoveList* moves, ThreadData* thread, int cutoff) {
