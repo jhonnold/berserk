@@ -23,22 +23,30 @@
 #include "move.h"
 #include "util.h"
 
-void AddKillerMove(SearchData* data, Move move) {
-  if (data->killers[data->ply][0] != move) data->killers[data->ply][1] = data->killers[data->ply][0];
-
-  data->killers[data->ply][0] = move;
+void AddKillerMove(SearchStack* ss, Move move) {
+  if (ss->killers[0] != move) {
+    ss->killers[1] = ss->killers[0];
+    ss->killers[0] = move;
+  }
 }
 
-void AddCounterMove(SearchData* data, Move move, Move parent) {
-  data->counters[FromTo(parent)] = move;
+void AddCounterMove(ThreadData* thread, Move move, Move parent) {
+  thread->counters[FromTo(parent)] = move;
 }
 
 void AddHistoryHeuristic(int* entry, int inc) {
   *entry += inc - *entry * abs(inc) / 65536;
 }
 
+void UpdateCH(SearchStack* ss, Move move, int bonus) {
+  for (int i = 1; i < 3; i++) {
+    if ((ss - i)->move) AddHistoryHeuristic(&(*(ss - i)->ch)[Moving(move)][To(move)], bonus);
+  }
+}
+
 void UpdateHistories(Board* board,
-                     SearchData* data,
+                     SearchStack* ss,
+                     ThreadData* thread,
                      Move bestMove,
                      int depth,
                      int stm,
@@ -49,19 +57,13 @@ void UpdateHistories(Board* board,
                      BitBoard threats) {
   int inc = min(7584, 16 * depth * depth + 480 * depth - 480);
 
-  Move parent      = data->moves[data->ply - 1];
-  Move grandParent = data->moves[data->ply - 2];
-
   if (!IsTactical(bestMove)) {
-    AddKillerMove(data, bestMove);
+    AddKillerMove(ss, bestMove);
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
+    UpdateCH(ss, bestMove, inc);
 
-    if (parent) {
-      AddCounterMove(data, bestMove, parent);
-      AddHistoryHeuristic(&CH(parent, bestMove), inc);
-    }
+    if ((ss - 1)->move) AddCounterMove(thread, bestMove, (ss - 1)->move);
 
-    if (grandParent) AddHistoryHeuristic(&CH(grandParent, bestMove), inc);
   } else {
     int piece    = PieceType(Moving(bestMove));
     int to       = To(bestMove);
@@ -74,50 +76,37 @@ void UpdateHistories(Board* board,
   if (!IsTactical(bestMove)) {
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
-      if (m != bestMove) {
-        AddHistoryHeuristic(&HH(stm, m, threats), -inc);
-        if (parent) AddHistoryHeuristic(&CH(parent, m), -inc);
-        if (grandParent) AddHistoryHeuristic(&CH(grandParent, m), -inc);
-      }
+      if (m == bestMove) continue;
+
+      AddHistoryHeuristic(&HH(stm, m, threats), -inc);
+      UpdateCH(ss, m, -inc);
     }
   }
 
   // Update tacticals
   for (int i = 0; i < nT; i++) {
     Move m = tacticals[i];
+    if (m == bestMove) continue;
 
-    if (m != bestMove) {
-      int piece    = PieceType(Moving(m));
-      int to       = To(m);
-      int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
+    int piece    = PieceType(Moving(m));
+    int to       = To(m);
+    int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
-      AddHistoryHeuristic(&TH(piece, to, captured), -inc);
-    }
+    AddHistoryHeuristic(&TH(piece, to, captured), -inc);
   }
 }
 
-int GetQuietHistory(SearchData* data, Move move, int stm, BitBoard threats) {
+int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats) {
   if (IsTactical(move)) return 0;
 
   int history = HH(stm, move, threats);
-
-  Move parent = data->moves[data->ply - 1];
-  if (parent) history += CH(parent, move);
-
-  Move grandParent = data->moves[data->ply - 2];
-  if (grandParent) history += CH(grandParent, move);
+  history += (*(ss - 1)->ch)[Moving(move)][To(move)];
+  history += (*(ss - 2)->ch)[Moving(move)][To(move)];
 
   return history;
 }
 
-int GetCounterHistory(SearchData* data, Move move) {
-  if (IsTactical(move)) return 0;
-
-  Move parent = data->moves[data->ply - 1];
-  return parent ? CH(parent, move) : 0;
-}
-
-int GetTacticalHistory(SearchData* data, Board* board, Move m) {
+int GetTacticalHistory(ThreadData* thread, Board* board, Move m) {
   int piece    = PieceType(Moving(m));
   int to       = To(m);
   int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);

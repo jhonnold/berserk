@@ -60,26 +60,22 @@ void CreatePool(int count) {
       (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
 
     ResetRefreshTable(threads[i].refreshTable);
-
-    threads[i].data.moves = &threads[i].data.searchMoves[2];
   }
 }
 
 // initialize a pool prepping to start a search
 void InitPool(Board* board, SearchParams* params) {
   for (int i = 0; i < threads->count; i++) {
-    threads[i].params = params;
+    threads[i].params   = params;
+    threads[i].nodes    = 0;
+    threads[i].tbhits   = 0;
+    threads[i].seldepth = 1;
 
     threads[i].results.prevScore =
       threads[i].results.depth > 0 ? threads[i].results.scores[threads[i].results.depth] : UNKNOWN;
     threads[i].results.depth = 0;
 
-    threads[i].data.nodes    = 0;
-    threads[i].data.seldepth = 0;
-    threads[i].data.ply      = 0;
-    threads[i].data.tbhits   = 0;
-
-    memset(&threads[i].data.tm, 0, sizeof(threads[i].data.tm));
+    memset(&threads[i].nodeCounts, 0, sizeof(threads[i].nodeCounts));
 
     // need full copies of the board
     memcpy(&threads[i].board, board, sizeof(Board));
@@ -94,20 +90,11 @@ void ResetThreadPool() {
   for (int i = 0; i < threads->count; i++) {
     threads[i].results.depth = 0;
 
-    threads[i].data.nodes    = 0;
-    threads[i].data.seldepth = 0;
-    threads[i].data.ply      = 0;
-    threads[i].data.tbhits   = 0;
-
     // empty ALL data
-    memset(&threads[i].data.skipMove, 0, sizeof(threads[i].data.skipMove));
-    memset(&threads[i].data.evals, 0, sizeof(threads[i].data.evals));
-    memset(&threads[i].data.searchMoves, 0, sizeof(threads[i].data.searchMoves));
-    memset(&threads[i].data.killers, 0, sizeof(threads[i].data.killers));
-    memset(&threads[i].data.counters, 0, sizeof(threads[i].data.counters));
-    memset(&threads[i].data.hh, 0, sizeof(threads[i].data.hh));
-    memset(&threads[i].data.ch, 0, sizeof(threads[i].data.ch));
-    memset(&threads[i].data.th, 0, sizeof(threads[i].data.th));
+    memset(&threads[i].counters, 0, sizeof(threads[i].counters));
+    memset(&threads[i].hh, 0, sizeof(threads[i].hh));
+    memset(&threads[i].ch, 0, sizeof(threads[i].ch));
+    memset(&threads[i].th, 0, sizeof(threads[i].th));
 
     memset(&threads[i].scores, 0, sizeof(threads[i].scores));
     memset(&threads[i].bestMoves, 0, sizeof(threads[i].bestMoves));
@@ -129,14 +116,14 @@ void FreeThreads() {
 // sum node counts
 uint64_t NodesSearched() {
   uint64_t nodes = 0;
-  for (int i = 0; i < threads->count; i++) nodes += threads[i].data.nodes;
+  for (int i = 0; i < threads->count; i++) nodes += threads[i].nodes;
 
   return nodes;
 }
 
 uint64_t TBHits() {
   uint64_t tbhits = 0;
-  for (int i = 0; i < threads->count; i++) tbhits += threads[i].data.tbhits;
+  for (int i = 0; i < threads->count; i++) tbhits += threads[i].tbhits;
 
   return tbhits;
 }

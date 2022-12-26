@@ -196,8 +196,6 @@ void ParsePosition(char* in, Board* board) {
 
   ptrChar = strstr(in, "moves");
 
-  for (int t = 0; t < threads->count; t++) threads->data.searchMoves[0] = threads->data.searchMoves[1] = NULL_MOVE;
-
   if (ptrChar == NULL) return;
 
   ptrChar += 6;
@@ -209,11 +207,6 @@ void ParsePosition(char* in, Board* board) {
     MakeMoveUpdate(enteredMove, board, 0);
 
     if (board->halfMove == 0) board->histPly = 0;
-
-    for (int t = 0; t < threads->count; t++) {
-      threads->data.searchMoves[0] = threads->data.searchMoves[1];
-      threads->data.searchMoves[1] = enteredMove;
-    }
   }
 }
 
@@ -330,8 +323,6 @@ void UCILoop() {
       printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 
       printf("Score: %dcp (white)\n", score);
-    } else if (!strncmp(in, "moves", 5)) {
-      PrintMoves(&board, threads);
     } else if (!strncmp(in, "see ", 4)) {
       Move m = ParseMove(in + 4, &board);
       if (m)

@@ -29,7 +29,7 @@
 
 const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
 
-void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, BitBoard threats) {
+void InitAllMoves(MoveList* moves, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats) {
   moves->type         = ALL_MOVES;
   moves->phase        = HASH_MOVE;
   moves->nTactical    = 0;
@@ -39,15 +39,16 @@ void InitAllMoves(MoveList* moves, Move hashMove, SearchData* data, BitBoard thr
   moves->threats      = threats;
 
   moves->hashMove = hashMove;
-  moves->killer1  = data->killers[data->ply][0];
-  moves->killer2  = data->killers[data->ply][1];
+  moves->killer1  = ss->killers[0];
+  moves->killer2  = ss->killers[1];
 
-  moves->counter = data->counters[FromTo(data->moves[data->ply - 1])];
+  moves->counter = thread->counters[FromTo((ss - 1)->move)];
 
-  moves->data = data;
+  moves->thread = thread;
+  moves->ss   = ss;
 }
 
-void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
+void InitTacticalMoves(MoveList* moves, ThreadData* thread, int cutoff) {
   moves->type         = TACTICAL_MOVES;
   moves->phase        = GEN_TACTICAL_MOVES;
   moves->nTactical    = 0;
@@ -61,7 +62,7 @@ void InitTacticalMoves(MoveList* moves, SearchData* data, int cutoff) {
   moves->killer2  = NULL_MOVE;
   moves->counter  = NULL_MOVE;
 
-  moves->data = data;
+  moves->thread = thread;
 }
 
 void InitPerftMoves(MoveList* moves, Board* board) {
@@ -136,15 +137,15 @@ void ScoreTacticalMoves(MoveList* moves, Board* board) {
     Move m = moves->tactical[i];
 
     int captured        = PieceType(board->squares[To(m)]);
-    moves->sTactical[i] = GetTacticalHistory(moves->data, board, m) + MATERIAL_VALUES[captured] * 32;
+    moves->sTactical[i] = GetTacticalHistory(moves->thread, board, m) + MATERIAL_VALUES[captured] * 32;
   }
 }
 
-void ScoreQuietMoves(MoveList* moves, Board* board, SearchData* data) {
+void ScoreQuietMoves(MoveList* moves, Board* board, ThreadData* thread) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = GetQuietHistory(data, m, board->stm, moves->threats);
+    moves->sQuiet[i] = GetQuietHistory(moves->ss, thread, m, board->stm, moves->threats);
   }
 }
 
@@ -186,11 +187,13 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
       // fallthrough
     case PLAY_KILLER_1:
       moves->phase = PLAY_KILLER_2;
-      if (!skipQuiets && moves->killer1 != moves->hashMove && IsPseudoLegal(moves->killer1, board)) return moves->killer1;
+      if (!skipQuiets && moves->killer1 != moves->hashMove && IsPseudoLegal(moves->killer1, board))
+        return moves->killer1;
       // fallthrough
     case PLAY_KILLER_2:
       moves->phase = PLAY_COUNTER;
-      if (!skipQuiets && moves->killer2 != moves->hashMove && IsPseudoLegal(moves->killer2, board)) return moves->killer2;
+      if (!skipQuiets && moves->killer2 != moves->hashMove && IsPseudoLegal(moves->killer2, board))
+        return moves->killer2;
       // fallthrough
     case PLAY_COUNTER:
       moves->phase = GEN_QUIET_MOVES;
@@ -201,7 +204,7 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
     case GEN_QUIET_MOVES:
       if (!skipQuiets) {
         GenerateQuietMoves(moves, board);
-        ScoreQuietMoves(moves, board, moves->data);
+        ScoreQuietMoves(moves, board, moves->thread);
       }
 
       moves->phase = PLAY_QUIETS;
@@ -260,29 +263,4 @@ char* PhaseName(MoveList* list) {
     case PLAY_BAD_TACTICAL: return "PLAY_BAD_TACTICAL";
     default: return "UNKNOWN";
   }
-}
-
-void PrintMoves(Board* board, ThreadData* thread) {
-  TTEntry* tt = TTProbe(board->zobrist);
-
-  printf("#HM: %5s\n", tt ? MoveToStr(tt->move, board) : "N/A");
-
-  Move k1 = thread->data.killers[0][0];
-  Move k2 = thread->data.killers[0][1];
-
-  printf("#K1: %5s\n", k1 ? MoveToStr(k1, board) : "N/A");
-  printf("#K2: %5s\n\n", k2 ? MoveToStr(k2, board) : "N/A");
-
-  thread->data.ply = 0;
-  MoveList list    = {0};
-
-  Threat oppThreat;
-  Threats(&oppThreat, board, board->xstm);
-
-  InitAllMoves(&list, tt ? tt->move : NULL_MOVE, &thread->data, oppThreat.sqs);
-
-  int i = 1;
-  Move move;
-  while ((move = NextMove(&list, board, 0)))
-    printf("#%2d: %5s - %24s\n", i++, MoveToStr(move, board), PhaseName(&list));
 }

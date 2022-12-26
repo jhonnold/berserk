@@ -113,7 +113,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
   Score knownEval = EvaluateKnownPositions(board);
   if (knownEval != UNKNOWN) return knownEval;
 
-  SearchData* data = &thread->data;
   int16_t* stm     = board->accumulators[board->stm][board->acc];
   int16_t* xstm    = board->accumulators[board->xstm][board->acc];
 
@@ -123,7 +122,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (CHESS_960) score += FRCCorneredBishop(board);
 
   // static contempt
-  score += data->contempt[board->stm];
+  score += thread->contempt[board->stm];
 
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;

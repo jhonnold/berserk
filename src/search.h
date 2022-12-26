@@ -43,8 +43,8 @@ void InitPruningAndReductionTables();
 void* UCISearch(void* arg);
 void BestMove(Board* board, SearchParams* params);
 void* Search(void* arg);
-int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv);
-int Quiesce(int alpha, int beta, ThreadData* thread);
+int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
+int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss);
 
 void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board);
 void PrintPV(PV* pv, Board* board);

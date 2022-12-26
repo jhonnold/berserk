@@ -31,7 +31,7 @@
 #define N_OUTPUT   1
 
 #define ALIGN_ON 64
-#define ALIGN __attribute__((aligned(ALIGN_ON)))
+#define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -97,37 +97,14 @@ typedef struct {
   Move moves[MAX_SEARCH_PLY];
 } PV;
 
-// A general data object for use during search
+typedef int PieceTo[12][64];
+
 typedef struct {
-  int window;
-
-  Board* board; // reference to board
-  int ply;      // ply depth of active search
-
-  // TODO: Put depth here as well? Just cause
-  uint64_t nodes; // node count
-  uint64_t tbhits;
-  int seldepth; // seldepth count
-
-  Move* moves;
-
-  int contempt[2];
-
-  int de[MAX_SEARCH_PLY]; // double extensions
-
-  Move skipMove[MAX_SEARCH_PLY];        // moves to skip during singular search
-  int evals[MAX_SEARCH_PLY];            // static evals at ply stack
-  Move searchMoves[MAX_SEARCH_PLY + 2]; // moves for ply stack
-
-  Move killers[MAX_SEARCH_PLY][2]; // killer moves, 2 per ply
-  Move counters[64 * 64];          // counter move butterfly table
-  int hh[2][2][2][64 * 64];        // history heuristic butterfly table (stm / threatened)
-  int ch[12][64][12][64];          // continuation move history table
-
-  int th[6][64][7]; // tactical (capture) history
-
-  int64_t tm[64 * 64];
-} SearchData;
+  int ply, staticEval, de;
+  PieceTo* ch;
+  Move move, skip;
+  Move killers[2];
+} SearchStack;
 
 typedef struct {
   long start;
@@ -155,10 +132,12 @@ typedef struct {
   Move ponderMoves[MAX_SEARCH_PLY];
 } SearchResults;
 
+
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int count, idx, multiPV, depth;
+  int count, idx, multiPV, depth, seldepth;
+  uint64_t nodes, tbhits;
 
   Accumulator* accumulators[2];
   AccumulatorKingState* refreshTable[2];
@@ -168,13 +147,20 @@ struct ThreadData {
 
   SearchParams* params;
   SearchResults results;
-  SearchData data;
-
   Board board;
+
+  uint64_t nodeCounts[64 * 64];
+
+  int contempt[2];
 
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];
   PV pvs[MAX_MOVES];
+
+  Move counters[64 * 64];   // counter move butterfly table
+  int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
+  int ch[12][64][12][64];   // continuation move history table
+  int th[6][64][7];         // tactical (capture) history
 };
 
 typedef struct {
@@ -201,7 +187,8 @@ enum {
 };
 
 typedef struct {
-  SearchData* data;
+  ThreadData* thread;
+  SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
   int seeCutoff;
   uint8_t type, phase, nTactical, nQuiets, nBadTactical;
