@@ -400,6 +400,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->killers[1] = NULL_MOVE;
   ss->de               = (ss - 1)->de;
 
+  int inCheck = !!board->checkers;
+
   Threat oppThreat;
   Threats(&oppThreat, board, board->xstm);
 
@@ -586,6 +588,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // move GAVE check
       if (board->checkers) R--;
+
+      // Ethereal king evasions
+      if (inCheck && PieceType(Moving(move)) == KING) R++;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
