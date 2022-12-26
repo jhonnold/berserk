@@ -31,7 +31,7 @@ void AddKillerMove(SearchStack* ss, Move move) {
 }
 
 void AddCounterMove(ThreadData* thread, Move move, Move parent) {
-  thread->counters[FromTo(parent)] = move;
+  thread->counters[Moving(parent)][To(parent)] = move;
 }
 
 void AddHistoryHeuristic(int* entry, int inc) {

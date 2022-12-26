@@ -132,7 +132,6 @@ typedef struct {
   Move ponderMoves[MAX_SEARCH_PLY];
 } SearchResults;
 
-
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
@@ -157,7 +156,7 @@ struct ThreadData {
   Move bestMoves[MAX_MOVES];
   PV pvs[MAX_MOVES];
 
-  Move counters[64 * 64];   // counter move butterfly table
+  Move counters[12][64];    // counter move butterfly table
   int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
   int ch[12][64][12][64];   // continuation move history table
   int th[6][64][7];         // tactical (capture) history
