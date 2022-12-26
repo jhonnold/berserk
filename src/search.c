@@ -596,7 +596,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
       // and https://www.chessprogramming.org/Node_Types
-      if (cutnode && !tactical) R++;
+      if (cutnode) R++;
 
       // adjust reduction based on historical score
       R -= history / 20480;
