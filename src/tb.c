@@ -26,6 +26,14 @@
 
 #define vf(bb) __builtin_bswap64((bb))
 
+const int TB_PROMO_MAP[5] = {
+  NORMAL2,
+  QUEEN_PROMO,
+  ROOK_PROMO,
+  BISHOP_PROMO,
+  ROOK_PROMO,
+};
+
 Move TBRootProbe(Board* board) {
   if (board->castling || bits(OccBB(BOTH)) > TB_LARGEST) return NULL_MOVE;
 
@@ -51,10 +59,9 @@ Move TBRootProbe(Board* board) {
   unsigned promo = TB_GET_PROMOTES(res);
   int promoPiece = promo ? Piece(KING - promo, board->stm) : 0;
 
-  int flags = QUIET;
-  if (ep) flags = EP;
+  if (ep) return BuildMove(from, to, EP2, NO_PROMO, EP);
 
-  return BuildMove(from, to, promoPiece, flags);
+  return BuildMove(from, to, TB_PROMO_MAP[promo], promoPiece, NORMAL);
 }
 
 unsigned TBProbe(Board* board) {

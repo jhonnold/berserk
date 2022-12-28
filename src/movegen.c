@@ -19,7 +19,7 @@
 #include <stdio.h>
 
 void GenerateTacticalMoves(MoveList* list, Board* board) {
-  GenerateMoves(list, board, !QUIET, 0);
+  GenerateMoves(list, board, NOISY, 0);
 }
 
 void GenerateQuietMoves(MoveList* list, Board* board) {
@@ -27,6 +27,6 @@ void GenerateQuietMoves(MoveList* list, Board* board) {
 }
 
 void GenerateAllMoves(MoveList* list, Board* board) {
-  GenerateMoves(list, board, !QUIET, 1);
+  GenerateMoves(list, board, NOISY, 1);
   GenerateMoves(list, board, QUIET, 1);
 }
