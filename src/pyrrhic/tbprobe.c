@@ -168,10 +168,10 @@ static FD open_tb(const char *str, const char *suffix)
     size_t len;
     mbstowcs_s(&len, ucode_name, 4096, file, _TRUNCATE);
     fd = CreateFile(ucode_name, GENERIC_READ, FILE_SHARE_READ, NULL,
-			  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			  OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, NULL);
 #else
     fd = CreateFile(file, GENERIC_READ, FILE_SHARE_READ, NULL,
-			  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			  OPEN_EXISTING, FILE_FLAG_RANDOM_ACCESS, NULL);
 #endif
 #endif
     free(file);
@@ -203,6 +203,9 @@ static void *map_file(FD fd, map_t *mapping)
   *mapping = statbuf.st_size;
   void *data = mmap(NULL, statbuf.st_size, PROT_READ,
 			      MAP_SHARED, fd, 0);
+#if defined(MADV_RANDOM)
+  madvise(data, statbuf.st_size, MADV_RANDOM);
+#endif
   if (data == MAP_FAILED) {
     perror("mmap");
     return NULL;
@@ -1350,7 +1353,7 @@ static bool init_table(struct BaseEntry *be, const char *str, int type)
         } else {
           data += (uintptr_t)data & 0x01;
           for (int i = 0; i < 4; i++) {
-            mapIdx[t][i] = (uint16_t)(data + 1 - (uint8_t *)map);
+            mapIdx[t][i] = (uint16_t)((uint16_t*)data + 1 - (uint16_t *)map);
             data += 2 + 2 * read_le_u16(data);
           }
         }
