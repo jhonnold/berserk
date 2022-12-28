@@ -17,7 +17,9 @@
 #ifndef MOVE_H
 #define MOVE_H
 
+#include "board.h"
 #include "types.h"
+#include "util.h"
 
 #define NULL_MOVE 0
 
@@ -33,7 +35,6 @@ extern const int CASTLING_ROOK[64];
 #define From(move)   ((int) (move) &0x3f)
 #define To(move)     (((int) (move) &0xfc0) >> 6)
 #define Promo(move)  (((int) (move) &0xf0000) >> 16)
-#define IsCap(move)  (((int) (move) &0x100000) >> 20)
 #define IsEP(move)   (((int) (move) &0x400000) >> 22)
 #define IsCas(move)  (((int) (move) &0x800000) >> 23)
 // just mask the from/to bits into a single int for indexing butterfly tables
@@ -41,8 +42,12 @@ extern const int CASTLING_ROOK[64];
 
 #define IsTactical(move) (((int) (move) &0x1f0000) >> 16)
 
+INLINE int IsCapture(Move move, Board* board) {
+  return (!IsCas(move) && board->squares[To(move)] != NO_PIECE) || IsEP(move);
+}
+
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move, Board* board);
-int IsRecapture(SearchStack* ss, Move move);
+int IsRecapture(SearchStack* ss, Board* board, Move move);
 
 #endif

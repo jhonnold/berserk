@@ -100,7 +100,7 @@ typedef struct {
 typedef int PieceTo[12][64];
 
 typedef struct {
-  int ply, staticEval, de;
+  int ply, staticEval, de, capture;
   PieceTo* ch;
   Move move, skip;
   Move killers[2];

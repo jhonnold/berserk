@@ -95,8 +95,8 @@ char* MoveToStr(Move move, Board* board) {
   return buffer;
 }
 
-inline int IsRecapture(SearchStack* ss, Move move) {
-  return IsCap(move) &&                                                //
-         ((IsCap((ss - 1)->move) && To((ss - 1)->move) == To(move)) || //
-          (IsCap((ss - 3)->move) && To((ss - 3)->move) == To(move)));
+inline int IsRecapture(SearchStack* ss, Board* board, Move move) {
+  return IsCapture(move, board) &&                                 //
+         (((ss - 1)->capture && To((ss - 1)->move) == To(move)) || //
+          ((ss - 3)->capture && To((ss - 3)->move) == To(move)));
 }

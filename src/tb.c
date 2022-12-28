@@ -49,14 +49,10 @@ Move TBRootProbe(Board* board) {
   unsigned to    = TB_GET_TO(res) ^ 56;
   unsigned ep    = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
-  int capture    = board->squares[to] != NO_PIECE;
   int promoPiece = promo ? Piece(KING - promo, board->stm) : 0;
 
   int flags = QUIET;
-  if (ep)
-    flags = EP;
-  else if (capture)
-    flags = CAPTURE;
+  if (ep) flags = EP;
 
   return BuildMove(from, to, promoPiece, flags);
 }

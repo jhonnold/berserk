@@ -309,10 +309,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int to       = To(move);
   int piece    = board->squares[from];
   int promoted = Promo(move);
-  int capture  = IsCap(move);
+  int capture  = IsCapture(move, board);
   int ep       = IsEP(move);
   int castle   = IsCas(move);
-  int captured = !ep ? board->squares[to] : Piece(PAWN, board->xstm);
+  int captured = capture ? (!ep ? board->squares[to] : Piece(PAWN, board->xstm)) : NO_PIECE;
 
   // store hard to recalculate values
   board->zobristHistory[board->histPly]  = board->zobrist;
@@ -448,7 +448,7 @@ void UndoMove(Move move, Board* board) {
   int from     = From(move);
   int to       = To(move);
   int promoted = Promo(move);
-  int capture  = IsCap(move);
+  int capture  = IsEP(move) || board->captureHistory[board->histPly - 1] != NO_PIECE;
   int ep       = IsEP(move);
   int castle   = IsCas(move);
   int piece    = promoted ? Piece(PAWN, board->xstm) : board->squares[to];
@@ -661,8 +661,6 @@ int IsPseudoLegal(Move move, Board* board) {
     return !!getBit(goal & opts & valid, to);
   }
 
-  if (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE) return 0;
-  if (!IsCap(move) && board->squares[to] != NO_PIECE) return 0;
   if (IsEP(move) && to != board->epSquare) return 0;
   if (getBit(OccBB(board->stm), to)) return 0;
 

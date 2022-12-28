@@ -145,7 +145,7 @@ void ApplyUpdates(Board* board, int moving, Move move, int captured, const int v
   f         = FeatureIdx(endPc, To(move), king, view);
   ApplyFeature(output, output, f, ADD);
 
-  if (IsCap(move)) {
+  if (captured != NO_PIECE) {
     int movingSide = moving & 1;
     int capturedSq = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     f              = FeatureIdx(captured, capturedSq, king, view);

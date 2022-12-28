@@ -278,6 +278,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int origAlpha  = alpha;             // remember first alpha for tt storage
   int ttScore    = UNKNOWN;
   int ttPv       = 0;
+  int ttCapture  = 0;
 
   Move bestMove = NULL_MOVE, hashMove = NULL_MOVE;
 
@@ -319,6 +320,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   ttScore     = tt ? TTScore(tt, ss->ply) : UNKNOWN;
   ttPv        = isPV || (tt && (tt->flags & TT_PV));
   hashMove    = isRoot ? thread->pvs[thread->multiPV].moves[0] : tt ? tt->move : NULL_MOVE;
+  ttCapture   = hashMove && IsCapture(hashMove, board);
 
   // if the TT has a value that fits our position and has been searched to an equal or greater depth, then we accept
   // this score and prune
@@ -430,8 +432,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       int R = 4 + depth / 6 + min((eval - beta) / 256, 3) + !oppThreat.pcs;
       R     = min(depth, R); // don't go too low
 
-      ss->move = NULL_MOVE;
-      ss->ch   = &thread->ch[WHITE_PAWN][A1];
+      ss->move    = NULL_MOVE;
+      ss->capture = 0;
+      ss->ch      = &thread->ch[WHITE_PAWN][A1];
       MakeNullMove(board);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
@@ -454,8 +457,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (ss->skip == move) continue;
         if (!IsLegal(move, board)) continue;
 
-        ss->move = move;
-        ss->ch   = &thread->ch[board->squares[From(move)]][To(move)];
+        ss->move    = move;
+        ss->capture = IsCapture(move, board);
+        ss->ch      = &thread->ch[board->squares[From(move)]][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -558,11 +562,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // re-capture extension - looks for a follow up capture on the same square
     // as the previous capture
-    else if (!isRoot && isPV && IsRecapture(ss, move))
+    else if (!isRoot && isPV && IsRecapture(ss, board, move))
       extension = 1;
 
-    ss->move = move;
-    ss->ch   = &thread->ch[board->squares[From(move)]][To(move)];
+    ss->move    = move;
+    ss->capture = IsCapture(move, board);
+    ss->ch      = &thread->ch[board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
     // apply extensions
@@ -571,7 +576,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int doFullSearch = 0;
 
     // Late move reductions
-    if (depth > 2 && legalMoves > 1 && !(ttPv && IsCap(move))) {
+    if (depth > 2 && legalMoves > 1 && !(ttPv && ss->capture)) {
       int R = LMR[min(depth, 63)][min(legalMoves, 63)];
 
       // increase reduction on non-pv
@@ -584,7 +589,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (killerOrCounter) R -= 2;
 
       // less likely a non-capture is best
-      if (IsCap(hashMove)) R++;
+      if (ttCapture) R++;
 
       // move GAVE check
       if (board->checkers) R--;
@@ -729,8 +734,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     if (moves.phase > PLAY_GOOD_TACTICAL) break;
 
-    ss->move = move;
-    ss->ch   = &thread->ch[board->squares[From(move)]][To(move)];
+    ss->move    = move;
+    ss->capture = IsCapture(move, board);
+    ss->ch      = &thread->ch[board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
     int score = -Quiesce(-beta, -alpha, thread, ss + 1);

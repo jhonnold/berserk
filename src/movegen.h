@@ -36,7 +36,6 @@
 
 #define NO_PROMO 0
 #define QUIET    0b0000
-#define CAPTURE  0b0001
 #define EP       0b0101
 #define CASTLE   0b1000
 
@@ -75,10 +74,10 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
-    AppendMove(arr, n, from, to, Piece(QUEEN, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(ROOK, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(BISHOP, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(KNIGHT, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(QUEEN, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(ROOK, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(BISHOP, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(KNIGHT, stm), QUIET);
   }
 
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -87,10 +86,10 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
-    AppendMove(arr, n, from, to, Piece(QUEEN, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(ROOK, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(BISHOP, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(KNIGHT, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(QUEEN, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(ROOK, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(BISHOP, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(KNIGHT, stm), QUIET);
   }
 }
 
@@ -106,7 +105,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
-    AppendMove(arr, n, from, to, NO_PROMO, CAPTURE);
+    AppendMove(arr, n, from, to, NO_PROMO, QUIET);
   }
 
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -115,7 +114,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
-    AppendMove(arr, n, from, to, NO_PROMO, CAPTURE);
+    AppendMove(arr, n, from, to, NO_PROMO, QUIET);
   }
 
   if (!board->epSquare) return;
@@ -176,7 +175,7 @@ INLINE void GeneratePieceMoves(MoveList* list,
     while (targets) {
       int to = popAndGetLsb(&targets);
 
-      AppendMove(arr, n, from, to, NO_PROMO, type == QUIET ? QUIET : CAPTURE);
+      AppendMove(arr, n, from, to, NO_PROMO, QUIET);
     }
   }
 }
