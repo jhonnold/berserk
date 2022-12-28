@@ -24,7 +24,6 @@
 #define TH(p, e, c)         (thread->th[p][e][c])
 
 void AddKillerMove(SearchStack* ss, Move move);
-void AddCounterMove(Board* board, ThreadData* thread, Move move, Move parent);
 void AddHistoryHeuristic(int* entry, int inc);
 void UpdateHistories(Board* board,
                      SearchStack* ss,

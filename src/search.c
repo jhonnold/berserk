@@ -496,7 +496,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     int extension       = 0;
     int tactical        = IsTactical(move, board);
-    int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
+    int killer = move == moves.killer1 || move == moves.killer2;
     int history         = !tactical ? GetQuietHistory(board, ss, thread, move, board->stm, oppThreat.sqs) :
                                       GetTacticalHistory(thread, board, move);
 
@@ -586,7 +586,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!improving) R++;
 
       // reduce these special quiets less
-      if (killerOrCounter) R -= 2;
+      if (killer) R -= 2;
 
       // less likely a non-capture is best
       if (ttCapture) R++;

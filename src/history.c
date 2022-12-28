@@ -30,13 +30,6 @@ void AddKillerMove(SearchStack* ss, Move move) {
   }
 }
 
-void AddCounterMove(Board* board, ThreadData* thread, Move move, Move parent) {
-  int to     = To(parent);
-  int moving = IsPromo(parent) ? Piece(PAWN, board->xstm) : board->squares[to];
-
-  thread->counters[moving][to] = move;
-}
-
 void AddHistoryHeuristic(int* entry, int inc) {
   *entry += inc - *entry * abs(inc) / 65536;
 }
@@ -64,9 +57,6 @@ void UpdateHistories(Board* board,
     AddKillerMove(ss, bestMove);
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
     UpdateCH(board, ss, bestMove, inc);
-
-    if ((ss - 1)->move) AddCounterMove(board, thread, bestMove, (ss - 1)->move);
-
   } else {
     int piece    = PieceType(board->squares[From(bestMove)]);
     int to       = To(bestMove);

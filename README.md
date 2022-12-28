@@ -52,7 +52,6 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
   - Static Exchange Evaluation Pruning
 - [LMR](https://www.chessprogramming.org/Late_Move_Reductions)
 - [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
-- [Countermove Heuristic](https://www.chessprogramming.org/Countermove_Heuristic)
 - [Extensions](https://www.chessprogramming.org/Extensions)
   - [Singular](https://www.chessprogramming.org/Singular_Extensions)
   - [Check](https://www.chessprogramming.org/Check_Extensions)

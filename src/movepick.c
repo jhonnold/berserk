@@ -42,11 +42,6 @@ void InitAllMoves(MoveList* moves, Move hashMove, ThreadData* thread, SearchStac
   moves->killer1  = ss->killers[0];
   moves->killer2  = ss->killers[1];
 
-  Move parent      = (ss - 1)->move;
-  int parentTo     = To(parent);
-  int parentMoving = IsPromo(parent) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[parentTo];
-  moves->counter   = parent ? thread->counters[parentMoving][parentTo] : NULL_MOVE;
-
   moves->thread = thread;
   moves->ss     = ss;
 }
@@ -63,7 +58,6 @@ void InitTacticalMoves(MoveList* moves, ThreadData* thread, int cutoff) {
   moves->hashMove = NULL_MOVE;
   moves->killer1  = NULL_MOVE;
   moves->killer2  = NULL_MOVE;
-  moves->counter  = NULL_MOVE;
 
   moves->thread = thread;
 }
@@ -195,16 +189,10 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
         return moves->killer1;
       // fallthrough
     case PLAY_KILLER_2:
-      moves->phase = PLAY_COUNTER;
+      moves->phase = GEN_QUIET_MOVES;
       if (!skipQuiets && moves->killer2 != moves->hashMove && !IsTactical(moves->killer2, board) &&
           IsPseudoLegal(moves->killer2, board))
         return moves->killer2;
-      // fallthrough
-    case PLAY_COUNTER:
-      moves->phase = GEN_QUIET_MOVES;
-      if (!skipQuiets && moves->counter != moves->hashMove && moves->counter != moves->killer1 &&
-          moves->counter != moves->killer2 && !IsTactical(moves->counter, board) && IsPseudoLegal(moves->counter, board))
-        return moves->counter;
       // fallthrough
     case GEN_QUIET_MOVES:
       if (!skipQuiets) {
@@ -219,7 +207,7 @@ Move NextMove(MoveList* moves, Board* board, int skipQuiets) {
         int idx = GetTopIdx(moves->sQuiet, moves->nQuiets);
         Move m  = PopQuiet(moves, idx);
 
-        if (m == moves->hashMove || m == moves->killer1 || m == moves->killer2 || m == moves->counter)
+        if (m == moves->hashMove || m == moves->killer1 || m == moves->killer2)
           return NextMove(moves, board, skipQuiets);
 
         return m;
@@ -263,7 +251,6 @@ char* PhaseName(MoveList* list) {
     case PLAY_GOOD_TACTICAL: return "PLAY_GOOD_TACTICAL";
     case PLAY_KILLER_1: return "PLAY_KILLER_1";
     case PLAY_KILLER_2: return "PLAY_KILLER_2";
-    case PLAY_COUNTER: return "PLAY_COUNTER";
     case PLAY_QUIETS: return "PLAY_QUIETS";
     case PLAY_BAD_TACTICAL: return "PLAY_BAD_TACTICAL";
     default: return "UNKNOWN";
