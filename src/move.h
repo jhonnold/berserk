@@ -46,11 +46,20 @@ extern const int CASTLING_ROOK[64];
   (from) | ((to) << 6) | (newFlags) | ((promo) << 16) | ((flags) << 20)
 #define From(move)  ((int) (move) &0x3f)
 #define To(move)    (((int) (move) &0xfc0) >> 6)
-#define Promo(move) (((int) (move) &0xf0000) >> 16)
-// #define IsEP(move)   (((int) (move) &0x400000) >> 22)
-// #define IsCas(move)  (((int) (move) &0x800000) >> 23)
 // just mask the from/to bits into a single int for indexing butterfly tables
 #define FromTo(move) ((int) (move) &0xfff)
+
+INLINE int IsNormal(Move move) {
+  return (move & 0x3000) == NORMAL2;
+}
+
+INLINE int IsPromo(Move move) {
+  return (move & 0x3000) == PROMO;
+}
+
+INLINE int PromoPiece(Move move, int color) {
+  return Piece(((move & 0xc000) >> 14) + 1, color);
+}
 
 INLINE int IsEP(Move move) {
   return (move & 0x3000) == EP2;
@@ -65,7 +74,7 @@ INLINE int IsCapture(Move move, Board* board) {
 }
 
 INLINE int IsTactical(Move move, Board* board) {
-  return IsCapture(move, board) || Promo(move);
+  return IsCapture(move, board) || IsPromo(move);
 }
 
 Move ParseMove(char* moveStr, Board* board);

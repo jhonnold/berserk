@@ -141,7 +141,7 @@ void ApplyUpdates(Board* board, int moving, Move move, int captured, const int v
   int f = FeatureIdx(moving, From(move), king, view);
   ApplyFeature(output, prev, f, SUB);
 
-  int endPc = !Promo(move) ? moving : Promo(move);
+  int endPc = board->squares[To(move)];
   f         = FeatureIdx(endPc, To(move), king, view);
   ApplyFeature(output, output, f, ADD);
 

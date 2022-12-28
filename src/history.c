@@ -32,7 +32,7 @@ void AddKillerMove(SearchStack* ss, Move move) {
 
 void AddCounterMove(Board* board, ThreadData* thread, Move move, Move parent) {
   int to     = To(parent);
-  int moving = Promo(parent) ? Piece(PAWN, board->xstm) : board->squares[to];
+  int moving = IsPromo(parent) ? Piece(PAWN, board->xstm) : board->squares[to];
 
   thread->counters[moving][to] = move;
 }

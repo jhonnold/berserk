@@ -308,7 +308,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int from     = From(move);
   int to       = To(move);
   int piece    = board->squares[from];
-  int promoted = Promo(move);
+  int promoted = IsPromo(move) ? PromoPiece(move, board->stm) : 0;
   int capture  = IsCapture(move, board);
   int ep       = IsEP(move);
   int castle   = IsCas(move);
@@ -447,7 +447,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 void UndoMove(Move move, Board* board) {
   int from     = From(move);
   int to       = To(move);
-  int promoted = Promo(move);
+  int promoted = IsPromo(move) ? PromoPiece(move, board->xstm) : 0;
   int capture  = IsEP(move) || board->captureHistory[board->histPly - 1] != NO_PIECE;
   int ep       = IsEP(move);
   int castle   = IsCas(move);
@@ -649,7 +649,7 @@ int IsPseudoLegal(Move move, Board* board) {
     return 1;
   }
 
-  if (Promo(move)) {
+  if (IsPromo(move)) {
     if (bits(board->checkers) > 1) return 0;
 
     int king       = lsb(PieceBB(KING, board->stm));

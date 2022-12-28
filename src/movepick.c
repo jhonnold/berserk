@@ -44,7 +44,7 @@ void InitAllMoves(MoveList* moves, Move hashMove, ThreadData* thread, SearchStac
 
   Move parent      = (ss - 1)->move;
   int parentTo     = To(parent);
-  int parentMoving = Promo(parent) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[parentTo];
+  int parentMoving = IsPromo(parent) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[parentTo];
   moves->counter   = parent ? thread->counters[parentMoving][parentTo] : NULL_MOVE;
 
   moves->thread = thread;
