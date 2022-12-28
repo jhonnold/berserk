@@ -310,7 +310,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int piece    = Moving(move);
   int promoted = Promo(move);
   int capture  = IsCap(move);
-  int dub      = IsDP(move);
   int ep       = IsEP(move);
   int castle   = IsCas(move);
   int captured = !ep ? board->squares[to] : Piece(PAWN, board->xstm);
@@ -383,7 +382,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->epSquare = 0;
   }
 
-  if (dub) {
+  if (PieceType(piece) == PAWN && (from ^ to) == 16) {
     int epSquare = to - PawnDir(board->stm);
 
     if (GetPawnAttacks(epSquare, board->stm) & PieceBB(PAWN, board->xstm)) {

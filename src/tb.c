@@ -58,8 +58,6 @@ Move TBRootProbe(Board* board) {
     flags = EP;
   else if (capture)
     flags = CAPTURE;
-  else if (PieceType(piece) == PAWN && (from ^ to) == 16)
-    flags = DP;
 
   return BuildMove(from, to, piece, promoPiece, flags);
 }

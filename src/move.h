@@ -35,7 +35,6 @@ extern const int CASTLING_ROOK[64];
 #define Moving(move) (((int) (move) &0xf000) >> 12)
 #define Promo(move)  (((int) (move) &0xf0000) >> 16)
 #define IsCap(move)  (((int) (move) &0x100000) >> 20)
-#define IsDP(move)   (((int) (move) &0x200000) >> 21)
 #define IsEP(move)   (((int) (move) &0x400000) >> 22)
 #define IsCas(move)  (((int) (move) &0x800000) >> 23)
 // just mask the from/to bits into a single int for indexing butterfly tables

@@ -38,7 +38,6 @@
 #define QUIET    0b0000
 #define CAPTURE  0b0001
 #define EP       0b0101
-#define DP       0b0010
 #define CASTLE   0b1000
 
 #define WHITE_KS 0x8
@@ -153,7 +152,7 @@ INLINE void GeneratePawnQuiets(MoveList* list, BitBoard movers, BitBoard opts, B
     int to   = popAndGetLsb(&dpTargets);
     int from = to - PawnDir(stm) - PawnDir(stm);
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, DP);
+    AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, QUIET);
   }
 }
 
