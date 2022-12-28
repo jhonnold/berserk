@@ -47,8 +47,8 @@
 
 #define CanCastle(dir) (board->castling & (dir))
 
-INLINE void AppendMove(Move* arr, uint8_t* n, int from, int to, int moving, int promo, int flags) {
-  arr[(*n)++] = BuildMove(from, to, moving, promo, flags);
+INLINE void AppendMove(Move* arr, uint8_t* n, int from, int to, int promo, int flags) {
+  arr[(*n)++] = BuildMove(from, to, promo, flags);
 }
 
 INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opts, Board* board, const int stm) {
@@ -63,10 +63,10 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
     int to   = popAndGetLsb(&targets);
     int from = to - PawnDir(stm);
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(QUEEN, stm), QUIET);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(ROOK, stm), QUIET);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(BISHOP, stm), QUIET);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(KNIGHT, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(QUEEN, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(ROOK, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(BISHOP, stm), QUIET);
+    AppendMove(arr, n, from, to, Piece(KNIGHT, stm), QUIET);
   }
 
   targets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
@@ -75,10 +75,10 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(QUEEN, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(ROOK, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(BISHOP, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(KNIGHT, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(QUEEN, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(ROOK, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(BISHOP, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(KNIGHT, stm), CAPTURE);
   }
 
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -87,10 +87,10 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(QUEEN, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(ROOK, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(BISHOP, stm), CAPTURE);
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), Piece(KNIGHT, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(QUEEN, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(ROOK, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(BISHOP, stm), CAPTURE);
+    AppendMove(arr, n, from, to, Piece(KNIGHT, stm), CAPTURE);
   }
 }
 
@@ -106,7 +106,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, CAPTURE);
+    AppendMove(arr, n, from, to, NO_PROMO, CAPTURE);
   }
 
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -115,7 +115,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, CAPTURE);
+    AppendMove(arr, n, from, to, NO_PROMO, CAPTURE);
   }
 
   if (!board->epSquare) return;
@@ -126,7 +126,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int from = popAndGetLsb(&pawns);
     int to   = board->epSquare;
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, EP);
+    AppendMove(arr, n, from, to, NO_PROMO, EP);
   }
 }
 
@@ -145,14 +145,14 @@ INLINE void GeneratePawnQuiets(MoveList* list, BitBoard movers, BitBoard opts, B
     int to   = popAndGetLsb(&targets);
     int from = to - PawnDir(stm);
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, QUIET);
+    AppendMove(arr, n, from, to, NO_PROMO, QUIET);
   }
 
   while (dpTargets) {
     int to   = popAndGetLsb(&dpTargets);
     int from = to - PawnDir(stm) - PawnDir(stm);
 
-    AppendMove(arr, n, from, to, Piece(PAWN, stm), NO_PROMO, QUIET);
+    AppendMove(arr, n, from, to, NO_PROMO, QUIET);
   }
 }
 
@@ -176,7 +176,7 @@ INLINE void GeneratePieceMoves(MoveList* list,
     while (targets) {
       int to = popAndGetLsb(&targets);
 
-      AppendMove(arr, n, from, to, Piece(piece, stm), NO_PROMO, type == QUIET ? QUIET : CAPTURE);
+      AppendMove(arr, n, from, to, NO_PROMO, type == QUIET ? QUIET : CAPTURE);
     }
   }
 }
@@ -191,13 +191,13 @@ INLINE void GenerateCastles(MoveList* list, Board* board, const int stm) {
     if (CanCastle(WHITE_KS)) {
       BitBoard between = BetweenSquares(from, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
       if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[0])) & between))
-        AppendMove(arr, n, from, G1, Piece(KING, stm), NO_PROMO, CASTLE);
+        AppendMove(arr, n, from, G1, NO_PROMO, CASTLE);
     }
 
     if (CanCastle(WHITE_QS)) {
       BitBoard between = BetweenSquares(from, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
       if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[1])) & between))
-        AppendMove(arr, n, from, C1, Piece(KING, stm), NO_PROMO, CASTLE);
+        AppendMove(arr, n, from, C1, NO_PROMO, CASTLE);
     }
   } else {
     int from = lsb(PieceBB(KING, BLACK));
@@ -205,13 +205,13 @@ INLINE void GenerateCastles(MoveList* list, Board* board, const int stm) {
     if (CanCastle(BLACK_KS)) {
       BitBoard between = BetweenSquares(from, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
       if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[2])) & between))
-        AppendMove(arr, n, from, G8, Piece(KING, stm), NO_PROMO, CASTLE);
+        AppendMove(arr, n, from, G8, NO_PROMO, CASTLE);
     }
 
     if (CanCastle(BLACK_QS)) {
       BitBoard between = BetweenSquares(from, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
       if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[3])) & between))
-        AppendMove(arr, n, from, C8, Piece(KING, stm), NO_PROMO, CASTLE);
+        AppendMove(arr, n, from, C8, NO_PROMO, CASTLE);
     }
   }
 }

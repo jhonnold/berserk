@@ -307,7 +307,7 @@ void MakeMove(Move move, Board* board) {
 void MakeMoveUpdate(Move move, Board* board, int update) {
   int from     = From(move);
   int to       = To(move);
-  int piece    = Moving(move);
+  int piece    = board->squares[from];
   int promoted = Promo(move);
   int capture  = IsCap(move);
   int ep       = IsEP(move);
@@ -436,10 +436,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     if (MoveRequiresRefresh(piece, from, to)) {
       int colorToRefresh = piece & 1;
       RefreshAccumulator(board->accumulators[colorToRefresh][board->acc], board, colorToRefresh);
-      ApplyUpdates(board, move, captured, !colorToRefresh);
+      ApplyUpdates(board, piece, move, captured, !colorToRefresh);
     } else {
-      ApplyUpdates(board, move, captured, WHITE);
-      ApplyUpdates(board, move, captured, BLACK);
+      ApplyUpdates(board, piece, move, captured, WHITE);
+      ApplyUpdates(board, piece, move, captured, BLACK);
     }
   }
 }
@@ -447,11 +447,11 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 void UndoMove(Move move, Board* board) {
   int from     = From(move);
   int to       = To(move);
-  int piece    = Moving(move);
   int promoted = Promo(move);
   int capture  = IsCap(move);
   int ep       = IsEP(move);
   int castle   = IsCas(move);
+  int piece    = promoted ? Piece(PAWN, board->xstm) : board->squares[to];
 
   board->stm = board->xstm;
   board->xstm ^= 1;
@@ -609,10 +609,10 @@ inline int IsFiftyMoveRule(Board* board) {
 int IsPseudoLegal(Move move, Board* board) {
   int from   = From(move);
   int to     = To(move);
-  int piece  = Moving(move);
+  int piece  = board->squares[from];
   int pcType = PieceType(piece);
 
-  if (!move || (piece & 1) != board->stm || piece != board->squares[from]) return 0;
+  if (!move || piece == NO_PIECE || (piece & 1) != board->stm) return 0;
 
   if (IsCas(move)) {
     if (board->checkers) return 0;
@@ -721,7 +721,7 @@ int IsLegal(Move move, Board* board) {
     return !CHESS_960 || !getBit(board->pinned, To(move));
   }
 
-  if (PieceType(Moving(move)) == KING)
+  if (PieceType(board->squares[from]) == KING)
     return !(AttacksToSquare(board, to, OccBB(BOTH) ^ PieceBB(KING, board->stm)) & OccBB(board->xstm));
 
   return !getBit(board->pinned, from) || getBit(PinnedMoves(from, kingSq), to);

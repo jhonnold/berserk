@@ -42,7 +42,10 @@ void InitAllMoves(MoveList* moves, Move hashMove, ThreadData* thread, SearchStac
   moves->killer1  = ss->killers[0];
   moves->killer2  = ss->killers[1];
 
-  moves->counter = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
+  Move parent      = (ss - 1)->move;
+  int parentTo     = To(parent);
+  int parentMoving = Promo(parent) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[parentTo];
+  moves->counter   = parent ? thread->counters[parentMoving][parentTo] : NULL_MOVE;
 
   moves->thread = thread;
   moves->ss     = ss;
@@ -145,7 +148,7 @@ void ScoreQuietMoves(MoveList* moves, Board* board, ThreadData* thread) {
   for (int i = 0; i < moves->nQuiets; i++) {
     Move m = moves->quiet[i];
 
-    moves->sQuiet[i] = GetQuietHistory(moves->ss, thread, m, board->stm, moves->threats);
+    moves->sQuiet[i] = GetQuietHistory(board, moves->ss, thread, m, board->stm, moves->threats);
   }
 }
 

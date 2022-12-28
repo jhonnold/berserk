@@ -24,7 +24,7 @@
 #define TH(p, e, c)         (thread->th[p][e][c])
 
 void AddKillerMove(SearchStack* ss, Move move);
-void AddCounterMove(ThreadData* thread, Move move, Move parent);
+void AddCounterMove(Board* board, ThreadData* thread, Move move, Move parent);
 void AddHistoryHeuristic(int* entry, int inc);
 void UpdateHistories(Board* board,
                      SearchStack* ss,
@@ -37,7 +37,7 @@ void UpdateHistories(Board* board,
                      Move tacticals[],
                      int nT,
                      BitBoard threats);
-int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats);
+int GetQuietHistory(Board* board, SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats);
 int GetTacticalHistory(ThreadData* thread, Board* board, Move move);
 
 #endif

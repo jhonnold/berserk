@@ -36,7 +36,7 @@ inline int SEE(Board* board, Move move, int threshold) {
   int v = SEE_VALUE[PieceType(board->squares[to])] - threshold;
   if (v < 0) return 0;
 
-  v -= SEE_VALUE[PieceType(Moving(move))];
+  v -= SEE_VALUE[PieceType(board->squares[from])];
   if (v >= 0) return 1;
 
   BitBoard occ       = (OccBB(BOTH) ^ bit(from)) | bit(to);

@@ -455,7 +455,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (!IsLegal(move, board)) continue;
 
         ss->move = move;
-        ss->ch   = &thread->ch[Moving(move)][To(move)];
+        ss->ch   = &thread->ch[board->squares[From(move)]][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -493,7 +493,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int extension       = 0;
     int tactical        = IsTactical(move);
     int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
-    int history         = !tactical ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
+    int history         = !tactical ? GetQuietHistory(board, ss, thread, move, board->stm, oppThreat.sqs) :
                                       GetTacticalHistory(thread, board, move);
 
     if (bestScore > -MATE_BOUND) {
@@ -562,7 +562,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       extension = 1;
 
     ss->move = move;
-    ss->ch   = &thread->ch[Moving(move)][To(move)];
+    ss->ch   = &thread->ch[board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
     // apply extensions
@@ -590,7 +590,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (board->checkers) R--;
 
       // Ethereal king evasions
-      if (inCheck && PieceType(Moving(move)) == KING) R++;
+      if (inCheck && PieceType(board->squares[To(move)]) == KING) R++;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
@@ -730,7 +730,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     if (moves.phase > PLAY_GOOD_TACTICAL) break;
 
     ss->move = move;
-    ss->ch   = &thread->ch[Moving(move)][To(move)];
+    ss->ch   = &thread->ch[board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
     int score = -Quiesce(-beta, -alpha, thread, ss + 1);

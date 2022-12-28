@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "nn.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +24,6 @@
 #include "board.h"
 #include "move.h"
 #include "movegen.h"
-#include "nn.h"
 #include "util.h"
 
 #define INCBIN_PREFIX
@@ -56,12 +57,10 @@ int OutputLayer(Accumulator stm, Accumulator xstm) {
   int result = OUTPUT_BIAS;
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++)
-      result += max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
+    for (size_t i = 0; i < UNROLL; i++) result += max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++)
-      result += max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
+    for (size_t i = 0; i < UNROLL; i++) result += max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
 
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
@@ -133,21 +132,21 @@ void ResetAccumulator(Accumulator accumulator, Board* board, const int perspecti
   }
 }
 
-void ApplyUpdates(Board* board, Move move, int captured, const int view) {
+void ApplyUpdates(Board* board, int moving, Move move, int captured, const int view) {
   int16_t* output = board->accumulators[view][board->acc];
   int16_t* prev   = board->accumulators[view][board->acc - 1];
 
   const int king = lsb(PieceBB(KING, view));
 
-  int f = FeatureIdx(Moving(move), From(move), king, view);
+  int f = FeatureIdx(moving, From(move), king, view);
   ApplyFeature(output, prev, f, SUB);
 
-  int endPc = !Promo(move) ? Moving(move) : Promo(move);
+  int endPc = !Promo(move) ? moving : Promo(move);
   f         = FeatureIdx(endPc, To(move), king, view);
   ApplyFeature(output, output, f, ADD);
 
   if (IsCap(move)) {
-    int movingSide = Moving(move) & 1;
+    int movingSide = moving & 1;
     int capturedSq = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     f              = FeatureIdx(captured, capturedSq, king, view);
 
@@ -155,7 +154,7 @@ void ApplyUpdates(Board* board, Move move, int captured, const int view) {
   }
 
   if (IsCas(move)) {
-    int movingSide = Moving(move) & 1;
+    int movingSide = moving & 1;
     int rook       = Piece(ROOK, movingSide);
 
     int rookFrom = board->cr[CASTLING_ROOK[To(move)]];

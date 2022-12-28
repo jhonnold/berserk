@@ -24,7 +24,7 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable[2]);
 void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective);
 void ResetAccumulator(Accumulator output, Board* board, const int perspective);
 
-void ApplyUpdates(Board* board, Move move, int captured, const int view);
+void ApplyUpdates(Board* board, int moving, Move move, int captured, const int view);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);

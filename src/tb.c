@@ -49,7 +49,6 @@ Move TBRootProbe(Board* board) {
   unsigned to    = TB_GET_TO(res) ^ 56;
   unsigned ep    = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
-  int piece      = board->squares[from];
   int capture    = board->squares[to] != NO_PIECE;
   int promoPiece = promo ? Piece(KING - promo, board->stm) : 0;
 
@@ -59,7 +58,7 @@ Move TBRootProbe(Board* board) {
   else if (capture)
     flags = CAPTURE;
 
-  return BuildMove(from, to, piece, promoPiece, flags);
+  return BuildMove(from, to, promoPiece, flags);
 }
 
 unsigned TBProbe(Board* board) {
