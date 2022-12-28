@@ -340,7 +340,11 @@ void UCILoop() {
       int mb                  = GetOptionIntValue(in);
       mb                      = max(2, min(131072, mb));
       uint64_t bytesAllocated = TTInit(mb);
-      printf("info string set Hash to value %d (%" PRIu64 " bytes)\n", mb, bytesAllocated);
+      uint64_t totalEntries   = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
+      printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",
+             mb,
+             bytesAllocated,
+             totalEntries);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
       CreatePool(max(1, min(256, n)));

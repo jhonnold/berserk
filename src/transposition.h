@@ -21,17 +21,19 @@
 
 #define NO_ENTRY    0ULL
 #define MEGABYTE    (1024ull * 1024ull)
-#define BUCKET_SIZE 2
+#define BUCKET_SIZE 3
 
 typedef struct {
-  uint32_t hash, move;
-  int16_t eval, score;
+  uint16_t hash;
   int8_t depth;
-  uint8_t flags, age;
+  uint8_t flags; // holds both age (top 4, and flags lower 4)
+  Move move;
+  int16_t eval, score;
 } TTEntry;
 
 typedef struct {
   TTEntry entries[BUCKET_SIZE];
+  uint16_t padding;
 } TTBucket;
 
 typedef struct {

@@ -35,7 +35,7 @@
 
 typedef int Score;
 typedef uint64_t BitBoard;
-typedef uint32_t Move;
+typedef uint16_t Move;
 
 enum { SUB = 0, ADD = 1 };
 
