@@ -25,10 +25,10 @@
 
 #define NULL_MOVE 0
 
-#define NORMAL2 (0 << 12)
-#define CASTLE2 (1 << 12)
-#define EP2     (2 << 12)
-#define PROMO   (3 << 12)
+#define NORMAL (0 << 12)
+#define CASTLE (1 << 12)
+#define EP     (2 << 12)
+#define PROMO  (3 << 12)
 
 #define KNIGHT_PROMO (3 << 12)
 #define BISHOP_PROMO (7 << 12)
@@ -42,15 +42,14 @@ extern const char* SQ_TO_COORD[64];
 extern const int CASTLE_ROOK_DEST[64];
 extern const int CASTLING_ROOK[64];
 
-#define BuildMove(from, to, newFlags, promo, flags) \
-  (from) | ((to) << 6) | (newFlags) | ((promo) << 16) | ((flags) << 20)
-#define From(move)  ((int) (move) &0x3f)
-#define To(move)    (((int) (move) &0xfc0) >> 6)
+#define BuildMove(from, to, flags) (from) | ((to) << 6) | (flags)
+#define From(move)                 ((int) (move) &0x3f)
+#define To(move)                   (((int) (move) &0xfc0) >> 6)
 // just mask the from/to bits into a single int for indexing butterfly tables
 #define FromTo(move) ((int) (move) &0xfff)
 
 INLINE int IsNormal(Move move) {
-  return (move & 0x3000) == NORMAL2;
+  return (move & 0x3000) == NORMAL;
 }
 
 INLINE int IsPromo(Move move) {
@@ -62,11 +61,11 @@ INLINE int PromoPiece(Move move, int color) {
 }
 
 INLINE int IsEP(Move move) {
-  return (move & 0x3000) == EP2;
+  return (move & 0x3000) == EP;
 }
 
 INLINE int IsCas(Move move) {
-  return (move & 0x3000) == CASTLE2;
+  return (move & 0x3000) == CASTLE;
 }
 
 INLINE int IsCapture(Move move, Board* board) {

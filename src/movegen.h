@@ -37,11 +37,6 @@
 #define QUIET 0
 #define NOISY 1
 
-#define NO_PROMO 0
-#define NORMAL   0b0000
-#define EP       0b0101
-#define CASTLE   0b1000
-
 #define WHITE_KS 0x8
 #define WHITE_QS 0x4
 #define BLACK_KS 0x2
@@ -49,8 +44,8 @@
 
 #define CanCastle(dir) (board->castling & (dir))
 
-INLINE void AppendMove(Move* arr, uint8_t* n, int from, int to, int newFlags, int promo, int flags) {
-  arr[(*n)++] = BuildMove(from, to, newFlags, promo, flags);
+INLINE void AppendMove(Move* arr, uint8_t* n, int from, int to, int flags) {
+  arr[(*n)++] = BuildMove(from, to, flags);
 }
 
 INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opts, Board* board, const int stm) {
@@ -65,10 +60,10 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
     int to   = popAndGetLsb(&targets);
     int from = to - PawnDir(stm);
 
-    AppendMove(arr, n, from, to, QUEEN_PROMO, Piece(QUEEN, stm), NORMAL);
-    AppendMove(arr, n, from, to, ROOK_PROMO, Piece(ROOK, stm), NORMAL);
-    AppendMove(arr, n, from, to, BISHOP_PROMO, Piece(BISHOP, stm), NORMAL);
-    AppendMove(arr, n, from, to, KNIGHT_PROMO, Piece(KNIGHT, stm), NORMAL);
+    AppendMove(arr, n, from, to, QUEEN_PROMO);
+    AppendMove(arr, n, from, to, ROOK_PROMO);
+    AppendMove(arr, n, from, to, BISHOP_PROMO);
+    AppendMove(arr, n, from, to, KNIGHT_PROMO);
   }
 
   targets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
@@ -77,10 +72,10 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
-    AppendMove(arr, n, from, to, QUEEN_PROMO, Piece(QUEEN, stm), NORMAL);
-    AppendMove(arr, n, from, to, ROOK_PROMO, Piece(ROOK, stm), NORMAL);
-    AppendMove(arr, n, from, to, BISHOP_PROMO, Piece(BISHOP, stm), NORMAL);
-    AppendMove(arr, n, from, to, KNIGHT_PROMO, Piece(KNIGHT, stm), NORMAL);
+    AppendMove(arr, n, from, to, QUEEN_PROMO);
+    AppendMove(arr, n, from, to, ROOK_PROMO);
+    AppendMove(arr, n, from, to, BISHOP_PROMO);
+    AppendMove(arr, n, from, to, KNIGHT_PROMO);
   }
 
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -89,10 +84,10 @@ INLINE void GeneratePawnPromotions(MoveList* list, BitBoard movers, BitBoard opt
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
-    AppendMove(arr, n, from, to, QUEEN_PROMO, Piece(QUEEN, stm), NORMAL);
-    AppendMove(arr, n, from, to, ROOK_PROMO, Piece(ROOK, stm), NORMAL);
-    AppendMove(arr, n, from, to, BISHOP_PROMO, Piece(BISHOP, stm), NORMAL);
-    AppendMove(arr, n, from, to, KNIGHT_PROMO, Piece(KNIGHT, stm), NORMAL);
+    AppendMove(arr, n, from, to, QUEEN_PROMO);
+    AppendMove(arr, n, from, to, ROOK_PROMO);
+    AppendMove(arr, n, from, to, BISHOP_PROMO);
+    AppendMove(arr, n, from, to, KNIGHT_PROMO);
   }
 }
 
@@ -108,7 +103,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
-    AppendMove(arr, n, from, to, NORMAL2, NO_PROMO, NORMAL);
+    AppendMove(arr, n, from, to, NORMAL);
   }
 
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -117,7 +112,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
-    AppendMove(arr, n, from, to, NORMAL2, NO_PROMO, NORMAL);
+    AppendMove(arr, n, from, to, NORMAL);
   }
 
   if (!board->epSquare) return;
@@ -128,7 +123,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int from = popAndGetLsb(&pawns);
     int to   = board->epSquare;
 
-    AppendMove(arr, n, from, to, EP2, NO_PROMO, EP);
+    AppendMove(arr, n, from, to, EP);
   }
 }
 
@@ -147,14 +142,14 @@ INLINE void GeneratePawnQuiets(MoveList* list, BitBoard movers, BitBoard opts, B
     int to   = popAndGetLsb(&targets);
     int from = to - PawnDir(stm);
 
-    AppendMove(arr, n, from, to, NORMAL, NO_PROMO, NORMAL);
+    AppendMove(arr, n, from, to, NORMAL);
   }
 
   while (dpTargets) {
     int to   = popAndGetLsb(&dpTargets);
     int from = to - PawnDir(stm) - PawnDir(stm);
 
-    AppendMove(arr, n, from, to, NORMAL, NO_PROMO, NORMAL);
+    AppendMove(arr, n, from, to, NORMAL);
   }
 }
 
@@ -178,7 +173,7 @@ INLINE void GeneratePieceMoves(MoveList* list,
     while (targets) {
       int to = popAndGetLsb(&targets);
 
-      AppendMove(arr, n, from, to, NORMAL, NO_PROMO, NORMAL);
+      AppendMove(arr, n, from, to, NORMAL);
     }
   }
 }
@@ -193,13 +188,13 @@ INLINE void GenerateCastles(MoveList* list, Board* board, const int stm) {
     if (CanCastle(WHITE_KS)) {
       BitBoard between = BetweenSquares(from, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
       if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[0])) & between))
-        AppendMove(arr, n, from, G1, CASTLE2, NO_PROMO, CASTLE);
+        AppendMove(arr, n, from, G1, CASTLE);
     }
 
     if (CanCastle(WHITE_QS)) {
       BitBoard between = BetweenSquares(from, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
       if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[1])) & between))
-        AppendMove(arr, n, from, C1, CASTLE2, NO_PROMO, CASTLE);
+        AppendMove(arr, n, from, C1, CASTLE);
     }
   } else {
     int from = lsb(PieceBB(KING, BLACK));
@@ -207,13 +202,13 @@ INLINE void GenerateCastles(MoveList* list, Board* board, const int stm) {
     if (CanCastle(BLACK_KS)) {
       BitBoard between = BetweenSquares(from, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
       if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[2])) & between))
-        AppendMove(arr, n, from, G8, CASTLE2, NO_PROMO, CASTLE);
+        AppendMove(arr, n, from, G8, CASTLE);
     }
 
     if (CanCastle(BLACK_QS)) {
       BitBoard between = BetweenSquares(from, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
       if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[3])) & between))
-        AppendMove(arr, n, from, C8, CASTLE2, NO_PROMO, CASTLE);
+        AppendMove(arr, n, from, C8, CASTLE);
     }
   }
 }

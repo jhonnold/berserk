@@ -27,7 +27,7 @@
 #define vf(bb) __builtin_bswap64((bb))
 
 const int TB_PROMO_MAP[5] = {
-  NORMAL2,
+  NORMAL,
   QUEEN_PROMO,
   ROOK_PROMO,
   BISHOP_PROMO,
@@ -57,11 +57,9 @@ Move TBRootProbe(Board* board) {
   unsigned to    = TB_GET_TO(res) ^ 56;
   unsigned ep    = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
-  int promoPiece = promo ? Piece(KING - promo, board->stm) : 0;
 
-  if (ep) return BuildMove(from, to, EP2, NO_PROMO, EP);
-
-  return BuildMove(from, to, TB_PROMO_MAP[promo], promoPiece, NORMAL);
+  if (ep) return BuildMove(from, to, EP);
+  return BuildMove(from, to, TB_PROMO_MAP[promo]);
 }
 
 unsigned TBProbe(Board* board) {
