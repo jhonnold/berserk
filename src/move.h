@@ -30,8 +30,6 @@
 #define EP     (2 << 12)
 #define PROMO  (3 << 12)
 
-#define NORMAL_CAPTURE (4 << 12)
-
 #define KNIGHT_PROMO (3 << 12)
 #define BISHOP_PROMO (7 << 12)
 #define ROOK_PROMO   (11 << 12)
@@ -54,10 +52,6 @@ INLINE int IsNormal(Move move) {
   return (move & 0x3000) == NORMAL;
 }
 
-INLINE int IsNormalCapture(Move move) {
-  return (move & 0xF000) == NORMAL_CAPTURE;
-}
-
 INLINE int IsPromo(Move move) {
   return (move & 0x3000) == PROMO;
 }
@@ -75,7 +69,7 @@ INLINE int IsCas(Move move) {
 }
 
 INLINE int IsCapture(Move move, Board* board) {
-  return IsNormalCapture(move) || IsEP(move) || (board->squares[To(move)] != NO_PIECE && !IsCas(move));
+  return (!IsCas(move) && board->squares[To(move)] != NO_PIECE) || IsEP(move);
 }
 
 INLINE int IsTactical(Move move, Board* board) {

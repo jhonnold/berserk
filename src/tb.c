@@ -59,9 +59,7 @@ Move TBRootProbe(Board* board) {
   unsigned promo = TB_GET_PROMOTES(res);
 
   if (ep) return BuildMove(from, to, EP);
-  if (promo) return BuildMove(from, to, TB_PROMO_MAP[promo]);
-
-  return BuildMove(from, to, board->squares[to] != NO_PIECE ? NORMAL_CAPTURE : NORMAL);
+  return BuildMove(from, to, TB_PROMO_MAP[promo]);
 }
 
 unsigned TBProbe(Board* board) {
