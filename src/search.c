@@ -495,7 +495,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     legalMoves++;
 
     int extension       = 0;
-    int tactical        = IsTactical(move);
+    int tactical        = IsTactical(move, board);
     int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
     int history         = !tactical ? GetQuietHistory(board, ss, thread, move, board->stm, oppThreat.sqs) :
                                       GetTacticalHistory(thread, board, move);

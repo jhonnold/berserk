@@ -60,7 +60,7 @@ void UpdateHistories(Board* board,
                      BitBoard threats) {
   int inc = min(7584, 16 * depth * depth + 480 * depth - 480);
 
-  if (!IsTactical(bestMove)) {
+  if (!IsTactical(bestMove, board)) {
     AddKillerMove(ss, bestMove);
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
     UpdateCH(board, ss, bestMove, inc);
@@ -76,7 +76,7 @@ void UpdateHistories(Board* board,
   }
 
   // Update quiets
-  if (!IsTactical(bestMove)) {
+  if (!IsTactical(bestMove, board)) {
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
       if (m == bestMove) continue;
@@ -100,7 +100,7 @@ void UpdateHistories(Board* board,
 }
 
 int GetQuietHistory(Board* board, SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats) {
-  if (IsTactical(move)) return 0;
+  if (IsTactical(move, board)) return 0;
 
   int history = HH(stm, move, threats);
   history += (*(ss - 1)->ch)[board->squares[From(move)]][To(move)];
