@@ -661,6 +661,9 @@ int IsPseudoLegal(Move move, Board* board) {
     return !!getBit(goal & opts & valid, to);
   }
 
+  // the following condition can assume not promotion from above
+  if (!IsNormalCapture(move) && board->squares[to] != NO_PIECE) return 0;
+  if (IsNormalCapture(move) && board->squares[to] == NO_PIECE) return 0;
   if (IsEP(move) && to != board->epSquare) return 0;
   if (getBit(OccBB(board->stm), to)) return 0;
 

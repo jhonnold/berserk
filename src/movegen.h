@@ -103,7 +103,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + E);
 
-    AppendMove(arr, n, from, to, NORMAL);
+    AppendMove(arr, n, from, to, NORMAL_CAPTURE);
   }
 
   targets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -112,7 +112,7 @@ INLINE void GeneratePawnCaptures(MoveList* list, BitBoard movers, BitBoard opts,
     int to   = popAndGetLsb(&targets);
     int from = to - (PawnDir(stm) + W);
 
-    AppendMove(arr, n, from, to, NORMAL);
+    AppendMove(arr, n, from, to, NORMAL_CAPTURE);
   }
 
   if (!board->epSquare) return;
@@ -173,7 +173,7 @@ INLINE void GeneratePieceMoves(MoveList* list,
     while (targets) {
       int to = popAndGetLsb(&targets);
 
-      AppendMove(arr, n, from, to, NORMAL);
+      AppendMove(arr, n, from, to, type == QUIET ? NORMAL : NORMAL_CAPTURE);
     }
   }
 }
