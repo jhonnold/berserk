@@ -336,6 +336,29 @@ void UCILoop() {
         PrintBoard(&board);
       } else
         printf("info string Invalid move!\n");
+    } else if (!strncmp(in, "legal ", 6)) {
+      char* moveStr = in + 6;
+      int from      = Sq(7 - (moveStr[1] - '1'), moveStr[0] - 'a');
+      int to        = Sq(7 - (moveStr[3] - '1'), moveStr[2] - 'a');
+      int flags     = NORMAL;
+      if (PieceType(board.squares[from]) == PAWN && to == board.epSquare) 
+        flags = EP;
+      // TODO: Castles
+      else if (moveStr[4]) {
+        switch (moveStr[4]) {
+          case 'q': flags = QUEEN_PROMO; break;
+          case 'r': flags = ROOK_PROMO; break;
+          case 'b': flags = BISHOP_PROMO; break;
+          case 'n': flags = KNIGHT_PROMO; break;
+        }
+      }
+
+      Move move = BuildMove(from, to, flags);
+
+      int pseudoLegal = IsPseudoLegal(move, &board);
+      int legal = IsLegal(move, &board);
+
+      printf("Move %s - PseudoLegal %d, Legal %d\n", MoveToStr(move, &board), pseudoLegal, legal);
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb                  = GetOptionIntValue(in);
       mb                      = max(2, min(131072, mb));

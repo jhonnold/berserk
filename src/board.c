@@ -662,7 +662,6 @@ int IsPseudoLegal(Move move, Board* board) {
     return !!getBit(goal & opts & valid, to);
   }
 
-  if (IsEP(move) && to != board->epSquare) return 0;
   if (getBit(OccBB(board->stm), to)) return 0;
 
   if (pcType == PAWN) {
@@ -677,6 +676,9 @@ int IsPseudoLegal(Move move, Board* board) {
                && (Rank(from ^ (56 * board->stm)) == 6)                              //
                ))
         return 0;
+    } else {
+      if (to != board->epSquare) return 0;
+      if (PieceType(board->squares[from]) != PAWN) return 0;
     }
   } else if (!getBit(GetPieceAttacks(from, OccBB(BOTH), pcType), to)) {
     return 0;
