@@ -650,6 +650,7 @@ int IsPseudoLegal(Move move, Board* board) {
   }
 
   if (IsPromo(move)) {
+    if (PieceType(board->squares[from]) != PAWN) return 0;
     if (bits(board->checkers) > 1) return 0;
 
     int king       = lsb(PieceBB(KING, board->stm));
