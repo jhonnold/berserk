@@ -19,9 +19,9 @@
 
 #include "types.h"
 
-void InitAllMoves(MoveList* moves, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats);
-void InitTacticalMoves(MoveList* moves, ThreadData* thread, int cutoff);
-void InitPerftMoves(MoveList* moves, Board* board);
-Move NextMove(MoveList* moves, Board* board, int skipQuiets);
+void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats);
+void InitTacticalMoves(MovePicker* picker, ThreadData* thread, int cutoff);
+void InitPerftMoves(MovePicker* picker, Board* board);
+Move NextMove(MovePicker* picker, Board* board, int skipQuiets);
 
 #endif

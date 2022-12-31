@@ -48,11 +48,11 @@ volatile int PONDERING = 0;
 void RootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
 
-  MoveList m;
-  InitPerftMoves(&m, board);
+  MovePicker mp;
+  InitPerftMoves(&mp, board);
 
   Move mv;
-  while ((mv = NextMove(&m, board, 0))) moves->moves[moves->count++] = mv;
+  while ((mv = NextMove(&mp, board, 0))) moves->moves[moves->count++] = mv;
 }
 
 // uci "go" command

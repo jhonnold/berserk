@@ -185,19 +185,20 @@ enum {
 };
 
 typedef struct {
+  int score;
+  Move move;
+} ScoredMove;
+
+typedef struct {
   ThreadData* thread;
   SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
-  int seeCutoff;
-  uint8_t type, phase, nTactical, nQuiets, nBadTactical;
-
   BitBoard threats;
+  int seeCutoff, phase;
 
-  Move tactical[MAX_MOVES];
-  Move quiet[MAX_MOVES];
-  int sTactical[MAX_MOVES];
-  int sQuiet[MAX_MOVES];
-} MoveList;
+  ScoredMove *current, *end, *endBad;
+  ScoredMove moves[MAX_MOVES];
+} MovePicker;
 
 enum { WHITE, BLACK, BOTH };
 

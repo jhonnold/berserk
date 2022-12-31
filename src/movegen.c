@@ -16,17 +16,10 @@
 
 #include "movegen.h"
 
-#include <stdio.h>
-
-void GenerateTacticalMoves(MoveList* list, Board* board) {
-  GenerateMoves(list, board, !QUIET, 0);
+ScoredMove* AddTacticalMoves(ScoredMove* moves, Board* board) {
+  return AddPseudoLegalMoves(moves, board, !QUIET);
 }
 
-void GenerateQuietMoves(MoveList* list, Board* board) {
-  GenerateMoves(list, board, QUIET, 0);
-}
-
-void GenerateAllMoves(MoveList* list, Board* board) {
-  GenerateMoves(list, board, !QUIET, 1);
-  GenerateMoves(list, board, QUIET, 1);
+ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
+  return AddPseudoLegalMoves(moves, board, QUIET);
 }
