@@ -66,7 +66,7 @@ void InitPerftMoves(MovePicker* picker, Board* board) {
   picker->end = AddLegalMoves(picker->end, board, QUIET);
 }
 
-inline Move Best(ScoredMove* current, ScoredMove* end) {
+Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* orig = current;
   ScoredMove* max  = current;
 
@@ -80,7 +80,7 @@ inline Move Best(ScoredMove* current, ScoredMove* end) {
   return orig->move;
 }
 
-inline void ScoreMoves(MovePicker* picker, Board* board, const int type) {
+void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   ScoredMove* current = picker->current;
   while (current < picker->end) {
     Move move = current->move;
@@ -111,14 +111,12 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       // fallthrough
     case PLAY_GOOD_TACTICAL:
       if (picker->current != picker->end) {
-        Move move = Best(picker->current, picker->end);
-        picker->current++;
+        Move move = Best(picker->current++, picker->end);
 
         if (move == picker->hashMove) {
           return NextMove(picker, board, skipQuiets);
         } else if (!SEE(board, move, picker->seeCutoff)) {
           *picker->endBad++ = *(picker->current - 1);
-          picker->endBad++;
           return NextMove(picker, board, skipQuiets);
         } else {
           return move;
@@ -159,8 +157,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       // fallthrough
     case PLAY_QUIETS:
       if (picker->current != picker->end && !skipQuiets) {
-        Move move = Best(picker->current, picker->end);
-        picker->current++;
+        Move move = Best(picker->current++, picker->end);
 
         if (move == picker->hashMove || //
             move == picker->killer1 ||  //
@@ -180,20 +177,17 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       if (picker->current != picker->end) {
         Move move = (picker->current++)->move;
 
-        if (move == picker->hashMove)
-          return NextMove(picker, board, skipQuiets);
-        else
-          return move;
+        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
       }
 
-      picker->phase = NO_MORE_MOVES;
+      picker->phase = -1;
       return NULL_MOVE;
     case PERFT_MOVES:
       if (picker->current != picker->end) return (picker->current++)->move;
 
-      picker->phase = NO_MORE_MOVES;
+      picker->phase = -1;
       return NULL_MOVE;
-    case NO_MORE_MOVES: return NULL_MOVE;
+    default: return NULL_MOVE;
   }
 
   return NULL_MOVE;

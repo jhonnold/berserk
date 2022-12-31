@@ -48,10 +48,6 @@
 
 #define CanCastle(dir) (board->castling & (dir))
 
-INLINE void AppendMove(Move* arr, uint8_t* n, int from, int to, int moving, int promo, int flags) {
-  arr[(*n)++] = BuildMove(from, to, moving, promo, flags);
-}
-
 INLINE ScoredMove* AddMove(ScoredMove* moves, int from, int to, int moving, int promo, int flags) {
   *moves++ = (ScoredMove) {.move = BuildMove(from, to, moving, promo, flags), .score = 0};
   return moves;
@@ -194,22 +190,24 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
 }
 
 INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type) {
-  if (bits(board->checkers) > 1) return AddPieceMoves(moves, ALL, board, board->stm, type, KING);
+  const int color = board->stm == WHITE ? WHITE : BLACK;
+
+  if (bits(board->checkers) > 1) return AddPieceMoves(moves, ALL, board, color, type, KING);
 
   BitBoard pieceOpts = !board->checkers ? ALL :
-                       type == QUIET    ? BetweenSquares(lsb(PieceBB(KING, board->stm)), lsb(board->checkers)) :
+                       type == QUIET    ? BetweenSquares(lsb(PieceBB(KING, color)), lsb(board->checkers)) :
                                           board->checkers;
   BitBoard pawnOpts  = !board->checkers ? ALL :
-                                          BetweenSquares(lsb(PieceBB(KING, board->stm)), lsb(board->checkers)) |
+                                          BetweenSquares(lsb(PieceBB(KING, color)), lsb(board->checkers)) |
                                            ((type != QUIET) * board->checkers);
 
-  moves = AddPawnMoves(moves, pawnOpts, board, board->stm, type);
-  moves = AddPieceMoves(moves, pieceOpts, board, board->stm, type, KNIGHT);
-  moves = AddPieceMoves(moves, pieceOpts, board, board->stm, type, BISHOP);
-  moves = AddPieceMoves(moves, pieceOpts, board, board->stm, type, ROOK);
-  moves = AddPieceMoves(moves, pieceOpts, board, board->stm, type, QUEEN);
-  moves = AddPieceMoves(moves, ALL, board, board->stm, type, KING);
-  if (type == QUIET && !board->checkers) moves = AddCastles(moves, board, board->stm);
+  moves = AddPawnMoves(moves, pawnOpts, board, color, type);
+  moves = AddPieceMoves(moves, pieceOpts, board, color, type, KNIGHT);
+  moves = AddPieceMoves(moves, pieceOpts, board, color, type, BISHOP);
+  moves = AddPieceMoves(moves, pieceOpts, board, color, type, ROOK);
+  moves = AddPieceMoves(moves, pieceOpts, board, color, type, QUEEN);
+  moves = AddPieceMoves(moves, ALL, board, color, type, KING);
+  if (type == QUIET && !board->checkers) moves = AddCastles(moves, board, color);
 
   return moves;
 }
