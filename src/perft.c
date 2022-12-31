@@ -28,13 +28,13 @@ uint64_t Perft(int depth, Board* board) {
   if (depth == 0) return 1;
 
   Move move;
-  MoveList moves;
-  InitPerftMoves(&moves, board);
+  MovePicker mp;
+  InitPerftMoves(&mp, board);
 
-  if (depth == 1) return moves.nTactical + moves.nQuiets;
+  if (depth == 1) return mp.end - mp.moves;
 
   uint64_t nodes = 0;
-  while ((move = NextMove(&moves, board, 0))) {
+  while ((move = NextMove(&mp, board, 0))) {
     MakeMoveUpdate(move, board, 0);
     nodes += Perft(depth - 1, board);
     UndoMove(move, board);
@@ -51,10 +51,10 @@ void PerftTest(int depth, Board* board) {
   long startTime = GetTimeMS();
 
   Move move;
-  MoveList moves;
-  InitPerftMoves(&moves, board);
+  MovePicker mp;
+  InitPerftMoves(&mp, board);
 
-  while ((move = NextMove(&moves, board, 0))) {
+  while ((move = NextMove(&mp, board, 0))) {
     MakeMoveUpdate(move, board, 0);
     uint64_t nodes = Perft(depth - 1, board);
     UndoMove(move, board);

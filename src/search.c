@@ -282,7 +282,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move bestMove = NULL_MOVE, hashMove = NULL_MOVE;
 
   Move move;
-  MoveList moves;
+  MovePicker mp;
 
   // drop into tactical moves only
   if (depth <= 0) {
@@ -449,8 +449,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int probBeta = beta + 110 - 30 * improving;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && tt->depth >= depth - 3 && ttScore < probBeta)) {
-      InitTacticalMoves(&moves, thread, 0);
-      while ((move = NextMove(&moves, board, 1))) {
+      InitTacticalMoves(&mp, thread, 0);
+      while ((move = NextMove(&mp, board, 1))) {
         if (ss->skip == move) continue;
         if (!IsLegal(move, board)) continue;
 
@@ -475,9 +475,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move tacticals[64];
 
   int legalMoves = 0, playedMoves = 0, numQuiets = 0, numTacticals = 0, skipQuiets = 0, singularExtension = 0;
-  InitAllMoves(&moves, hashMove, thread, ss, oppThreat.sqs);
+  InitAllMoves(&mp, hashMove, thread, ss, oppThreat.sqs);
 
-  while ((move = NextMove(&moves, board, skipQuiets))) {
+  while ((move = NextMove(&mp, board, skipQuiets))) {
     uint64_t startingNodeCount = thread->nodes;
 
     if (isRoot && MoveSearchedByMultiPV(thread, move)) continue;
@@ -492,7 +492,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     int extension       = 0;
     int tactical        = IsTactical(move);
-    int killerOrCounter = move == moves.killer1 || move == moves.killer2 || move == moves.counter;
+    int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
     int history         = !tactical ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
                                       GetTacticalHistory(thread, board, move);
 
@@ -504,7 +504,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         if (!SEE(board, move, STATIC_PRUNE[0][depth])) continue;
       } else {
-        if (moves.phase > PLAY_GOOD_TACTICAL && !SEE(board, move, STATIC_PRUNE[1][depth])) continue;
+        if (mp.phase > PLAY_GOOD_TACTICAL && !SEE(board, move, STATIC_PRUNE[1][depth])) continue;
       }
     }
 
@@ -720,14 +720,14 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   }
 
   Move move;
-  MoveList moves;
+  MovePicker mp;
 
-  InitTacticalMoves(&moves, thread, eval <= alpha - DELTA_CUTOFF);
+  InitTacticalMoves(&mp, thread, eval <= alpha - DELTA_CUTOFF);
 
-  while ((move = NextMove(&moves, board, 1))) {
+  while ((move = NextMove(&mp, board, 1))) {
     if (!IsLegal(move, board)) continue;
 
-    if (moves.phase > PLAY_GOOD_TACTICAL) break;
+    if (mp.phase > PLAY_GOOD_TACTICAL) break;
 
     ss->move = move;
     ss->ch   = &thread->ch[Moving(move)][To(move)];
