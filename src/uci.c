@@ -271,6 +271,15 @@ void UCILoop() {
       PONDERING = 0;
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
+    } else if (!strncmp(in, "perft", 5)) { 
+      strtok(in, " ");
+      char* d = strtok(NULL, " ") ?: "5";
+      char* fen = strtok(NULL, "\0") ?: START_FEN;
+
+      int depth = atoi(d);
+      ParseFen(fen, &board);
+
+      PerftTest(depth, &board);
     } else if (!strncmp(in, "threats", 7)) {
       Threat threats[1];
       Threats(threats, &board, board.stm);

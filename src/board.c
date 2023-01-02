@@ -616,31 +616,35 @@ int IsPseudoLegal(Move move, Board* board) {
   if (!move || (piece & 1) != board->stm || piece != board->squares[from]) return 0;
 
   if (IsCas(move)) {
-    if (board->checkers) return 0;
+    if (board->checkers || !board->castling) return 0;
 
     int kingsq = lsb(PieceBB(KING, board->stm));
 
     switch (to) {
       case G1: {
         if (!CanCastle(WHITE_KS)) return 0;
+        if (getBit(board->pinned, board->cr[0])) return 0;
         BitBoard between = BetweenSquares(kingsq, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
         if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[0])) & between) return 0;
         break;
       }
       case C1: {
         if (!CanCastle(WHITE_QS)) return 0;
+        if (getBit(board->pinned, board->cr[1])) return 0;
         BitBoard between = BetweenSquares(kingsq, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
         if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[1])) & between) return 0;
         break;
       }
       case G8: {
         if (!CanCastle(BLACK_KS)) return 0;
+        if (getBit(board->pinned, board->cr[2])) return 0;
         BitBoard between = BetweenSquares(kingsq, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
         if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ bit(board->cr[2])) & between) return 0;
         break;
       }
       case C8: {
         if (!CanCastle(BLACK_QS)) return 0;
+        if (getBit(board->pinned, board->cr[3])) return 0;
         BitBoard between = BetweenSquares(kingsq, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
         if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ bit(board->cr[3])) & between) return 0;
         break;

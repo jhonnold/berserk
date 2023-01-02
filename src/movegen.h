@@ -28,6 +28,8 @@
 #include "types.h"
 #include "util.h"
 
+extern const int CASTLE_MAP[4][3];
+
 #define PawnDir(c)   ((c) == WHITE ? N : S)
 #define PromoRank(c) ((c) == WHITE ? RANK_7 : RANK_2)
 #define DPRank(c)    ((c) == WHITE ? RANK_3 : RANK_6)
@@ -156,34 +158,23 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
 }
 
 INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
-  if (stm == WHITE) {
-    int from = lsb(PieceBB(KING, WHITE));
+  if (!board->castling) return moves;
 
-    if (CanCastle(WHITE_KS)) {
-      BitBoard between = BetweenSquares(from, G1) | BetweenSquares(board->cr[0], F1) | bit(G1) | bit(F1);
-      if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[0])) & between))
-        moves = AddMove(moves, from, G1, Piece(KING, stm), NO_PROMO, CASTLE);
-    }
+  const int rookStart = stm == WHITE ? 0 : 2;
+  const int rookEnd   = stm == WHITE ? 2 : 4;
+  const int from      = lsb(PieceBB(KING, stm));
 
-    if (CanCastle(WHITE_QS)) {
-      BitBoard between = BetweenSquares(from, C1) | BetweenSquares(board->cr[1], D1) | bit(C1) | bit(D1);
-      if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[1])) & between))
-        moves = AddMove(moves, from, C1, Piece(KING, stm), NO_PROMO, CASTLE);
-    }
-  } else {
-    int from = lsb(PieceBB(KING, BLACK));
+  for (int rk = rookStart; rk < rookEnd; rk++) {
+    if (!CanCastle(CASTLE_MAP[rk][0])) continue;
 
-    if (CanCastle(BLACK_KS)) {
-      BitBoard between = BetweenSquares(from, G8) | BetweenSquares(board->cr[2], F8) | bit(G8) | bit(F8);
-      if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[2])) & between))
-        moves = AddMove(moves, from, G8, Piece(KING, stm), NO_PROMO, CASTLE);
-    }
+    int rookFrom = board->cr[rk];
+    if (getBit(board->pinned, rookFrom)) continue;
 
-    if (CanCastle(BLACK_QS)) {
-      BitBoard between = BetweenSquares(from, C8) | BetweenSquares(board->cr[3], D8) | bit(C8) | bit(D8);
-      if (!((OccBB(BOTH) ^ PieceBB(KING, stm) ^ bit(board->cr[3])) & between))
-        moves = AddMove(moves, from, C8, Piece(KING, stm), NO_PROMO, CASTLE);
-    }
+    int to = CASTLE_MAP[rk][1], rookTo = CASTLE_MAP[rk][2];
+
+    BitBoard between = BetweenSquares(from, to) | BetweenSquares(rookFrom, rookTo) | bit(to) | bit(rookTo);
+    if (!((OccBB(BOTH) ^ bit(from) ^ bit(rookFrom)) & between))
+      moves = AddMove(moves, from, to, Piece(KING, stm), NO_PROMO, CASTLE);
   }
 
   return moves;
