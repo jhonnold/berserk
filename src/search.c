@@ -140,8 +140,12 @@ void* Search(void* arg) {
 
   SetContempt(thread->contempt, board->stm);
 
-  // set a hot exit point for this thread
+// set a hot exit point for this thread
+#if defined(_WIN32) || defined(_WIN64)
+  if (!_setjmp(thread->exit, NULL)) {
+#else
   if (!setjmp(thread->exit)) {
+#endif
     int searchStability = 0;
 
     // Iterative deepening
