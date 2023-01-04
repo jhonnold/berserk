@@ -64,9 +64,8 @@ void CreatePool(int count) {
 }
 
 // initialize a pool prepping to start a search
-void InitPool(Board* board, SearchParams* params) {
+void InitPool(Board* board) {
   for (int i = 0; i < threads->count; i++) {
-    threads[i].params   = params;
     threads[i].nodes    = 0;
     threads[i].tbhits   = 0;
     threads[i].seldepth = 1;

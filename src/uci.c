@@ -45,6 +45,8 @@ int CHESS_960          = 0;
 int CONTEMPT           = 12;
 volatile int PONDERING = 0;
 
+SearchParams limits;
+
 void RootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
 
@@ -56,17 +58,17 @@ void RootMoves(SimpleMoveList* moves, Board* board) {
 }
 
 // uci "go" command
-void ParseGo(char* in, SearchParams* params, Board* board) {
+void ParseGo(char* in, Board* board) {
   in += 3;
 
-  params->depth            = MAX_SEARCH_PLY;
-  params->start            = GetTimeMS();
-  params->timeset          = 0;
-  params->stopped          = 0;
-  params->quit             = 0;
-  params->multiPV          = MULTI_PV;
-  params->searchMoves      = 0;
-  params->searchable.count = 0;
+  limits.depth            = MAX_SEARCH_PLY;
+  limits.start            = GetTimeMS();
+  limits.timeset          = 0;
+  limits.stopped          = 0;
+  limits.quit             = 0;
+  limits.multiPV          = MULTI_PV;
+  limits.searchMoves      = 0;
+  limits.searchable.count = 0;
 
   PONDERING = 0;
 
@@ -104,12 +106,12 @@ void ParseGo(char* in, SearchParams* params, Board* board) {
   }
 
   if ((ptrChar = strstr(in, "searchmoves"))) {
-    params->searchMoves = 1;
+    limits.searchMoves = 1;
 
     for (char* moves = strtok(ptrChar + 12, " "); moves != NULL; moves = strtok(NULL, " "))
       for (int i = 0; i < rootMoves.count; i++)
         if (!strcmp(MoveToStr(rootMoves.moves[i], board), moves))
-          params->searchable.moves[params->searchable.count++] = rootMoves.moves[i];
+          limits.searchable.moves[limits.searchable.count++] = rootMoves.moves[i];
   }
 
   if (perft) {
@@ -117,63 +119,58 @@ void ParseGo(char* in, SearchParams* params, Board* board) {
     return;
   }
 
-  params->depth = depth;
-  params->nodes = nodes;
+  limits.depth = depth;
+  limits.nodes = nodes;
 
-  if (params->nodes)
-    params->hitrate = min(1000, max(1, params->nodes / 100));
+  if (limits.nodes)
+    limits.hitrate = min(1000, max(1, limits.nodes / 100));
   else
-    params->hitrate = 1000;
+    limits.hitrate = 1000;
 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
-    params->timeset = 1;
-    params->alloc   = moveTime;
-    params->max     = moveTime;
+    limits.timeset = 1;
+    limits.alloc   = moveTime;
+    limits.max     = moveTime;
   } else {
     if (time != -1) {
-      params->timeset = 1;
+      limits.timeset = 1;
 
       if (movesToGo == -1) {
         int total = max(1, time + 50 * inc - MOVE_OVERHEAD);
 
-        params->alloc = min(time * 0.33, total / 20.0);
+        limits.alloc = min(time * 0.33, total / 20.0);
       } else {
         int total = max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
-        params->alloc = min(time * 0.9, (0.9 * total) / max(1, movesToGo / 2.5));
+        limits.alloc = min(time * 0.9, (0.9 * total) / max(1, movesToGo / 2.5));
       }
 
-      params->max = min(time * 0.75, params->alloc * 5.5);
+      limits.max = min(time * 0.75, limits.alloc * 5.5);
     } else {
       // no time control
-      params->timeset = 0;
-      params->max     = INT_MAX;
+      limits.timeset = 0;
+      limits.max     = INT_MAX;
     }
   }
 
-  params->multiPV = min(params->multiPV, params->searchMoves ? params->searchable.count : rootMoves.count);
-  if (rootMoves.count == 1 && params->timeset) params->max = min(250, params->max);
+  limits.multiPV = min(limits.multiPV, limits.searchMoves ? limits.searchable.count : rootMoves.count);
+  if (rootMoves.count == 1 && limits.timeset) limits.max = min(250, limits.max);
 
-  if (depth <= 0) params->depth = MAX_SEARCH_PLY - 1;
+  if (depth <= 0) limits.depth = MAX_SEARCH_PLY - 1;
 
   printf("info string time %d start %ld alloc %d max %d depth %d timeset %d searchmoves %d\n",
          time,
-         params->start,
-         params->alloc,
-         params->max,
-         params->depth,
-         params->timeset,
-         params->searchable.count);
-
-  // this MUST be freed from within the search, or else massive leak
-  SearchArgs* args = malloc(sizeof(SearchArgs));
-  args->board      = board;
-  args->params     = params;
+         limits.start,
+         limits.alloc,
+         limits.max,
+         limits.depth,
+         limits.timeset,
+         limits.searchable.count);
 
   // start the search!
   pthread_t searchThread;
-  pthread_create(&searchThread, NULL, &UCISearch, args);
+  pthread_create(&searchThread, NULL, &BestMove, board);
   pthread_detach(searchThread);
 }
 
@@ -240,8 +237,6 @@ void UCILoop() {
   Board board;
   ParseFen(START_FEN, &board);
 
-  SearchParams searchParameters = {.quit = 0};
-
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
@@ -257,13 +252,13 @@ void UCILoop() {
       TTClear();
       ResetThreadPool();
     } else if (!strncmp(in, "go", 2)) {
-      ParseGo(in, &searchParameters, &board);
+      ParseGo(in, &board);
     } else if (!strncmp(in, "stop", 4)) {
-      PONDERING                = 0;
-      searchParameters.stopped = 1;
+      PONDERING      = 0;
+      limits.stopped = 1;
     } else if (!strncmp(in, "quit", 4)) {
-      PONDERING             = 0;
-      searchParameters.quit = 1;
+      PONDERING   = 0;
+      limits.quit = limits.stopped = 1;
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
@@ -271,9 +266,9 @@ void UCILoop() {
       PONDERING = 0;
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
-    } else if (!strncmp(in, "perft", 5)) { 
+    } else if (!strncmp(in, "perft", 5)) {
       strtok(in, " ");
-      char* d = strtok(NULL, " ") ?: "5";
+      char* d   = strtok(NULL, " ") ?: "5";
       char* fen = strtok(NULL, "\0") ?: START_FEN;
 
       int depth = atoi(d);

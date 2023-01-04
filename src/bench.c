@@ -28,6 +28,7 @@
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
+#include "uci.h"
 
 // Ethereal's bench set
 const int NUM_BENCH_POSITIONS = 50;
@@ -37,7 +38,12 @@ char* benchmarks[]            = {
 
 void Bench(int depth) {
   Board board;
-  SearchParams params = {.depth = depth, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
+
+  limits.depth = depth;
+  limits.multiPV = 1;
+  limits.hitrate = 1000;
+  limits.max = INT_MAX;
+  limits.timeset = 0;
 
   Move bestMoves[NUM_BENCH_POSITIONS];
   int scores[NUM_BENCH_POSITIONS];
@@ -50,11 +56,11 @@ void Bench(int depth) {
 
     TTClear();
     ResetThreadPool();
-    InitPool(&board, &params);
+    InitPool(&board);
 
-    params.start = GetTimeMS();
-    BestMove(&board, &params);
-    times[i] = GetTimeMS() - params.start;
+    limits.start = GetTimeMS();
+    BestMove(&board);
+    times[i] = GetTimeMS() - limits.start;
 
     SearchResults* results = &threads->results;
     bestMoves[i]           = results->bestMoves[results->depth];

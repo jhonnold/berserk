@@ -143,7 +143,6 @@ struct ThreadData {
 
   jmp_buf exit;
 
-  SearchParams* params;
   SearchResults results;
   Board board;
 
@@ -163,7 +162,6 @@ struct ThreadData {
 
 typedef struct {
   Board* board;
-  SearchParams* params;
 } SearchArgs;
 
 // Move generation storage

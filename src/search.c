@@ -38,6 +38,7 @@
 #include "thread.h"
 #include "transposition.h"
 #include "types.h"
+#include "uci.h"
 #include "util.h"
 
 // arrays to store these pruning cutoffs at specific depths
@@ -63,29 +64,19 @@ void InitPruningAndReductionTables() {
   }
 }
 
-INLINE int StopSearch(SearchParams* params, ThreadData* thread) {
-  if (thread->nodes % params->hitrate != 0) return 0;
+INLINE int StopSearch(ThreadData* thread) {
+  if (thread->nodes % limits.hitrate != 0) return 0;
 
-  int unlimitedSearch = !params->timeset && !params->nodes;
+  int unlimitedSearch = !limits.timeset && !limits.nodes;
   if (unlimitedSearch || PONDERING) return 0;
 
-  long elapsed = GetTimeMS() - params->start;
-  return elapsed >= params->max || (params->nodes && thread->nodes >= params->nodes);
+  long elapsed = GetTimeMS() - limits.start;
+  return elapsed >= limits.max || (limits.nodes && thread->nodes >= limits.nodes);
 }
 
-void* UCISearch(void* arg) {
-  SearchArgs* args = (SearchArgs*) arg;
+void* BestMove(void* arg) {
+  Board* board = (Board*) arg;
 
-  Board* board         = args->board;
-  SearchParams* params = args->params;
-
-  BestMove(board, params);
-
-  free(args);
-  return NULL;
-}
-
-void BestMove(Board* board, SearchParams* params) {
   Move bestMove;
   if ((bestMove = TBRootProbe(board))) {
     while (PONDERING)
@@ -93,9 +84,9 @@ void BestMove(Board* board, SearchParams* params) {
 
     printf("bestmove %s\n", MoveToStr(bestMove, board));
   } else {
-    InitPool(board, params);
+    InitPool(board);
 
-    params->stopped = 0;
+    limits.stopped = 0;
     TTUpdate();
 
     // start at 1, we will resuse main-thread
@@ -103,7 +94,7 @@ void BestMove(Board* board, SearchParams* params) {
     Search(&threads[0]);
 
     // if main thread stopped, then stop all and wait till complete
-    params->stopped = 1;
+    limits.stopped = 1;
     for (int i = 1; i < threads->count; i++) pthread_join(pthreads[i], NULL);
 
     while (PONDERING)
@@ -116,11 +107,12 @@ void BestMove(Board* board, SearchParams* params) {
 
     printf("\n");
   }
+
+  return NULL;
 }
 
 void* Search(void* arg) {
   ThreadData* thread     = (ThreadData*) arg;
-  SearchParams* params   = thread->params;
   SearchResults* results = &thread->results;
   Board* board           = &thread->board;
 
@@ -149,8 +141,8 @@ void* Search(void* arg) {
     int searchStability = 0;
 
     // Iterative deepening
-    for (int depth = 1; depth <= params->depth; depth++) {
-      for (thread->multiPV = 0; thread->multiPV < params->multiPV; thread->multiPV++) {
+    for (int depth = 1; depth <= limits.depth; depth++) {
+      for (thread->multiPV = 0; thread->multiPV < limits.multiPV; thread->multiPV++) {
         PV* pv = &thread->pvs[thread->multiPV];
 
         // delta is our window for search. early depths get full searches
@@ -170,12 +162,12 @@ void* Search(void* arg) {
           delta = WINDOW;
         }
 
-        while (!params->stopped) {
+        while (!limits.stopped) {
           // search!
           score = Negamax(alpha, beta, searchDepth, 0, thread, pv, ss);
 
-          if (mainThread && (score <= alpha || score >= beta) && params->multiPV == 1 &&
-              GetTimeMS() - params->start >= 2500)
+          if (mainThread && (score <= alpha || score >= beta) && limits.multiPV == 1 &&
+              GetTimeMS() - limits.start >= 2500)
             PrintInfo(pv, score, thread, alpha, beta, 1, board);
 
           if (score <= alpha) {
@@ -201,10 +193,10 @@ void* Search(void* arg) {
       }
 
       // sort multi pv
-      for (int i = 0; i < params->multiPV; i++) {
+      for (int i = 0; i < limits.multiPV; i++) {
         int best = i;
 
-        for (int j = i + 1; j < params->multiPV; j++)
+        for (int j = i + 1; j < limits.multiPV; j++)
           if (thread->scores[j] > thread->scores[best]) best = j;
 
         if (best != i) {
@@ -225,16 +217,16 @@ void* Search(void* arg) {
         results->bestMoves[depth]   = thread->bestMoves[0];
         results->ponderMoves[depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
 
-        for (int i = 0; i < params->multiPV; i++)
+        for (int i = 0; i < limits.multiPV; i++)
           PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
       }
 
-      if (!mainThread || !params->timeset) continue;
+      if (!mainThread || !limits.timeset) continue;
 
-      long elapsed = GetTimeMS() - params->start;
+      long elapsed = GetTimeMS() - limits.start;
 
-      if (elapsed >= params->max) {
-        params->stopped = 1;
+      if (elapsed >= limits.max) {
+        limits.stopped = 1;
         break;
       } else if (depth < 5)
         continue;
@@ -256,8 +248,8 @@ void* Search(void* arg) {
 
       if (results->scores[depth] >= TB_WIN_BOUND) nodeCountFactor = 0.5;
 
-      if (elapsed > params->alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
-        params->stopped = 1;
+      if (elapsed > limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
+        limits.stopped = 1;
         break;
       }
     }
@@ -267,7 +259,6 @@ void* Search(void* arg) {
 }
 
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
-  SearchParams* params = thread->params;
   Board* board         = &thread->board;
 
   PV childPv;
@@ -302,7 +293,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // Either mainthread has ended us OR we've run out of time
   // this second check is more expensive and done only every 1024 nodes
   // 1Mnps ~1ms
-  if (params->stopped || (mainThread && StopSearch(params, thread))) longjmp(thread->exit, 1);
+  if (limits.stopped || (mainThread && StopSearch(thread))) longjmp(thread->exit, 1);
 
   if (!isRoot) {
     // draw
@@ -485,7 +476,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     uint64_t startingNodeCount = thread->nodes;
 
     if (isRoot && MoveSearchedByMultiPV(thread, move)) continue;
-    if (isRoot && !MoveSearchable(params, move)) continue;
+    if (isRoot && !MoveSearchable(move)) continue;
 
     // don't search this during singular
     if (ss->skip == move) continue;
@@ -514,7 +505,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     playedMoves++;
 
-    if (isRoot && !thread->idx && GetTimeMS() - params->start > 2500)
+    if (isRoot && !thread->idx && GetTimeMS() - limits.start > 2500)
       printf("info depth %d currmove %s currmovenumber %d\n",
              thread->depth,
              MoveToStr(move, board),
@@ -673,8 +664,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 }
 
 int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
-  SearchParams* params = thread->params;
-  Board* board         = &thread->board;
+  Board* board = &thread->board;
 
   int mainThread = !thread->idx;
   int isPV       = beta - alpha != 1;
@@ -682,7 +672,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
   thread->nodes++;
 
-  if (params->stopped || (mainThread && StopSearch(params, thread))) longjmp(thread->exit, 1);
+  if (limits.stopped || (mainThread && StopSearch(thread))) longjmp(thread->exit, 1);
 
   // draw check
   if (IsDraw(board, ss->ply)) return 0;
@@ -763,7 +753,7 @@ inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta
   int seldepth    = thread->seldepth;
   uint64_t nodes  = NodesSearched();
   uint64_t tbhits = TBHits();
-  uint64_t time   = GetTimeMS() - thread->params->start;
+  uint64_t time   = GetTimeMS() - limits.start;
   uint64_t nps    = 1000 * nodes / max(time, 1);
   int hashfull    = TTFull();
   int bounded     = max(alpha, min(beta, score));
@@ -806,11 +796,11 @@ int MoveSearchedByMultiPV(ThreadData* thread, Move move) {
   return 0;
 }
 
-int MoveSearchable(SearchParams* params, Move move) {
-  if (!params->searchMoves) return 1;
+int MoveSearchable(Move move) {
+  if (!limits.searchMoves) return 1;
 
-  for (int i = 0; i < params->searchable.count; i++)
-    if (move == params->searchable.moves[i]) return 1;
+  for (int i = 0; i < limits.searchable.count; i++)
+    if (move == limits.searchable.moves[i]) return 1;
 
   return 0;
 }
