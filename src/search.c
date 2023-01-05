@@ -246,6 +246,17 @@ void Search(ThreadData* thread) {
 
     if (!mainThread) continue;
 
+    long elapsed = GetTimeMS() - limits.start;
+
+    if (limits.timeset && elapsed > limits.max) {
+      if (threadPool.ponder)
+        threadPool.stopOnPonderHit = 1;
+      else
+        threadPool.stop = 1;
+    }
+
+    if (thread->depth < 5) continue;
+
     if (limits.timeset && !threadPool.stop && !threadPool.stopOnPonderHit) {
       int sameBestMove       = results->bestMoves[thread->depth] == results->bestMoves[thread->depth - 1]; // same move?
       searchStability        = sameBestMove ? min(10, searchStability + 1) : 0; // increase how stable our best move is
@@ -261,7 +272,6 @@ void Search(ThreadData* thread) {
       double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
       if (results->scores[thread->depth] >= TB_WIN_BOUND) nodeCountFactor = 0.5;
 
-      long elapsed = GetTimeMS() - limits.start;
       if (elapsed > limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
         if (threadPool.ponder)
           threadPool.stopOnPonderHit = 1;

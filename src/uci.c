@@ -273,10 +273,13 @@ void UCILoop() {
       PrintUCIOptions();
     } else if (!strncmp(in, "ponderhit", 9)) {
       threadPool.ponder = 0;
+      if (threadPool.stopOnPonderHit) threadPool.stop = 1;
       pthread_mutex_lock(&threadPool.lock);
-      if (threadPool.sleeping)
+      if (threadPool.sleeping) {
+        threadPool.stop = 1;
         ThreadWake(threadPool.threads[0], THREAD_RESUME);
-      threadPool.sleeping = 0;
+        threadPool.sleeping = 0;
+      }
       pthread_mutex_unlock(&threadPool.lock);
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
