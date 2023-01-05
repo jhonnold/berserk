@@ -234,13 +234,11 @@ void Search(ThreadData* thread) {
       }
     }
 
-    if (mainThread) {
-      if (!Threads.stop) {
-        results->depth                      = thread->depth;
-        results->scores[thread->depth]      = thread->scores[0];
-        results->bestMoves[thread->depth]   = thread->bestMoves[0];
-        results->ponderMoves[thread->depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
-      }
+    if (mainThread && !Threads.stop) {
+      results->depth                      = thread->depth;
+      results->scores[thread->depth]      = thread->scores[0];
+      results->bestMoves[thread->depth]   = thread->bestMoves[0];
+      results->ponderMoves[thread->depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
 
       for (int i = 0; i < Limits.multiPV; i++)
         PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
