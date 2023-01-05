@@ -819,13 +819,13 @@ int MoveSearchable(Move move) {
 void SearchClearThread(ThreadData* thread) {
   thread->results.depth = 0;
 
-  memset(thread->counters, 0, sizeof(*thread->counters));
-  memset(thread->hh, 0, sizeof(*thread->hh));
-  memset(thread->ch, 0, sizeof(*thread->ch));
-  memset(thread->th, 0, sizeof(*thread->th));
-  memset(thread->scores, 0, sizeof(*thread->scores));
-  memset(thread->bestMoves, 0, sizeof(*thread->bestMoves));
-  memset(thread->pvs, 0, sizeof(*thread->counters));
+  memset(&thread->counters, 0, sizeof(thread->counters));
+  memset(&thread->hh, 0, sizeof(thread->hh));
+  memset(&thread->ch, 0, sizeof(thread->ch));
+  memset(&thread->th, 0, sizeof(thread->th));
+  memset(&thread->scores, 0, sizeof(thread->scores));
+  memset(&thread->bestMoves, 0, sizeof(thread->bestMoves));
+  memset(&thread->pvs, 0, sizeof(thread->counters));
 }
 
 void SearchClear() {
