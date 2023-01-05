@@ -40,8 +40,9 @@
 
 void InitPruningAndReductionTables();
 
-void* BestMove(void* arg);
-void* Search(void* arg);
+void StartSearch(Board* board, uint8_t ponder);
+void MainSearch();
+void Search(ThreadData* thread);
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
 int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss);
 
@@ -50,5 +51,7 @@ void PrintPV(PV* pv, Board* board);
 
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);
 int MoveSearchable(Move move);
+void SearchClearThread(ThreadData* thread);
+void SearchClear();
 
 #endif

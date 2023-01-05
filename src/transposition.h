@@ -47,6 +47,7 @@ extern TTTable TT;
 
 size_t TTInit(int mb);
 void TTFree();
+void TTClearPart(int idx);
 void TTClear();
 void TTUpdate();
 void TTPrefetch(uint64_t hash);

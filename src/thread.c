@@ -17,17 +17,18 @@
 #include "thread.h"
 
 #include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "eval.h"
 #include "nn.h"
 #include "search.h"
+#include "transposition.h"
 #include "types.h"
 #include "util.h"
 
-ThreadData* threads = NULL;
-pthread_t* pthreads = NULL;
+ThreadPool threadPool;
 
 void* AlignedMalloc(uint64_t size) {
   void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
@@ -40,89 +41,155 @@ void AlignedFree(void* ptr) {
   free(((void**) ptr)[-1]);
 }
 
-// initialize a pool of threads
-void CreatePool(int count) {
-  if (threads) FreeThreads();
-  if (pthreads) free(pthreads);
+void ThreadWaitUntilSleep(ThreadData* thread) {
+  pthread_mutex_lock(&thread->mutex);
 
-  threads  = calloc(count, sizeof(ThreadData));
-  pthreads = calloc(count, sizeof(pthread_t));
+  while (thread->action != THREAD_SLEEP) pthread_cond_wait(&thread->sleep, &thread->mutex);
 
-  for (int i = 0; i < count; i++) {
-    threads[i].idx                 = i;
-    threads[i].count               = count;
-    threads[i].results.depth       = 0;
-    threads[i].accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
-    threads[i].accumulators[BLACK] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
-    threads[i].refreshTable[WHITE] =
-      (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
-    threads[i].refreshTable[BLACK] =
-      (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
+  pthread_mutex_unlock(&thread->mutex);
 
-    ResetRefreshTable(threads[i].refreshTable);
+  if (thread->idx == 0) threadPool.searching = 0;
+}
+
+void ThreadWait(ThreadData* thread, atomic_uchar* cond) {
+  pthread_mutex_lock(&thread->mutex);
+
+  while (!atomic_load(cond)) pthread_cond_wait(&thread->sleep, &thread->mutex);
+
+  pthread_mutex_unlock(&thread->mutex);
+}
+
+void ThreadWake(ThreadData* thread, int action) {
+  pthread_mutex_lock(&thread->mutex);
+
+  if (action != THREAD_RESUME) thread->action = action;
+
+  pthread_cond_signal(&thread->sleep);
+  pthread_mutex_unlock(&thread->mutex);
+}
+
+void ThreadIdle(ThreadData* thread) {
+  while (1) {
+    pthread_mutex_lock(&thread->mutex);
+
+    while (thread->action == THREAD_SLEEP) {
+      pthread_cond_signal(&thread->sleep);
+      pthread_cond_wait(&thread->sleep, &thread->mutex);
+    }
+
+    pthread_mutex_unlock(&thread->mutex);
+
+    if (thread->action == THREAD_EXIT)
+      break;
+    else if (thread->action == THREAD_TT_CLEAR) {
+      TTClearPart(thread->idx);
+    } else if (thread->action == THREAD_SEARCH_CLEAR) {
+      SearchClearThread(thread);
+    } else {
+      if (thread->idx)
+        Search(thread);
+      else
+        MainSearch();
+    }
+
+    thread->action = THREAD_SLEEP;
   }
 }
 
-// initialize a pool prepping to start a search
-void InitPool(Board* board) {
-  for (int i = 0; i < threads->count; i++) {
-    threads[i].nodes    = 0;
-    threads[i].tbhits   = 0;
-    threads[i].seldepth = 1;
+void* ThreadInit(void* arg) {
+  int i = (intptr_t) arg;
 
-    threads[i].results.prevScore =
-      threads[i].results.depth > 0 ? threads[i].results.scores[threads[i].results.depth] : UNKNOWN;
-    threads[i].results.depth = 0;
+  ThreadData* thread          = calloc(1, sizeof(ThreadData));
+  thread->idx                 = i;
+  thread->results.depth       = 0;
+  thread->accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
+  thread->accumulators[BLACK] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
+  thread->refreshTable[WHITE] =
+    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
+  thread->refreshTable[BLACK] =
+    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
 
-    memset(&threads[i].nodeCounts, 0, sizeof(threads[i].nodeCounts));
+  ResetRefreshTable(thread->refreshTable);
 
-    // need full copies of the board
-    memcpy(&threads[i].board, board, sizeof(Board));
-    threads[i].board.accumulators[WHITE] = threads[i].accumulators[WHITE];
-    threads[i].board.accumulators[BLACK] = threads[i].accumulators[BLACK];
-    threads[i].board.refreshTable[WHITE] = threads[i].refreshTable[WHITE];
-    threads[i].board.refreshTable[BLACK] = threads[i].refreshTable[BLACK];
-  }
+  pthread_mutex_init(&thread->mutex, NULL);
+  pthread_cond_init(&thread->sleep, NULL);
+
+  threadPool.threads[i] = thread;
+
+  pthread_mutex_lock(&threadPool.mutex);
+  threadPool.init = 0;
+  pthread_cond_signal(&threadPool.sleep);
+  pthread_mutex_unlock(&threadPool.mutex);
+
+  ThreadIdle(thread);
+
+  return NULL;
 }
 
-void ResetThreadPool() {
-  for (int i = 0; i < threads->count; i++) {
-    threads[i].results.depth = 0;
+void ThreadCreate(int i) {
+  pthread_t thread;
 
-    // empty ALL data
-    memset(&threads[i].counters, 0, sizeof(threads[i].counters));
-    memset(&threads[i].hh, 0, sizeof(threads[i].hh));
-    memset(&threads[i].ch, 0, sizeof(threads[i].ch));
-    memset(&threads[i].th, 0, sizeof(threads[i].th));
+  threadPool.init = 1;
+  pthread_mutex_lock(&threadPool.mutex);
+  pthread_create(&thread, NULL, ThreadInit, (void*) (intptr_t) i);
 
-    memset(&threads[i].scores, 0, sizeof(threads[i].scores));
-    memset(&threads[i].bestMoves, 0, sizeof(threads[i].bestMoves));
-    memset(&threads[i].pvs, 0, sizeof(threads[i].pvs));
-  }
+  while (threadPool.init) pthread_cond_wait(&threadPool.sleep, &threadPool.mutex);
+  pthread_mutex_unlock(&threadPool.mutex);
+
+  threadPool.threads[i]->nativeThread = thread;
 }
 
-void FreeThreads() {
-  for (int i = 0; i < threads->count; i++) {
-    AlignedFree(threads[i].accumulators[WHITE]);
-    AlignedFree(threads[i].accumulators[BLACK]);
-    AlignedFree(threads[i].refreshTable[WHITE]);
-    AlignedFree(threads[i].refreshTable[BLACK]);
-  }
+void ThreadDestroy(ThreadData* thread) {
+  pthread_mutex_lock(&thread->mutex);
+  thread->action = THREAD_EXIT;
+  pthread_cond_signal(&thread->sleep);
+  pthread_mutex_unlock(&thread->mutex);
 
-  free(threads);
+  pthread_join(thread->nativeThread, NULL);
+  pthread_cond_destroy(&thread->sleep);
+  pthread_mutex_destroy(&thread->mutex);
+
+  AlignedFree(thread->accumulators[WHITE]);
+  AlignedFree(thread->accumulators[BLACK]);
+  AlignedFree(thread->refreshTable[WHITE]);
+  AlignedFree(thread->refreshTable[BLACK]);
+
+  free(thread);
+}
+
+void ThreadsSetNumber(int n) {
+  while (threadPool.count < n) ThreadCreate(threadPool.count++);
+  while (threadPool.count > n) ThreadDestroy(threadPool.threads[--threadPool.count]);
+
+  if (n == 0) threadPool.searching = 0;
+}
+
+void ThreadsExit() {
+  ThreadsSetNumber(0);
+
+  pthread_cond_destroy(&threadPool.sleep);
+  pthread_mutex_destroy(&threadPool.mutex);
+}
+
+void ThreadsInit() {
+  pthread_mutex_init(&threadPool.mutex, NULL);
+  pthread_cond_init(&threadPool.sleep, NULL);
+
+  threadPool.count = 1;
+  ThreadCreate(0);
 }
 
 // sum node counts
 uint64_t NodesSearched() {
   uint64_t nodes = 0;
-  for (int i = 0; i < threads->count; i++) nodes += threads[i].nodes;
+  for (int i = 0; i < threadPool.count; i++) nodes += threadPool.threads[i]->nodes;
 
   return nodes;
 }
 
 uint64_t TBHits() {
   uint64_t tbhits = 0;
-  for (int i = 0; i < threads->count; i++) tbhits += threads[i].tbhits;
+  for (int i = 0; i < threadPool.count; i++) tbhits += threadPool.threads[i]->tbhits;
 
   return tbhits;
 }

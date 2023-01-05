@@ -38,12 +38,11 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD      = 300;
-int MULTI_PV           = 1;
-int PONDER_ENABLED     = 0;
-int CHESS_960          = 0;
-int CONTEMPT           = 12;
-volatile int PONDERING = 0;
+int MOVE_OVERHEAD  = 300;
+int MULTI_PV       = 1;
+int PONDER_ENABLED = 0;
+int CHESS_960      = 0;
+int CONTEMPT       = 12;
 
 SearchParams limits;
 
@@ -69,14 +68,15 @@ void ParseGo(char* in, Board* board) {
   limits.multiPV          = MULTI_PV;
   limits.searchMoves      = 0;
   limits.searchable.count = 0;
-
-  PONDERING = 0;
+  limits.infinite         = 0;
 
   char* ptrChar = in;
-  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0;
+  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0, ponder = 0;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
+
+  if ((ptrChar = strstr(in, "infinite"))) limits.infinite = 1;
 
   if ((ptrChar = strstr(in, "perft"))) perft = atoi(ptrChar + 6);
 
@@ -98,7 +98,7 @@ void ParseGo(char* in, Board* board) {
 
   if ((ptrChar = strstr(in, "ponder"))) {
     if (PONDER_ENABLED)
-      PONDERING = 1;
+      ponder = 1;
     else {
       printf("info string Enable option Ponder to use 'ponder'\n");
       return;
@@ -168,10 +168,7 @@ void ParseGo(char* in, Board* board) {
          limits.timeset,
          limits.searchable.count);
 
-  // start the search!
-  pthread_t searchThread;
-  pthread_create(&searchThread, NULL, &BestMove, board);
-  pthread_detach(searchThread);
+  StartSearch(board, ponder);
 }
 
 // uci "position" command
@@ -240,6 +237,8 @@ void UCILoop() {
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
+  threadPool.searching = threadPool.sleeping = 0;
+
   while (ReadLine(in)) {
     if (in[0] == '\n') continue;
 
@@ -250,20 +249,35 @@ void UCILoop() {
     } else if (!strncmp(in, "ucinewgame", 10)) {
       ParsePosition("position startpos\n", &board);
       TTClear();
-      ResetThreadPool();
+      SearchClear();
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &board);
     } else if (!strncmp(in, "stop", 4)) {
-      PONDERING      = 0;
-      limits.stopped = 1;
+      if (threadPool.searching) {
+        threadPool.stop = 1;
+        pthread_mutex_lock(&threadPool.lock);
+        if (threadPool.sleeping) ThreadWake(threadPool.threads[0], THREAD_RESUME);
+        threadPool.sleeping = 0;
+        pthread_mutex_unlock(&threadPool.lock);
+      }
     } else if (!strncmp(in, "quit", 4)) {
-      PONDERING   = 0;
-      limits.quit = limits.stopped = 1;
+      if (threadPool.searching) {
+        threadPool.stop = 1;
+        pthread_mutex_lock(&threadPool.lock);
+        if (threadPool.sleeping) ThreadWake(threadPool.threads[0], THREAD_RESUME);
+        threadPool.sleeping = 0;
+        pthread_mutex_unlock(&threadPool.lock);
+      }
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
     } else if (!strncmp(in, "ponderhit", 9)) {
-      PONDERING = 0;
+      threadPool.ponder = 0;
+      pthread_mutex_lock(&threadPool.lock);
+      if (threadPool.sleeping)
+        ThreadWake(threadPool.threads[0], THREAD_RESUME);
+      threadPool.sleeping = 0;
+      pthread_mutex_unlock(&threadPool.lock);
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "perft", 5)) {
@@ -282,15 +296,16 @@ void UCILoop() {
       PrintBB(threats->pcs);
       PrintBB(threats->sqs);
     } else if (!strncmp(in, "eval", 4)) {
-      board.acc = 0;
+      ThreadData* thread = threadPool.threads[0];
 
-      board.accumulators[WHITE] = threads->accumulators[WHITE];
-      board.accumulators[BLACK] = threads->accumulators[BLACK];
+      board.acc                 = 0;
+      board.accumulators[WHITE] = thread->accumulators[WHITE];
+      board.accumulators[BLACK] = thread->accumulators[BLACK];
 
       ResetAccumulator(board.accumulators[WHITE][0], &board, WHITE);
       ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
 
-      int score = Evaluate(&board, threads);
+      int score = Evaluate(&board, thread);
       score     = board.stm == WHITE ? score : -score;
 
       for (int r = 0; r < 8; r++) {
@@ -312,7 +327,7 @@ void UCILoop() {
             ResetAccumulator(board.accumulators[WHITE][0], &board, WHITE);
             ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
 
-            int new = Evaluate(&board, threads);
+            int new = Evaluate(&board, thread);
             new     = board.stm == WHITE ? new : -new;
 
             int diff = score - new;
@@ -347,8 +362,8 @@ void UCILoop() {
       printf("info string set Hash to value %d (%" PRIu64 " bytes)\n", mb, bytesAllocated);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
-      CreatePool(max(1, min(256, n)));
-      printf("info string set Threads to value %d\n", n);
+      ThreadsSetNumber(max(1, min(256, n)));
+      printf("info string set Threads to value %d\n", threadPool.count);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
       int success = tb_init(in + 32);
       if (success)
@@ -376,7 +391,7 @@ void UCILoop() {
 
       ParsePosition("position startpos\n", &board);
       TTClear();
-      ResetThreadPool();
+      SearchClear();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
       MOVE_OVERHEAD = min(10000, max(100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
@@ -395,6 +410,11 @@ void UCILoop() {
       if (success) printf("info string set EvalFile to value %s\n", path);
     }
   }
+
+  if (threadPool.searching) ThreadWaitUntilSleep(threadPool.threads[0]);
+
+  pthread_mutex_destroy(&threadPool.lock);
+  ThreadsExit();
 }
 
 int GetOptionIntValue(char* in) {

@@ -63,11 +63,8 @@ void TTFree() {
 #endif
 }
 
-void* TTClearPart(void* arg) {
-  // Logic for dividing the work taken from Weiss (which got from CFish)
-  ThreadData* thread = (ThreadData*) arg;
-  int idx            = thread->idx;
-  int count          = thread->count;
+void TTClearPart(int idx) {
+  int count = threadPool.count;
 
   uint64_t size   = TT.count * sizeof(TTBucket);
   uint64_t slice  = (size + count - 1) / count;
@@ -76,12 +73,11 @@ void* TTClearPart(void* arg) {
   uint64_t end    = min(size, begin + blocks * 2 * MEGABYTE);
 
   memset(TT.buckets + begin / sizeof(TTBucket), 0, end - begin);
-  return NULL;
 }
 
 inline void TTClear() {
-  for (int i = 0; i < threads->count; i++) pthread_create(&pthreads[i], NULL, TTClearPart, &threads[i]);
-  for (int i = 0; i < threads->count; i++) pthread_join(pthreads[i], NULL);
+  for (int i = 0; i < threadPool.count; i++) ThreadWake(threadPool.threads[i], THREAD_TT_CLEAR);
+  for (int i = 0; i < threadPool.count; i++) ThreadWaitUntilSleep(threadPool.threads[i]);
 }
 
 inline void TTUpdate() {

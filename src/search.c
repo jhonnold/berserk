@@ -19,7 +19,6 @@
 #include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
-#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,7 +44,6 @@
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
 int STATIC_PRUNE[2][MAX_SEARCH_PLY];
-extern volatile int PONDERING;
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
@@ -64,57 +62,84 @@ void InitPruningAndReductionTables() {
   }
 }
 
-INLINE int StopSearch(ThreadData* thread) {
-  if (thread->nodes % limits.hitrate != 0) return 0;
-
-  int unlimitedSearch = !limits.timeset && !limits.nodes;
-  if (unlimitedSearch || PONDERING) return 0;
+INLINE void CheckLimits(ThreadData* thread) {
+  if (thread->nodes % limits.hitrate != 0 || threadPool.ponder) return;
 
   long elapsed = GetTimeMS() - limits.start;
-  return elapsed >= limits.max || (limits.nodes && thread->nodes >= limits.nodes);
+  if ((limits.timeset && elapsed >= limits.max) || (limits.nodes && NodesSearched() >= limits.nodes))
+    threadPool.stop = 1;
 }
 
-void* BestMove(void* arg) {
-  Board* board = (Board*) arg;
+void StartSearch(Board* board, uint8_t ponder) {
+  if (threadPool.searching) ThreadWaitUntilSleep(threadPool.threads[0]);
 
-  Move bestMove;
-  if ((bestMove = TBRootProbe(board))) {
-    while (PONDERING)
-      ;
+  threadPool.stopOnPonderHit = 0;
+  threadPool.stop            = 0;
+  threadPool.ponder          = ponder;
 
-    printf("bestmove %s\n", MoveToStr(bestMove, board));
-  } else {
-    InitPool(board);
+  for (int i = 0; i < 64 * 64; i++) threadPool.threads[0]->nodeCounts[i] = 0;
 
-    limits.stopped = 0;
-    TTUpdate();
+  for (int i = 0; i < threadPool.count; i++) {
+    ThreadData* thread = threadPool.threads[i];
+    thread->nodes      = 0;
+    thread->tbhits     = 0;
+    thread->seldepth   = 1;
 
-    // start at 1, we will resuse main-thread
-    for (int i = 1; i < threads->count; i++) pthread_create(&pthreads[i], NULL, &Search, &threads[i]);
-    Search(&threads[0]);
+    SearchResults* results = &thread->results;
+    results->prevScore     = results->depth > 0 ? results->scores[results->depth] : UNKNOWN;
+    results->depth         = 0;
 
-    // if main thread stopped, then stop all and wait till complete
-    limits.stopped = 1;
-    for (int i = 1; i < threads->count; i++) pthread_join(pthreads[i], NULL);
-
-    while (PONDERING)
-      ;
-
-    SearchResults* results = &threads->results;
-    printf("bestmove %s", MoveToStr(results->bestMoves[results->depth], board));
-    if (results->ponderMoves[results->depth])
-      printf(" ponder %s", MoveToStr(results->ponderMoves[results->depth], board));
-
-    printf("\n");
+    memcpy(&thread->board, board, sizeof(Board));
+    thread->board.accumulators[WHITE] = thread->accumulators[WHITE];
+    thread->board.accumulators[BLACK] = thread->accumulators[BLACK];
+    thread->board.refreshTable[WHITE] = thread->refreshTable[WHITE];
+    thread->board.refreshTable[BLACK] = thread->refreshTable[BLACK];
   }
 
-  return NULL;
+  threadPool.searching = 1;
+  ThreadWake(threadPool.threads[0], THREAD_SEARCH);
 }
 
-void* Search(void* arg) {
-  ThreadData* thread     = (ThreadData*) arg;
+void MainSearch() {
+  ThreadData* thread     = threadPool.threads[0];
+  Board* board           = &thread->board;
+  SearchResults* results = &thread->results;
+
+  TTUpdate();
+
+  Move bestMove   = TBRootProbe(board);
+  Move ponderMove = NULL_MOVE;
+  if (!bestMove) {
+    for (int i = 1; i < threadPool.count; i++) ThreadWake(threadPool.threads[i], THREAD_SEARCH);
+    Search(thread);
+  }
+
+  pthread_mutex_lock(&threadPool.lock);
+  if (!threadPool.stop && (threadPool.ponder || limits.infinite)) {
+    threadPool.sleeping = 1;
+    pthread_mutex_unlock(&threadPool.lock);
+    ThreadWait(thread, &threadPool.stop);
+  } else {
+    pthread_mutex_unlock(&threadPool.lock);
+  }
+
+  threadPool.stop = 1;
+
+  if (!bestMove) {
+    for (int i = 1; i < threadPool.count; i++) ThreadWaitUntilSleep(threadPool.threads[i]);
+    bestMove   = results->bestMoves[results->depth];
+    ponderMove = results->ponderMoves[results->depth];
+  }
+
+  printf("bestmove %s", MoveToStr(bestMove, board));
+  if (ponderMove) printf(" ponder %s", MoveToStr(ponderMove, board));
+  printf("\n");
+}
+
+void Search(ThreadData* thread) {
   SearchResults* results = &thread->results;
   Board* board           = &thread->board;
+  int mainThread         = !thread->idx;
 
   SearchStack searchStack[MAX_SEARCH_PLY + 4];
   SearchStack* ss = searchStack + 4;
@@ -122,157 +147,145 @@ void* Search(void* arg) {
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++) (ss + i)->ply = i;
   for (size_t i = 1; i <= 4; i++) (ss - i)->ch = &thread->ch[WHITE_PAWN][A1];
 
-  int mainThread = !thread->idx;
-  int alpha      = -CHECKMATE;
-  int beta       = CHECKMATE;
+  int alpha = -CHECKMATE;
+  int beta  = CHECKMATE;
 
   board->acc = 0;
-  RefreshAccumulator(board->accumulators[WHITE][0], board, WHITE);
-  RefreshAccumulator(board->accumulators[BLACK][0], board, BLACK);
+  ResetAccumulator(board->accumulators[WHITE][0], board, WHITE);
+  ResetAccumulator(board->accumulators[BLACK][0], board, BLACK);
 
   SetContempt(thread->contempt, board->stm);
 
-// set a hot exit point for this thread
-#if defined(_WIN32) || defined(_WIN64)
-  if (!_setjmp(thread->exit, NULL)) {
-#else
-  if (!setjmp(thread->exit)) {
-#endif
-    int searchStability = 0;
+  int searchStability = 0;
+  thread->depth       = 0;
 
-    // Iterative deepening
-    for (int depth = 1; depth <= limits.depth; depth++) {
-      for (thread->multiPV = 0; thread->multiPV < limits.multiPV; thread->multiPV++) {
-        PV* pv = &thread->pvs[thread->multiPV];
+  while (++thread->depth < MAX_SEARCH_PLY && !threadPool.stop) {
+    if (limits.depth && mainThread && thread->depth > limits.depth) break;
 
-        // delta is our window for search. early depths get full searches
-        // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
-        // vary this slightly based on the previous depths window expansion count
-        int delta       = WINDOW;
-        int score       = thread->scores[thread->multiPV];
-        int searchDepth = thread->depth = depth;
+    for (thread->multiPV = 0; thread->multiPV < limits.multiPV && !threadPool.stop; thread->multiPV++) {
+      PV* pv = &thread->pvs[thread->multiPV];
 
-        alpha = -CHECKMATE;
-        beta  = CHECKMATE;
-        delta = CHECKMATE;
+      // delta is our window for search. early depths get full searches
+      // as we don't know what score to expect. Otherwise we start with a window of 16 (8x2), but
+      // vary this slightly based on the previous depths window expansion count
+      int delta       = WINDOW;
+      int score       = thread->scores[thread->multiPV];
+      int searchDepth = thread->depth;
 
-        if (depth >= 5) {
-          alpha = max(score - WINDOW, -CHECKMATE);
-          beta  = min(score + WINDOW, CHECKMATE);
-          delta = WINDOW;
-        }
+      alpha = -CHECKMATE;
+      beta  = CHECKMATE;
+      delta = CHECKMATE;
 
-        while (!limits.stopped) {
-          // search!
-          score = Negamax(alpha, beta, searchDepth, 0, thread, pv, ss);
-
-          if (mainThread && (score <= alpha || score >= beta) && limits.multiPV == 1 &&
-              GetTimeMS() - limits.start >= 2500)
-            PrintInfo(pv, score, thread, alpha, beta, 1, board);
-
-          if (score <= alpha) {
-            // adjust beta downward when failing low
-            beta  = (alpha + beta) / 2;
-            alpha = max(alpha - delta, -CHECKMATE);
-
-            searchDepth = depth;
-          } else if (score >= beta) {
-            beta = min(beta + delta, CHECKMATE);
-
-            if (abs(score) < TB_WIN_BOUND) searchDepth--;
-          } else {
-            thread->scores[thread->multiPV]    = score;
-            thread->bestMoves[thread->multiPV] = pv->moves[0];
-
-            break;
-          }
-
-          // delta x 1.25
-          delta += delta / 4;
-        }
+      if (thread->depth >= 5) {
+        alpha = max(score - WINDOW, -CHECKMATE);
+        beta  = min(score + WINDOW, CHECKMATE);
+        delta = WINDOW;
       }
 
-      // sort multi pv
-      for (int i = 0; i < limits.multiPV; i++) {
-        int best = i;
+      while (1) {
+        // search!
+        score = Negamax(alpha, beta, searchDepth, 0, thread, pv, ss);
 
-        for (int j = i + 1; j < limits.multiPV; j++)
-          if (thread->scores[j] > thread->scores[best]) best = j;
+        if (threadPool.stop) break;
 
-        if (best != i) {
-          Score tempS = thread->scores[best];
-          Move tempM  = thread->bestMoves[best];
+        if (mainThread && (score <= alpha || score >= beta) && limits.multiPV == 1 &&
+            GetTimeMS() - limits.start >= 2500)
+          PrintInfo(pv, score, thread, alpha, beta, 1, board);
 
-          thread->scores[best]    = thread->scores[i];
-          thread->bestMoves[best] = thread->bestMoves[i];
+        if (score <= alpha) {
+          // adjust beta downward when failing low
+          beta  = (alpha + beta) / 2;
+          alpha = max(alpha - delta, -CHECKMATE);
 
-          thread->scores[i]    = tempS;
-          thread->bestMoves[i] = tempM;
+          searchDepth = thread->depth;
+          if (mainThread) threadPool.stopOnPonderHit = 0;
+        } else if (score >= beta) {
+          beta = min(beta + delta, CHECKMATE);
+
+          if (abs(score) < TB_WIN_BOUND) searchDepth--;
+        } else {
+          thread->scores[thread->multiPV]    = score;
+          thread->bestMoves[thread->multiPV] = pv->moves[0];
+
+          break;
         }
+
+        // delta x 1.25
+        delta += delta / 4;
       }
+    }
 
-      if (mainThread) {
-        results->depth              = depth;
-        results->scores[depth]      = thread->scores[0];
-        results->bestMoves[depth]   = thread->bestMoves[0];
-        results->ponderMoves[depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
+    // sort multi pv
+    for (int i = 0; i < limits.multiPV; i++) {
+      int best = i;
 
-        for (int i = 0; i < limits.multiPV; i++)
-          PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
+      for (int j = i + 1; j < limits.multiPV; j++)
+        if (thread->scores[j] > thread->scores[best]) best = j;
+
+      if (best != i) {
+        Score tempS = thread->scores[best];
+        Move tempM  = thread->bestMoves[best];
+
+        thread->scores[best]    = thread->scores[i];
+        thread->bestMoves[best] = thread->bestMoves[i];
+
+        thread->scores[i]    = tempS;
+        thread->bestMoves[i] = tempM;
       }
+    }
 
-      if (!mainThread || !limits.timeset) continue;
+    if (mainThread && !threadPool.stop) {
+      results->depth                      = thread->depth;
+      results->scores[thread->depth]      = thread->scores[0];
+      results->bestMoves[thread->depth]   = thread->bestMoves[0];
+      results->ponderMoves[thread->depth] = thread->pvs[0].count > 1 ? thread->pvs[0].moves[1] : NULL_MOVE;
 
-      long elapsed = GetTimeMS() - limits.start;
+      for (int i = 0; i < limits.multiPV; i++)
+        PrintInfo(&thread->pvs[i], thread->scores[i], thread, -CHECKMATE, CHECKMATE, i + 1, board);
+    }
 
-      if (elapsed >= limits.max) {
-        limits.stopped = 1;
-        break;
-      } else if (depth < 5)
-        continue;
+    if (!mainThread) continue;
 
-      int sameBestMove       = results->bestMoves[depth] == results->bestMoves[depth - 1]; // same move?
+    if (limits.timeset && !threadPool.stop && !threadPool.stopOnPonderHit) {
+      int sameBestMove       = results->bestMoves[thread->depth] == results->bestMoves[thread->depth - 1]; // same move?
       searchStability        = sameBestMove ? min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.25 - 0.05 * searchStability;
 
-      if (PONDERING) continue;
-
-      Score searchScoreDiff    = results->scores[depth - 3] - results->scores[depth];
-      Score prevScoreDiff      = results->prevScore - results->scores[depth];
+      Score searchScoreDiff    = results->scores[thread->depth - 3] - results->scores[thread->depth];
+      Score prevScoreDiff      = results->prevScore - results->scores[thread->depth];
       double scoreChangeFactor = 0.1 + 0.0275 * searchScoreDiff + 0.0275 * prevScoreDiff;
       scoreChangeFactor        = max(0.5, min(1.5, scoreChangeFactor));
 
-      uint64_t bestMoveNodes = thread->nodeCounts[FromTo(results->bestMoves[depth])];
+      uint64_t bestMoveNodes = thread->nodeCounts[FromTo(results->bestMoves[thread->depth])];
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
       double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
+      if (results->scores[thread->depth] >= TB_WIN_BOUND) nodeCountFactor = 0.5;
 
-      if (results->scores[depth] >= TB_WIN_BOUND) nodeCountFactor = 0.5;
-
+      long elapsed = GetTimeMS() - limits.start;
       if (elapsed > limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
-        limits.stopped = 1;
-        break;
+        if (threadPool.ponder)
+          threadPool.stopOnPonderHit = 1;
+        else
+          threadPool.stop = 1;
       }
     }
   }
-
-  return NULL;
 }
 
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
-  Board* board         = &thread->board;
+  Board* board = &thread->board;
 
   PV childPv;
   pv->count = 0;
 
-  int mainThread = !thread->idx;
-  int isPV       = beta - alpha != 1; // pv node when doing a full window
-  int isRoot     = !ss->ply;          //
-  int score      = -CHECKMATE;        // initially assume the worst case
-  int bestScore  = -CHECKMATE;        //
-  int maxScore   = CHECKMATE;         // best possible
-  int origAlpha  = alpha;             // remember first alpha for tt storage
-  int ttScore    = UNKNOWN;
-  int ttPv       = 0;
+  int isPV      = beta - alpha != 1; // pv node when doing a full window
+  int isRoot    = !ss->ply;          //
+  int score     = -CHECKMATE;        // initially assume the worst case
+  int bestScore = -CHECKMATE;        //
+  int maxScore  = CHECKMATE;         // best possible
+  int origAlpha = alpha;             // remember first alpha for tt storage
+  int ttScore   = UNKNOWN;
+  int ttPv      = 0;
 
   Move bestMove = NULL_MOVE, hashMove = NULL_MOVE;
 
@@ -287,15 +300,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       return Quiesce(alpha, beta, thread, ss);
   }
 
+  if (!thread->idx) CheckLimits(thread);
+
   thread->nodes++;
   thread->seldepth = max(ss->ply + 1, thread->seldepth);
 
-  // Either mainthread has ended us OR we've run out of time
-  // this second check is more expensive and done only every 1024 nodes
-  // 1Mnps ~1ms
-  if (limits.stopped || (mainThread && StopSearch(thread))) longjmp(thread->exit, 1);
-
   if (!isRoot) {
+    if (load_rlx(threadPool.stop)) return 0;
+
     // draw
     if (IsDraw(board, ss->ply)) return 2 - (thread->nodes & 0x3);
 
@@ -613,6 +625,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     UndoMove(move, board);
 
+    if (load_rlx(threadPool.stop)) return 0;
+
     if (isRoot) thread->nodeCounts[FromTo(move)] += thread->nodes - startingNodeCount;
 
     if (score > bestScore) {
@@ -666,13 +680,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   Board* board = &thread->board;
 
-  int mainThread = !thread->idx;
-  int isPV       = beta - alpha != 1;
-  int ttPv       = 0;
+  int isPV = beta - alpha != 1;
+  int ttPv = 0;
 
   thread->nodes++;
-
-  if (limits.stopped || (mainThread && StopSearch(thread))) longjmp(thread->exit, 1);
 
   // draw check
   if (IsDraw(board, ss->ply)) return 0;
@@ -803,4 +814,21 @@ int MoveSearchable(Move move) {
     if (move == limits.searchable.moves[i]) return 1;
 
   return 0;
+}
+
+void SearchClearThread(ThreadData* thread) {
+  thread->results.depth = 0;
+
+  memset(thread->counters, 0, sizeof(*thread->counters));
+  memset(thread->hh, 0, sizeof(*thread->hh));
+  memset(thread->ch, 0, sizeof(*thread->ch));
+  memset(thread->th, 0, sizeof(*thread->th));
+  memset(thread->scores, 0, sizeof(*thread->scores));
+  memset(thread->bestMoves, 0, sizeof(*thread->bestMoves));
+  memset(thread->pvs, 0, sizeof(*thread->counters));
+}
+
+void SearchClear() {
+  for (int i = 0; i < threadPool.count; i++) ThreadWake(threadPool.threads[i], THREAD_SEARCH_CLEAR);
+  for (int i = 0; i < threadPool.count; i++) ThreadWaitUntilSleep(threadPool.threads[i]);
 }

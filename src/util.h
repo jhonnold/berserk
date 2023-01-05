@@ -27,6 +27,8 @@
 
 #define INLINE static inline __attribute__((always_inline))
 
+#define load_rlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
+
 long GetTimeMS();
 
 #endif

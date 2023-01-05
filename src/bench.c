@@ -55,17 +55,17 @@ void Bench(int depth) {
     ParseFen(benchmarks[i], &board);
 
     TTClear();
-    ResetThreadPool();
-    InitPool(&board);
+    SearchClear();
 
     limits.start = GetTimeMS();
-    BestMove(&board);
+    StartSearch(&board, 0);
+    ThreadWaitUntilSleep(threadPool.threads[0]);
     times[i] = GetTimeMS() - limits.start;
 
-    SearchResults* results = &threads->results;
+    SearchResults* results = &threadPool.threads[0]->results;
     bestMoves[i]           = results->bestMoves[results->depth];
     scores[i]              = results->scores[results->depth];
-    nodes[i]               = threads[0].nodes;
+    nodes[i]               = threadPool.threads[0]->nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 
@@ -84,6 +84,4 @@ void Bench(int depth) {
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) totalNodes += nodes[i];
 
   printf("\nResults: %43" PRIu64 " nodes %8d nps\n\n", totalNodes, (int) (1000.0 * totalNodes / (totalTime + 1)));
-
-  free(threads);
 }
