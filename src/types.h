@@ -19,7 +19,7 @@
 
 #include <inttypes.h>
 #include <limits.h>
-#include <setjmp.h>
+#include <pthread.h>
 
 #define MAX_SEARCH_PLY (INT8_MAX + 1)
 #define MAX_MOVES      128
@@ -66,9 +66,6 @@ typedef struct {
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
 
-  Accumulator* accumulators[2];
-  AccumulatorKingState* refreshTable[2];
-
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
   BitBoard pieces[12];     // individual piece data
@@ -84,6 +81,9 @@ typedef struct {
   uint64_t zobristHistory[MAX_SEARCH_PLY + 100];
   BitBoard checkersHistory[MAX_SEARCH_PLY + 100];
   BitBoard pinnedHistory[MAX_SEARCH_PLY + 100];
+
+  Accumulator* accumulators[2];
+  AccumulatorKingState* refreshTable[2];
 } Board;
 
 typedef struct {
@@ -120,6 +120,7 @@ typedef struct {
   int stopped;
   int quit;
   int multiPV;
+  int infinite;
   int searchMoves;
   SimpleMoveList searchable;
 } SearchParams;
@@ -132,18 +133,17 @@ typedef struct {
   Move ponderMoves[MAX_SEARCH_PLY];
 } SearchResults;
 
+enum { THREAD_SLEEP, THREAD_SEARCH, THREAD_TT_CLEAR, THREAD_SEARCH_CLEAR, THREAD_EXIT, THREAD_RESUME };
+
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int count, idx, multiPV, depth, seldepth;
+  int idx, multiPV, depth, seldepth;
   uint64_t nodes, tbhits;
 
   Accumulator* accumulators[2];
   AccumulatorKingState* refreshTable[2];
 
-  jmp_buf exit;
-
-  SearchParams* params;
   SearchResults results;
   Board board;
 
@@ -159,11 +159,15 @@ struct ThreadData {
   int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
   int ch[12][64][12][64];   // continuation move history table
   int th[6][64][7];         // tactical (capture) history
+
+  int action, calls;
+  pthread_t nativeThread;
+  pthread_mutex_t mutex;
+  pthread_cond_t sleep;
 };
 
 typedef struct {
   Board* board;
-  SearchParams* params;
 } SearchArgs;
 
 // Move generation storage

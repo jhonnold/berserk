@@ -21,10 +21,11 @@
 
 extern int CHESS_960;
 extern int CONTEMPT;
+extern SearchParams Limits;
 
 void RootMoves(SimpleMoveList* moves, Board* board);
 
-void ParseGo(char* in, SearchParams* params, Board* board);
+void ParseGo(char* in, Board* board);
 void ParsePosition(char* in, Board* board);
 void PrintUCIOptions();
 

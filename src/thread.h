@@ -17,19 +17,35 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include <pthread.h>
+#include <stdatomic.h>
+
 #include "types.h"
 
-#include <pthread.h>
+typedef struct {
+  ThreadData* threads[256];
+  int count;
 
-extern ThreadData* threads;
-extern pthread_t* pthreads;
+  pthread_mutex_t mutex, lock;
+  pthread_cond_t sleep;
 
-void* AlignedMalloc(uint64_t size);
-void AlignedFree(void* ptr);
-void CreatePool(int count);
-void InitPool(Board* board, SearchParams* params);
-void ResetThreadPool();
-void FreeThreads();
+  uint8_t init, searching, sleeping, stopOnPonderHit;
+  atomic_uchar ponder, stop;
+} ThreadPool;
+
+extern ThreadPool Threads;
+
+void ThreadWaitUntilSleep(ThreadData* thread);
+void ThreadWait(ThreadData* thread, atomic_uchar* cond);
+void ThreadWake(ThreadData* thread, int action);
+void ThreadIdle(ThreadData* thread);
+void* ThreadInit(void* arg);
+void ThreadCreate(int i);
+void ThreadDestroy(ThreadData* thread);
+void ThreadsSetNumber(int n);
+void ThreadsExit();
+void ThreadsInit();
+
 uint64_t NodesSearched();
 uint64_t TBHits();
 

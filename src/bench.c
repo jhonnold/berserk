@@ -28,6 +28,7 @@
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
+#include "uci.h"
 
 // Ethereal's bench set
 const int NUM_BENCH_POSITIONS = 50;
@@ -37,7 +38,12 @@ char* benchmarks[]            = {
 
 void Bench(int depth) {
   Board board;
-  SearchParams params = {.depth = depth, .multiPV = 1, .hitrate = 1000, .max = INT_MAX};
+
+  Limits.depth = depth;
+  Limits.multiPV = 1;
+  Limits.hitrate = 4096;
+  Limits.max = INT_MAX;
+  Limits.timeset = 0;
 
   Move bestMoves[NUM_BENCH_POSITIONS];
   int scores[NUM_BENCH_POSITIONS];
@@ -49,17 +55,17 @@ void Bench(int depth) {
     ParseFen(benchmarks[i], &board);
 
     TTClear();
-    ResetThreadPool();
-    InitPool(&board, &params);
+    SearchClear();
 
-    params.start = GetTimeMS();
-    BestMove(&board, &params);
-    times[i] = GetTimeMS() - params.start;
+    Limits.start = GetTimeMS();
+    StartSearch(&board, 0);
+    ThreadWaitUntilSleep(Threads.threads[0]);
+    times[i] = GetTimeMS() - Limits.start;
 
-    SearchResults* results = &threads->results;
+    SearchResults* results = &Threads.threads[0]->results;
     bestMoves[i]           = results->bestMoves[results->depth];
     scores[i]              = results->scores[results->depth];
-    nodes[i]               = threads[0].nodes;
+    nodes[i]               = Threads.threads[0]->nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 
@@ -78,6 +84,4 @@ void Bench(int depth) {
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) totalNodes += nodes[i];
 
   printf("\nResults: %43" PRIu64 " nodes %8d nps\n\n", totalNodes, (int) (1000.0 * totalNodes / (totalTime + 1)));
-
-  free(threads);
 }

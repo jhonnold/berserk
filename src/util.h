@@ -17,6 +17,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <stdlib.h>
+
 #include "types.h"
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
@@ -27,6 +29,19 @@
 
 #define INLINE static inline __attribute__((always_inline))
 
+#define load_rlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
+
 long GetTimeMS();
+
+INLINE void* AlignedMalloc(uint64_t size) {
+  void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
+  void** ptr = (void**) ((uintptr_t) (mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
+  ptr[-1]    = mem;
+  return ptr;
+}
+
+INLINE void AlignedFree(void* ptr) {
+  free(((void**) ptr)[-1]);
+}
 
 #endif

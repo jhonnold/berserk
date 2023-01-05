@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
   InitAttacks();
 
   LoadDefaultNN();
-  CreatePool(1);
+  ThreadsInit();
   TTInit(16);
 
   // Compliance for OpenBench

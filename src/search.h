@@ -40,9 +40,9 @@
 
 void InitPruningAndReductionTables();
 
-void* UCISearch(void* arg);
-void BestMove(Board* board, SearchParams* params);
-void* Search(void* arg);
+void StartSearch(Board* board, uint8_t ponder);
+void MainSearch();
+void Search(ThreadData* thread);
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
 int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss);
 
@@ -50,6 +50,8 @@ void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int m
 void PrintPV(PV* pv, Board* board);
 
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);
-int MoveSearchable(SearchParams* params, Move move);
+int MoveSearchable(Move move);
+void SearchClearThread(ThreadData* thread);
+void SearchClear();
 
 #endif
