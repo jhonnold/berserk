@@ -19,6 +19,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,8 +70,7 @@ INLINE void CheckLimits(ThreadData* thread) {
   if (Threads.ponder) return;
 
   long elapsed = GetTimeMS() - Limits.start;
-  if ((Limits.timeset && elapsed >= Limits.max) || (Limits.nodes && NodesSearched() >= Limits.nodes))
-    Threads.stop = 1;
+  if ((Limits.timeset && elapsed >= Limits.max) || (Limits.nodes && NodesSearched() >= Limits.nodes)) Threads.stop = 1;
 }
 
 void StartSearch(Board* board, uint8_t ponder) {
