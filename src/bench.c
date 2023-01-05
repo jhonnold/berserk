@@ -39,11 +39,11 @@ char* benchmarks[]            = {
 void Bench(int depth) {
   Board board;
 
-  limits.depth = depth;
-  limits.multiPV = 1;
-  limits.hitrate = 4096;
-  limits.max = INT_MAX;
-  limits.timeset = 0;
+  Limits.depth = depth;
+  Limits.multiPV = 1;
+  Limits.hitrate = 4096;
+  Limits.max = INT_MAX;
+  Limits.timeset = 0;
 
   Move bestMoves[NUM_BENCH_POSITIONS];
   int scores[NUM_BENCH_POSITIONS];
@@ -57,10 +57,10 @@ void Bench(int depth) {
     TTClear();
     SearchClear();
 
-    limits.start = GetTimeMS();
+    Limits.start = GetTimeMS();
     StartSearch(&board, 0);
     ThreadWaitUntilSleep(Threads.threads[0]);
-    times[i] = GetTimeMS() - limits.start;
+    times[i] = GetTimeMS() - Limits.start;
 
     SearchResults* results = &Threads.threads[0]->results;
     bestMoves[i]           = results->bestMoves[results->depth];

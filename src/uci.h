@@ -21,7 +21,7 @@
 
 extern int CHESS_960;
 extern int CONTEMPT;
-extern SearchParams limits;
+extern SearchParams Limits;
 
 void RootMoves(SimpleMoveList* moves, Board* board);
 

@@ -44,7 +44,7 @@ int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
 int CONTEMPT       = 12;
 
-SearchParams limits;
+SearchParams Limits;
 
 void RootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
@@ -60,15 +60,15 @@ void RootMoves(SimpleMoveList* moves, Board* board) {
 void ParseGo(char* in, Board* board) {
   in += 3;
 
-  limits.depth            = MAX_SEARCH_PLY;
-  limits.start            = GetTimeMS();
-  limits.timeset          = 0;
-  limits.stopped          = 0;
-  limits.quit             = 0;
-  limits.multiPV          = MULTI_PV;
-  limits.searchMoves      = 0;
-  limits.searchable.count = 0;
-  limits.infinite         = 0;
+  Limits.depth            = MAX_SEARCH_PLY;
+  Limits.start            = GetTimeMS();
+  Limits.timeset          = 0;
+  Limits.stopped          = 0;
+  Limits.quit             = 0;
+  Limits.multiPV          = MULTI_PV;
+  Limits.searchMoves      = 0;
+  Limits.searchable.count = 0;
+  Limits.infinite         = 0;
 
   char* ptrChar = in;
   int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0, ponder = 0;
@@ -76,7 +76,7 @@ void ParseGo(char* in, Board* board) {
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
 
-  if ((ptrChar = strstr(in, "infinite"))) limits.infinite = 1;
+  if ((ptrChar = strstr(in, "infinite"))) Limits.infinite = 1;
 
   if ((ptrChar = strstr(in, "perft"))) perft = atoi(ptrChar + 6);
 
@@ -106,12 +106,12 @@ void ParseGo(char* in, Board* board) {
   }
 
   if ((ptrChar = strstr(in, "searchmoves"))) {
-    limits.searchMoves = 1;
+    Limits.searchMoves = 1;
 
     for (char* moves = strtok(ptrChar + 12, " "); moves != NULL; moves = strtok(NULL, " "))
       for (int i = 0; i < rootMoves.count; i++)
         if (!strcmp(MoveToStr(rootMoves.moves[i], board), moves))
-          limits.searchable.moves[limits.searchable.count++] = rootMoves.moves[i];
+          Limits.searchable.moves[Limits.searchable.count++] = rootMoves.moves[i];
   }
 
   if (perft) {
@@ -119,54 +119,54 @@ void ParseGo(char* in, Board* board) {
     return;
   }
 
-  limits.depth = depth;
-  limits.nodes = nodes;
+  Limits.depth = depth;
+  Limits.nodes = nodes;
 
-  if (limits.nodes)
-    limits.hitrate = min(4096, max(1, limits.nodes / 100));
+  if (Limits.nodes)
+    Limits.hitrate = min(4096, max(1, Limits.nodes / 100));
   else
-    limits.hitrate = 4096;
+    Limits.hitrate = 4096;
 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
-    limits.timeset = 1;
-    limits.alloc   = moveTime;
-    limits.max     = moveTime;
+    Limits.timeset = 1;
+    Limits.alloc   = moveTime;
+    Limits.max     = moveTime;
   } else {
     if (time != -1) {
-      limits.timeset = 1;
+      Limits.timeset = 1;
 
       if (movesToGo == -1) {
         int total = max(1, time + 50 * inc - MOVE_OVERHEAD);
 
-        limits.alloc = min(time * 0.33, total / 20.0);
+        Limits.alloc = min(time * 0.33, total / 20.0);
       } else {
         int total = max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
-        limits.alloc = min(time * 0.9, (0.9 * total) / max(1, movesToGo / 2.5));
+        Limits.alloc = min(time * 0.9, (0.9 * total) / max(1, movesToGo / 2.5));
       }
 
-      limits.max = min(time * 0.75, limits.alloc * 5.5);
+      Limits.max = min(time * 0.75, Limits.alloc * 5.5);
     } else {
       // no time control
-      limits.timeset = 0;
-      limits.max     = INT_MAX;
+      Limits.timeset = 0;
+      Limits.max     = INT_MAX;
     }
   }
 
-  limits.multiPV = min(limits.multiPV, limits.searchMoves ? limits.searchable.count : rootMoves.count);
-  if (rootMoves.count == 1 && limits.timeset) limits.max = min(250, limits.max);
+  Limits.multiPV = min(Limits.multiPV, Limits.searchMoves ? Limits.searchable.count : rootMoves.count);
+  if (rootMoves.count == 1 && Limits.timeset) Limits.max = min(250, Limits.max);
 
-  if (depth <= 0) limits.depth = MAX_SEARCH_PLY - 1;
+  if (depth <= 0) Limits.depth = MAX_SEARCH_PLY - 1;
 
   printf("info string time %d start %ld alloc %d max %d depth %d timeset %d searchmoves %d\n",
          time,
-         limits.start,
-         limits.alloc,
-         limits.max,
-         limits.depth,
-         limits.timeset,
-         limits.searchable.count);
+         Limits.start,
+         Limits.alloc,
+         Limits.max,
+         Limits.depth,
+         Limits.timeset,
+         Limits.searchable.count);
 
   StartSearch(board, ponder);
 }
