@@ -64,7 +64,7 @@ void TTFree() {
 }
 
 void TTClearPart(int idx) {
-  int count = threadPool.count;
+  int count = Threads.count;
 
   uint64_t size   = TT.count * sizeof(TTBucket);
   uint64_t slice  = (size + count - 1) / count;
@@ -76,8 +76,8 @@ void TTClearPart(int idx) {
 }
 
 inline void TTClear() {
-  for (int i = 0; i < threadPool.count; i++) ThreadWake(threadPool.threads[i], THREAD_TT_CLEAR);
-  for (int i = 0; i < threadPool.count; i++) ThreadWaitUntilSleep(threadPool.threads[i]);
+  for (int i = 0; i < Threads.count; i++) ThreadWake(Threads.threads[i], THREAD_TT_CLEAR);
+  for (int i = 0; i < Threads.count; i++) ThreadWaitUntilSleep(Threads.threads[i]);
 }
 
 inline void TTUpdate() {

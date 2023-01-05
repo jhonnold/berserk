@@ -123,9 +123,9 @@ void ParseGo(char* in, Board* board) {
   limits.nodes = nodes;
 
   if (limits.nodes)
-    limits.hitrate = min(1000, max(1, limits.nodes / 100));
+    limits.hitrate = min(4096, max(1, limits.nodes / 100));
   else
-    limits.hitrate = 1000;
+    limits.hitrate = 4096;
 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
@@ -237,7 +237,7 @@ void UCILoop() {
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
-  threadPool.searching = threadPool.sleeping = 0;
+  Threads.searching = Threads.sleeping = 0;
 
   while (ReadLine(in)) {
     if (in[0] == '\n') continue;
@@ -253,34 +253,34 @@ void UCILoop() {
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &board);
     } else if (!strncmp(in, "stop", 4)) {
-      if (threadPool.searching) {
-        threadPool.stop = 1;
-        pthread_mutex_lock(&threadPool.lock);
-        if (threadPool.sleeping) ThreadWake(threadPool.threads[0], THREAD_RESUME);
-        threadPool.sleeping = 0;
-        pthread_mutex_unlock(&threadPool.lock);
+      if (Threads.searching) {
+        Threads.stop = 1;
+        pthread_mutex_lock(&Threads.lock);
+        if (Threads.sleeping) ThreadWake(Threads.threads[0], THREAD_RESUME);
+        Threads.sleeping = 0;
+        pthread_mutex_unlock(&Threads.lock);
       }
     } else if (!strncmp(in, "quit", 4)) {
-      if (threadPool.searching) {
-        threadPool.stop = 1;
-        pthread_mutex_lock(&threadPool.lock);
-        if (threadPool.sleeping) ThreadWake(threadPool.threads[0], THREAD_RESUME);
-        threadPool.sleeping = 0;
-        pthread_mutex_unlock(&threadPool.lock);
+      if (Threads.searching) {
+        Threads.stop = 1;
+        pthread_mutex_lock(&Threads.lock);
+        if (Threads.sleeping) ThreadWake(Threads.threads[0], THREAD_RESUME);
+        Threads.sleeping = 0;
+        pthread_mutex_unlock(&Threads.lock);
       }
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
     } else if (!strncmp(in, "ponderhit", 9)) {
-      threadPool.ponder = 0;
-      if (threadPool.stopOnPonderHit) threadPool.stop = 1;
-      pthread_mutex_lock(&threadPool.lock);
-      if (threadPool.sleeping) {
-        threadPool.stop = 1;
-        ThreadWake(threadPool.threads[0], THREAD_RESUME);
-        threadPool.sleeping = 0;
+      Threads.ponder = 0;
+      if (Threads.stopOnPonderHit) Threads.stop = 1;
+      pthread_mutex_lock(&Threads.lock);
+      if (Threads.sleeping) {
+        Threads.stop = 1;
+        ThreadWake(Threads.threads[0], THREAD_RESUME);
+        Threads.sleeping = 0;
       }
-      pthread_mutex_unlock(&threadPool.lock);
+      pthread_mutex_unlock(&Threads.lock);
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "perft", 5)) {
@@ -299,7 +299,7 @@ void UCILoop() {
       PrintBB(threats->pcs);
       PrintBB(threats->sqs);
     } else if (!strncmp(in, "eval", 4)) {
-      ThreadData* thread = threadPool.threads[0];
+      ThreadData* thread = Threads.threads[0];
 
       board.acc                 = 0;
       board.accumulators[WHITE] = thread->accumulators[WHITE];
@@ -366,7 +366,7 @@ void UCILoop() {
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
       ThreadsSetNumber(max(1, min(256, n)));
-      printf("info string set Threads to value %d\n", threadPool.count);
+      printf("info string set Threads to value %d\n", Threads.count);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
       int success = tb_init(in + 32);
       if (success)
@@ -414,9 +414,9 @@ void UCILoop() {
     }
   }
 
-  if (threadPool.searching) ThreadWaitUntilSleep(threadPool.threads[0]);
+  if (Threads.searching) ThreadWaitUntilSleep(Threads.threads[0]);
 
-  pthread_mutex_destroy(&threadPool.lock);
+  pthread_mutex_destroy(&Threads.lock);
   ThreadsExit();
 }
 

@@ -41,7 +41,7 @@ void Bench(int depth) {
 
   limits.depth = depth;
   limits.multiPV = 1;
-  limits.hitrate = 1000;
+  limits.hitrate = 4096;
   limits.max = INT_MAX;
   limits.timeset = 0;
 
@@ -59,13 +59,13 @@ void Bench(int depth) {
 
     limits.start = GetTimeMS();
     StartSearch(&board, 0);
-    ThreadWaitUntilSleep(threadPool.threads[0]);
+    ThreadWaitUntilSleep(Threads.threads[0]);
     times[i] = GetTimeMS() - limits.start;
 
-    SearchResults* results = &threadPool.threads[0]->results;
+    SearchResults* results = &Threads.threads[0]->results;
     bestMoves[i]           = results->bestMoves[results->depth];
     scores[i]              = results->scores[results->depth];
-    nodes[i]               = threadPool.threads[0]->nodes;
+    nodes[i]               = Threads.threads[0]->nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 

@@ -33,10 +33,8 @@ typedef struct {
   atomic_uchar ponder, stop;
 } ThreadPool;
 
-extern ThreadPool threadPool;
+extern ThreadPool Threads;
 
-void* AlignedMalloc(uint64_t size);
-void AlignedFree(void* ptr);
 void ThreadWaitUntilSleep(ThreadData* thread);
 void ThreadWait(ThreadData* thread, atomic_uchar* cond);
 void ThreadWake(ThreadData* thread, int action);

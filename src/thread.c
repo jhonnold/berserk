@@ -28,19 +28,11 @@
 #include "types.h"
 #include "util.h"
 
-ThreadPool threadPool;
+// Below is an implementation of CFish's Sleeping Threads
+// This is implemented entirely with pThreads
+ThreadPool Threads;
 
-void* AlignedMalloc(uint64_t size) {
-  void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
-  void** ptr = (void**) ((uintptr_t) (mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
-  ptr[-1]    = mem;
-  return ptr;
-}
-
-void AlignedFree(void* ptr) {
-  free(((void**) ptr)[-1]);
-}
-
+// Block until requested thread is sleeping
 void ThreadWaitUntilSleep(ThreadData* thread) {
   pthread_mutex_lock(&thread->mutex);
 
@@ -48,9 +40,10 @@ void ThreadWaitUntilSleep(ThreadData* thread) {
 
   pthread_mutex_unlock(&thread->mutex);
 
-  if (thread->idx == 0) threadPool.searching = 0;
+  if (thread->idx == 0) Threads.searching = 0;
 }
 
+// Block thread until on condition
 void ThreadWait(ThreadData* thread, atomic_uchar* cond) {
   pthread_mutex_lock(&thread->mutex);
 
@@ -59,6 +52,7 @@ void ThreadWait(ThreadData* thread, atomic_uchar* cond) {
   pthread_mutex_unlock(&thread->mutex);
 }
 
+// Wake a thread up with an action
 void ThreadWake(ThreadData* thread, int action) {
   pthread_mutex_lock(&thread->mutex);
 
@@ -67,7 +61,8 @@ void ThreadWake(ThreadData* thread, int action) {
   pthread_cond_signal(&thread->sleep);
   pthread_mutex_unlock(&thread->mutex);
 }
-
+ 
+// Idle loop that wakes into an action
 void ThreadIdle(ThreadData* thread) {
   while (1) {
     pthread_mutex_lock(&thread->mutex);
@@ -96,49 +91,60 @@ void ThreadIdle(ThreadData* thread) {
   }
 }
 
+// Build a thread
 void* ThreadInit(void* arg) {
   int i = (intptr_t) arg;
 
   ThreadData* thread          = calloc(1, sizeof(ThreadData));
   thread->idx                 = i;
   thread->results.depth       = 0;
+
+  // Alloc all the necessary accumulators
   thread->accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
   thread->accumulators[BLACK] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
   thread->refreshTable[WHITE] =
     (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
   thread->refreshTable[BLACK] =
     (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
-
+  
   ResetRefreshTable(thread->refreshTable);
+
+  // Copy these onto the board for easier access within the engine
+  thread->board.accumulators[WHITE] = thread->accumulators[WHITE];
+  thread->board.accumulators[BLACK] = thread->accumulators[BLACK];
+  thread->board.refreshTable[WHITE] = thread->refreshTable[WHITE];
+  thread->board.refreshTable[BLACK] = thread->refreshTable[BLACK];
 
   pthread_mutex_init(&thread->mutex, NULL);
   pthread_cond_init(&thread->sleep, NULL);
 
-  threadPool.threads[i] = thread;
+  Threads.threads[i] = thread;
 
-  pthread_mutex_lock(&threadPool.mutex);
-  threadPool.init = 0;
-  pthread_cond_signal(&threadPool.sleep);
-  pthread_mutex_unlock(&threadPool.mutex);
+  pthread_mutex_lock(&Threads.mutex);
+  Threads.init = 0;
+  pthread_cond_signal(&Threads.sleep);
+  pthread_mutex_unlock(&Threads.mutex);
 
   ThreadIdle(thread);
 
   return NULL;
 }
 
+// Create a thread with idx i
 void ThreadCreate(int i) {
   pthread_t thread;
 
-  threadPool.init = 1;
-  pthread_mutex_lock(&threadPool.mutex);
+  Threads.init = 1;
+  pthread_mutex_lock(&Threads.mutex);
   pthread_create(&thread, NULL, ThreadInit, (void*) (intptr_t) i);
 
-  while (threadPool.init) pthread_cond_wait(&threadPool.sleep, &threadPool.mutex);
-  pthread_mutex_unlock(&threadPool.mutex);
+  while (Threads.init) pthread_cond_wait(&Threads.sleep, &Threads.mutex);
+  pthread_mutex_unlock(&Threads.mutex);
 
-  threadPool.threads[i]->nativeThread = thread;
+  Threads.threads[i]->nativeThread = thread;
 }
 
+// Teardown and free a thread
 void ThreadDestroy(ThreadData* thread) {
   pthread_mutex_lock(&thread->mutex);
   thread->action = THREAD_EXIT;
@@ -157,39 +163,42 @@ void ThreadDestroy(ThreadData* thread) {
   free(thread);
 }
 
+// Build the pool to a certain amnt
 void ThreadsSetNumber(int n) {
-  while (threadPool.count < n) ThreadCreate(threadPool.count++);
-  while (threadPool.count > n) ThreadDestroy(threadPool.threads[--threadPool.count]);
+  while (Threads.count < n) ThreadCreate(Threads.count++);
+  while (Threads.count > n) ThreadDestroy(Threads.threads[--Threads.count]);
 
-  if (n == 0) threadPool.searching = 0;
+  if (n == 0) Threads.searching = 0;
 }
 
+// End
 void ThreadsExit() {
   ThreadsSetNumber(0);
 
-  pthread_cond_destroy(&threadPool.sleep);
-  pthread_mutex_destroy(&threadPool.mutex);
+  pthread_cond_destroy(&Threads.sleep);
+  pthread_mutex_destroy(&Threads.mutex);
 }
 
+// Start
 void ThreadsInit() {
-  pthread_mutex_init(&threadPool.mutex, NULL);
-  pthread_cond_init(&threadPool.sleep, NULL);
+  pthread_mutex_init(&Threads.mutex, NULL);
+  pthread_cond_init(&Threads.sleep, NULL);
 
-  threadPool.count = 1;
+  Threads.count = 1;
   ThreadCreate(0);
 }
 
 // sum node counts
 uint64_t NodesSearched() {
   uint64_t nodes = 0;
-  for (int i = 0; i < threadPool.count; i++) nodes += threadPool.threads[i]->nodes;
+  for (int i = 0; i < Threads.count; i++) nodes += Threads.threads[i]->nodes;
 
   return nodes;
 }
 
 uint64_t TBHits() {
   uint64_t tbhits = 0;
-  for (int i = 0; i < threadPool.count; i++) tbhits += threadPool.threads[i]->tbhits;
+  for (int i = 0; i < Threads.count; i++) tbhits += Threads.threads[i]->tbhits;
 
   return tbhits;
 }
