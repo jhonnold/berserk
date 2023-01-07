@@ -64,7 +64,7 @@ void InitPruningAndReductionTables() {
 }
 
 INLINE void CheckLimits(ThreadData* thread) {
-  if (--thread->calls < 0) return;
+  if (--thread->calls > 0) return;
   thread->calls = Limits.hitrate;
 
   if (Threads.ponder) return;
