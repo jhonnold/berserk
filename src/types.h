@@ -193,12 +193,14 @@ typedef struct {
   Move move;
 } ScoredMove;
 
+enum { MP_ALL, MP_PC, MP_QS, MP_PERFT };
+
 typedef struct {
   ThreadData* thread;
   SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
   BitBoard threats;
-  int seeCutoff, phase;
+  int seeCutoff, phase, type;
 
   ScoredMove *current, *end, *endBad;
   ScoredMove moves[MAX_MOVES];

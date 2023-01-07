@@ -30,9 +30,8 @@
 const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
 
 void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats) {
+  picker->phase = MP_ALL;
   picker->phase = HASH_MOVE;
-
-  picker->seeCutoff = 0;
 
   picker->hashMove = hashMove;
   picker->killer1  = ss->killers[0];
@@ -44,10 +43,9 @@ void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchS
   picker->ss      = ss;
 }
 
-void InitTacticalMoves(MovePicker* picker, ThreadData* thread, int cutoff) {
+void InitTacticalMoves(MovePicker* picker, ThreadData* thread, int probcut) {
+  picker->phase = probcut ? MP_PC : MP_QS;
   picker->phase = GEN_TACTICAL_MOVES;
-
-  picker->seeCutoff = cutoff;
 
   picker->hashMove = NULL_MOVE;
   picker->killer1  = NULL_MOVE;
@@ -59,6 +57,7 @@ void InitTacticalMoves(MovePicker* picker, ThreadData* thread, int cutoff) {
 }
 
 void InitPerftMoves(MovePicker* picker, Board* board) {
+  picker->phase   = MP_PERFT;
   picker->phase   = PERFT_MOVES;
   picker->current = picker->moves;
 
@@ -115,7 +114,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
         if (move == picker->hashMove) {
           return NextMove(picker, board, skipQuiets);
-        } else if (!SEE(board, move, picker->seeCutoff)) {
+        } else if (picker->type != MP_QS && !SEE(board, move, 0)) {
           *picker->endBad++ = *(picker->current - 1);
           return NextMove(picker, board, skipQuiets);
         } else {

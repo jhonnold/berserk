@@ -463,7 +463,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int probBeta = beta + 110 - 30 * improving;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && tt->depth >= depth - 3 && ttScore < probBeta)) {
-      InitTacticalMoves(&mp, thread, 0);
+      InitTacticalMoves(&mp, thread, 1);
       while ((move = NextMove(&mp, board, 1))) {
         if (ss->skip == move) continue;
         if (!IsLegal(move, board)) continue;
@@ -734,12 +734,14 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   Move move;
   MovePicker mp;
 
-  InitTacticalMoves(&mp, thread, eval <= alpha - DELTA_CUTOFF);
+  InitTacticalMoves(&mp, thread, 0);
 
   while ((move = NextMove(&mp, board, 1))) {
     if (!IsLegal(move, board)) continue;
 
-    if (mp.phase > PLAY_GOOD_TACTICAL) break;
+    if (bestScore > -MATE_BOUND) {
+      if (!SEE(board, move, eval <= alpha - DELTA_CUTOFF)) continue;
+    }
 
     ss->move = move;
     ss->ch   = &thread->ch[Moving(move)][To(move)];
