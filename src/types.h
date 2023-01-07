@@ -158,7 +158,7 @@ struct ThreadData {
   Move counters[12][64];    // counter move butterfly table
   int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
   int ch[12][64][12][64];   // continuation move history table
-  int th[6][64][7];         // tactical (capture) history
+  int caph[6][64][7];         // capture history
 
   int action, calls;
   pthread_t nativeThread;
@@ -172,18 +172,18 @@ typedef struct {
 
 // Move generation storage
 // moves/scores idx's match
-enum { ALL_MOVES, TACTICAL_MOVES };
+enum { ALL_MOVES, NOISY_MOVES };
 
 enum {
   HASH_MOVE,
-  GEN_TACTICAL_MOVES,
-  PLAY_GOOD_TACTICAL,
+  GEN_NOISY_MOVES,
+  PLAY_GOOD_NOISY,
   PLAY_KILLER_1,
   PLAY_KILLER_2,
   PLAY_COUNTER,
   GEN_QUIET_MOVES,
   PLAY_QUIETS,
-  PLAY_BAD_TACTICAL,
+  PLAY_BAD_NOISY,
   NO_MORE_MOVES,
   PERFT_MOVES,
 };

@@ -20,7 +20,7 @@
 #include "types.h"
 
 void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats);
-void InitTacticalMoves(MovePicker* picker, ThreadData* thread, int probcut);
+void InitNoisyMoves(MovePicker* picker, ThreadData* thread, int probcut);
 void InitPerftMoves(MovePicker* picker, Board* board);
 Move NextMove(MovePicker* picker, Board* board, int skipQuiets);
 

@@ -21,7 +21,7 @@
 #include "types.h"
 
 #define HH(stm, m, threats) (thread->hh[stm][!getBit(threats, From(m))][!getBit(threats, To(m))][FromTo(m)])
-#define TH(p, e, c)         (thread->th[p][e][c])
+#define TH(p, e, c)         (thread->caph[p][e][c])
 
 void AddKillerMove(SearchStack* ss, Move move);
 void AddCounterMove(ThreadData* thread, Move move, Move parent);
@@ -34,10 +34,10 @@ void UpdateHistories(Board* board,
                      int stm,
                      Move quiets[],
                      int nQ,
-                     Move tacticals[],
-                     int nT,
+                     Move captures[],
+                     int nC,
                      BitBoard threats);
 int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats);
-int GetTacticalHistory(ThreadData* thread, Board* board, Move move);
+int GetCaptureHistory(ThreadData* thread, Board* board, Move move);
 
 #endif

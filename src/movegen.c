@@ -23,7 +23,7 @@ const int CASTLE_MAP[4][3] = {
   { BLACK_QS, C8, D8 },
 };
 
-ScoredMove* AddTacticalMoves(ScoredMove* moves, Board* board) {
+ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board) {
   return AddPseudoLegalMoves(moves, board, !QUIET);
 }
 

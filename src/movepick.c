@@ -43,9 +43,9 @@ void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchS
   picker->ss      = ss;
 }
 
-void InitTacticalMoves(MovePicker* picker, ThreadData* thread, int probcut) {
+void InitNoisyMoves(MovePicker* picker, ThreadData* thread, int probcut) {
   picker->type  = probcut ? MP_PC : MP_QS;
-  picker->phase = GEN_TACTICAL_MOVES;
+  picker->phase = GEN_NOISY_MOVES;
 
   picker->hashMove = NULL_MOVE;
   picker->killer1  = NULL_MOVE;
@@ -88,7 +88,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       current->score = GetQuietHistory(picker->ss, picker->thread, move, board->stm, picker->threats);
     else
       current->score =
-        GetTacticalHistory(picker->thread, board, move) + MATERIAL_VALUES[PieceType(board->squares[To(move)])] * 32;
+        GetCaptureHistory(picker->thread, board, move) + MATERIAL_VALUES[PieceType(board->squares[To(move)])] * 32;
 
     current++;
   }
@@ -97,18 +97,18 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
 Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
   switch (picker->phase) {
     case HASH_MOVE:
-      picker->phase = GEN_TACTICAL_MOVES;
+      picker->phase = GEN_NOISY_MOVES;
       if (IsPseudoLegal(picker->hashMove, board)) return picker->hashMove;
       // fallthrough
-    case GEN_TACTICAL_MOVES:
+    case GEN_NOISY_MOVES:
       picker->current = picker->endBad = picker->moves;
-      picker->end                      = AddTacticalMoves(picker->current, board);
+      picker->end                      = AddNoisyMoves(picker->current, board);
 
       ScoreMoves(picker, board, !QUIET);
 
-      picker->phase = PLAY_GOOD_TACTICAL;
+      picker->phase = PLAY_GOOD_NOISY;
       // fallthrough
-    case PLAY_GOOD_TACTICAL:
+    case PLAY_GOOD_NOISY:
       if (picker->current != picker->end) {
         Move move = Best(picker->current++, picker->end);
 
@@ -123,7 +123,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       }
 
       if (skipQuiets) {
-        picker->phase = PLAY_BAD_TACTICAL;
+        picker->phase = PLAY_BAD_NOISY;
         return NextMove(picker, board, skipQuiets);
       }
       picker->phase = PLAY_KILLER_1;
@@ -170,9 +170,9 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->current = picker->moves;
       picker->end     = picker->endBad;
 
-      picker->phase = PLAY_BAD_TACTICAL;
+      picker->phase = PLAY_BAD_NOISY;
       // fallthrough
-    case PLAY_BAD_TACTICAL:
+    case PLAY_BAD_NOISY:
       if (picker->current != picker->end) {
         Move move = (picker->current++)->move;
 
@@ -195,12 +195,12 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 char* PhaseName(MovePicker* picker) {
   switch (picker->phase) {
     case HASH_MOVE: return "HASH_MOVE";
-    case PLAY_GOOD_TACTICAL: return "PLAY_GOOD_TACTICAL";
+    case PLAY_GOOD_NOISY: return "PLAY_GOOD_NOISY";
     case PLAY_KILLER_1: return "PLAY_KILLER_1";
     case PLAY_KILLER_2: return "PLAY_KILLER_2";
     case PLAY_COUNTER: return "PLAY_COUNTER";
     case PLAY_QUIETS: return "PLAY_QUIETS";
-    case PLAY_BAD_TACTICAL: return "PLAY_BAD_TACTICAL";
+    case PLAY_BAD_NOISY: return "PLAY_BAD_NOISY";
     default: return "UNKNOWN";
   }
 }

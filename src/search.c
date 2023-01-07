@@ -299,7 +299,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move move;
   MovePicker mp;
 
-  // drop into tactical moves only
+  // drop into noisy moves only
   if (depth <= 0) {
     if (board->checkers)
       depth = 1;
@@ -463,7 +463,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int probBeta = beta + 110 - 30 * improving;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && tt->depth >= depth - 3 && ttScore < probBeta)) {
-      InitTacticalMoves(&mp, thread, 1);
+      InitNoisyMoves(&mp, thread, 1);
       while ((move = NextMove(&mp, board, 1))) {
         if (ss->skip == move) continue;
         if (!IsLegal(move, board)) continue;
@@ -485,10 +485,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
-  Move quiets[64];
-  Move tacticals[64];
+  int numQuiets = 0, numCaptures = 0;
+  Move quiets[64], captures[32];
 
-  int legalMoves = 0, playedMoves = 0, numQuiets = 0, numTacticals = 0, skipQuiets = 0, singularExtension = 0;
+  int legalMoves = 0, playedMoves = 0, skipQuiets = 0, singularExtension = 0;
   InitAllMoves(&mp, hashMove, thread, ss, oppThreat.sqs);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
@@ -505,20 +505,19 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     legalMoves++;
 
     int extension       = 0;
-    int tactical        = IsTactical(move);
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
-    int history         = !tactical ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
-                                      GetTacticalHistory(thread, board, move);
+    int history         = !IsCap(move) ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
+                                         GetCaptureHistory(thread, board, move);
 
     if (bestScore > -MATE_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
 
-      if (!tactical) {
+      if (!IsCap(move)) {
         if (depth < 9 && eval + 100 + 50 * depth + history / 512 <= alpha) skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][depth])) continue;
       } else {
-        if (mp.phase > PLAY_GOOD_TACTICAL && !SEE(board, move, STATIC_PRUNE[1][depth])) continue;
+        if (mp.phase > PLAY_GOOD_NOISY && !SEE(board, move, STATIC_PRUNE[1][depth])) continue;
       }
     }
 
@@ -530,10 +529,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
              MoveToStr(move, board),
              playedMoves + thread->multiPV);
 
-    if (!tactical)
+    if (!IsCap(move))
       quiets[numQuiets++] = move;
     else
-      tacticals[numTacticals++] = move;
+      captures[numCaptures++] = move;
 
     // singular extension
     // if one move is better than all the rest, then we consider this singular
@@ -610,7 +609,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
       // and https://www.chessprogramming.org/Node_Types
-      if (cutnode) R += 1 + !tactical;
+      if (cutnode) R += 1 + !IsCap(move);
 
       // adjust reduction based on historical score
       R -= history / 20480;
@@ -658,8 +657,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
                         board->stm,
                         quiets,
                         numQuiets,
-                        tacticals,
-                        numTacticals,
+                        captures,
+                        numCaptures,
                         oppThreat.sqs);
         break;
       }
@@ -734,7 +733,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   Move move;
   MovePicker mp;
 
-  InitTacticalMoves(&mp, thread, 0);
+  InitNoisyMoves(&mp, thread, 0);
 
   while ((move = NextMove(&mp, board, 1))) {
     if (!IsLegal(move, board)) continue;
@@ -831,7 +830,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->counters, 0, sizeof(thread->counters));
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
-  memset(&thread->th, 0, sizeof(thread->th));
+  memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->scores, 0, sizeof(thread->scores));
   memset(&thread->bestMoves, 0, sizeof(thread->bestMoves));
   memset(&thread->pvs, 0, sizeof(thread->counters));

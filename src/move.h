@@ -41,8 +41,6 @@ extern const int CASTLING_ROOK[64];
 // just mask the from/to bits into a single int for indexing butterfly tables
 #define FromTo(move) ((int) (move) &0xfff)
 
-#define IsTactical(move) (((int) (move) &0x1f0000) >> 16)
-
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move, Board* board);
 int IsRecapture(SearchStack* ss, Move move);

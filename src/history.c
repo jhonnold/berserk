@@ -52,12 +52,12 @@ void UpdateHistories(Board* board,
                      int stm,
                      Move quiets[],
                      int nQ,
-                     Move tacticals[],
-                     int nT,
+                     Move captures[],
+                     int nC,
                      BitBoard threats) {
   int inc = min(7584, 16 * depth * depth + 480 * depth - 480);
 
-  if (!IsTactical(bestMove)) {
+  if (!IsCap(bestMove)) {
     AddKillerMove(ss, bestMove);
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
     UpdateCH(ss, bestMove, inc);
@@ -73,7 +73,7 @@ void UpdateHistories(Board* board,
   }
 
   // Update quiets
-  if (!IsTactical(bestMove)) {
+  if (!IsCap(bestMove)) {
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
       if (m == bestMove) continue;
@@ -83,9 +83,9 @@ void UpdateHistories(Board* board,
     }
   }
 
-  // Update tacticals
-  for (int i = 0; i < nT; i++) {
-    Move m = tacticals[i];
+  // Update captures
+  for (int i = 0; i < nC; i++) {
+    Move m = captures[i];
     if (m == bestMove) continue;
 
     int piece    = PieceType(Moving(m));
@@ -97,8 +97,6 @@ void UpdateHistories(Board* board,
 }
 
 int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats) {
-  if (IsTactical(move)) return 0;
-
   int history = HH(stm, move, threats);
   history += (*(ss - 1)->ch)[Moving(move)][To(move)];
   history += (*(ss - 2)->ch)[Moving(move)][To(move)];
@@ -106,7 +104,7 @@ int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, Bit
   return history;
 }
 
-int GetTacticalHistory(ThreadData* thread, Board* board, Move m) {
+int GetCaptureHistory(ThreadData* thread, Board* board, Move m) {
   int piece    = PieceType(Moving(m));
   int to       = To(m);
   int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
