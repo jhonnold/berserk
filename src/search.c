@@ -259,8 +259,10 @@ void Search(ThreadData* thread) {
 
       Score searchScoreDiff    = results->scores[thread->depth - 3] - results->scores[thread->depth];
       Score prevScoreDiff      = results->prevScore - results->scores[thread->depth];
-      double scoreChangeFactor = 0.1 + 0.0275 * searchScoreDiff + 0.0275 * prevScoreDiff;
-      scoreChangeFactor        = max(0.5, min(1.5, scoreChangeFactor));
+      double scoreChangeFactor = 0.1 +                                              //
+                                 0.0275 * searchScoreDiff * (searchScoreDiff > 0) + //
+                                 0.0275 * prevScoreDiff * (prevScoreDiff > 0);
+      scoreChangeFactor = max(0.5, min(1.5, scoreChangeFactor));
 
       uint64_t bestMoveNodes = thread->nodeCounts[FromTo(results->bestMoves[thread->depth])];
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
