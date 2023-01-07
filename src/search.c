@@ -740,7 +740,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     if (!IsLegal(move, board)) continue;
 
     if (bestScore > -MATE_BOUND) {
-      if (!SEE(board, move, 0)) continue;
+      if (!SEE(board, move, eval <= alpha - DELTA_CUTOFF)) continue;
     }
 
     ss->move = move;

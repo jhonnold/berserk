@@ -32,6 +32,9 @@
 #define SEE_PRUNE_CAPTURE_CUTOFF 90
 #define SEE_PRUNE_CUTOFF         15
 
+// delta pruning in QS
+#define DELTA_CUTOFF 50
+
 // base window value
 #define WINDOW 10
 
