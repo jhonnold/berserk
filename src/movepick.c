@@ -30,7 +30,7 @@
 const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
 
 void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats) {
-  picker->phase = MP_ALL;
+  picker->type  = MP_ALL;
   picker->phase = HASH_MOVE;
 
   picker->hashMove = hashMove;
@@ -44,7 +44,7 @@ void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchS
 }
 
 void InitTacticalMoves(MovePicker* picker, ThreadData* thread, int probcut) {
-  picker->phase = probcut ? MP_PC : MP_QS;
+  picker->type  = probcut ? MP_PC : MP_QS;
   picker->phase = GEN_TACTICAL_MOVES;
 
   picker->hashMove = NULL_MOVE;
@@ -57,7 +57,7 @@ void InitTacticalMoves(MovePicker* picker, ThreadData* thread, int probcut) {
 }
 
 void InitPerftMoves(MovePicker* picker, Board* board) {
-  picker->phase   = MP_PERFT;
+  picker->type    = MP_PERFT;
   picker->phase   = PERFT_MOVES;
   picker->current = picker->moves;
 
