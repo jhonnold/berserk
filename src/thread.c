@@ -61,7 +61,7 @@ void ThreadWake(ThreadData* thread, int action) {
   pthread_cond_signal(&thread->sleep);
   pthread_mutex_unlock(&thread->mutex);
 }
- 
+
 // Idle loop that wakes into an action
 void ThreadIdle(ThreadData* thread) {
   while (1) {
@@ -95,9 +95,9 @@ void ThreadIdle(ThreadData* thread) {
 void* ThreadInit(void* arg) {
   int i = (intptr_t) arg;
 
-  ThreadData* thread          = calloc(1, sizeof(ThreadData));
-  thread->idx                 = i;
-  thread->results.depth       = 0;
+  ThreadData* thread    = calloc(1, sizeof(ThreadData));
+  thread->idx           = i;
+  thread->results.depth = 0;
 
   // Alloc all the necessary accumulators
   thread->accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
@@ -106,7 +106,7 @@ void* ThreadInit(void* arg) {
     (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
   thread->refreshTable[BLACK] =
     (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
-  
+
   ResetRefreshTable(thread->refreshTable);
 
   // Copy these onto the board for easier access within the engine

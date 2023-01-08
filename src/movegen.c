@@ -17,10 +17,10 @@
 #include "movegen.h"
 
 const int CASTLE_MAP[4][3] = {
-  { WHITE_KS, G1, F1 },
-  { WHITE_QS, C1, D1 },
-  { BLACK_KS, G8, F8 },
-  { BLACK_QS, C8, D8 },
+  {WHITE_KS, G1, F1},
+  {WHITE_QS, C1, D1},
+  {BLACK_KS, G8, F8},
+  {BLACK_QS, C8, D8},
 };
 
 ScoredMove* AddTacticalMoves(ScoredMove* moves, Board* board) {

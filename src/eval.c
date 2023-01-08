@@ -113,8 +113,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
   Score knownEval = EvaluateKnownPositions(board);
   if (knownEval != UNKNOWN) return knownEval;
 
-  int16_t* stm     = board->accumulators[board->stm][board->acc];
-  int16_t* xstm    = board->accumulators[board->xstm][board->acc];
+  int16_t* stm  = board->accumulators[board->stm][board->acc];
+  int16_t* xstm = board->accumulators[board->xstm][board->acc];
 
   int score = OutputLayer(stm, xstm);
 
