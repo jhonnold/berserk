@@ -415,7 +415,7 @@ void UCILoop() {
       }
 
       if (success) printf("info string set EvalFile to value %s\n", path);
-    }
+    } else printf("Unknown command: %s \n",in);
   }
 
   if (Threads.searching) ThreadWaitUntilSleep(Threads.threads[0]);
