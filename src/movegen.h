@@ -189,17 +189,14 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
 
   if (bits(board->checkers) > 1) return AddPieceMoves(moves, ALL, board, color, type, KING);
 
-  BitBoard pieceOpts = !board->checkers ? ALL :
-                       type == QUIET    ? BetweenSquares(lsb(PieceBB(KING, color)), lsb(board->checkers)) :
-                                          board->checkers;
-  BitBoard pawnOpts =
+  BitBoard opts =
     !board->checkers ? ALL : BetweenSquares(lsb(PieceBB(KING, color)), lsb(board->checkers)) | board->checkers;
 
-  moves = AddPawnMoves(moves, pawnOpts, board, color, type);
-  moves = AddPieceMoves(moves, pieceOpts, board, color, type, KNIGHT);
-  moves = AddPieceMoves(moves, pieceOpts, board, color, type, BISHOP);
-  moves = AddPieceMoves(moves, pieceOpts, board, color, type, ROOK);
-  moves = AddPieceMoves(moves, pieceOpts, board, color, type, QUEEN);
+  moves = AddPawnMoves(moves, opts, board, color, type);
+  moves = AddPieceMoves(moves, opts, board, color, type, KNIGHT);
+  moves = AddPieceMoves(moves, opts, board, color, type, BISHOP);
+  moves = AddPieceMoves(moves, opts, board, color, type, ROOK);
+  moves = AddPieceMoves(moves, opts, board, color, type, QUEEN);
   moves = AddPieceMoves(moves, ALL, board, color, type, KING);
   if (type == QUIET && !board->checkers) moves = AddCastles(moves, board, color);
 
