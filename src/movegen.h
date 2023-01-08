@@ -217,6 +217,6 @@ INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int type
 
 ScoredMove* AddTacticalMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddPeftMoves(ScoredMove* moves, Board* board);
+ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board);
 
 #endif

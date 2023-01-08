@@ -62,7 +62,7 @@ void InitPerftMoves(MovePicker* picker, Board* board) {
   picker->phase   = PERFT_MOVES;
   picker->current = picker->moves;
 
-  picker->end = AddPeftMoves(picker->moves, board);
+  picker->end = AddPerftMoves(picker->moves, board);
 }
 
 Move Best(ScoredMove* current, ScoredMove* end) {

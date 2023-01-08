@@ -33,7 +33,7 @@ ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
                                AddPseudoLegalMoves(moves, board, QUIET, BLACK);
 }
 
-ScoredMove* AddPeftMoves(ScoredMove* moves, Board* board) {
+ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
   moves = board->stm == WHITE ? AddLegalMoves(moves, board, !QUIET, WHITE) : //
                                 AddLegalMoves(moves, board, !QUIET, BLACK);
   return board->stm == WHITE ? AddLegalMoves(moves, board, QUIET, WHITE) : //
