@@ -300,13 +300,9 @@ void UCILoop() {
       PrintBB(threats->sqs);
     } else if (!strncmp(in, "eval", 4)) {
       ThreadData* thread = Threads.threads[0];
-
-      board.acc                 = 0;
-      board.accumulators[WHITE] = thread->accumulators[WHITE];
-      board.accumulators[BLACK] = thread->accumulators[BLACK];
-
-      ResetAccumulator(board.accumulators[WHITE][0], &board, WHITE);
-      ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
+      board.accumulators = thread->accumulators;
+      ResetAccumulator(board.accumulators, &board, WHITE);
+      ResetAccumulator(board.accumulators, &board, BLACK);
 
       int score = Evaluate(&board, thread);
       score     = board.stm == WHITE ? score : -score;
@@ -327,8 +323,8 @@ void UCILoop() {
           } else if (board.squares[sq] < WHITE_KING) {
             popBit(board.occupancies[BOTH], sq);
 
-            ResetAccumulator(board.accumulators[WHITE][0], &board, WHITE);
-            ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
+            ResetAccumulator(board.accumulators, &board, WHITE);
+            ResetAccumulator(board.accumulators, &board, BLACK);
 
             int new = Evaluate(&board, thread);
             new     = board.stm == WHITE ? new : -new;

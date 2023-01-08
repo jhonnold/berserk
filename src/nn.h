@@ -19,10 +19,12 @@
 #include "util.h"
 
 int Predict(Board* board);
-int OutputLayer(Accumulator stm, Accumulator xstm);
-void ResetRefreshTable(AccumulatorKingState* refreshTable[2]);
-void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective);
-void ResetAccumulator(Accumulator output, Board* board, const int perspective);
+int OutputLayer(acc_t* stm, acc_t* xstm);
+
+void ResetRefreshTable(AccumulatorKingState* refreshTable);
+void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective);
+
+void ResetAccumulator(Accumulator* dest, Board* board, const int perspective);
 
 void ApplyUpdates(Board* board, Move move, int captured, const int view);
 

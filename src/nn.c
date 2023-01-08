@@ -48,12 +48,12 @@ int32_t OUTPUT_BIAS;
 #define UNROLL 128
 #endif
 
-INLINE void ApplyFeature(Accumulator dest, Accumulator src, int f, const int add) {
+INLINE void ApplyFeature(acc_t* dest, acc_t* src, int f, const int add) {
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
     for (size_t i = 0; i < UNROLL; i++) dest[i + c] = src[i + c] + (2 * add - 1) * INPUT_WEIGHTS[f * N_HIDDEN + i + c];
 }
 
-int OutputLayer(Accumulator stm, Accumulator xstm) {
+int OutputLayer(acc_t* stm, acc_t* xstm) {
   int result = OUTPUT_BIAS;
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
@@ -66,31 +66,31 @@ int OutputLayer(Accumulator stm, Accumulator xstm) {
 }
 
 int Predict(Board* board) {
-  Accumulator stm, xstm;
+  Accumulator acc[1];
 
-  ResetAccumulator(stm, board, board->stm);
-  ResetAccumulator(xstm, board, board->xstm);
+  ResetAccumulator(acc, board, board->stm);
+  ResetAccumulator(acc, board, board->xstm);
 
-  return OutputLayer(stm, xstm);
+  return OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
 }
 
-void ResetRefreshTable(AccumulatorKingState* refreshTable[2]) {
-  for (int c = WHITE; c <= BLACK; c++) {
-    for (int b = 0; b < 2 * N_KING_BUCKETS; b++) {
-      AccumulatorKingState* state = &refreshTable[c][b];
-      memcpy(state->values, INPUT_BIASES, sizeof(int16_t) * N_HIDDEN);
-      memset(state->pcs, 0, sizeof(BitBoard) * 12);
-    }
+void ResetRefreshTable(AccumulatorKingState* refreshTable) {
+  for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
+    AccumulatorKingState* state = refreshTable + b;
+
+    memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
+    memset(state->pcs, 0, sizeof(BitBoard) * 12);
   }
 }
 
 // Refreshes an accumulator using a diff from the last known board state
 // with proper king bucketing
-inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int perspective) {
+void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) {
   int kingSq     = lsb(PieceBB(KING, perspective));
+  int pBucket    = perspective == WHITE ? 0 : 2 * N_KING_BUCKETS;
   int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
 
-  AccumulatorKingState* state = &board->refreshTable[perspective][kingBucket];
+  AccumulatorKingState* state = &board->refreshTable[pBucket + kingBucket];
 
   for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
     BitBoard curr = board->pieces[pc];
@@ -113,14 +113,15 @@ inline void RefreshAccumulator(Accumulator accumulator, Board* board, const int 
   }
 
   // Copy in state
-  memcpy(accumulator, state->values, sizeof(int16_t) * N_HIDDEN);
+  memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
 }
 
 // Resets an accumulator from pieces on the board
-void ResetAccumulator(Accumulator accumulator, Board* board, const int perspective) {
-  int kingSq = lsb(PieceBB(KING, perspective));
+void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
+  int kingSq    = lsb(PieceBB(KING, perspective));
+  acc_t* values = dest->values[perspective];
 
-  memcpy(accumulator, INPUT_BIASES, sizeof(Accumulator));
+  memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
 
   BitBoard occ = OccBB(BOTH);
   while (occ) {
@@ -128,13 +129,13 @@ void ResetAccumulator(Accumulator accumulator, Board* board, const int perspecti
     int pc      = board->squares[sq];
     int feature = FeatureIdx(pc, sq, kingSq, perspective);
 
-    ApplyFeature(accumulator, accumulator, feature, ADD);
+    ApplyFeature(values, values, feature, ADD);
   }
 }
 
 void ApplyUpdates(Board* board, Move move, int captured, const int view) {
-  int16_t* output = board->accumulators[view][board->acc];
-  int16_t* prev   = board->accumulators[view][board->acc - 1];
+  int16_t* output = board->accumulators->values[view];
+  int16_t* prev   = (board->accumulators - 1)->values[view];
 
   const int king = lsb(PieceBB(KING, view));
 

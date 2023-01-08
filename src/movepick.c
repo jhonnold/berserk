@@ -62,8 +62,7 @@ void InitPerftMoves(MovePicker* picker, Board* board) {
   picker->phase   = PERFT_MOVES;
   picker->current = picker->moves;
 
-  picker->end = AddLegalMoves(picker->moves, board, !QUIET);
-  picker->end = AddLegalMoves(picker->end, board, QUIET);
+  picker->end = AddPerftMoves(picker->moves, board);
 }
 
 Move Best(ScoredMove* current, ScoredMove* end) {

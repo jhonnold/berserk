@@ -24,9 +24,18 @@ const int CASTLE_MAP[4][3] = {
 };
 
 ScoredMove* AddTacticalMoves(ScoredMove* moves, Board* board) {
-  return AddPseudoLegalMoves(moves, board, !QUIET);
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, !QUIET, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, !QUIET, BLACK);
 }
 
 ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
-  return AddPseudoLegalMoves(moves, board, QUIET);
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, QUIET, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, QUIET, BLACK);
+}
+
+ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
+  moves = board->stm == WHITE ? AddLegalMoves(moves, board, !QUIET, WHITE) : //
+                                AddLegalMoves(moves, board, !QUIET, BLACK);
+  return board->stm == WHITE ? AddLegalMoves(moves, board, QUIET, WHITE) : //
+                               AddLegalMoves(moves, board, QUIET, BLACK);
 }

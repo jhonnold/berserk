@@ -100,20 +100,13 @@ void* ThreadInit(void* arg) {
   thread->results.depth = 0;
 
   // Alloc all the necessary accumulators
-  thread->accumulators[WHITE] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
-  thread->accumulators[BLACK] = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
-  thread->refreshTable[WHITE] =
-    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
-  thread->refreshTable[BLACK] =
-    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * N_KING_BUCKETS);
-
+  thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
+  thread->refreshTable = (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS);
   ResetRefreshTable(thread->refreshTable);
 
   // Copy these onto the board for easier access within the engine
-  thread->board.accumulators[WHITE] = thread->accumulators[WHITE];
-  thread->board.accumulators[BLACK] = thread->accumulators[BLACK];
-  thread->board.refreshTable[WHITE] = thread->refreshTable[WHITE];
-  thread->board.refreshTable[BLACK] = thread->refreshTable[BLACK];
+  thread->board.accumulators = thread->accumulators;
+  thread->board.refreshTable = thread->refreshTable;
 
   pthread_mutex_init(&thread->mutex, NULL);
   pthread_cond_init(&thread->sleep, NULL);
@@ -155,10 +148,8 @@ void ThreadDestroy(ThreadData* thread) {
   pthread_cond_destroy(&thread->sleep);
   pthread_mutex_destroy(&thread->mutex);
 
-  AlignedFree(thread->accumulators[WHITE]);
-  AlignedFree(thread->accumulators[BLACK]);
-  AlignedFree(thread->refreshTable[WHITE]);
-  AlignedFree(thread->refreshTable[BLACK]);
+  AlignedFree(thread->accumulators);
+  AlignedFree(thread->refreshTable);
 
   free(thread);
 }
