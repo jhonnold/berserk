@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "nn.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +24,6 @@
 #include "board.h"
 #include "move.h"
 #include "movegen.h"
-#include "nn.h"
 #include "util.h"
 
 #define INCBIN_PREFIX
@@ -56,12 +57,10 @@ int OutputLayer(Accumulator stm, Accumulator xstm) {
   int result = OUTPUT_BIAS;
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++)
-      result += max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
+    for (size_t i = 0; i < UNROLL; i++) result += max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++)
-      result += max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
+    for (size_t i = 0; i < UNROLL; i++) result += max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
 
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
