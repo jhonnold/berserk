@@ -513,7 +513,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!isRoot && legalMoves >= LMP[improving][depth]) skipQuiets = 1;
 
       if (!tactical) {
-        if (depth < 9 && eval + 100 + 50 * depth + history / 512 <= alpha) skipQuiets = 1;
+        if (depth < 9 && eval + 100 + 50 * depth + history / 128 <= alpha) skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][depth])) continue;
       } else {
@@ -566,7 +566,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // history extension - if the tt move has a really good history score, extend.
     // thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 7 && tt && move == hashMove && history >= 98304)
+    else if (!isRoot && depth >= 7 && tt && move == hashMove && history >= 24576)
       extension = 1;
 
     // re-capture extension - looks for a follow up capture on the same square
@@ -612,7 +612,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (cutnode) R += 1 + !tactical;
 
       // adjust reduction based on historical score
-      R -= history / 20480;
+      R -= history / 5120;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = min(depth - 1, max(R, !singularExtension));
