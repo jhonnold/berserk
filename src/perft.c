@@ -25,7 +25,6 @@
 #include "util.h"
 
 uint64_t Perft(int depth, Board* board) {
-  if (depth == 0) return 1;
 
   Move move;
   MovePicker mp;
@@ -65,7 +64,7 @@ void PerftTest(int depth, Board* board) {
 
   long endTime = GetTimeMS();
 
-  printf("\nNodes: %" PRIu64 "\n", total);
-  printf("Time: %ldms\n", (endTime - startTime));
-  printf("NPS: %" PRIu64 "\n\n", total / max(1, (endTime - startTime)) * 1000);
+  printf("\nNodes searched : %" PRIu64 "\n", total);
+  printf("Total time (ms) : %ldms\n", (endTime - startTime));
+  printf("Nodes/second : %" PRIu64 "\n\n", total / max(1, (endTime - startTime)) * 1000);
 }
