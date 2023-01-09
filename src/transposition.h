@@ -58,4 +58,6 @@ int TTScore(TTEntry* e, int ply);
 void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv);
 int TTFull();
 
+#define HASH_MAX ((int)(pow(2, 32) * sizeof(TTBucket) / MEGABYTE))
+
 #endif

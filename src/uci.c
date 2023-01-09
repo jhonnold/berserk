@@ -207,7 +207,7 @@ void ParsePosition(char* in, Board* board) {
 void PrintUCIOptions() {
   printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
-  printf("option name Hash type spin default 16 min 2 max 262144\n");
+  printf("option name Hash type spin default 16 min 2 max %d\n", HASH_MAX);
   printf("option name Threads type spin default 1 min 1 max 256\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
@@ -356,7 +356,7 @@ void UCILoop() {
         printf("info string Invalid move!\n");
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb                  = GetOptionIntValue(in);
-      mb                      = max(2, min(262144, mb));
+      mb                      = max(2, min(HASH_MAX, mb));
       uint64_t bytesAllocated = TTInit(mb);
       uint64_t totalEntries   = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
       printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",

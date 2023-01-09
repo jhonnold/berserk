@@ -90,8 +90,8 @@ inline int TTScore(TTEntry* e, int ply) {
   return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
 }
 
-inline uint32_t TTIdx(uint64_t hash) {
-  return ((uint32_t) hash * (uint64_t) TT.count) >> 32;
+inline uint64_t TTIdx(uint64_t hash) {
+  return ((unsigned __int128) hash * (unsigned __int128) TT.count) >> 64;
 }
 
 inline void TTPrefetch(uint64_t hash) {
@@ -100,7 +100,7 @@ inline void TTPrefetch(uint64_t hash) {
 
 inline TTEntry* TTProbe(uint64_t hash) {
   TTEntry* bucket    = TT.buckets[TTIdx(hash)].entries;
-  uint16_t shortHash = hash >> 48;
+  uint16_t shortHash = (uint16_t) hash;
 
   for (int i = 0; i < BUCKET_SIZE; i++)
     if (bucket[i].hash == shortHash) {
@@ -113,7 +113,7 @@ inline TTEntry* TTProbe(uint64_t hash) {
 
 inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
   TTBucket* bucket   = &TT.buckets[TTIdx(hash)];
-  uint16_t shortHash = hash >> 48;
+  uint16_t shortHash = (uint16_t) hash;
   TTEntry* toReplace = bucket->entries;
 
   if (score > MATE_BOUND)
