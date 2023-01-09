@@ -21,7 +21,7 @@
 #include <limits.h>
 #include <pthread.h>
 
-#define MAX_SEARCH_PLY (INT8_MAX + 1)
+#define MAX_SEARCH_PLY 251 // effective max depth 250
 #define MAX_MOVES      128
 
 #define N_KING_BUCKETS 16
@@ -161,7 +161,7 @@ struct ThreadData {
   Move counters[12][64];    // counter move butterfly table
   int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
   int ch[12][64][12][64];   // continuation move history table
-  int caph[6][64][7];         // capture history
+  int caph[6][64][7];       // capture history
 
   int action, calls;
   pthread_t nativeThread;
