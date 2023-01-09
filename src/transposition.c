@@ -120,7 +120,7 @@ inline void TTPut(uint64_t hash, int depth, int16_t score, uint8_t flag, Move mo
   if (pv) flag |= TT_PV;
 
   for (TTEntry* entry = bucket->entries; entry < bucket->entries + BUCKET_SIZE; entry++) {
-    if (!entry->hash) { // raw depth of 0 means empty
+    if (!entry->depth) { // raw depth of 0 means empty
       toReplace = entry;
       break;
     }
