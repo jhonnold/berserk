@@ -207,7 +207,7 @@ void ParsePosition(char* in, Board* board) {
 void PrintUCIOptions() {
   printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
-  printf("option name Hash type spin default 16 min 2 max 131072\n");
+  printf("option name Hash type spin default 16 min 2 max 262144\n");
   printf("option name Threads type spin default 1 min 1 max 256\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
@@ -300,13 +300,9 @@ void UCILoop() {
       PrintBB(threats->sqs);
     } else if (!strncmp(in, "eval", 4)) {
       ThreadData* thread = Threads.threads[0];
-
-      board.acc                 = 0;
-      board.accumulators[WHITE] = thread->accumulators[WHITE];
-      board.accumulators[BLACK] = thread->accumulators[BLACK];
-
-      ResetAccumulator(board.accumulators[WHITE][0], &board, WHITE);
-      ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
+      board.accumulators = thread->accumulators;
+      ResetAccumulator(board.accumulators, &board, WHITE);
+      ResetAccumulator(board.accumulators, &board, BLACK);
 
       int score = Evaluate(&board, thread);
       score     = board.stm == WHITE ? score : -score;
@@ -327,8 +323,8 @@ void UCILoop() {
           } else if (board.squares[sq] < WHITE_KING) {
             popBit(board.occupancies[BOTH], sq);
 
-            ResetAccumulator(board.accumulators[WHITE][0], &board, WHITE);
-            ResetAccumulator(board.accumulators[BLACK][0], &board, BLACK);
+            ResetAccumulator(board.accumulators, &board, WHITE);
+            ResetAccumulator(board.accumulators, &board, BLACK);
 
             int new = Evaluate(&board, thread);
             new     = board.stm == WHITE ? new : -new;
@@ -360,9 +356,13 @@ void UCILoop() {
         printf("info string Invalid move!\n");
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb                  = GetOptionIntValue(in);
-      mb                      = max(2, min(131072, mb));
+      mb                      = max(2, min(262144, mb));
       uint64_t bytesAllocated = TTInit(mb);
-      printf("info string set Hash to value %d (%" PRIu64 " bytes)\n", mb, bytesAllocated);
+      uint64_t totalEntries   = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
+      printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",
+             mb,
+             bytesAllocated,
+             totalEntries);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
       ThreadsSetNumber(max(1, min(256, n)));
@@ -411,7 +411,7 @@ void UCILoop() {
       }
 
       if (success) printf("info string set EvalFile to value %s\n", path);
-    }
+    } else printf("Unknown command: %s \n",in);
   }
 
   if (Threads.searching) ThreadWaitUntilSleep(Threads.threads[0]);

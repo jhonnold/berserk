@@ -81,7 +81,7 @@ inline void TTClear() {
 }
 
 inline void TTUpdate() {
-  TT.age += 1;
+  TT.age += 0x10;
 }
 
 inline int TTScore(TTEntry* e, int ply) {
@@ -100,11 +100,11 @@ inline void TTPrefetch(uint64_t hash) {
 
 inline TTEntry* TTProbe(uint64_t hash) {
   TTEntry* bucket    = TT.buckets[TTIdx(hash)].entries;
-  uint32_t shortHash = hash >> 32;
+  uint16_t shortHash = hash >> 48;
 
   for (int i = 0; i < BUCKET_SIZE; i++)
     if (bucket[i].hash == shortHash) {
-      bucket[i].age = TT.age;
+      bucket[i].flags = TT.age | (bucket[i].flags & 0x0F);
       return &bucket[i];
     }
 
@@ -113,7 +113,7 @@ inline TTEntry* TTProbe(uint64_t hash) {
 
 inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
   TTBucket* bucket   = &TT.buckets[TTIdx(hash)];
-  uint32_t shortHash = hash >> 32;
+  uint16_t shortHash = hash >> 48;
   TTEntry* toReplace = bucket->entries;
 
   if (score > MATE_BOUND)
@@ -136,17 +136,18 @@ inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move
       break;
     }
 
-    if (entry->depth - (256 + TT.age - entry->age) * 4 < toReplace->depth - (256 + TT.age - toReplace->age) * 4)
-      toReplace = entry;
+    int existingReplaceFactor = entry->depth - ((271 + TT.age - entry->flags) & 0xF0) / 4;
+    int currentReplaceFactor  = toReplace->depth - ((271 + TT.age - toReplace->flags) & 0xF0) / 4;
+
+    if (existingReplaceFactor < currentReplaceFactor) toReplace = entry;
   }
 
-  *toReplace = (TTEntry) {.flags = flag,
-                          .depth = depth,
-                          .eval  = eval,
-                          .score = score,
-                          .hash  = shortHash,
-                          .move  = move,
-                          .age   = TT.age};
+  toReplace->move  = move;
+  toReplace->hash  = shortHash;
+  toReplace->depth = depth;
+  toReplace->flags = TT.age | flag;
+  toReplace->score = score;
+  toReplace->eval  = eval;
 }
 
 inline int TTFull() {
@@ -156,7 +157,7 @@ inline int TTFull() {
   for (int i = 0; i < c; i++) {
     TTBucket b = TT.buckets[i];
     for (int j = 0; j < BUCKET_SIZE; j++) {
-      if (b.entries[j].hash && b.entries[j].age == TT.age) t++;
+      if (b.entries[j].hash && (b.entries[j].flags & 0xF0) == TT.age) t++;
     }
   }
 

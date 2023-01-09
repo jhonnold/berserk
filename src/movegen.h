@@ -184,9 +184,7 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
   return moves;
 }
 
-INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type) {
-  const int color = board->stm == WHITE ? WHITE : BLACK;
-
+INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
   if (bits(board->checkers) > 1) return AddPieceMoves(moves, ALL, board, color, type, KING);
 
   BitBoard opts =
@@ -203,12 +201,12 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
   return moves;
 }
 
-INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int type) {
+INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
   ScoredMove* curr = moves;
   BitBoard pinned  = board->pinned;
   int king         = lsb(PieceBB(KING, board->stm));
 
-  moves = AddPseudoLegalMoves(moves, board, type);
+  moves = AddPseudoLegalMoves(moves, board, type, color);
 
   while (curr != moves) {
     if (((pinned && getBit(pinned, From(curr->move))) || From(curr->move) == king || IsEP(curr->move)) &&
@@ -223,5 +221,6 @@ INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int type
 
 ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board);
+ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board);
 
 #endif

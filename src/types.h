@@ -39,12 +39,16 @@ typedef uint32_t Move;
 
 enum { SUB = 0, ADD = 1 };
 
-typedef int16_t Accumulator[N_HIDDEN] ALIGN;
+typedef int16_t acc_t;
 
 typedef struct {
+  acc_t values[2][512] ALIGN;
+} Accumulator;
+
+typedef struct {
+  acc_t values[N_HIDDEN] ALIGN;
   BitBoard pcs[12];
-  Accumulator values;
-} ALIGN AccumulatorKingState;
+} AccumulatorKingState;
 
 typedef struct {
   BitBoard pcs, sqs;
@@ -53,7 +57,6 @@ typedef struct {
 typedef struct {
   int stm;      // side to move
   int xstm;     // not side to move
-  int acc;      // board ply for accumulator access
   int histPly;  // ply for historical state
   int moveNo;   // game move number
   int halfMove; // half move count for 50 move rule
@@ -82,8 +85,8 @@ typedef struct {
   BitBoard checkersHistory[MAX_SEARCH_PLY + 100];
   BitBoard pinnedHistory[MAX_SEARCH_PLY + 100];
 
-  Accumulator* accumulators[2];
-  AccumulatorKingState* refreshTable[2];
+  Accumulator* accumulators;
+  AccumulatorKingState* refreshTable;
 } Board;
 
 typedef struct {
@@ -141,8 +144,8 @@ struct ThreadData {
   int idx, multiPV, depth, seldepth;
   uint64_t nodes, tbhits;
 
-  Accumulator* accumulators[2];
-  AccumulatorKingState* refreshTable[2];
+  Accumulator* accumulators;
+  AccumulatorKingState* refreshTable;
 
   SearchResults results;
   Board board;

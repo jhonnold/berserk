@@ -150,9 +150,8 @@ void Search(ThreadData* thread) {
   int alpha = -CHECKMATE;
   int beta  = CHECKMATE;
 
-  board->acc = 0;
-  ResetAccumulator(board->accumulators[WHITE][0], board, WHITE);
-  ResetAccumulator(board->accumulators[BLACK][0], board, BLACK);
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
 
   SetContempt(thread->contempt, board->stm);
 

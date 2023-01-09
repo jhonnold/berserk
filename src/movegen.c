@@ -17,16 +17,25 @@
 #include "movegen.h"
 
 const int CASTLE_MAP[4][3] = {
-  { WHITE_KS, G1, F1 },
-  { WHITE_QS, C1, D1 },
-  { BLACK_KS, G8, F8 },
-  { BLACK_QS, C8, D8 },
+  {WHITE_KS, G1, F1},
+  {WHITE_QS, C1, D1},
+  {BLACK_KS, G8, F8},
+  {BLACK_QS, C8, D8},
 };
 
 ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board) {
-  return AddPseudoLegalMoves(moves, board, !QUIET);
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, !QUIET, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, !QUIET, BLACK);
 }
 
 ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
-  return AddPseudoLegalMoves(moves, board, QUIET);
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, QUIET, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, QUIET, BLACK);
+}
+
+ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
+  moves = board->stm == WHITE ? AddLegalMoves(moves, board, !QUIET, WHITE) : //
+                                AddLegalMoves(moves, board, !QUIET, BLACK);
+  return board->stm == WHITE ? AddLegalMoves(moves, board, QUIET, WHITE) : //
+                               AddLegalMoves(moves, board, QUIET, BLACK);
 }

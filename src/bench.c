@@ -27,8 +27,8 @@
 #include "thread.h"
 #include "transposition.h"
 #include "types.h"
-#include "util.h"
 #include "uci.h"
+#include "util.h"
 
 // Ethereal's bench set
 const int NUM_BENCH_POSITIONS = 50;
@@ -39,10 +39,10 @@ char* benchmarks[]            = {
 void Bench(int depth) {
   Board board;
 
-  Limits.depth = depth;
+  Limits.depth   = depth;
   Limits.multiPV = 1;
   Limits.hitrate = 4096;
-  Limits.max = INT_MAX;
+  Limits.max     = INT_MAX;
   Limits.timeset = 0;
 
   Move bestMoves[NUM_BENCH_POSITIONS];

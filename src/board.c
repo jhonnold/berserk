@@ -418,11 +418,11 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int stm = board->stm;
 
   board->histPly++;
-  board->acc++;
   board->moveNo += (board->stm == BLACK);
   board->xstm = board->stm;
   board->stm ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
+  board->accumulators++;
 
   // Prefetch the hash entry for this board position
   TTPrefetch(board->zobrist);
@@ -436,7 +436,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     if (MoveRequiresRefresh(piece, from, to)) {
       int colorToRefresh = piece & 1;
-      RefreshAccumulator(board->accumulators[colorToRefresh][board->acc], board, colorToRefresh);
+      RefreshAccumulator(board->accumulators, board, colorToRefresh);
       ApplyUpdates(board, move, captured, !colorToRefresh);
     } else {
       ApplyUpdates(board, move, captured, WHITE);
@@ -457,8 +457,8 @@ void UndoMove(Move move, Board* board) {
   board->stm = board->xstm;
   board->xstm ^= 1;
   board->histPly--;
-  board->acc--;
   board->moveNo -= (board->stm == BLACK);
+  board->accumulators--;
 
   // reload historical values
   board->epSquare = board->epSquareHistory[board->histPly];
