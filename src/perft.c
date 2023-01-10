@@ -25,12 +25,11 @@
 #include "util.h"
 
 uint64_t Perft(int depth, Board* board) {
-
+  if (depth == 0) return 1;
+  
   Move move;
   MovePicker mp;
   InitPerftMoves(&mp, board);
-
-  if (depth == 1) return mp.end - mp.moves;
 
   uint64_t nodes = 0;
   while ((move = NextMove(&mp, board, 0))) {
@@ -65,6 +64,6 @@ void PerftTest(int depth, Board* board) {
   long endTime = GetTimeMS();
 
   printf("\nNodes searched : %" PRIu64 "\n", total);
-  printf("Total time (ms) : %ldms\n", (endTime - startTime));
+  printf("Total time (ms) : %ld\n", (endTime - startTime));
   printf("Nodes/second : %" PRIu64 "\n\n", total / max(1, (endTime - startTime)) * 1000);
 }
