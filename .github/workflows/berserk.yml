@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
-        version: [8, 9, 10, 11]
+        version: [9, 10, 11]
     
     steps:
     - name: Set up GCC ${{matrix.version}}

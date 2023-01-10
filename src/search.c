@@ -335,11 +335,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // if the TT has a value that fits our position and has been searched to an equal or greater depth, then we accept
   // this score and prune
-  if (!isPV && tt && tt->depth >= depth && ttScore != UNKNOWN) {
-    if ((tt->flags & TT_EXACT) || ((tt->flags & TT_LOWER) && ttScore >= beta) ||
-        ((tt->flags & TT_UPPER) && ttScore <= alpha))
-      return ttScore;
-  }
+  if (!isPV && tt && ttScore != UNKNOWN && TTDepth(tt) >= depth &&
+      ((tt->flags & TT_EXACT) ||                      //
+       ((tt->flags & TT_LOWER) && ttScore >= beta) || //
+       ((tt->flags & TT_UPPER) && ttScore <= alpha)))
+    return ttScore;
 
   // tablebase - we do not do this at root
   if (!isRoot) {
@@ -395,7 +395,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   if (!tt && !ss->skip && eval != UNKNOWN)
-    TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, eval, ttPv);
+    TTPut(board->zobrist, -1, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, eval, ttPv);
 
   // getting better if eval has gone up
   int improving = 0;
@@ -461,7 +461,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     Threats(&ownThreat, board, board->stm);
     int probBeta = beta + 110 - 30 * improving;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
-        !(tt && tt->depth >= depth - 3 && ttScore < probBeta)) {
+        !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitNoisyMoves(&mp, thread, 1);
       while ((move = NextMove(&mp, board, 1))) {
         if (ss->skip == move) continue;
@@ -538,7 +538,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // and look at it more (extend). Singular is determined by checking all other
     // moves at a shallow depth on a nullwindow that is somewhere below the tt evaluation
     // implemented using "skip move" recursion like in SF (allows for reductions when doing singular search)
-    if (!isRoot && depth >= 7 && tt && move == hashMove && tt->depth >= depth - 3 && (tt->flags & TT_LOWER) &&
+    if (!isRoot && depth >= 7 && tt && move == hashMove && TTDepth(tt) >= depth - 3 && (tt->flags & TT_LOWER) &&
         abs(ttScore) < WINNING_ENDGAME) {
       int sBeta  = max(ttScore - 3 * depth / 2, -CHECKMATE);
       int sDepth = depth / 2 - 1;
@@ -714,7 +714,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
   // pull cached eval if it exists
   int eval = ss->staticEval = board->checkers ? UNKNOWN : (tt ? tt->eval : Evaluate(board, thread));
-  if (!tt && eval != UNKNOWN) TTPut(board->zobrist, INT8_MIN, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, eval, ttPv);
+  if (!tt && eval != UNKNOWN) TTPut(board->zobrist, -1, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, eval, ttPv);
 
   // can we use an improved evaluation from the tt?
   if (tt && ttScore != UNKNOWN)

@@ -31,6 +31,8 @@
 #include "transposition.h"
 #include "types.h"
 
+const int DEPTH_OFFSET = -2;
+
 // Global TT
 TTTable TT = {0};
 
@@ -84,12 +86,6 @@ inline void TTUpdate() {
   TT.age += 0x10;
 }
 
-inline int TTScore(TTEntry* e, int ply) {
-  if (e->score == UNKNOWN) return UNKNOWN;
-
-  return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
-}
-
 inline uint64_t TTIdx(uint64_t hash) {
   return ((unsigned __int128) hash * (unsigned __int128) TT.count) >> 64;
 }
@@ -111,7 +107,7 @@ inline TTEntry* TTProbe(uint64_t hash) {
   return NULL;
 }
 
-inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
+inline void TTPut(uint64_t hash, int depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
   TTBucket* bucket   = &TT.buckets[TTIdx(hash)];
   uint16_t shortHash = (uint16_t) hash;
   TTEntry* toReplace = bucket->entries;
@@ -124,13 +120,13 @@ inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move
   if (pv) flag |= TT_PV;
 
   for (TTEntry* entry = bucket->entries; entry < bucket->entries + BUCKET_SIZE; entry++) {
-    if (!entry->hash) {
+    if (!entry->depth) { // raw depth of 0 means empty
       toReplace = entry;
       break;
     }
 
     if (entry->hash == shortHash) {
-      if (entry->depth > depth * 2 && !(flag & TT_EXACT)) return;
+      if (TTDepth(entry) > depth * 2 && !(flag & TT_EXACT)) return;
 
       toReplace = entry;
       break;
@@ -142,10 +138,10 @@ inline void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move
     if (existingReplaceFactor < currentReplaceFactor) toReplace = entry;
   }
 
-  toReplace->move  = move;
   toReplace->hash  = shortHash;
-  toReplace->depth = depth;
+  toReplace->depth = depth - DEPTH_OFFSET;
   toReplace->flags = TT.age | flag;
+  toReplace->move  = move;
   toReplace->score = score;
   toReplace->eval  = eval;
 }
@@ -157,7 +153,7 @@ inline int TTFull() {
   for (int i = 0; i < c; i++) {
     TTBucket b = TT.buckets[i];
     for (int j = 0; j < BUCKET_SIZE; j++) {
-      if (b.entries[j].hash && (b.entries[j].flags & 0xF0) == TT.age) t++;
+      if (b.entries[j].depth && (b.entries[j].flags & 0xF0) == TT.age) t++;
     }
   }
 

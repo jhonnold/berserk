@@ -18,6 +18,7 @@
 #define TRANSPOSITION_H
 
 #include "types.h"
+#include "util.h"
 
 #define NO_ENTRY    0ULL
 #define MEGABYTE    (1024ull * 1024ull)
@@ -25,10 +26,9 @@
 
 typedef struct {
   uint16_t hash;
-  int16_t eval, score;
-  uint8_t flags;
-  int8_t depth;
+  uint8_t depth, flags;
   Move move;
+  int16_t score, eval;
 } TTEntry;
 
 typedef struct {
@@ -54,10 +54,21 @@ void TTClear();
 void TTUpdate();
 void TTPrefetch(uint64_t hash);
 TTEntry* TTProbe(uint64_t hash);
-int TTScore(TTEntry* e, int ply);
-void TTPut(uint64_t hash, int8_t depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv);
+void TTPut(uint64_t hash, int depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv);
 int TTFull();
 
-#define HASH_MAX ((int)(pow(2, 32) * sizeof(TTBucket) / MEGABYTE))
+#define HASH_MAX ((int) (pow(2, 32) * sizeof(TTBucket) / MEGABYTE))
+
+INLINE int TTScore(TTEntry* e, int ply) {
+  if (e->score == UNKNOWN) return UNKNOWN;
+
+  return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
+}
+
+extern const int DEPTH_OFFSET;
+
+INLINE int TTDepth(TTEntry* e) {
+  return e->depth + DEPTH_OFFSET;
+}
 
 #endif

@@ -114,7 +114,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (knownEval != UNKNOWN) return knownEval;
 
   Accumulator* acc = board->accumulators;
-  int score = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
+  int score        = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
 
   // sf cornered bishop in FRC
   if (CHESS_960) score += FRCCorneredBishop(board);
