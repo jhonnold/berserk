@@ -20,6 +20,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <pthread.h>
+#include <setjmp.h>
 
 #define MAX_SEARCH_PLY 251 // effective max depth 250
 #define MAX_MOVES      128
@@ -153,7 +154,7 @@ struct ThreadData {
   uint64_t nodeCounts[64 * 64];
 
   int contempt[2];
-
+  int searchStability;
   Score scores[MAX_MOVES];
   Move bestMoves[MAX_MOVES];
   PV pvs[MAX_MOVES];
@@ -167,6 +168,7 @@ struct ThreadData {
   pthread_t nativeThread;
   pthread_mutex_t mutex;
   pthread_cond_t sleep;
+  jmp_buf exit;
 };
 
 typedef struct {

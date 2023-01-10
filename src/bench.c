@@ -41,7 +41,7 @@ void Bench(int depth) {
 
   Limits.depth   = depth;
   Limits.multiPV = 1;
-  Limits.hitrate = 4096;
+  Limits.hitrate = INT_MAX;
   Limits.max     = INT_MAX;
   Limits.timeset = 0;
 

@@ -123,9 +123,9 @@ void ParseGo(char* in, Board* board) {
   Limits.nodes = nodes;
 
   if (Limits.nodes)
-    Limits.hitrate = min(4096, max(1, Limits.nodes / 100));
+    Limits.hitrate = min(1000, max(1, Limits.nodes / 100));
   else
-    Limits.hitrate = 4096;
+    Limits.hitrate = 1000;
 
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
