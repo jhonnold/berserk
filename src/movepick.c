@@ -27,7 +27,7 @@
 #include "transposition.h"
 #include "types.h"
 
-const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
+const int MATERIAL_VALUES[7] = {100, 300, 300, 550, 1000, 0, 0};
 
 void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats) {
   picker->type  = MP_ALL;
