@@ -53,7 +53,8 @@ void RootMoves(SimpleMoveList* moves, Board* board) {
   InitPerftMoves(&mp, board);
 
   Move mv;
-  while ((mv = NextMove(&mp, board, 0))) moves->moves[moves->count++] = mv;
+  while ((mv = NextMove(&mp, board, 0)))
+    moves->moves[moves->count++] = mv;
 }
 
 // uci "go" command
@@ -76,25 +77,35 @@ void ParseGo(char* in, Board* board) {
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
 
-  if ((ptrChar = strstr(in, "infinite"))) Limits.infinite = 1;
+  if ((ptrChar = strstr(in, "infinite")))
+    Limits.infinite = 1;
 
-  if ((ptrChar = strstr(in, "perft"))) perft = atoi(ptrChar + 6);
+  if ((ptrChar = strstr(in, "perft")))
+    perft = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "binc")) && board->stm == BLACK) inc = atoi(ptrChar + 5);
+  if ((ptrChar = strstr(in, "binc")) && board->stm == BLACK)
+    inc = atoi(ptrChar + 5);
 
-  if ((ptrChar = strstr(in, "winc")) && board->stm == WHITE) inc = atoi(ptrChar + 5);
+  if ((ptrChar = strstr(in, "winc")) && board->stm == WHITE)
+    inc = atoi(ptrChar + 5);
 
-  if ((ptrChar = strstr(in, "wtime")) && board->stm == WHITE) time = atoi(ptrChar + 6);
+  if ((ptrChar = strstr(in, "wtime")) && board->stm == WHITE)
+    time = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "btime")) && board->stm == BLACK) time = atoi(ptrChar + 6);
+  if ((ptrChar = strstr(in, "btime")) && board->stm == BLACK)
+    time = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "movestogo"))) movesToGo = max(1, min(50, atoi(ptrChar + 10)));
+  if ((ptrChar = strstr(in, "movestogo")))
+    movesToGo = max(1, min(50, atoi(ptrChar + 10)));
 
-  if ((ptrChar = strstr(in, "movetime"))) moveTime = atoi(ptrChar + 9);
+  if ((ptrChar = strstr(in, "movetime")))
+    moveTime = atoi(ptrChar + 9);
 
-  if ((ptrChar = strstr(in, "depth"))) depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+  if ((ptrChar = strstr(in, "depth")))
+    depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
 
-  if ((ptrChar = strstr(in, "nodes"))) nodes = max(1, atol(ptrChar + 6));
+  if ((ptrChar = strstr(in, "nodes")))
+    nodes = max(1, atol(ptrChar + 6));
 
   if ((ptrChar = strstr(in, "ponder"))) {
     if (PONDER_ENABLED)
@@ -155,18 +166,22 @@ void ParseGo(char* in, Board* board) {
   }
 
   Limits.multiPV = min(Limits.multiPV, Limits.searchMoves ? Limits.searchable.count : rootMoves.count);
-  if (rootMoves.count == 1 && Limits.timeset) Limits.max = min(250, Limits.max);
+  if (rootMoves.count == 1 && Limits.timeset)
+    Limits.max = min(250, Limits.max);
 
-  if (depth <= 0) Limits.depth = MAX_SEARCH_PLY - 1;
+  if (depth <= 0)
+    Limits.depth = MAX_SEARCH_PLY - 1;
 
-  printf("info string time %d start %ld alloc %d max %d depth %d timeset %d searchmoves %d\n",
-         time,
-         Limits.start,
-         Limits.alloc,
-         Limits.max,
-         Limits.depth,
-         Limits.timeset,
-         Limits.searchable.count);
+  printf(
+    "info string time %d start %ld alloc %d max %d depth %d timeset %d "
+    "searchmoves %d\n",
+    time,
+    Limits.start,
+    Limits.alloc,
+    Limits.max,
+    Limits.depth,
+    Limits.timeset,
+    Limits.searchable.count);
 
   StartSearch(board, ponder);
 }
@@ -190,17 +205,20 @@ void ParsePosition(char* in, Board* board) {
 
   ptrChar = strstr(in, "moves");
 
-  if (ptrChar == NULL) return;
+  if (ptrChar == NULL)
+    return;
 
   ptrChar += 6;
 
   for (char* moves = strtok(ptrChar, " "); moves != NULL; moves = strtok(NULL, " ")) {
     Move enteredMove = ParseMove(moves, board);
-    if (!enteredMove) break;
+    if (!enteredMove)
+      break;
 
     MakeMoveUpdate(enteredMove, board, 0);
 
-    if (board->halfMove == 0) board->histPly = 0;
+    if (board->halfMove == 0)
+      board->histPly = 0;
   }
 }
 
@@ -220,10 +238,12 @@ void PrintUCIOptions() {
 }
 
 int ReadLine(char* in) {
-  if (fgets(in, 8192, stdin) == NULL) return 0;
+  if (fgets(in, 8192, stdin) == NULL)
+    return 0;
 
   size_t c = strcspn(in, "\r\n");
-  if (c < strlen(in)) in[c] = '\0';
+  if (c < strlen(in))
+    in[c] = '\0';
 
   return 1;
 }
@@ -240,7 +260,8 @@ void UCILoop() {
   Threads.searching = Threads.sleeping = 0;
 
   while (ReadLine(in)) {
-    if (in[0] == '\n') continue;
+    if (in[0] == '\n')
+      continue;
 
     if (!strncmp(in, "isready", 7)) {
       printf("readyok\n");
@@ -256,7 +277,8 @@ void UCILoop() {
       if (Threads.searching) {
         Threads.stop = 1;
         pthread_mutex_lock(&Threads.lock);
-        if (Threads.sleeping) ThreadWake(Threads.threads[0], THREAD_RESUME);
+        if (Threads.sleeping)
+          ThreadWake(Threads.threads[0], THREAD_RESUME);
         Threads.sleeping = 0;
         pthread_mutex_unlock(&Threads.lock);
       }
@@ -264,7 +286,8 @@ void UCILoop() {
       if (Threads.searching) {
         Threads.stop = 1;
         pthread_mutex_lock(&Threads.lock);
-        if (Threads.sleeping) ThreadWake(Threads.threads[0], THREAD_RESUME);
+        if (Threads.sleeping)
+          ThreadWake(Threads.threads[0], THREAD_RESUME);
         Threads.sleeping = 0;
         pthread_mutex_unlock(&Threads.lock);
       }
@@ -273,7 +296,8 @@ void UCILoop() {
       PrintUCIOptions();
     } else if (!strncmp(in, "ponderhit", 9)) {
       Threads.ponder = 0;
-      if (Threads.stopOnPonderHit) Threads.stop = 1;
+      if (Threads.stopOnPonderHit)
+        Threads.stop = 1;
       pthread_mutex_lock(&Threads.lock);
       if (Threads.sleeping) {
         Threads.stop = 1;
@@ -308,10 +332,13 @@ void UCILoop() {
       score     = board.stm == WHITE ? score : -score;
 
       for (int r = 0; r < 8; r++) {
-        printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+        printf(
+          "+-------+-------+-------+-------+-------+-------+-------+-------+"
+          "\n");
         printf("|");
         for (int f = 0; f < 16; f++) {
-          if (f == 8) printf("\n|");
+          if (f == 8)
+            printf("\n|");
 
           int sq = r * 8 + (f > 7 ? f - 8 : f);
 
@@ -410,12 +437,14 @@ void UCILoop() {
         success = 1;
       }
 
-      if (success) printf("info string set EvalFile to value %s\n", path);
+      if (success)
+        printf("info string set EvalFile to value %s\n", path);
     } else
       printf("Unknown command: %s \n", in);
   }
 
-  if (Threads.searching) ThreadWaitUntilSleep(Threads.threads[0]);
+  if (Threads.searching)
+    ThreadWaitUntilSleep(Threads.threads[0]);
 
   pthread_mutex_destroy(&Threads.lock);
   ThreadsExit();

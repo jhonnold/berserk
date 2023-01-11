@@ -69,7 +69,8 @@ Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* max  = current;
 
   while (++current < end)
-    if (current->score > max->score) max = current;
+    if (current->score > max->score)
+      max = current;
 
   ScoredMove temp = *orig;
   *orig           = *max;
@@ -97,7 +98,8 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
   switch (picker->phase) {
     case HASH_MOVE:
       picker->phase = GEN_NOISY_MOVES;
-      if (IsPseudoLegal(picker->hashMove, board)) return picker->hashMove;
+      if (IsPseudoLegal(picker->hashMove, board))
+        return picker->hashMove;
       // fallthrough
     case GEN_NOISY_MOVES:
       picker->current = picker->endBad = picker->moves;
@@ -181,7 +183,8 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = -1;
       return NULL_MOVE;
     case PERFT_MOVES:
-      if (picker->current != picker->end) return (picker->current++)->move;
+      if (picker->current != picker->end)
+        return (picker->current++)->move;
 
       picker->phase = -1;
       return NULL_MOVE;

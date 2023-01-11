@@ -81,7 +81,8 @@ void Threats(Threat* threats, Board* board, int stm) {
   }
 
   BitBoard queens = PieceBB(QUEEN, stm);
-  while (queens) threats->sqs |= GetQueenAttacks(popAndGetLsb(&queens), OccBB(BOTH));
+  while (queens)
+    threats->sqs |= GetQueenAttacks(popAndGetLsb(&queens), OccBB(BOTH));
 
   threats->sqs |= GetKingAttacks(lsb(PieceBB(KING, stm)));
 }
@@ -111,13 +112,15 @@ Score FRCCorneredBishop(Board* board) {
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
   Score knownEval = EvaluateKnownPositions(board);
-  if (knownEval != UNKNOWN) return knownEval;
+  if (knownEval != UNKNOWN)
+    return knownEval;
 
   Accumulator* acc = board->accumulators;
   int score        = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
 
   // sf cornered bishop in FRC
-  if (CHESS_960) score += FRCCorneredBishop(board);
+  if (CHESS_960)
+    score += FRCCorneredBishop(board);
 
   // static contempt
   score += thread->contempt[board->stm];

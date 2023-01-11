@@ -50,17 +50,20 @@ int32_t OUTPUT_BIAS;
 
 INLINE void ApplyFeature(acc_t* dest, acc_t* src, int f, const int add) {
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++) dest[i + c] = src[i + c] + (2 * add - 1) * INPUT_WEIGHTS[f * N_HIDDEN + i + c];
+    for (size_t i = 0; i < UNROLL; i++)
+      dest[i + c] = src[i + c] + (2 * add - 1) * INPUT_WEIGHTS[f * N_HIDDEN + i + c];
 }
 
 int OutputLayer(acc_t* stm, acc_t* xstm) {
   int result = OUTPUT_BIAS;
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++) result += max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
+    for (size_t i = 0; i < UNROLL; i++)
+      result += max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++) result += max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
+    for (size_t i = 0; i < UNROLL; i++)
+      result += max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
 
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }

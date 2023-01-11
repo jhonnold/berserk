@@ -10,8 +10,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -44,15 +44,15 @@
 #include "../types.h"
 
 #define PYRRHIC_POPCOUNT(x) (bits(x))
-#define PYRRHIC_LSB(x) (lsb(x))
-#define PYRRHIC_POPLSB(x) (popAndGetLsb(x))
+#define PYRRHIC_LSB(x)      (lsb(x))
+#define PYRRHIC_POPLSB(x)   (popAndGetLsb(x))
 
-#define PYRRHIC_PAWN_ATTACKS(sq, c) (GetPawnAttacks(sq, c))
-#define PYRRHIC_KNIGHT_ATTACKS(sq) (GetKnightAttacks(sq))
+#define PYRRHIC_PAWN_ATTACKS(sq, c)     (GetPawnAttacks(sq, c))
+#define PYRRHIC_KNIGHT_ATTACKS(sq)      (GetKnightAttacks(sq))
 #define PYRRHIC_BISHOP_ATTACKS(sq, occ) (GetBishopAttacks(sq, occ))
-#define PYRRHIC_ROOK_ATTACKS(sq, occ) (GetRookAttacks(sq, occ))
-#define PYRRHIC_QUEEN_ATTACKS(sq, occ) (GetQueenAttacks(sq, occ))
-#define PYRRHIC_KING_ATTACKS(sq) (GetKingAttacks(sq))
+#define PYRRHIC_ROOK_ATTACKS(sq, occ)   (GetRookAttacks(sq, occ))
+#define PYRRHIC_QUEEN_ATTACKS(sq, occ)  (GetQueenAttacks(sq, occ))
+#define PYRRHIC_KING_ATTACKS(sq)        (GetKingAttacks(sq))
 
 /*
  * Pyrrhic can produce scores for tablebase moves. These depend on the value
@@ -62,7 +62,7 @@
  * moves. Without these values you are still able to detmine which moves Win,
  * Draw, and Lose. PYRRHIC_MAX_MATE_PLY should be your max search height.
  */
-#define PYRRHIC_VALUE_PAWN (100)
-#define PYRRHIC_VALUE_MATE (CHECKMATE)
-#define PYRRHIC_VALUE_DRAW (0)
+#define PYRRHIC_VALUE_PAWN   (100)
+#define PYRRHIC_VALUE_MATE   (CHECKMATE)
+#define PYRRHIC_VALUE_DRAW   (0)
 #define PYRRHIC_MAX_MATE_PLY (MAX_SEARCH_PLY)

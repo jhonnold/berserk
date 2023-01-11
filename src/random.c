@@ -17,9 +17,9 @@
 
 #include <inttypes.h>
 
-// I dunno anything about random number generators, and had a bad one for a while
-// Thanks to Martin Sedlák (author of Cheng) this one is really cool and works :)
-// http://www.vlasak.biz/cheng/
+// I dunno anything about random number generators, and had a bad one for a
+// while Thanks to Martin Sedlák (author of Cheng) this one is really cool and
+// works :) http://www.vlasak.biz/cheng/
 
 uint64_t keys[2];
 
@@ -36,7 +36,8 @@ inline uint64_t RandomUInt64() {
 void SeedRandom(uint64_t seed) {
   keys[0] = keys[1] = seed;
 
-  for (int i = 0; i < 64; i++) RandomUInt64();
+  for (int i = 0; i < 64; i++)
+    RandomUInt64();
 }
 
 // Magic's are combined to try and get one with few bits

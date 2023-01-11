@@ -81,7 +81,8 @@ void Bench(int depth) {
   }
 
   uint64_t totalNodes = 0;
-  for (int i = 0; i < NUM_BENCH_POSITIONS; i++) totalNodes += nodes[i];
+  for (int i = 0; i < NUM_BENCH_POSITIONS; i++)
+    totalNodes += nodes[i];
 
   printf("\nResults: %43" PRIu64 " nodes %8d nps\n\n", totalNodes, (int) (1000.0 * totalNodes / (totalTime + 1)));
 }

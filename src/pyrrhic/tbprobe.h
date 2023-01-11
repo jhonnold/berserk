@@ -11,8 +11,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -26,8 +26,8 @@
 #ifndef TBPROBE_H
 #define TBPROBE_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "tbconfig.h"
 
@@ -35,64 +35,48 @@
 /* MAIN API                                                                 */
 /****************************************************************************/
 
-#define TB_MAX_MOVES                256
-#define TB_MAX_CAPTURES             64
-#define TB_MAX_PLY                  256
+#define TB_MAX_MOVES    256
+#define TB_MAX_CAPTURES 64
+#define TB_MAX_PLY      256
 
-#define TB_LOSS                     0       /* LOSS */
-#define TB_BLESSED_LOSS             1       /* LOSS but 50-move draw */
-#define TB_DRAW                     2       /* DRAW */
-#define TB_CURSED_WIN               3       /* WIN but 50-move draw  */
-#define TB_WIN                      4       /* WIN  */
+#define TB_LOSS         0 /* LOSS */
+#define TB_BLESSED_LOSS 1 /* LOSS but 50-move draw */
+#define TB_DRAW         2 /* DRAW */
+#define TB_CURSED_WIN   3 /* WIN but 50-move draw  */
+#define TB_WIN          4 /* WIN  */
 
-#define TB_RESULT_WDL_MASK          0x0000000F
-#define TB_RESULT_TO_MASK           0x000003F0
-#define TB_RESULT_FROM_MASK         0x0000FC00
-#define TB_RESULT_PROMOTES_MASK     0x00070000
-#define TB_RESULT_EP_MASK           0x00080000
-#define TB_RESULT_DTZ_MASK          0xFFF00000
-#define TB_RESULT_WDL_SHIFT         0
-#define TB_RESULT_TO_SHIFT          4
-#define TB_RESULT_FROM_SHIFT        10
-#define TB_RESULT_PROMOTES_SHIFT    16
-#define TB_RESULT_EP_SHIFT          19
-#define TB_RESULT_DTZ_SHIFT         20
+#define TB_RESULT_WDL_MASK       0x0000000F
+#define TB_RESULT_TO_MASK        0x000003F0
+#define TB_RESULT_FROM_MASK      0x0000FC00
+#define TB_RESULT_PROMOTES_MASK  0x00070000
+#define TB_RESULT_EP_MASK        0x00080000
+#define TB_RESULT_DTZ_MASK       0xFFF00000
+#define TB_RESULT_WDL_SHIFT      0
+#define TB_RESULT_TO_SHIFT       4
+#define TB_RESULT_FROM_SHIFT     10
+#define TB_RESULT_PROMOTES_SHIFT 16
+#define TB_RESULT_EP_SHIFT       19
+#define TB_RESULT_DTZ_SHIFT      20
 
-#define TB_GET_WDL(_res)                        \
-    (((_res) & TB_RESULT_WDL_MASK) >> TB_RESULT_WDL_SHIFT)
-#define TB_GET_TO(_res)                         \
-    (((_res) & TB_RESULT_TO_MASK) >> TB_RESULT_TO_SHIFT)
-#define TB_GET_FROM(_res)                       \
-    (((_res) & TB_RESULT_FROM_MASK) >> TB_RESULT_FROM_SHIFT)
-#define TB_GET_PROMOTES(_res)                   \
-    (((_res) & TB_RESULT_PROMOTES_MASK) >> TB_RESULT_PROMOTES_SHIFT)
-#define TB_GET_EP(_res)                         \
-    (((_res) & TB_RESULT_EP_MASK) >> TB_RESULT_EP_SHIFT)
-#define TB_GET_DTZ(_res)                        \
-    (((_res) & TB_RESULT_DTZ_MASK) >> TB_RESULT_DTZ_SHIFT)
+#define TB_GET_WDL(_res)      (((_res) &TB_RESULT_WDL_MASK) >> TB_RESULT_WDL_SHIFT)
+#define TB_GET_TO(_res)       (((_res) &TB_RESULT_TO_MASK) >> TB_RESULT_TO_SHIFT)
+#define TB_GET_FROM(_res)     (((_res) &TB_RESULT_FROM_MASK) >> TB_RESULT_FROM_SHIFT)
+#define TB_GET_PROMOTES(_res) (((_res) &TB_RESULT_PROMOTES_MASK) >> TB_RESULT_PROMOTES_SHIFT)
+#define TB_GET_EP(_res)       (((_res) &TB_RESULT_EP_MASK) >> TB_RESULT_EP_SHIFT)
+#define TB_GET_DTZ(_res)      (((_res) &TB_RESULT_DTZ_MASK) >> TB_RESULT_DTZ_SHIFT)
 
-#define TB_SET_WDL(_res, _wdl)                  \
-    (((_res) & ~TB_RESULT_WDL_MASK) |           \
-     (((_wdl) << TB_RESULT_WDL_SHIFT) & TB_RESULT_WDL_MASK))
-#define TB_SET_TO(_res, _to)                    \
-    (((_res) & ~TB_RESULT_TO_MASK) |            \
-     (((_to) << TB_RESULT_TO_SHIFT) & TB_RESULT_TO_MASK))
-#define TB_SET_FROM(_res, _from)                \
-    (((_res) & ~TB_RESULT_FROM_MASK) |          \
-     (((_from) << TB_RESULT_FROM_SHIFT) & TB_RESULT_FROM_MASK))
-#define TB_SET_PROMOTES(_res, _promotes)        \
-    (((_res) & ~TB_RESULT_PROMOTES_MASK) |      \
-     (((_promotes) << TB_RESULT_PROMOTES_SHIFT) & TB_RESULT_PROMOTES_MASK))
-#define TB_SET_EP(_res, _ep)                    \
-    (((_res) & ~TB_RESULT_EP_MASK) |            \
-     (((_ep) << TB_RESULT_EP_SHIFT) & TB_RESULT_EP_MASK))
-#define TB_SET_DTZ(_res, _dtz)                  \
-    (((_res) & ~TB_RESULT_DTZ_MASK) |           \
-     (((_dtz) << TB_RESULT_DTZ_SHIFT) & TB_RESULT_DTZ_MASK))
+#define TB_SET_WDL(_res, _wdl) (((_res) & ~TB_RESULT_WDL_MASK) | (((_wdl) << TB_RESULT_WDL_SHIFT) & TB_RESULT_WDL_MASK))
+#define TB_SET_TO(_res, _to)   (((_res) & ~TB_RESULT_TO_MASK) | (((_to) << TB_RESULT_TO_SHIFT) & TB_RESULT_TO_MASK))
+#define TB_SET_FROM(_res, _from) \
+  (((_res) & ~TB_RESULT_FROM_MASK) | (((_from) << TB_RESULT_FROM_SHIFT) & TB_RESULT_FROM_MASK))
+#define TB_SET_PROMOTES(_res, _promotes) \
+  (((_res) & ~TB_RESULT_PROMOTES_MASK) | (((_promotes) << TB_RESULT_PROMOTES_SHIFT) & TB_RESULT_PROMOTES_MASK))
+#define TB_SET_EP(_res, _ep)   (((_res) & ~TB_RESULT_EP_MASK) | (((_ep) << TB_RESULT_EP_SHIFT) & TB_RESULT_EP_MASK))
+#define TB_SET_DTZ(_res, _dtz) (((_res) & ~TB_RESULT_DTZ_MASK) | (((_dtz) << TB_RESULT_DTZ_SHIFT) & TB_RESULT_DTZ_MASK))
 
-#define TB_RESULT_CHECKMATE         TB_SET_WDL(0, TB_WIN)
-#define TB_RESULT_STALEMATE         TB_SET_WDL(0, TB_DRAW)
-#define TB_RESULT_FAILED            0xFFFFFFFF
+#define TB_RESULT_CHECKMATE TB_SET_WDL(0, TB_WIN)
+#define TB_RESULT_STALEMATE TB_SET_WDL(0, TB_DRAW)
+#define TB_RESULT_FAILED    0xFFFFFFFF
 
 /*
  * The tablebase can be probed for any position where #pieces <= TB_LARGEST.
@@ -138,12 +122,16 @@ void tb_free(void);
  * - Engines should use this function during search.
  * - This function is thread safe assuming TB_NO_THREADS is disabled.
  */
-unsigned tb_probe_wdl(
-    uint64_t white,     uint64_t black,
-    uint64_t kings,     uint64_t queens,
-    uint64_t rooks,     uint64_t bishops,
-    uint64_t knights,   uint64_t pawns,
-    unsigned ep,        bool     turn);
+unsigned tb_probe_wdl(uint64_t white,
+                      uint64_t black,
+                      uint64_t kings,
+                      uint64_t queens,
+                      uint64_t rooks,
+                      uint64_t bishops,
+                      uint64_t knights,
+                      uint64_t pawns,
+                      unsigned ep,
+                      bool turn);
 
 /*
  * Probe the Distance-To-Zero (DTZ) table.
@@ -190,14 +178,18 @@ unsigned tb_probe_wdl(
  * - This function is NOT thread safe.  For engines this function should only
  *   be called once at the root per search.
  */
-unsigned tb_probe_root(
-    uint64_t white,    uint64_t black,
-    uint64_t kings,    uint64_t queens,
-    uint64_t rooks,    uint64_t bishops,
-    uint64_t knights,  uint64_t pawns,
-    unsigned rule50,   unsigned ep,
-    bool     turn,     unsigned *results);
-
+unsigned tb_probe_root(uint64_t white,
+                       uint64_t black,
+                       uint64_t kings,
+                       uint64_t queens,
+                       uint64_t rooks,
+                       uint64_t bishops,
+                       uint64_t knights,
+                       uint64_t pawns,
+                       unsigned rule50,
+                       unsigned ep,
+                       bool turn,
+                       unsigned *results);
 
 typedef uint16_t PyrrhicMove;
 
@@ -224,14 +216,20 @@ struct TbRootMoves {
  *   non-zero if ok, 0 means not all probes were successful
  *
  */
-int tb_probe_root_dtz(
-    uint64_t white,    uint64_t black,
-    uint64_t kings,    uint64_t queens,
-    uint64_t rooks,    uint64_t bishops,
-    uint64_t knights,  uint64_t pawns,
-    unsigned rule50,   unsigned ep,
-    bool     turn,     bool hasRepeated,
-    bool useRule50,    struct TbRootMoves *results);
+int tb_probe_root_dtz(uint64_t white,
+                      uint64_t black,
+                      uint64_t kings,
+                      uint64_t queens,
+                      uint64_t rooks,
+                      uint64_t bishops,
+                      uint64_t knights,
+                      uint64_t pawns,
+                      unsigned rule50,
+                      unsigned ep,
+                      bool turn,
+                      bool hasRepeated,
+                      bool useRule50,
+                      struct TbRootMoves *results);
 
 /*
 // Use the WDL tables to rank and score all root moves.
@@ -245,13 +243,18 @@ int tb_probe_root_dtz(
  *   non-zero if ok, 0 means not all probes were successful
  *
  */
-int tb_probe_root_wdl(
-    uint64_t white,    uint64_t black,
-    uint64_t kings,    uint64_t queens,
-    uint64_t rooks,    uint64_t bishops,
-    uint64_t knights,  uint64_t pawns,
-    unsigned rule50,   unsigned ep,
-    bool     turn,     bool useRule50,
-    struct TbRootMoves *_results);
+int tb_probe_root_wdl(uint64_t white,
+                      uint64_t black,
+                      uint64_t kings,
+                      uint64_t queens,
+                      uint64_t rooks,
+                      uint64_t bishops,
+                      uint64_t knights,
+                      uint64_t pawns,
+                      unsigned rule50,
+                      unsigned ep,
+                      bool turn,
+                      bool useRule50,
+                      struct TbRootMoves *_results);
 
 #endif

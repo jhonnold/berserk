@@ -40,7 +40,8 @@ void AddHistoryHeuristic(int* entry, int inc) {
 
 void UpdateCH(SearchStack* ss, Move move, int bonus) {
   for (int i = 1; i < 3; i++) {
-    if ((ss - i)->move) AddHistoryHeuristic(&(*(ss - i)->ch)[Moving(move)][To(move)], bonus);
+    if ((ss - i)->move)
+      AddHistoryHeuristic(&(*(ss - i)->ch)[Moving(move)][To(move)], bonus);
   }
 }
 
@@ -62,7 +63,8 @@ void UpdateHistories(Board* board,
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
     UpdateCH(ss, bestMove, inc);
 
-    if ((ss - 1)->move) AddCounterMove(thread, bestMove, (ss - 1)->move);
+    if ((ss - 1)->move)
+      AddCounterMove(thread, bestMove, (ss - 1)->move);
 
   } else {
     int piece    = PieceType(Moving(bestMove));
@@ -76,7 +78,8 @@ void UpdateHistories(Board* board,
   if (!IsCap(bestMove)) {
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
-      if (m == bestMove) continue;
+      if (m == bestMove)
+        continue;
 
       AddHistoryHeuristic(&HH(stm, m, threats), -inc);
       UpdateCH(ss, m, -inc);
@@ -86,7 +89,8 @@ void UpdateHistories(Board* board,
   // Update captures
   for (int i = 0; i < nC; i++) {
     Move m = captures[i];
-    if (m == bestMove) continue;
+    if (m == bestMove)
+      continue;
 
     int piece    = PieceType(Moving(m));
     int to       = To(m);

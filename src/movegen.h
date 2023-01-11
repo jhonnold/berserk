@@ -162,17 +162,20 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
 }
 
 INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
-  if (!board->castling) return moves;
+  if (!board->castling)
+    return moves;
 
   const int rookStart = stm == WHITE ? 0 : 2;
   const int rookEnd   = stm == WHITE ? 2 : 4;
   const int from      = lsb(PieceBB(KING, stm));
 
   for (int rk = rookStart; rk < rookEnd; rk++) {
-    if (!CanCastle(CASTLE_MAP[rk][0])) continue;
+    if (!CanCastle(CASTLE_MAP[rk][0]))
+      continue;
 
     int rookFrom = board->cr[rk];
-    if (getBit(board->pinned, rookFrom)) continue;
+    if (getBit(board->pinned, rookFrom))
+      continue;
 
     int to = CASTLE_MAP[rk][1], rookTo = CASTLE_MAP[rk][2];
 
@@ -185,7 +188,8 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
 }
 
 INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
-  if (bits(board->checkers) > 1) return AddPieceMoves(moves, ALL, board, color, type, KING);
+  if (bits(board->checkers) > 1)
+    return AddPieceMoves(moves, ALL, board, color, type, KING);
 
   BitBoard opts =
     !board->checkers ? ALL : BetweenSquares(lsb(PieceBB(KING, color)), lsb(board->checkers)) | board->checkers;
@@ -196,7 +200,8 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
   moves = AddPieceMoves(moves, opts, board, color, type, ROOK);
   moves = AddPieceMoves(moves, opts, board, color, type, QUEEN);
   moves = AddPieceMoves(moves, ALL, board, color, type, KING);
-  if (type == QUIET && !board->checkers) moves = AddCastles(moves, board, color);
+  if (type == QUIET && !board->checkers)
+    moves = AddCastles(moves, board, color);
 
   return moves;
 }

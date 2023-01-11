@@ -73,7 +73,8 @@ Move ParseMove(char* moveStr, Board* board) {
   RootMoves(&rootMoves, board);
 
   for (int i = 0; i < rootMoves.count; i++)
-    if (!strcmp(MoveToStr(rootMoves.moves[i], board), moveStr)) return rootMoves.moves[i];
+    if (!strcmp(MoveToStr(rootMoves.moves[i], board), moveStr))
+      return rootMoves.moves[i];
 
   return NULL_MOVE;
 }
@@ -84,7 +85,8 @@ char* MoveToStr(Move move, Board* board) {
   int from = From(move);
   int to   = To(move);
 
-  if (CHESS_960 && IsCas(move)) to = board->cr[CASTLING_ROOK[to]];
+  if (CHESS_960 && IsCas(move))
+    to = board->cr[CASTLING_ROOK[to]];
 
   if (Promo(move)) {
     sprintf(buffer, "%s%s%c", SQ_TO_COORD[from], SQ_TO_COORD[to], PROMOTION_TO_CHAR[Promo(move)]);

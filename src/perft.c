@@ -25,13 +25,15 @@
 #include "util.h"
 
 uint64_t Perft(int depth, Board* board) {
-  if (depth == 0) return 1;
+  if (depth == 0)
+    return 1;
 
   Move move;
   MovePicker mp;
   InitPerftMoves(&mp, board);
 
-  if (depth == 1) return mp.end - mp.moves;
+  if (depth == 1)
+    return mp.end - mp.moves;
 
   uint64_t nodes = 0;
   while ((move = NextMove(&mp, board, 0))) {

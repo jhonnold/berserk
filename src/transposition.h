@@ -43,7 +43,13 @@ typedef struct {
   uint8_t age;
 } TTTable;
 
-enum { TT_UNKNOWN = 0, TT_LOWER = 1, TT_UPPER = 2, TT_EXACT = 4, TT_PV = 8 };
+enum {
+  TT_UNKNOWN = 0,
+  TT_LOWER   = 1,
+  TT_UPPER   = 2,
+  TT_EXACT   = 4,
+  TT_PV      = 8
+};
 
 extern TTTable TT;
 
@@ -60,7 +66,8 @@ int TTFull();
 #define HASH_MAX ((int) (pow(2, 32) * sizeof(TTBucket) / MEGABYTE))
 
 INLINE int TTScore(TTEntry* e, int ply) {
-  if (e->score == UNKNOWN) return UNKNOWN;
+  if (e->score == UNKNOWN)
+    return UNKNOWN;
 
   return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
 }

@@ -20,7 +20,9 @@
 #include "types.h"
 
 // search specific score evals
-#define UNKNOWN      32257 // this must be higher than CHECKMATE (some conditional logic relies on this)
+#define UNKNOWN \
+  32257 // this must be higher than CHECKMATE (some conditional logic relies on
+        // this)
 #define CHECKMATE    32200
 #define MATE_BOUND   (32200 - MAX_SEARCH_PLY)
 #define TB_WIN_SCORE MATE_BOUND

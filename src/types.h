@@ -38,7 +38,10 @@ typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
 
-enum { SUB = 0, ADD = 1 };
+enum {
+  SUB = 0,
+  ADD = 1
+};
 
 typedef int16_t acc_t;
 
@@ -63,7 +66,8 @@ typedef struct {
   int halfMove; // half move count for 50 move rule
   int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
   int phase;    // efficiently updated phase for scaling
-  int epSquare; // en passant square (a8 or 0 is not valid so that marks no active ep)
+  int epSquare; // en passant square (a8 or 0 is not valid so that marks no
+                // active ep)
 
   BitBoard checkers;     // checking piece squares
   BitBoard pinned;       // pinned pieces
@@ -137,7 +141,14 @@ typedef struct {
   Move ponderMoves[MAX_SEARCH_PLY];
 } SearchResults;
 
-enum { THREAD_SLEEP, THREAD_SEARCH, THREAD_TT_CLEAR, THREAD_SEARCH_CLEAR, THREAD_EXIT, THREAD_RESUME };
+enum {
+  THREAD_SLEEP,
+  THREAD_SEARCH,
+  THREAD_TT_CLEAR,
+  THREAD_SEARCH_CLEAR,
+  THREAD_EXIT,
+  THREAD_RESUME
+};
 
 typedef struct ThreadData ThreadData;
 
@@ -177,7 +188,10 @@ typedef struct {
 
 // Move generation storage
 // moves/scores idx's match
-enum { ALL_MOVES, NOISY_MOVES };
+enum {
+  ALL_MOVES,
+  NOISY_MOVES
+};
 
 enum {
   HASH_MOVE,
@@ -198,7 +212,12 @@ typedef struct {
   Move move;
 } ScoredMove;
 
-enum { MP_ALL, MP_PC, MP_QS, MP_PERFT };
+enum {
+  MP_ALL,
+  MP_PC,
+  MP_QS,
+  MP_PERFT
+};
 
 typedef struct {
   ThreadData* thread;
@@ -211,7 +230,11 @@ typedef struct {
   ScoredMove moves[MAX_MOVES];
 } MovePicker;
 
-enum { WHITE, BLACK, BOTH };
+enum {
+  WHITE,
+  BLACK,
+  BOTH
+};
 
 enum {
   A8,
@@ -280,7 +303,16 @@ enum {
   H1,
 };
 
-enum { N = -8, E = 1, S = 8, W = -1, NE = -7, SE = 9, SW = 7, NW = -9 };
+enum {
+  N  = -8,
+  E  = 1,
+  S  = 8,
+  W  = -1,
+  NE = -7,
+  SE = 9,
+  SW = 7,
+  NW = -9
+};
 
 enum {
   WHITE_PAWN,
@@ -297,8 +329,18 @@ enum {
   BLACK_KING
 };
 
-enum { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
+enum {
+  PAWN,
+  KNIGHT,
+  BISHOP,
+  ROOK,
+  QUEEN,
+  KING
+};
 
-enum { MG, EG };
+enum {
+  MG,
+  EG
+};
 
 #endif

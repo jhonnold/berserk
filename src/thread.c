@@ -36,18 +36,21 @@ ThreadPool Threads;
 void ThreadWaitUntilSleep(ThreadData* thread) {
   pthread_mutex_lock(&thread->mutex);
 
-  while (thread->action != THREAD_SLEEP) pthread_cond_wait(&thread->sleep, &thread->mutex);
+  while (thread->action != THREAD_SLEEP)
+    pthread_cond_wait(&thread->sleep, &thread->mutex);
 
   pthread_mutex_unlock(&thread->mutex);
 
-  if (thread->idx == 0) Threads.searching = 0;
+  if (thread->idx == 0)
+    Threads.searching = 0;
 }
 
 // Block thread until on condition
 void ThreadWait(ThreadData* thread, atomic_uchar* cond) {
   pthread_mutex_lock(&thread->mutex);
 
-  while (!atomic_load(cond)) pthread_cond_wait(&thread->sleep, &thread->mutex);
+  while (!atomic_load(cond))
+    pthread_cond_wait(&thread->sleep, &thread->mutex);
 
   pthread_mutex_unlock(&thread->mutex);
 }
@@ -56,7 +59,8 @@ void ThreadWait(ThreadData* thread, atomic_uchar* cond) {
 void ThreadWake(ThreadData* thread, int action) {
   pthread_mutex_lock(&thread->mutex);
 
-  if (action != THREAD_RESUME) thread->action = action;
+  if (action != THREAD_RESUME)
+    thread->action = action;
 
   pthread_cond_signal(&thread->sleep);
   pthread_mutex_unlock(&thread->mutex);
@@ -131,7 +135,8 @@ void ThreadCreate(int i) {
   pthread_mutex_lock(&Threads.mutex);
   pthread_create(&thread, NULL, ThreadInit, (void*) (intptr_t) i);
 
-  while (Threads.init) pthread_cond_wait(&Threads.sleep, &Threads.mutex);
+  while (Threads.init)
+    pthread_cond_wait(&Threads.sleep, &Threads.mutex);
   pthread_mutex_unlock(&Threads.mutex);
 
   Threads.threads[i]->nativeThread = thread;
@@ -156,10 +161,13 @@ void ThreadDestroy(ThreadData* thread) {
 
 // Build the pool to a certain amnt
 void ThreadsSetNumber(int n) {
-  while (Threads.count < n) ThreadCreate(Threads.count++);
-  while (Threads.count > n) ThreadDestroy(Threads.threads[--Threads.count]);
+  while (Threads.count < n)
+    ThreadCreate(Threads.count++);
+  while (Threads.count > n)
+    ThreadDestroy(Threads.threads[--Threads.count]);
 
-  if (n == 0) Threads.searching = 0;
+  if (n == 0)
+    Threads.searching = 0;
 }
 
 // End
@@ -182,14 +190,16 @@ void ThreadsInit() {
 // sum node counts
 uint64_t NodesSearched() {
   uint64_t nodes = 0;
-  for (int i = 0; i < Threads.count; i++) nodes += Threads.threads[i]->nodes;
+  for (int i = 0; i < Threads.count; i++)
+    nodes += Threads.threads[i]->nodes;
 
   return nodes;
 }
 
 uint64_t TBHits() {
   uint64_t tbhits = 0;
-  for (int i = 0; i < Threads.count; i++) tbhits += Threads.threads[i]->tbhits;
+  for (int i = 0; i < Threads.count; i++)
+    tbhits += Threads.threads[i]->tbhits;
 
   return tbhits;
 }

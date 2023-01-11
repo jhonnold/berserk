@@ -27,7 +27,8 @@
 #define vf(bb) __builtin_bswap64((bb))
 
 Move TBRootProbe(Board* board) {
-  if (board->castling || bits(OccBB(BOTH)) > TB_LARGEST) return NULL_MOVE;
+  if (board->castling || bits(OccBB(BOTH)) > TB_LARGEST)
+    return NULL_MOVE;
 
   unsigned results[MAX_MOVES]; // used for native support
   unsigned res = tb_probe_root(vf(OccBB(WHITE)),
@@ -43,7 +44,8 @@ Move TBRootProbe(Board* board) {
                                board->stm == WHITE ? 1 : 0,
                                results);
 
-  if (res == TB_RESULT_FAILED || res == TB_RESULT_STALEMATE || res == TB_RESULT_CHECKMATE) return NULL_MOVE;
+  if (res == TB_RESULT_FAILED || res == TB_RESULT_STALEMATE || res == TB_RESULT_CHECKMATE)
+    return NULL_MOVE;
 
   unsigned from  = TB_GET_FROM(res) ^ 56;
   unsigned to    = TB_GET_TO(res) ^ 56;
@@ -65,7 +67,8 @@ Move TBRootProbe(Board* board) {
 }
 
 unsigned TBProbe(Board* board) {
-  if (board->castling || board->halfMove || bits(OccBB(BOTH)) > TB_LARGEST) return TB_RESULT_FAILED;
+  if (board->castling || board->halfMove || bits(OccBB(BOTH)) > TB_LARGEST)
+    return TB_RESULT_FAILED;
 
   return tb_probe_wdl(vf(OccBB(WHITE)),
                       vf(OccBB(BLACK)),

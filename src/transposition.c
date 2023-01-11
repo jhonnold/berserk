@@ -37,7 +37,8 @@ const int DEPTH_OFFSET = -2;
 TTTable TT = {0};
 
 size_t TTInit(int mb) {
-  if (TT.mem) TTFree();
+  if (TT.mem)
+    TTFree();
 
   uint64_t size = (uint64_t) mb * MEGABYTE;
 
@@ -78,8 +79,10 @@ void TTClearPart(int idx) {
 }
 
 inline void TTClear() {
-  for (int i = 0; i < Threads.count; i++) ThreadWake(Threads.threads[i], THREAD_TT_CLEAR);
-  for (int i = 0; i < Threads.count; i++) ThreadWaitUntilSleep(Threads.threads[i]);
+  for (int i = 0; i < Threads.count; i++)
+    ThreadWake(Threads.threads[i], THREAD_TT_CLEAR);
+  for (int i = 0; i < Threads.count; i++)
+    ThreadWaitUntilSleep(Threads.threads[i]);
 }
 
 inline void TTUpdate() {
@@ -117,7 +120,8 @@ inline void TTPut(uint64_t hash, int depth, int16_t score, uint8_t flag, Move mo
   else if (score < -MATE_BOUND)
     score -= ply;
 
-  if (pv) flag |= TT_PV;
+  if (pv)
+    flag |= TT_PV;
 
   for (TTEntry* entry = bucket->entries; entry < bucket->entries + BUCKET_SIZE; entry++) {
     if (!entry->depth) { // raw depth of 0 means empty
@@ -126,7 +130,8 @@ inline void TTPut(uint64_t hash, int depth, int16_t score, uint8_t flag, Move mo
     }
 
     if (entry->hash == shortHash) {
-      if (TTDepth(entry) > depth * 2 && !(flag & TT_EXACT)) return;
+      if (TTDepth(entry) > depth * 2 && !(flag & TT_EXACT))
+        return;
 
       toReplace = entry;
       break;
@@ -135,7 +140,8 @@ inline void TTPut(uint64_t hash, int depth, int16_t score, uint8_t flag, Move mo
     int existingReplaceFactor = entry->depth - ((271 + TT.age - entry->flags) & 0xF0) / 4;
     int currentReplaceFactor  = toReplace->depth - ((271 + TT.age - toReplace->flags) & 0xF0) / 4;
 
-    if (existingReplaceFactor < currentReplaceFactor) toReplace = entry;
+    if (existingReplaceFactor < currentReplaceFactor)
+      toReplace = entry;
   }
 
   toReplace->hash  = shortHash;
@@ -153,7 +159,8 @@ inline int TTFull() {
   for (int i = 0; i < c; i++) {
     TTBucket b = TT.buckets[i];
     for (int j = 0; j < BUCKET_SIZE; j++) {
-      if (b.entries[j].depth && (b.entries[j].flags & 0xF0) == TT.age) t++;
+      if (b.entries[j].depth && (b.entries[j].flags & 0xF0) == TT.age)
+        t++;
     }
   }
 

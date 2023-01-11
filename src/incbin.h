@@ -101,8 +101,8 @@
 /**
  * @brief Optionally override the linker section into which data is emitted.
  *
- * @warning If you use this facility, you'll have to deal with platform-specific linker output
- * section naming on your own
+ * @warning If you use this facility, you'll have to deal with platform-specific
+ * linker output section naming on your own
  *
  * Overriding the default linker output section, e.g for esp8266/Arduino:
  * @code
@@ -274,8 +274,8 @@
 /**
  * @brief Include a binary file into the current translation unit.
  *
- * Includes a binary file into the current translation unit, producing three symbols
- * for objects that encode the data and size respectively.
+ * Includes a binary file into the current translation unit, producing three
+ * symbols for objects that encode the data and size respectively.
  *
  * The symbol names are a concatenation of `INCBIN_PREFIX' before *NAME*; with
  * "Data", as well as "End" and "Size" after. An example is provided below.

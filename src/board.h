@@ -68,9 +68,11 @@ int IsPseudoLegal(Move move, Board* board);
 int IsLegal(Move move, Board* board);
 
 INLINE int MoveRequiresRefresh(int piece, int from, int to) {
-  if (PieceType(piece) != KING) return 0;
+  if (PieceType(piece) != KING)
+    return 0;
 
-  if ((from & 4) != (to & 4)) return 1;
+  if ((from & 4) != (to & 4))
+    return 1;
   return KING_BUCKETS[from] != KING_BUCKETS[to];
 }
 
