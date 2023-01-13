@@ -51,8 +51,10 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss);
 void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board);
 void PrintPV(PV* pv, Board* board);
 
+void SortRootMoves(ThreadData* thread);
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);
-int MoveSearchable(Move move);
+int MoveSearchable(ThreadData* thread, Move move);
+
 void SearchClearThread(ThreadData* thread);
 void SearchClear();
 

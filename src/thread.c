@@ -101,7 +101,6 @@ void* ThreadInit(void* arg) {
 
   ThreadData* thread    = calloc(1, sizeof(ThreadData));
   thread->idx           = i;
-  thread->results.depth = 0;
 
   // Alloc all the necessary accumulators
   thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
