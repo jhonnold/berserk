@@ -103,6 +103,7 @@ void StartSearch(Board* board, uint8_t ponder) {
       mainThread->rootMoves[i].move          = Limits.searchable.moves[i];
       mainThread->rootMoves[i].score         = -CHECKMATE;
       mainThread->rootMoves[i].previousScore = -CHECKMATE;
+      mainThread->rootMoves[i].pv.moves[0]   = Limits.searchable.moves[i];
       mainThread->rootMoves[i].pv.count      = 1;
     }
 
@@ -115,6 +116,7 @@ void StartSearch(Board* board, uint8_t ponder) {
       mainThread->rootMoves[i].move          = ml->moves[i];
       mainThread->rootMoves[i].score         = -CHECKMATE;
       mainThread->rootMoves[i].previousScore = -CHECKMATE;
+      mainThread->rootMoves[i].pv.moves[0]   = ml->moves[i];
       mainThread->rootMoves[i].pv.count      = 1;
     }
 
@@ -133,7 +135,8 @@ void StartSearch(Board* board, uint8_t ponder) {
       thread->rootMoves[j].move          = mainThread->rootMoves[j].move;
       thread->rootMoves[j].score         = -CHECKMATE;
       thread->rootMoves[j].previousScore = -CHECKMATE;
-      thread->rootMoves[j].pv.count      = 0;
+      thread->rootMoves[j].pv.moves[0]   = -mainThread->rootMoves[j].move;
+      thread->rootMoves[j].pv.count      = 1;
     }
     thread->numRootMoves = mainThread->numRootMoves;
 
