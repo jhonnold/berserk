@@ -62,10 +62,9 @@ void Bench(int depth) {
     ThreadWaitUntilSleep(Threads.threads[0]);
     times[i] = GetTimeMS() - Limits.start;
 
-    SearchResults* results = &Threads.threads[0]->results;
-    bestMoves[i]           = results->bestMoves[results->depth];
-    scores[i]              = results->scores[results->depth];
-    nodes[i]               = Threads.threads[0]->nodes;
+    bestMoves[i] = Threads.threads[0]->rootMoves[0].move;
+    scores[i]    = Threads.threads[0]->rootMoves[0].score;
+    nodes[i]     = Threads.threads[0]->nodes;
   }
   long totalTime = GetTimeMS() - startTime;
 

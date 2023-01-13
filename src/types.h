@@ -134,12 +134,10 @@ typedef struct {
 } SearchParams;
 
 typedef struct {
-  int depth;
-  Score prevScore;
-  Score scores[MAX_SEARCH_PLY];
-  Move bestMoves[MAX_SEARCH_PLY];
-  Move ponderMoves[MAX_SEARCH_PLY];
-} SearchResults;
+  Move move;
+  int score, previousScore;
+  PV pv;
+} RootMove;
 
 enum {
   THREAD_SLEEP,
@@ -159,16 +157,13 @@ struct ThreadData {
   Accumulator* accumulators;
   AccumulatorKingState* refreshTable;
 
-  SearchResults results;
   Board board;
 
-  uint64_t nodeCounts[64 * 64];
-
   int contempt[2];
-  int searchStability;
-  Score scores[MAX_MOVES];
-  Move bestMoves[MAX_MOVES];
-  PV pvs[MAX_MOVES];
+  int previousScore;
+  int numRootMoves;
+  RootMove rootMoves[MAX_MOVES];
+  uint64_t nodeCounts[64 * 64];
 
   Move counters[12][64];    // counter move butterfly table
   int hh[2][2][2][64 * 64]; // history heuristic butterfly table (stm / threatened)
