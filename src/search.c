@@ -192,11 +192,11 @@ void Search(ThreadData* thread) {
         // search!
         score = Negamax(alpha, beta, searchDepth, 0, thread, &nullPv, ss);
 
-        SortRootMoves(thread);
+        SortRootMoves(thread, thread->multiPV);
 
         if (mainThread && (score <= alpha || score >= beta) && Limits.multiPV == 1 &&
             GetTimeMS() - Limits.start >= 2500)
-          PrintInfo(&thread->rootMoves[0].pv, thread->rootMoves[0].score, thread, alpha, beta, 1, board);
+          PrintUCI(thread, alpha, beta, board);
 
         if (score <= alpha) {
           // adjust beta downward when failing low
@@ -217,13 +217,16 @@ void Search(ThreadData* thread) {
         // delta x 1.25
         delta += delta / 4;
       }
+
+      SortRootMoves(thread, 0);
+
+      // Print if final multipv or time elapsed
+      if (mainThread && (thread->multiPV + 1 == Limits.multiPV || GetTimeMS() - Limits.start >= 2500))
+        PrintUCI(thread, -CHECKMATE, CHECKMATE, board);
     }
 
     if (!mainThread)
       continue;
-
-    for (int i = 0; i < Limits.multiPV; i++)
-      PrintInfo(&thread->rootMoves[i].pv, thread->rootMoves[i].score, thread, -CHECKMATE, CHECKMATE, i + 1, board);
 
     // Time Management stuff
     //
@@ -814,40 +817,50 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   return bestScore;
 }
 
-inline void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board) {
+void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board) {
   int depth       = thread->depth;
   int seldepth    = thread->seldepth;
   uint64_t nodes  = NodesSearched();
   uint64_t tbhits = TBHits();
-  uint64_t time   = GetTimeMS() - Limits.start;
-  uint64_t nps    = 1000 * nodes / max(time, 1);
+  uint64_t time   = max(1, GetTimeMS() - Limits.start);
+  uint64_t nps    = 1000 * nodes / time;
   int hashfull    = TTFull();
-  int bounded     = max(alpha, min(beta, score));
 
-  int printable = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
-                  bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
-                                          bounded;
-  char* type    = abs(bounded) > MATE_BOUND ? "mate" : "cp";
-  char* bound   = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
+  for (int i = 0; i < Limits.multiPV; i++) {
+    int updated = (thread->rootMoves[i].score != -CHECKMATE);
+    if (depth == 1 && i > 0 && !updated)
+      break;
 
-  printf("info depth %d seldepth %d multipv %d score %s %d%snodes %" PRId64 " nps %" PRId64
-         " hashfull %d tbhits %" PRId64 " time %" PRId64 " pv ",
-         depth,
-         seldepth,
-         multiPV,
-         type,
-         printable,
-         bound,
-         nodes,
-         nps,
-         hashfull,
-         tbhits,
-         time);
+    int realDepth = updated ? depth : max(1, depth - 1);
+    int bounded   = updated ? max(alpha, min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
+    int printable = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
+                    bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
+                                            bounded;
+    char* type    = abs(bounded) > MATE_BOUND ? "mate" : "cp";
+    char* bound   = " ";
+    if (updated)
+      bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
 
-  if (pv->count)
-    PrintPV(pv, board);
-  else
-    printf("%s\n", MoveToStr(pv->moves[0], board));
+    printf("info depth %d seldepth %d multipv %d score %s %d%snodes %" PRId64 " nps %" PRId64
+           " hashfull %d tbhits %" PRId64 " time %" PRId64 " pv ",
+           realDepth,
+           seldepth,
+           i + 1,
+           type,
+           printable,
+           bound,
+           nodes,
+           nps,
+           hashfull,
+           tbhits,
+           time);
+
+    PV* pv = &thread->rootMoves[i].pv;
+    if (pv->count)
+      PrintPV(pv, board);
+    else
+      printf("%s\n", MoveToStr(pv->moves[0], board));
+  }
 }
 
 void PrintPV(PV* pv, Board* board) {
@@ -856,8 +869,8 @@ void PrintPV(PV* pv, Board* board) {
   printf("\n");
 }
 
-void SortRootMoves(ThreadData* thread) {
-  for (int i = 0; i < thread->numRootMoves; i++) {
+void SortRootMoves(ThreadData* thread, int offset) {
+  for (int i = offset; i < thread->numRootMoves; i++) {
     int best = i;
 
     for (int j = i + 1; j < thread->numRootMoves; j++)

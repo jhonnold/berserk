@@ -48,10 +48,10 @@ void Search(ThreadData* thread);
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
 int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss);
 
-void PrintInfo(PV* pv, int score, ThreadData* thread, int alpha, int beta, int multiPV, Board* board);
+void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board);
 void PrintPV(PV* pv, Board* board);
 
-void SortRootMoves(ThreadData* thread);
+void SortRootMoves(ThreadData* thread, int offset);
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);
 int MoveSearchable(ThreadData* thread, Move move);
 
