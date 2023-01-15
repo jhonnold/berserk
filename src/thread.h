@@ -46,6 +46,9 @@ void ThreadsSetNumber(int n);
 void ThreadsExit();
 void ThreadsInit();
 
+void SetupMainThread(Board* board);
+void SetupOtherThreads(Board* board);
+
 uint64_t NodesSearched();
 uint64_t TBHits();
 

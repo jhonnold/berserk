@@ -86,62 +86,9 @@ void StartSearch(Board* board, uint8_t ponder) {
   Threads.stop            = 0;
   Threads.ponder          = ponder;
 
-  // Setup Main Thread
-  ThreadData* mainThread = Threads.threads[0];
-  mainThread->calls      = 0;
-  mainThread->nodes      = 0;
-  mainThread->tbhits     = 0;
-  mainThread->seldepth   = 1;
-
-  memcpy(&mainThread->board, board, offsetof(Board, accumulators));
-
-  for (int i = 0; i < 64 * 64; i++)
-    mainThread->nodeCounts[i] = 0;
-
-  if (Limits.searchMoves) {
-    for (int i = 0; i < Limits.searchable.count; i++) {
-      mainThread->rootMoves[i].move          = Limits.searchable.moves[i];
-      mainThread->rootMoves[i].score         = -CHECKMATE;
-      mainThread->rootMoves[i].previousScore = -CHECKMATE;
-      mainThread->rootMoves[i].pv.moves[0]   = Limits.searchable.moves[i];
-      mainThread->rootMoves[i].pv.count      = 1;
-    }
-
-    mainThread->numRootMoves = Limits.searchable.count;
-  } else {
-    SimpleMoveList ml[1];
-    RootMoves(ml, board);
-
-    for (int i = 0; i < ml->count; i++) {
-      mainThread->rootMoves[i].move          = ml->moves[i];
-      mainThread->rootMoves[i].score         = -CHECKMATE;
-      mainThread->rootMoves[i].previousScore = -CHECKMATE;
-      mainThread->rootMoves[i].pv.moves[0]   = ml->moves[i];
-      mainThread->rootMoves[i].pv.count      = 1;
-    }
-
-    mainThread->numRootMoves = ml->count;
-  }
-
-  // Setup following threads
-  for (int i = 1; i < Threads.count; i++) {
-    ThreadData* thread = Threads.threads[i];
-    thread->calls      = 0;
-    thread->nodes      = 0;
-    thread->tbhits     = 0;
-    thread->seldepth   = 1;
-
-    for (int j = 0; j < mainThread->numRootMoves; j++) {
-      thread->rootMoves[j].move          = mainThread->rootMoves[j].move;
-      thread->rootMoves[j].score         = -CHECKMATE;
-      thread->rootMoves[j].previousScore = -CHECKMATE;
-      thread->rootMoves[j].pv.moves[0]   = -mainThread->rootMoves[j].move;
-      thread->rootMoves[j].pv.count      = 1;
-    }
-    thread->numRootMoves = mainThread->numRootMoves;
-
-    memcpy(&thread->board, board, offsetof(Board, accumulators));
-  }
+  // Setup Threads
+  SetupMainThread(board);
+  SetupOtherThreads(board);
 
   Threads.searching = 1;
   ThreadWake(Threads.threads[0], THREAD_SEARCH);
