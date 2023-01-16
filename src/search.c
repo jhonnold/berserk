@@ -548,40 +548,42 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // other moves at a shallow depth on a nullwindow that is somewhere below
     // the tt evaluation implemented using "skip move" recursion like in SF
     // (allows for reductions when doing singular search)
-    if (!isRoot && depth >= 7 && tt && move == hashMove && TTDepth(tt) >= depth - 3 && (tt->flags & TT_LOWER) &&
-        abs(ttScore) < WINNING_ENDGAME) {
-      int sBeta  = max(ttScore - 3 * depth / 2, -CHECKMATE);
-      int sDepth = depth / 2 - 1;
+    if (ss->ply < thread->depth * 2) {
+      if (!isRoot && depth >= 7 && tt && move == hashMove && TTDepth(tt) >= depth - 3 && (tt->flags & TT_LOWER) &&
+          abs(ttScore) < WINNING_ENDGAME) {
+        int sBeta  = max(ttScore - 3 * depth / 2, -CHECKMATE);
+        int sDepth = depth / 2 - 1;
 
-      ss->skip = move;
-      score    = Negamax(sBeta - 1, sBeta, sDepth, cutnode, thread, pv, ss);
-      ss->skip = NULL_MOVE;
+        ss->skip = move;
+        score    = Negamax(sBeta - 1, sBeta, sDepth, cutnode, thread, pv, ss);
+        ss->skip = NULL_MOVE;
 
-      // no score failed above sBeta, so this is singular
-      if (score < sBeta) {
-        singularExtension = 1;
+        // no score failed above sBeta, so this is singular
+        if (score < sBeta) {
+          singularExtension = 1;
 
-        if (!isPV && score < sBeta - 35 && ss->de <= 6) {
-          extension = 2;
-          ss->de    = (ss - 1)->de + 1;
-        } else {
-          extension = 1;
-        }
-      } else if (sBeta >= beta)
-        return sBeta;
-      else if (ttScore >= beta)
-        extension = -1;
+          if (!isPV && score < sBeta - 35 && ss->de <= 6) {
+            extension = 2;
+            ss->de    = (ss - 1)->de + 1;
+          } else {
+            extension = 1;
+          }
+        } else if (sBeta >= beta)
+          return sBeta;
+        else if (ttScore >= beta)
+          extension = -1;
+      }
+
+      // history extension - if the tt move has a really good history score,
+      // extend. thank you to Connor, author of Seer for this idea
+      else if (!isRoot && depth >= 7 && tt && move == hashMove && history >= 98304 && abs(ttScore) < WINNING_ENDGAME)
+        extension = 1;
+
+      // re-capture extension - looks for a follow up capture on the same square
+      // as the previous capture
+      else if (!isRoot && isPV && IsRecapture(ss, move))
+        extension = 1;
     }
-
-    // history extension - if the tt move has a really good history score,
-    // extend. thank you to Connor, author of Seer for this idea
-    else if (!isRoot && depth >= 7 && tt && move == hashMove && history >= 98304)
-      extension = 1;
-
-    // re-capture extension - looks for a follow up capture on the same square
-    // as the previous capture
-    else if (!isRoot && isPV && IsRecapture(ss, move))
-      extension = 1;
 
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
