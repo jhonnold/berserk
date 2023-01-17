@@ -88,7 +88,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       current->score = GetQuietHistory(picker->ss, picker->thread, move, board->stm, picker->threats);
     else
       current->score =
-        GetCaptureHistory(picker->thread, board, move) + MATERIAL_VALUES[PieceType(board->squares[To(move)])] * 32;
+        GetCaptureHistory(picker->thread, board, move) + MATERIAL_VALUES[PieceType(board->squares[To(move)])] * 8;
 
     current++;
   }

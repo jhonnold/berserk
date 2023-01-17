@@ -105,7 +105,7 @@ typedef struct {
   Move moves[MAX_SEARCH_PLY];
 } PV;
 
-typedef int PieceTo[12][64];
+typedef int16_t PieceTo[12][64];
 
 typedef struct {
   int ply, staticEval, de;
@@ -165,10 +165,10 @@ struct ThreadData {
   RootMove rootMoves[MAX_MOVES];
   uint64_t nodeCounts[64 * 64];
 
-  Move counters[12][64];     // counter move butterfly table
-  int hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
-  int ch[2][12][64][12][64]; // continuation move history table
-  int caph[6][64][7];        // capture history
+  Move counters[12][64];         // counter move butterfly table
+  int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
+  int16_t ch[2][12][64][12][64]; // continuation move history table
+  int16_t caph[6][64][7];        // capture history
 
   int action, calls;
   pthread_t nativeThread;

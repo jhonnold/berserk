@@ -23,22 +23,22 @@
 #include "move.h"
 #include "util.h"
 
-void AddKillerMove(SearchStack* ss, Move move) {
+INLINE void AddKillerMove(SearchStack* ss, Move move) {
   if (ss->killers[0] != move) {
     ss->killers[1] = ss->killers[0];
     ss->killers[0] = move;
   }
 }
 
-void AddCounterMove(ThreadData* thread, Move move, Move parent) {
+INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
   thread->counters[Moving(parent)][To(parent)] = move;
 }
 
-void AddHistoryHeuristic(int* entry, int inc) {
-  *entry += inc - *entry * abs(inc) / 65536;
+INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
+  *entry += inc - *entry * abs(inc) / 16384;
 }
 
-void UpdateCH(SearchStack* ss, Move move, int bonus) {
+INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
   for (int i = 1; i < 3; i++) {
     if ((ss - i)->move)
       AddHistoryHeuristic(&(*(ss - i)->ch)[Moving(move)][To(move)], bonus);
@@ -56,7 +56,7 @@ void UpdateHistories(Board* board,
                      Move captures[],
                      int nC,
                      BitBoard threats) {
-  int inc = min(7584, 16 * depth * depth + 480 * depth - 480);
+  int16_t inc = min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
     AddKillerMove(ss, bestMove);

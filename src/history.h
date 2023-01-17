@@ -23,9 +23,6 @@
 #define HH(stm, m, threats) (thread->hh[stm][!getBit(threats, From(m))][!getBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, c)         (thread->caph[p][e][c])
 
-void AddKillerMove(SearchStack* ss, Move move);
-void AddCounterMove(ThreadData* thread, Move move, Move parent);
-void AddHistoryHeuristic(int* entry, int inc);
 void UpdateHistories(Board* board,
                      SearchStack* ss,
                      ThreadData* thread,
