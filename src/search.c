@@ -537,9 +537,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
              MoveToStr(move, board),
              playedMoves + thread->multiPV);
 
-    if (!IsCap(move))
+    if (!IsCap(move) && numQuiets < 64)
       quiets[numQuiets++] = move;
-    else
+    else if (IsCap(move) && numCaptures < 32)
       captures[numCaptures++] = move;
 
     // singular extension
