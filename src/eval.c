@@ -87,28 +87,6 @@ void Threats(Threat* threats, Board* board, int stm) {
   threats->sqs |= GetKingAttacks(lsb(PieceBB(KING, stm)));
 }
 
-// Idea from SF to correct positions not in classical chess
-// https://tcec-chess.com/#div=frc4ld&game=27&season=21
-Score FRCCorneredBishop(Board* board) {
-  static const Score v = 25;
-
-  Score fix = 0;
-
-  if (getBit(PieceBB(BISHOP, WHITE), A1) && getBit(PieceBB(PAWN, WHITE), B2))
-    fix -= (3 + !!getBit(OccBB(BOTH), B3)) * v;
-
-  if (getBit(PieceBB(BISHOP, WHITE), H1) && getBit(PieceBB(PAWN, WHITE), G2))
-    fix -= (3 + !!getBit(OccBB(BOTH), G3)) * v;
-
-  if (getBit(PieceBB(BISHOP, BLACK), A8) && getBit(PieceBB(PAWN, BLACK), B7))
-    fix += (3 + !!getBit(OccBB(BOTH), B6)) * v;
-
-  if (getBit(PieceBB(BISHOP, BLACK), H8) && getBit(PieceBB(PAWN, BLACK), G7))
-    fix += (3 + !!getBit(OccBB(BOTH), G6)) * v;
-
-  return board->stm == WHITE ? fix : -fix;
-}
-
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
   Score knownEval = EvaluateKnownPositions(board);
@@ -117,10 +95,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   Accumulator* acc = board->accumulators;
   int score        = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
-
-  // sf cornered bishop in FRC
-  if (CHESS_960)
-    score += FRCCorneredBishop(board);
 
   // static contempt
   score += thread->contempt[board->stm];
