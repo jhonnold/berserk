@@ -48,6 +48,7 @@ void ThreadsInit();
 
 void SetupMainThread(Board* board);
 void SetupOtherThreads(Board* board);
+void SetupFenGenThread(ThreadData* thread, Board* board);
 
 uint64_t NodesSearched();
 uint64_t TBHits();

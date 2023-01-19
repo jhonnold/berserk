@@ -241,6 +241,29 @@ void SetupOtherThreads(Board* board) {
   }
 }
 
+void SetupFenGenThread(ThreadData* thread, Board* board) {
+  // Set this really high since we don't ever use it in FENGEN
+  thread->calls    = INT_MAX;
+  thread->nodes    = 0;
+  thread->tbhits   = 0;
+  thread->seldepth = 1;
+
+  memcpy(&thread->board, board, offsetof(Board, accumulators));
+
+  SimpleMoveList ml[1];
+  RootMoves(ml, board);
+
+  for (int i = 0; i < ml->count; i++) {
+    thread->rootMoves[i].move          = ml->moves[i];
+    thread->rootMoves[i].score         = -CHECKMATE;
+    thread->rootMoves[i].previousScore = -CHECKMATE;
+    thread->rootMoves[i].pv.moves[0]   = ml->moves[i];
+    thread->rootMoves[i].pv.count      = 1;
+  }
+
+  thread->numRootMoves = ml->count;
+}
+
 // sum node counts
 uint64_t NodesSearched() {
   uint64_t nodes = 0;

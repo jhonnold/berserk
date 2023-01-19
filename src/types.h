@@ -188,6 +188,9 @@ struct ThreadData {
   pthread_mutex_t mutex;
   pthread_cond_t sleep;
   jmp_buf exit;
+
+  uint64_t maxNodes;
+  uint64_t fens;
 };
 
 typedef struct {

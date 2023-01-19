@@ -14,32 +14,47 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef FENGEN_H
+#define FENGEN_H
 
+#include <inttypes.h>
+#include <pthread.h>
 #include <stdlib.h>
 
-#include "types.h"
+typedef char Fen[128];
 
-#define Min(a, b) (((a) < (b)) ? (a) : (b))
-#define Max(a, b) (((a) > (b)) ? (a) : (b))
+typedef struct {
+  int eval;
+  Fen fen;
+} PositionData;
 
-#define INLINE static inline __attribute__((always_inline))
+typedef struct {
+  size_t n;
+  float result;
+  PositionData* positions;
+} GameData;
 
-#define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
+typedef struct {
+  uint64_t idx, total, capacity;
+  pthread_mutex_t mutex;
+  Fen* fens;
+} Book;
 
-long GetTimeMS();
-void SleepInSeconds(int seconds);
+typedef struct {
+  char* book;
 
-INLINE void* AlignedMalloc(uint64_t size) {
-  void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
-  void** ptr = (void**) ((uintptr_t) (mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
-  ptr[-1]    = mem;
-  return ptr;
-}
+  int evalLimit;
 
-INLINE void AlignedFree(void* ptr) {
-  free(((void**) ptr)[-1]);
-}
+  int randomMoveMin, randomMoveMax, randomMoveCount;
+  int randomMpv, randomMpvDiff;
+
+  int writeMin, writeMax;
+
+  uint64_t nodes;
+} FenGenParams;
+
+extern FenGenParams fenGenParams;
+
+void Generate(uint64_t total);
 
 #endif

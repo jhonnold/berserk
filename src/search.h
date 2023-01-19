@@ -58,4 +58,6 @@ int MoveSearchable(ThreadData* thread, Move move);
 void SearchClearThread(ThreadData* thread);
 void SearchClear();
 
+void FixedSeach(ThreadData* thread, Board* uciBoard, uint64_t nodes, int mpv);
+
 #endif

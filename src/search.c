@@ -66,19 +66,6 @@ void InitPruningAndReductionTables() {
   }
 }
 
-INLINE int CheckLimits(ThreadData* thread) {
-  if (--thread->calls > 0)
-    return 0;
-  thread->calls = Limits.hitrate;
-
-  if (Threads.ponder)
-    return 0;
-
-  long elapsed = GetTimeMS() - Limits.start;
-  return (Limits.timeset && elapsed >= Limits.max) || //
-         (Limits.nodes && NodesSearched() >= Limits.nodes);
-}
-
 void StartSearch(Board* board, uint8_t ponder) {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
@@ -331,8 +318,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (depth <= 0)
     return Quiesce(alpha, beta, thread, ss);
 
-  if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
-    // hot exit
+  if (thread->maxNodes && thread->nodes >= thread->maxNodes)
     longjmp(thread->exit, 1);
 
   thread->nodes++;
@@ -549,7 +535,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = !IsCap(move) ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
                                          GetCaptureHistory(thread, board, move);
 
-    if (bestScore > -WINNING_ENDGAME) {
+    if (bestScore > -WINNING_ENDGAME && !isPV) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
@@ -574,11 +560,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     playedMoves++;
 
-    if (isRoot && !thread->idx && GetTimeMS() - Limits.start > 2500)
-      printf("info depth %d currmove %s currmovenumber %d\n",
-             thread->depth,
-             MoveToStr(move, board),
-             playedMoves + thread->multiPV);
+    // if (isRoot && !thread->idx && GetTimeMS() - Limits.start > 2500)
+    //   printf("info depth %d currmove %s currmovenumber %d\n",
+    //          thread->depth,
+    //          MoveToStr(move, board),
+    //          playedMoves + thread->multiPV);
 
     if (!IsCap(move) && numQuiets < 64)
       quiets[numQuiets++] = move;
@@ -770,7 +756,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   Move move     = NULL_MOVE;
   MovePicker mp;
 
-  if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
+  if (thread->maxNodes && thread->nodes >= thread->maxNodes)
     // hot exit
     longjmp(thread->exit, 1);
 
@@ -981,4 +967,79 @@ void SearchClear() {
     ThreadWake(Threads.threads[i], THREAD_SEARCH_CLEAR);
   for (int i = 0; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
+}
+
+void FixedSeach(ThreadData* thread, Board* uciBoard, uint64_t nodes, int mpv) {
+  SetupFenGenThread(thread, uciBoard);
+  Board* board = &thread->board;
+
+  mpv = Min(thread->numRootMoves, mpv);
+  nodes *= mpv;
+
+  SearchStack searchStack[MAX_SEARCH_PLY + 4];
+  SearchStack* ss = searchStack + 4;
+  memset(searchStack, 0, 5 * sizeof(SearchStack));
+  for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
+    (ss + i)->ply = i;
+  for (size_t i = 1; i <= 4; i++)
+    (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
+
+  board->accumulators = thread->accumulators; // exit jumps can cause this pointer to not be reset
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
+
+  PV nullPv;
+
+  thread->depth    = 0;
+  thread->maxNodes = 10 * nodes;
+
+  while (++thread->depth <= MAX_SEARCH_PLY && !(nodes && thread->nodes >= nodes)) {
+#if defined(_WIN32) || defined(_WIN64)
+    if (_setjmp(thread->exit, NULL))
+      break;
+#else
+    if (setjmp(thread->exit))
+      break;
+#endif
+
+    for (int i = 0; i < thread->numRootMoves; i++)
+      thread->rootMoves[i].previousScore = thread->rootMoves[i].score;
+
+    for (thread->multiPV = 0; thread->multiPV < mpv; thread->multiPV++) {
+      // Currently not supporting mpv
+      int alpha       = -CHECKMATE;
+      int beta        = CHECKMATE;
+      int delta       = CHECKMATE;
+      int searchDepth = thread->depth;
+      int score       = thread->rootMoves[thread->multiPV].previousScore;
+
+      // One at depth 5 or later, start search at a reduced window
+      if (thread->depth >= 5) {
+        alpha = Max(score - WINDOW, -CHECKMATE);
+        beta  = Min(score + WINDOW, CHECKMATE);
+        delta = WINDOW;
+      }
+
+      while (1) {
+        // search!
+        score = Negamax(alpha, beta, searchDepth, 0, thread, &nullPv, ss);
+
+        SortRootMoves(thread, thread->multiPV);
+
+        if (score <= alpha) {
+          beta  = (alpha + beta) / 2;
+          alpha = Max(alpha - delta, -CHECKMATE);
+        } else if (score >= beta) {
+          beta = Min(beta + delta, CHECKMATE);
+        } else {
+          break;
+        }
+
+        // delta x 1.25
+        delta += delta / 4;
+      }
+
+      SortRootMoves(thread, 0);
+    }
+  }
 }

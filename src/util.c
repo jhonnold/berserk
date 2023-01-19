@@ -23,15 +23,24 @@ long GetTimeMS() {
   return GetTickCount();
 }
 
+void SleepInSeconds(int seconds) {
+  Sleep(seconds * 1000);
+}
+
 #else
 #include <stddef.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 long GetTimeMS() {
   struct timeval time;
   gettimeofday(&time, NULL);
 
   return time.tv_sec * 1000 + time.tv_usec / 1000;
+}
+
+void SleepInSeconds(int seconds) {
+  sleep(seconds);
 }
 
 #endif
