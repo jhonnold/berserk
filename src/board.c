@@ -101,55 +101,49 @@ void ParseFen(char* fen, Board* board) {
   board->stm  = (*fen++ == 'w' ? 0 : 1);
   board->xstm = board->stm ^ 1;
 
-  fen++;
+  board->castling = 0;
+  for (int i = 0; i < 4; i++)
+    board->cr[i] = -1;
 
-  int whiteKing = lsb(PieceBB(KING, WHITE) & RANK_1);
-  int blackKing = lsb(PieceBB(KING, BLACK) & RANK_8);
+  int whiteKing = lsb(PieceBB(KING, WHITE));
+  int blackKing = lsb(PieceBB(KING, BLACK));
 
-  int whiteKingFile = File(whiteKing);
-  int blackKingFile = File(blackKing);
+  BitBoard whiteRooks = PieceBB(ROOK, WHITE) & RANK_1;
+  BitBoard blackRooks = PieceBB(ROOK, BLACK) & RANK_8;
 
-  while (*fen != ' ') {
+  while (*(++fen) != ' ') {
     if (*fen == 'K') {
-      board->castling |= 8;
-      board->cr[0] = msb(PieceBB(ROOK, WHITE) & RANK_1);
+      board->castling |= WHITE_KS, board->cr[0] = msb(whiteRooks);
     } else if (*fen == 'Q') {
-      board->castling |= 4;
-      board->cr[1] = lsb(PieceBB(ROOK, WHITE) & RANK_1);
+      board->castling |= WHITE_QS, board->cr[1] = lsb(whiteRooks);
     } else if (*fen >= 'A' && *fen <= 'H') {
-      int file = *fen - 'A';
-      board->castling |= (file > whiteKingFile ? 8 : 4);
-      board->cr[file > whiteKingFile ? 0 : 1] = A1 + file;
+      board->castling |= ((*fen - 'A') > File(whiteKing) ? WHITE_KS : WHITE_QS);
+      board->cr[(*fen - 'A') > File(whiteKing) ? 0 : 1] = A1 + (*fen - 'A');
     } else if (*fen == 'k') {
-      board->castling |= 2;
-      board->cr[2] = msb(PieceBB(ROOK, BLACK) & RANK_8);
+      board->castling |= BLACK_KS, board->cr[2] = msb(blackRooks);
     } else if (*fen == 'q') {
-      board->castling |= 1;
-      board->cr[3] = lsb(PieceBB(ROOK, BLACK) & RANK_8);
+      board->castling |= BLACK_QS, board->cr[3] = lsb(blackRooks);
     } else if (*fen >= 'a' && *fen <= 'h') {
-      int file = *fen - 'a';
-      board->castling |= (file > blackKingFile ? 2 : 1);
-      board->cr[file > blackKingFile ? 2 : 3] = A8 + file;
+      board->castling |= ((*fen - 'a') > File(blackKing) ? BLACK_KS : BLACK_QS);
+      board->cr[(*fen - 'a') > File(blackKing) ? 2 : 3] = A8 + (*fen - 'a');
     }
-
-    fen++;
   }
 
   for (int i = 0; i < 64; i++) {
     board->castlingRights[i] = board->castling;
 
     if (i == whiteKing)
-      board->castlingRights[i] &= 3;
+      board->castlingRights[i] ^= (WHITE_KS | WHITE_QS);
     else if (i == blackKing)
-      board->castlingRights[i] &= 12;
-    else if (i == board->cr[0] && (board->castling & 8))
-      board->castlingRights[i] ^= 8;
-    else if (i == board->cr[1] && (board->castling & 4))
-      board->castlingRights[i] ^= 4;
-    else if (i == board->cr[2] && (board->castling & 2))
-      board->castlingRights[i] ^= 2;
-    else if (i == board->cr[3] && (board->castling & 1))
-      board->castlingRights[i] ^= 1;
+      board->castlingRights[i] ^= (BLACK_KS | BLACK_QS);
+    else if (i == board->cr[0])
+      board->castlingRights[i] ^= WHITE_KS;
+    else if (i == board->cr[1])
+      board->castlingRights[i] ^= WHITE_QS;
+    else if (i == board->cr[2])
+      board->castlingRights[i] ^= BLACK_KS;
+    else if (i == board->cr[3])
+      board->castlingRights[i] ^= BLACK_QS;
   }
 
   fen++;
