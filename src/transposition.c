@@ -72,8 +72,8 @@ void TTClearPart(int idx) {
   uint64_t size   = TT.count * sizeof(TTBucket);
   uint64_t slice  = (size + count - 1) / count;
   uint64_t blocks = (slice + 2 * MEGABYTE - 1) / (2 * MEGABYTE);
-  uint64_t begin  = min(size, idx * blocks * 2 * MEGABYTE);
-  uint64_t end    = min(size, begin + blocks * 2 * MEGABYTE);
+  uint64_t begin  = Min(size, idx * blocks * 2 * MEGABYTE);
+  uint64_t end    = Min(size, begin + blocks * 2 * MEGABYTE);
 
   memset(TT.buckets + begin / sizeof(TTBucket), 0, end - begin);
 }

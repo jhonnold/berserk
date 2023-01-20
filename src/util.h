@@ -21,15 +21,12 @@
 
 #include "types.h"
 
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#define max(a, b) (((a) > (b)) ? (a) : (b))
-
-#define stringize_(x) #x
-#define stringize(x)  stringize_(x)
+#define Min(a, b) (((a) < (b)) ? (a) : (b))
+#define Max(a, b) (((a) > (b)) ? (a) : (b))
 
 #define INLINE static inline __attribute__((always_inline))
 
-#define load_rlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
+#define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
 
 long GetTimeMS();
 

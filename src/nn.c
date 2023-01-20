@@ -59,11 +59,11 @@ int OutputLayer(acc_t* stm, acc_t* xstm) {
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
     for (size_t i = 0; i < UNROLL; i++)
-      result += max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
+      result += Max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
 
   for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
     for (size_t i = 0; i < UNROLL; i++)
-      result += max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
+      result += Max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
 
   return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
 }
@@ -89,7 +89,7 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
 // Refreshes an accumulator using a diff from the last known board state
 // with proper king bucketing
 void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) {
-  int kingSq     = lsb(PieceBB(KING, perspective));
+  int kingSq     = LSB(PieceBB(KING, perspective));
   int pBucket    = perspective == WHITE ? 0 : 2 * N_KING_BUCKETS;
   int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
 
@@ -121,7 +121,7 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
 
 // Resets an accumulator from pieces on the board
 void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
-  int kingSq    = lsb(PieceBB(KING, perspective));
+  int kingSq    = LSB(PieceBB(KING, perspective));
   acc_t* values = dest->values[perspective];
 
   memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
@@ -140,7 +140,7 @@ void ApplyUpdates(Board* board, Move move, int captured, const int view) {
   int16_t* output = board->accumulators->values[view];
   int16_t* prev   = (board->accumulators - 1)->values[view];
 
-  const int king = lsb(PieceBB(KING, view));
+  const int king = LSB(PieceBB(KING, view));
 
   int f = FeatureIdx(Moving(move), From(move), king, view);
   ApplyFeature(output, prev, f, SUB);

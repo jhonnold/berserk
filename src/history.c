@@ -56,7 +56,7 @@ void UpdateHistories(Board* board,
                      Move captures[],
                      int nC,
                      BitBoard threats) {
-  int16_t inc = min(1896, 4 * depth * depth + 120 * depth - 120);
+  int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
     AddKillerMove(ss, bestMove);

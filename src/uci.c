@@ -96,16 +96,16 @@ void ParseGo(char* in, Board* board) {
     time = atoi(ptrChar + 6);
 
   if ((ptrChar = strstr(in, "movestogo")))
-    movesToGo = max(1, min(50, atoi(ptrChar + 10)));
+    movesToGo = Max(1, Min(50, atoi(ptrChar + 10)));
 
   if ((ptrChar = strstr(in, "movetime")))
     moveTime = atoi(ptrChar + 9);
 
   if ((ptrChar = strstr(in, "depth")))
-    depth = min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+    depth = Min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
 
   if ((ptrChar = strstr(in, "nodes")))
-    nodes = max(1, atol(ptrChar + 6));
+    nodes = Max(1, atol(ptrChar + 6));
 
   if ((ptrChar = strstr(in, "ponder"))) {
     if (PONDER_ENABLED)
@@ -134,7 +134,7 @@ void ParseGo(char* in, Board* board) {
   Limits.nodes = nodes;
 
   if (Limits.nodes)
-    Limits.hitrate = min(1000, max(1, Limits.nodes / 100));
+    Limits.hitrate = Min(1000, Max(1, Limits.nodes / 100));
   else
     Limits.hitrate = 1000;
 
@@ -148,16 +148,16 @@ void ParseGo(char* in, Board* board) {
       Limits.timeset = 1;
 
       if (movesToGo == -1) {
-        int total = max(1, time + 50 * inc - MOVE_OVERHEAD);
+        int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
 
-        Limits.alloc = min(time * 0.33, total / 20.0);
+        Limits.alloc = Min(time * 0.33, total / 20.0);
       } else {
-        int total = max(1, time + movesToGo * inc - MOVE_OVERHEAD);
+        int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
-        Limits.alloc = min(time * 0.9, (0.9 * total) / max(1, movesToGo / 2.5));
+        Limits.alloc = Min(time * 0.9, (0.9 * total) / Max(1, movesToGo / 2.5));
       }
 
-      Limits.max = min(time * 0.75, Limits.alloc * 5.5);
+      Limits.max = Min(time * 0.75, Limits.alloc * 5.5);
     } else {
       // no time control
       Limits.timeset = 0;
@@ -165,9 +165,9 @@ void ParseGo(char* in, Board* board) {
     }
   }
 
-  Limits.multiPV = min(Limits.multiPV, Limits.searchMoves ? Limits.searchable.count : rootMoves.count);
+  Limits.multiPV = Min(Limits.multiPV, Limits.searchMoves ? Limits.searchable.count : rootMoves.count);
   if (rootMoves.count == 1 && Limits.timeset)
-    Limits.max = min(250, Limits.max);
+    Limits.max = Min(250, Limits.max);
 
   if (depth <= 0)
     Limits.depth = MAX_SEARCH_PLY - 1;
@@ -217,7 +217,7 @@ void ParsePosition(char* in, Board* board) {
 
     MakeMoveUpdate(enteredMove, board, 0);
 
-    if (board->halfMove == 0)
+    if (board->fmr == 0)
       board->histPly = 0;
   }
 }
@@ -348,7 +348,7 @@ void UCILoop() {
             else
               printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
           } else if (board.squares[sq] < WHITE_KING) {
-            popBit(board.occupancies[BOTH], sq);
+            PopBit(board.occupancies[BOTH], sq);
 
             ResetAccumulator(board.accumulators, &board, WHITE);
             ResetAccumulator(board.accumulators, &board, BLACK);
@@ -358,7 +358,7 @@ void UCILoop() {
 
             int diff = score - new;
             printf("%+7d|", diff);
-            setBit(board.occupancies[BOTH], sq);
+            SetBit(board.occupancies[BOTH], sq);
           } else {
             printf("       |");
           }
@@ -383,7 +383,7 @@ void UCILoop() {
         printf("info string Invalid move!\n");
     } else if (!strncmp(in, "setoption name Hash value ", 26)) {
       int mb                  = GetOptionIntValue(in);
-      mb                      = max(2, min(HASH_MAX, mb));
+      mb                      = Max(2, Min(HASH_MAX, mb));
       uint64_t bytesAllocated = TTInit(mb);
       uint64_t totalEntries   = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
       printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",
@@ -392,7 +392,7 @@ void UCILoop() {
              totalEntries);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
-      ThreadsSetNumber(max(1, min(256, n)));
+      ThreadsSetNumber(Max(1, Min(256, n)));
       printf("info string set Threads to value %d\n", Threads.count);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
       int success = tb_init(in + 32);
@@ -403,7 +403,7 @@ void UCILoop() {
     } else if (!strncmp(in, "setoption name MultiPV value ", 29)) {
       int n = GetOptionIntValue(in);
 
-      MULTI_PV = max(1, min(256, n));
+      MULTI_PV = Max(1, Min(256, n));
       printf("info string set MultiPV to value %d\n", MULTI_PV);
     } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
       char opt[5];
@@ -423,9 +423,9 @@ void UCILoop() {
       TTClear();
       SearchClear();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
-      MOVE_OVERHEAD = min(10000, max(100, GetOptionIntValue(in)));
+      MOVE_OVERHEAD = Min(10000, Max(100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
-      CONTEMPT = min(100, max(-100, GetOptionIntValue(in)));
+      CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
       char* path  = in + 30;
       int success = 0;

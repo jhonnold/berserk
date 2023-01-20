@@ -24,22 +24,22 @@
 #include "movegen.h"
 #include "pyrrhic/tbprobe.h"
 
-#define vf(bb) __builtin_bswap64((bb))
+#define ByteSwap(bb) __builtin_bswap64((bb))
 
 Move TBRootProbe(Board* board) {
-  if (board->castling || bits(OccBB(BOTH)) > TB_LARGEST)
+  if (board->castling || BitCount(OccBB(BOTH)) > TB_LARGEST)
     return NULL_MOVE;
 
   unsigned results[MAX_MOVES]; // used for native support
-  unsigned res = tb_probe_root(vf(OccBB(WHITE)),
-                               vf(OccBB(BLACK)),
-                               vf(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
-                               vf(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
-                               vf(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
-                               vf(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
-                               vf(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
-                               vf(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
-                               board->halfMove,
+  unsigned res = tb_probe_root(ByteSwap(OccBB(WHITE)),
+                               ByteSwap(OccBB(BLACK)),
+                               ByteSwap(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
+                               ByteSwap(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
+                               ByteSwap(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
+                               ByteSwap(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
+                               ByteSwap(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
+                               ByteSwap(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
+                               board->fmr,
                                board->epSquare ? (board->epSquare ^ 56) : 0,
                                board->stm == WHITE ? 1 : 0,
                                results);
@@ -67,17 +67,17 @@ Move TBRootProbe(Board* board) {
 }
 
 unsigned TBProbe(Board* board) {
-  if (board->castling || board->halfMove || bits(OccBB(BOTH)) > TB_LARGEST)
+  if (board->castling || board->fmr || BitCount(OccBB(BOTH)) > TB_LARGEST)
     return TB_RESULT_FAILED;
 
-  return tb_probe_wdl(vf(OccBB(WHITE)),
-                      vf(OccBB(BLACK)),
-                      vf(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
-                      vf(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
-                      vf(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
-                      vf(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
-                      vf(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
-                      vf(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
+  return tb_probe_wdl(ByteSwap(OccBB(WHITE)),
+                      ByteSwap(OccBB(BLACK)),
+                      ByteSwap(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
+                      ByteSwap(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
+                      ByteSwap(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
+                      ByteSwap(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
+                      ByteSwap(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
+                      ByteSwap(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
                       board->epSquare ? (board->epSquare ^ 56) : 0,
                       board->stm == WHITE ? 1 : 0);
 }

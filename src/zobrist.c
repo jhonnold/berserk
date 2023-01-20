@@ -44,8 +44,8 @@ uint64_t Zobrist(Board* board) {
   uint64_t hash = 0ULL;
 
   for (int piece = WHITE_PAWN; piece <= BLACK_KING; piece++)
-    for (BitBoard pieces = board->pieces[piece]; pieces; popLsb(pieces))
-      hash ^= ZOBRIST_PIECES[piece][lsb(pieces)];
+    for (BitBoard pieces = board->pieces[piece]; pieces; PopLSB(pieces))
+      hash ^= ZOBRIST_PIECES[piece][LSB(pieces)];
 
   if (board->epSquare)
     hash ^= ZOBRIST_EP_KEYS[board->epSquare];

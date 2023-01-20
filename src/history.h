@@ -20,7 +20,7 @@
 #include "bits.h"
 #include "types.h"
 
-#define HH(stm, m, threats) (thread->hh[stm][!getBit(threats, From(m))][!getBit(threats, To(m))][FromTo(m)])
+#define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, c)         (thread->caph[p][e][c])
 
 void UpdateHistories(Board* board,

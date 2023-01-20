@@ -43,7 +43,7 @@ inline int SEE(Board* board, Move move, int threshold) {
   if (v >= 0)
     return 1;
 
-  BitBoard occ       = (OccBB(BOTH) ^ bit(from)) | bit(to);
+  BitBoard occ       = (OccBB(BOTH) ^ Bit(from)) | Bit(to);
   BitBoard attackers = AttacksToSquare(board, to, occ);
 
   BitBoard diag     = PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
@@ -71,7 +71,7 @@ inline int SEE(Board* board, Move move, int threshold) {
       break;
     }
 
-    occ ^= bit(lsb(mine & PieceBB(piece, stm ^ 1)));
+    occ ^= Bit(LSB(mine & PieceBB(piece, stm ^ 1)));
 
     if (piece == PAWN || piece == BISHOP || piece == QUEEN)
       attackers |= GetBishopAttacks(to, occ) & diag;
