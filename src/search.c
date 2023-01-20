@@ -381,17 +381,23 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
-  if (!inCheck) {
-    if (!ss->skip)
-      eval = ss->staticEval = tt ? tt->eval : Evaluate(board, thread);
+  if (inCheck) {
+    eval = ss->staticEval = UNKNOWN;
+  } else {
+    if (tt) {
+      eval = ss->staticEval = tt->eval;
+      if (ss->staticEval == UNKNOWN)
+        eval = ss->staticEval = Evaluate(board, thread);
 
-    if (!isPV && tt && ttScore != UNKNOWN && (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)))
-      eval = ttScore;
+      if (!isPV && ttScore != UNKNOWN && (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)))
+        eval = ttScore;
+    } else if (!ss->skip) {
+      eval = ss->staticEval = Evaluate(board, thread);
 
-    if (!(tt || ss->skip))
       TTPut(board->zobrist, -1, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+    }
 
-    // getting better if eval has gone up
+    // Improving
     if (ss->ply >= 2) {
       if (ss->ply >= 4 && (ss - 2)->staticEval == UNKNOWN) {
         improving = ss->staticEval > (ss - 4)->staticEval || (ss - 4)->staticEval == UNKNOWN;
@@ -399,8 +405,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         improving = ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == UNKNOWN;
       }
     }
-  } else {
-    eval = ss->staticEval = UNKNOWN;
   }
 
   // reset moves to moves related to 1 additional ply
@@ -761,15 +765,21 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
        ((tt->flags & TT_UPPER) && ttScore <= alpha)))
     return ttScore;
 
-  if (!inCheck) {
-    if (!ss->skip)
-      eval = ss->staticEval = tt ? tt->eval : Evaluate(board, thread);
+  if (inCheck) {
+    eval = ss->staticEval = UNKNOWN;
+  } else {
+    if (tt) {
+      eval = ss->staticEval = tt->eval;
+      if (ss->staticEval == UNKNOWN)
+        eval = ss->staticEval = Evaluate(board, thread);
 
-    if (!isPV && tt && ttScore != UNKNOWN && (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)))
-      eval = ttScore;
+      if (!isPV && ttScore != UNKNOWN && (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)))
+        eval = ttScore;
+    } else {
+      eval = ss->staticEval = Evaluate(board, thread);
 
-    if (!tt)
       TTPut(board->zobrist, -1, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+    }
 
     // stand pat
     if (eval >= beta)
@@ -779,8 +789,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
       alpha = eval;
 
     bestScore = eval;
-  } else {
-    eval = ss->staticEval = UNKNOWN;
   }
 
   InitNoisyMoves(&mp, thread, 0);
