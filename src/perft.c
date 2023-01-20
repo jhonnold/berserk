@@ -69,5 +69,5 @@ void PerftTest(int depth, Board* board) {
 
   printf("\nNodes: %" PRIu64 "\n", total);
   printf("Time: %ldms\n", (endTime - startTime));
-  printf("NPS: %" PRIu64 "\n\n", total / max(1, (endTime - startTime)) * 1000);
+  printf("NPS: %" PRIu64 "\n\n", total / Max(1, (endTime - startTime)) * 1000);
 }

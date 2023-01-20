@@ -84,7 +84,7 @@ void Threats(Threat* threats, Board* board, int stm) {
   while (queens)
     threats->sqs |= GetQueenAttacks(popAndGetLsb(&queens), OccBB(BOTH));
 
-  threats->sqs |= GetKingAttacks(lsb(PieceBB(KING, stm)));
+  threats->sqs |= GetKingAttacks(LSB(PieceBB(KING, stm)));
 }
 
 // Main evalution method
@@ -102,5 +102,5 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
 
-  return min(TB_WIN_BOUND - 1, max(-TB_WIN_BOUND + 1, score));
+  return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
 }

@@ -59,11 +59,21 @@ typedef struct {
 } Threat;
 
 typedef struct {
+  int capture;
+  int castling;
+  int ep;
+  int fmr;
+  uint64_t zobrist;
+  BitBoard checkers;
+  BitBoard pinned;
+} BoardHistory;
+
+typedef struct {
   int stm;      // side to move
   int xstm;     // not side to move
   int histPly;  // ply for historical state
   int moveNo;   // game move number
-  int halfMove; // half move count for 50 move rule
+  int fmr;      // half move count for 50 move rule
   int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
   int phase;    // efficiently updated phase for scaling
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no
@@ -81,14 +91,7 @@ typedef struct {
   int cr[4];
   int castlingRights[64];
 
-  // data that is hard to track, so it is "remembered" when search undoes moves
-  int castlingHistory[MAX_SEARCH_PLY + 100];
-  int epSquareHistory[MAX_SEARCH_PLY + 100];
-  int captureHistory[MAX_SEARCH_PLY + 100];
-  int halfMoveHistory[MAX_SEARCH_PLY + 100];
-  uint64_t zobristHistory[MAX_SEARCH_PLY + 100];
-  BitBoard checkersHistory[MAX_SEARCH_PLY + 100];
-  BitBoard pinnedHistory[MAX_SEARCH_PLY + 100];
+  BoardHistory history[MAX_SEARCH_PLY + 100];
 
   Accumulator* accumulators;
   AccumulatorKingState* refreshTable;

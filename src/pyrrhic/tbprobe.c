@@ -1628,9 +1628,9 @@ int probe_wdl(PyrrhicPosition *pos, int *success) {
   if (*success == 0)
     return 0;
 
-  // Now max(v, bestCap) is the WDL value of the position without ep rights.
+  // Now Max(v, bestCap) is the WDL value of the position without ep rights.
   // If the position without ep rights is not stalemate or no ep captures
-  // exist, then the value of the position is max(v, bestCap, bestEp).
+  // exist, then the value of the position is Max(v, bestCap, bestEp).
   // If the position without ep rights is stalemate and bestEp > -3,
   // then the value of the position is bestEp (and we will have v == 0).
 
@@ -1642,7 +1642,7 @@ int probe_wdl(PyrrhicPosition *pos, int *success) {
     bestCap = bestEp;
   }
 
-  // Now max(v, bestCap) is the WDL value of the position unless
+  // Now Max(v, bestCap) is the WDL value of the position unless
   // the position without ep rights is stalemate and bestEp > -3.
 
   if (bestCap >= v) {

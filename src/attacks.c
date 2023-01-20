@@ -156,7 +156,7 @@ inline BitBoard PinnedMoves(int p, int k) {
 BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   BitBoard attacks = 0, board = 0;
 
-  setBit(board, sq);
+  SetBit(board, sq);
 
   if (color == WHITE) {
     attacks |= ShiftNW(board);
@@ -179,7 +179,7 @@ void InitPawnAttacks() {
 BitBoard GetGeneratedKnightAttacks(int sq) {
   BitBoard attacks = 0, board = 0;
 
-  setBit(board, sq);
+  SetBit(board, sq);
 
   if ((board >> 17) & ~H_FILE)
     attacks |= (board >> 17);
@@ -210,7 +210,7 @@ void InitKnightAttacks() {
 BitBoard GetGeneratedKingAttacks(int sq) {
   BitBoard attacks = 0, board = 0;
 
-  setBit(board, sq);
+  SetBit(board, sq);
 
   attacks |= ShiftN(board);
   attacks |= ShiftNE(board);
@@ -260,25 +260,25 @@ BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
 
   for (int r = sr + 1, f = sf + 1; r <= 7 && f <= 7; r++, f++) {
     attacks |= (1ULL << (r * 8 + f));
-    if (getBit(blockers, r * 8 + f))
+    if (GetBit(blockers, r * 8 + f))
       break;
   }
 
   for (int r = sr - 1, f = sf + 1; r >= 0 && f <= 7; r--, f++) {
     attacks |= (1ULL << (r * 8 + f));
-    if (getBit(blockers, r * 8 + f))
+    if (GetBit(blockers, r * 8 + f))
       break;
   }
 
   for (int r = sr + 1, f = sf - 1; r <= 7 && f >= 0; r++, f--) {
     attacks |= (1ULL << (r * 8 + f));
-    if (getBit(blockers, r * 8 + f))
+    if (GetBit(blockers, r * 8 + f))
       break;
   }
 
   for (int r = sr - 1, f = sf - 1; r >= 0 && f >= 0; r--, f--) {
     attacks |= (1ULL << (r * 8 + f));
-    if (getBit(blockers, r * 8 + f))
+    if (GetBit(blockers, r * 8 + f))
       break;
   }
 
@@ -316,25 +316,25 @@ BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
 
   for (int r = sr + 1; r <= 7; r++) {
     attacks |= (1ULL << (r * 8 + sf));
-    if (getBit(blockers, r * 8 + sf))
+    if (GetBit(blockers, r * 8 + sf))
       break;
   }
 
   for (int r = sr - 1; r >= 0; r--) {
     attacks |= (1ULL << (r * 8 + sf));
-    if (getBit(blockers, r * 8 + sf))
+    if (GetBit(blockers, r * 8 + sf))
       break;
   }
 
   for (int f = sf + 1; f <= 7; f++) {
     attacks |= (1ULL << (sr * 8 + f));
-    if (getBit(blockers, sr * 8 + f))
+    if (GetBit(blockers, sr * 8 + f))
       break;
   }
 
   for (int f = sf - 1; f >= 0; f--) {
     attacks |= (1ULL << (sr * 8 + f));
-    if (getBit(blockers, sr * 8 + f))
+    if (GetBit(blockers, sr * 8 + f))
       break;
   }
 
@@ -345,8 +345,8 @@ BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
   BitBoard occupany = 0;
 
   for (int i = 0; i < bits; i++) {
-    int sq = lsb(attacks);
-    popLsb(attacks);
+    int sq = LSB(attacks);
+    PopLSB(attacks);
 
     if (idx & (1 << i))
       occupany |= (1ULL << sq);
@@ -372,7 +372,7 @@ uint64_t FindMagicNumber(int sq, int n, int isBishop) {
   for (int count = 0; count < 10000000; count++) {
     uint64_t magic = RandomMagic();
 
-    if (bits((mask * magic) & 0xFF00000000000000) < 6)
+    if (BitCount((mask * magic) & 0xFF00000000000000) < 6)
       continue;
 
     memset(usedAttacks, 0UL, sizeof(usedAttacks));

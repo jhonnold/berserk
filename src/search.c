@@ -183,8 +183,8 @@ void Search(ThreadData* thread) {
 
       // One at depth 5 or later, start search at a reduced window
       if (thread->depth >= 5) {
-        alpha = max(score - WINDOW, -CHECKMATE);
-        beta  = min(score + WINDOW, CHECKMATE);
+        alpha = Max(score - WINDOW, -CHECKMATE);
+        beta  = Min(score + WINDOW, CHECKMATE);
         delta = WINDOW;
       }
 
@@ -201,13 +201,13 @@ void Search(ThreadData* thread) {
         if (score <= alpha) {
           // adjust beta downward when failing low
           beta  = (alpha + beta) / 2;
-          alpha = max(alpha - delta, -CHECKMATE);
+          alpha = Max(alpha - delta, -CHECKMATE);
 
           searchDepth = thread->depth;
           if (mainThread)
             Threads.stopOnPonderHit = 0;
         } else if (score >= beta) {
-          beta = min(beta + delta, CHECKMATE);
+          beta = Min(beta + delta, CHECKMATE);
 
           if (abs(score) < TB_WIN_BOUND)
             searchDepth--;
@@ -242,7 +242,7 @@ void Search(ThreadData* thread) {
     // Soft TM checks
     else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
       int sameBestMove       = bestMove == previousBestMove;                    // same move?
-      searchStability        = sameBestMove ? min(10, searchStability + 1) : 0; // increase how stable our best move is
+      searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.25 - 0.05 * searchStability;
 
       Score searchScoreDiff    = scores[thread->depth - 3] - bestScore;
@@ -250,11 +250,11 @@ void Search(ThreadData* thread) {
       double scoreChangeFactor = 0.1 +                                              //
                                  0.0275 * searchScoreDiff * (searchScoreDiff > 0) + //
                                  0.0275 * prevScoreDiff * (prevScoreDiff > 0);
-      scoreChangeFactor = max(0.5, min(1.5, scoreChangeFactor));
+      scoreChangeFactor = Max(0.5, Min(1.5, scoreChangeFactor));
 
       uint64_t bestMoveNodes = thread->nodeCounts[FromTo(bestMove)];
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
-      double nodeCountFactor = max(0.5, pctNodesNotBest * 2 + 0.4);
+      double nodeCountFactor = Max(0.5, pctNodesNotBest * 2 + 0.4);
       if (bestScore >= TB_WIN_BOUND)
         nodeCountFactor = 0.5;
 
@@ -302,12 +302,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       return Quiesce(alpha, beta, thread, ss);
   }
 
-  if (load_rlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
+  if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
     longjmp(thread->exit, 1);
 
   thread->nodes++;
-  thread->seldepth = max(ss->ply + 1, thread->seldepth);
+  thread->seldepth = Max(ss->ply + 1, thread->seldepth);
 
   if (!isRoot) {
     // draw
@@ -319,8 +319,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       return inCheck ? 0 : Evaluate(board, thread);
 
     // Mate distance pruning
-    alpha = max(alpha, -CHECKMATE + ss->ply);
-    beta  = min(beta, CHECKMATE - ss->ply - 1);
+    alpha = Max(alpha, -CHECKMATE + ss->ply);
+    beta  = Min(beta, CHECKMATE - ss->ply - 1);
     if (alpha >= beta)
       return alpha;
   }
@@ -374,7 +374,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (isPV) {
         if (flag & TT_LOWER) {
           bestScore = score;
-          alpha     = max(alpha, score);
+          alpha     = Max(alpha, score);
         } else
           maxScore = score;
       }
@@ -439,8 +439,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + depth / 6 + min((eval - beta) / 256, 3) + !oppThreat.pcs;
-      R     = min(depth, R); // don't go too low
+      int R = 4 + depth / 6 + Min((eval - beta) / 256, 3) + !oppThreat.pcs;
+      R     = Min(depth, R); // don't go too low
 
       ss->move = NULL_MOVE;
       ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
@@ -551,7 +551,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (ss->ply < thread->depth * 2) {
       if (!isRoot && depth >= 7 && tt && move == hashMove && TTDepth(tt) >= depth - 3 && (tt->flags & TT_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
-        int sBeta  = max(ttScore - 3 * depth / 2, -CHECKMATE);
+        int sBeta  = Max(ttScore - 3 * depth / 2, -CHECKMATE);
         int sDepth = depth / 2 - 1;
 
         ss->skip = move;
@@ -596,7 +596,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(ttPv && IsCap(move))) {
-      int R = LMR[min(depth, 63)][min(legalMoves, 63)];
+      int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
 
       // increase reduction on non-pv
       if (!ttPv)
@@ -633,7 +633,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       R -= history / 5120;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = min(depth - 1, max(R, !singularExtension));
+      R = Min(depth - 1, Max(R, !singularExtension));
 
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
 
@@ -706,7 +706,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     return ss->skip ? alpha : inCheck ? -CHECKMATE + ss->ply : 0;
 
   // don't let our score inflate too high (tb)
-  bestScore = min(bestScore, maxScore);
+  bestScore = Min(bestScore, maxScore);
 
   // prevent saving when in singular search
   if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
@@ -735,7 +735,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   Move move     = NULL_MOVE;
   MovePicker mp;
 
-  if (load_rlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
+  if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
     longjmp(thread->exit, 1);
 
@@ -824,7 +824,7 @@ void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board) {
   int seldepth    = thread->seldepth;
   uint64_t nodes  = NodesSearched();
   uint64_t tbhits = TBHits();
-  uint64_t time   = max(1, GetTimeMS() - Limits.start);
+  uint64_t time   = Max(1, GetTimeMS() - Limits.start);
   uint64_t nps    = 1000 * nodes / time;
   int hashfull    = TTFull();
 
@@ -833,8 +833,8 @@ void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board) {
     if (depth == 1 && i > 0 && !updated)
       break;
 
-    int realDepth = updated ? depth : max(1, depth - 1);
-    int bounded   = updated ? max(alpha, min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
+    int realDepth = updated ? depth : Max(1, depth - 1);
+    int bounded   = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
     int printable = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
                     bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
                                             bounded;

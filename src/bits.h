@@ -42,17 +42,16 @@
 
 #define DARK_SQS 0x55AA55AA55AA55AAULL
 
-#define bit(sq)                (1ULL << (sq))
-#define bits(bb)               (__builtin_popcountll(bb))
-#define setBit(bb, sq)         ((bb) |= bit(sq))
-#define getBit(bb, sq)         ((bb) &bit(sq))
-#define popBit(bb, sq)         ((bb) &= ~bit(sq))
-#define flipBit(bb, sq)        ((bb) ^= bit(sq))
-#define flipBits(bb, sq1, sq2) ((bb) ^= bit(sq1) ^ bit(sq2))
-#define popLsb(bb)             ((bb) &= (bb) -1)
-#define lsb(bb)                (__builtin_ctzll(bb))
-#define msb(bb)                (63 ^ __builtin_clzll(bb))
-#define subset(a, b)           (((a) & (b)) == (a))
+#define Bit(sq)                (1ULL << (sq))
+#define BitCount(bb)           (__builtin_popcountll(bb))
+#define SetBit(bb, sq)         ((bb) |= Bit(sq))
+#define GetBit(bb, sq)         ((bb) &Bit(sq))
+#define PopBit(bb, sq)         ((bb) &= ~Bit(sq))
+#define FlipBit(bb, sq)        ((bb) ^= Bit(sq))
+#define FlipBits(bb, sq1, sq2) ((bb) ^= Bit(sq1) ^ Bit(sq2))
+#define PopLSB(bb)             ((bb) &= (bb) -1)
+#define LSB(bb)                (__builtin_ctzll(bb))
+#define MSB(bb)                (63 ^ __builtin_clzll(bb))
 
 #define ShiftN(bb)  ((bb) >> 8)
 #define ShiftS(bb)  ((bb) << 8)
@@ -84,8 +83,8 @@ INLINE uint8_t PawnFiles(BitBoard pawns) {
 }
 
 INLINE int popAndGetLsb(BitBoard* bb) {
-  int sq = lsb(*bb);
-  popLsb(*bb);
+  int sq = LSB(*bb);
+  PopLSB(*bb);
   return sq;
 }
 
@@ -94,7 +93,7 @@ INLINE void PrintBB(BitBoard bitboard) {
     if ((i & 7) == 0)
       printf(" %d ", 8 - (i >> 3));
 
-    printf(" %d", getBit(bitboard, i) ? 1 : 0);
+    printf(" %d", GetBit(bitboard, i) ? 1 : 0);
 
     if ((i & 7) == 7)
       printf("\n");

@@ -43,8 +43,8 @@
 #include "../search.h"
 #include "../types.h"
 
-#define PYRRHIC_POPCOUNT(x) (bits(x))
-#define PYRRHIC_LSB(x)      (lsb(x))
+#define PYRRHIC_POPCOUNT(x) (BitCount(x))
+#define PYRRHIC_LSB(x)      (LSB(x))
 #define PYRRHIC_POPLSB(x)   (popAndGetLsb(x))
 
 #define PYRRHIC_PAWN_ATTACKS(sq, c)     (GetPawnAttacks(sq, c))
