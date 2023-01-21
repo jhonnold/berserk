@@ -139,6 +139,7 @@ typedef struct {
 typedef struct {
   Move move;
   int score, previousScore;
+  uint64_t nodes;
   PV pv;
 } RootMove;
 
@@ -166,7 +167,6 @@ struct ThreadData {
   int previousScore;
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
-  uint64_t nodeCounts[64 * 64];
 
   Move counters[12][64];         // counter move butterfly table
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)

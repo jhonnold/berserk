@@ -252,7 +252,7 @@ void Search(ThreadData* thread) {
                                  0.0275 * prevScoreDiff * (prevScoreDiff > 0);
       scoreChangeFactor = Max(0.5, Min(1.5, scoreChangeFactor));
 
-      uint64_t bestMoveNodes = thread->nodeCounts[FromTo(bestMove)];
+      uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
       double nodeCountFactor = Max(0.5, pctNodesNotBest * 2 + 0.4);
       if (bestScore >= TB_WIN_BOUND)
@@ -655,14 +655,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     UndoMove(move, board);
 
     if (isRoot) {
-      thread->nodeCounts[FromTo(move)] += thread->nodes - startingNodeCount;
-
       RootMove* rm = thread->rootMoves;
       for (int i = 1; i < thread->numRootMoves; i++)
         if (thread->rootMoves[i].move == move) {
           rm = &thread->rootMoves[i];
           break;
         }
+
+      rm->nodes += thread->nodes - startingNodeCount;
 
       if (playedMoves == 1 || score > alpha) {
         rm->score       = score;
