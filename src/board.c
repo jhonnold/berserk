@@ -153,7 +153,11 @@ void ParseFen(char* fen, Board* board) {
 
   sscanf(fen, " %d %d", &board->fmr, &board->moveNo);
 
-  SetOccupancies(board);
+  OccBB(WHITE) = OccBB(BLACK) = OccBB(BOTH) = 0;
+  for (int i = WHITE_PAWN; i <= BLACK_KING; i++)
+    OccBB(i & 1) |= board->pieces[i];
+  OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
+
   SetSpecialPieces(board);
 
   board->zobrist = Zobrist(board);
@@ -245,56 +249,28 @@ inline int IsOCB(Board* board) {
          BitCount((PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)) & DARK_SQS) == 1;
 }
 
-// Reset general piece locations on the board
-inline void SetOccupancies(Board* board) {
-  OccBB(WHITE) = 0;
-  OccBB(BLACK) = 0;
-  OccBB(BOTH)  = 0;
-
-  for (int i = WHITE_PAWN; i <= BLACK_KING; i++)
-    OccBB(i & 1) |= board->pieces[i];
-  OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
-}
-
 // Special pieces are those giving check, and those that are pinned
 // these must be recalculated every move for faster move legality purposes
 inline void SetSpecialPieces(Board* board) {
-  int kingSq = LSB(PieceBB(KING, board->stm));
+  const int stm  = board->stm;
+  const int xstm = board->xstm;
 
-  // Reset pinned pieces
-  board->pinned = 0;
-  // checked can be initialized easily with non-blockable checks
-  board->checkers = (GetKnightAttacks(kingSq) & PieceBB(KNIGHT, board->xstm)) |
-                    (GetPawnAttacks(kingSq, board->stm) & PieceBB(PAWN, board->xstm));
+  int kingSq = LSB(PieceBB(KING, stm));
 
-  // for each side
-  for (int kingColor = WHITE; kingColor <= BLACK; kingColor++) {
-    int enemyColor = 1 - kingColor;
-    kingSq         = LSB(PieceBB(KING, kingColor));
+  board->pinned   = 0;
+  board->checkers = (GetKnightAttacks(kingSq) & PieceBB(KNIGHT, xstm)) | // knight and
+                    (GetPawnAttacks(kingSq, stm) & PieceBB(PAWN, xstm)); // pawns are easy
 
-    // get full rook/bishop rays from the king that intersect that piece type of
-    // the enemy
-    BitBoard enemyPiece = ((PieceBB(BISHOP, enemyColor) | PieceBB(QUEEN, enemyColor)) & GetBishopAttacks(kingSq, 0)) |
-                          ((PieceBB(ROOK, enemyColor) | PieceBB(QUEEN, enemyColor)) & GetRookAttacks(kingSq, 0));
+  BitBoard sliders = ((PieceBB(BISHOP, xstm) | PieceBB(QUEEN, xstm)) & GetBishopAttacks(kingSq, 0)) |
+                     ((PieceBB(ROOK, xstm) | PieceBB(QUEEN, xstm)) & GetRookAttacks(kingSq, 0));
+  while (sliders) {
+    int sq = PopLSB(&sliders);
 
-    while (enemyPiece) {
-      int sq = LSB(enemyPiece);
-
-      // is something in the way
-      BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(BOTH);
-
-      if (!blockers)
-        // no? then its check
-        board->checkers |= (enemyPiece & -enemyPiece);
-      else if (BitCount(blockers) == 1)
-        // just 1? then its pinned
-        board->pinned |= (blockers & OccBB(kingColor));
-
-      // TODO: Similar logic can be applied for discoveries, but apply for self
-      // pieces
-
-      PopLSB(enemyPiece);
-    }
+    BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(BOTH);
+    if (!blockers)
+      SetBit(board->checkers, sq);
+    else if (BitCount(blockers) == 1)
+      board->pinned |= (blockers & OccBB(stm));
   }
 }
 
@@ -320,8 +296,12 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->fmr++;
 
   FlipBits(board->pieces[piece], from, to);
+  FlipBits(OccBB(board->stm), from, to);
+  FlipBits(OccBB(BOTH), from, to);
+
   board->squares[from] = NO_PIECE;
   board->squares[to]   = piece;
+
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
   if (IsCas(move)) {
@@ -330,6 +310,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     int rook     = Piece(ROOK, board->stm);
 
     FlipBits(PieceBB(ROOK, board->stm), rookFrom, rookTo);
+    FlipBits(OccBB(board->stm), rookFrom, rookTo);
+    FlipBits(OccBB(BOTH), rookFrom, rookTo);
 
     // chess960 can have the king going where the rook started
     // do this check to prevent accidental wipe outs
@@ -344,7 +326,11 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->squares[capSq] = NO_PIECE;
 
     FlipBit(board->pieces[captured], capSq);
+    FlipBit(OccBB(board->xstm), capSq);
+    FlipBit(OccBB(BOTH), capSq);
+
     board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
+
     board->piecesCounts -= PieceCount(captured);
     board->phase -= PHASE_VALUES[PieceType(captured)];
     board->fmr = 0;
@@ -383,8 +369,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->fmr = 0;
   }
-
-  SetOccupancies(board);
 
   int stm = board->stm;
 
@@ -446,8 +430,10 @@ void UndoMove(Move move, Board* board) {
   }
 
   FlipBits(board->pieces[piece], to, from);
+  FlipBits(OccBB(board->stm), to, from);
+  FlipBits(OccBB(BOTH), to, from);
+
   board->squares[from] = piece;
-  board->squares[to]   = NO_PIECE;
   board->squares[to]   = NO_PIECE;
 
   if (IsCas(move)) {
@@ -456,6 +442,8 @@ void UndoMove(Move move, Board* board) {
     int rook     = Piece(ROOK, board->stm);
 
     FlipBits(PieceBB(ROOK, board->stm), rookTo, rookFrom);
+    FlipBits(OccBB(board->stm), rookTo, rookFrom);
+    FlipBits(OccBB(BOTH), rookTo, rookFrom);
 
     if (from != rookTo)
       board->squares[rookTo] = NO_PIECE;
@@ -465,12 +453,14 @@ void UndoMove(Move move, Board* board) {
     int captured = board->history[board->histPly].capture;
 
     FlipBit(board->pieces[captured], capSq);
+    FlipBit(OccBB(board->xstm), capSq);
+    FlipBit(OccBB(BOTH), capSq);
+
     board->squares[capSq] = captured;
+
     board->piecesCounts += PieceCount(captured);
     board->phase += PHASE_VALUES[PieceType(captured)];
   }
-
-  SetOccupancies(board);
 }
 
 void MakeNullMove(Board* board) {
@@ -496,6 +486,8 @@ void MakeNullMove(Board* board) {
 
   // Prefetch the hash entry for this board position
   TTPrefetch(board->zobrist);
+
+  SetSpecialPieces(board);
 }
 
 void UndoNullMove(Board* board) {
@@ -707,7 +699,7 @@ int IsLegal(Move move, Board* board) {
       if (AttacksToSquare(board, i, OccBB(BOTH)) & OccBB(board->xstm))
         return 0;
 
-    return !CHESS_960 || !GetBit(board->pinned, To(move));
+    return 1;
   }
 
   if (PieceType(Moving(move)) == KING)

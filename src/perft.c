@@ -61,7 +61,7 @@ void PerftTest(int depth, Board* board) {
     uint64_t nodes = Perft(depth - 1, board);
     UndoMove(move, board);
 
-    printf("%-5s: %" PRIu64 "\n", MoveToStr(move, board), nodes);
+    printf("%5s: %" PRIu64 "\n", MoveToStr(move, board), nodes);
     total += nodes;
   }
 

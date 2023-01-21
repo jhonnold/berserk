@@ -49,7 +49,6 @@
 #define PopBit(bb, sq)         ((bb) &= ~Bit(sq))
 #define FlipBit(bb, sq)        ((bb) ^= Bit(sq))
 #define FlipBits(bb, sq1, sq2) ((bb) ^= Bit(sq1) ^ Bit(sq2))
-#define PopLSB(bb)             ((bb) &= (bb) -1)
 #define LSB(bb)                (__builtin_ctzll(bb))
 #define MSB(bb)                (63 ^ __builtin_clzll(bb))
 
@@ -82,9 +81,9 @@ INLINE uint8_t PawnFiles(BitBoard pawns) {
   return (uint8_t) ((pawns | (pawns >> 32)) & 0xFF);
 }
 
-INLINE int popAndGetLsb(BitBoard* bb) {
+INLINE int PopLSB(BitBoard* bb) {
   int sq = LSB(*bb);
-  PopLSB(*bb);
+  *bb &= *bb - 1;
   return sq;
 }
 

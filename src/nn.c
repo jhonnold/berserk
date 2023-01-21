@@ -103,12 +103,12 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
     BitBoard add = curr & ~prev;
 
     while (rem) {
-      int sq = popAndGetLsb(&rem);
+      int sq = PopLSB(&rem);
       ApplyFeature(state->values, state->values, FeatureIdx(pc, sq, kingSq, perspective), SUB);
     }
 
     while (add) {
-      int sq = popAndGetLsb(&add);
+      int sq = PopLSB(&add);
       ApplyFeature(state->values, state->values, FeatureIdx(pc, sq, kingSq, perspective), ADD);
     }
 
@@ -128,7 +128,7 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
 
   BitBoard occ = OccBB(BOTH);
   while (occ) {
-    int sq      = popAndGetLsb(&occ);
+    int sq      = PopLSB(&occ);
     int pc      = board->squares[sq];
     int feature = FeatureIdx(pc, sq, kingSq, perspective);
 

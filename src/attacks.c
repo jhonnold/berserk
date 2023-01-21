@@ -345,8 +345,7 @@ BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
   BitBoard occupany = 0;
 
   for (int i = 0; i < bits; i++) {
-    int sq = LSB(attacks);
-    PopLSB(attacks);
+    int sq = PopLSB(&attacks);
 
     if (idx & (1 << i))
       occupany |= (1ULL << sq);

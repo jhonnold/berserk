@@ -99,19 +99,3 @@ void UpdateHistories(Board* board,
     AddHistoryHeuristic(&TH(piece, to, captured), -inc);
   }
 }
-
-int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats) {
-  int history = HH(stm, move, threats);
-  history += (*(ss - 1)->ch)[Moving(move)][To(move)];
-  history += (*(ss - 2)->ch)[Moving(move)][To(move)];
-
-  return history;
-}
-
-int GetCaptureHistory(ThreadData* thread, Board* board, Move m) {
-  int piece    = PieceType(Moving(m));
-  int to       = To(m);
-  int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
-
-  return TH(piece, to, captured);
-}

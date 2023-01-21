@@ -79,12 +79,12 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
     targets &= opts, dpTargets &= opts;
 
     while (targets) {
-      int to = popAndGetLsb(&targets);
+      int to = PopLSB(&targets);
       moves  = AddMove(moves, to - PawnDir(stm), to, Piece(PAWN, stm), NO_PROMO, QUIET);
     }
 
     while (dpTargets) {
-      int to = popAndGetLsb(&dpTargets);
+      int to = PopLSB(&dpTargets);
       moves  = AddMove(moves, to - PawnDir(stm) - PawnDir(stm), to, Piece(PAWN, stm), NO_PROMO, DP);
     }
   } else {
@@ -94,12 +94,12 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
     BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
 
     while (eTargets) {
-      int to = popAndGetLsb(&eTargets);
+      int to = PopLSB(&eTargets);
       moves  = AddMove(moves, to - (PawnDir(stm) + E), to, Piece(PAWN, stm), NO_PROMO, CAPTURE);
     }
 
     while (wTargets) {
-      int to = popAndGetLsb(&wTargets);
+      int to = PopLSB(&wTargets);
       moves  = AddMove(moves, to - (PawnDir(stm) + W), to, Piece(PAWN, stm), NO_PROMO, CAPTURE);
     }
 
@@ -107,7 +107,7 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
       BitBoard movers = GetPawnAttacks(board->epSquare, xstm) & valid;
 
       while (movers) {
-        int from = popAndGetLsb(&movers);
+        int from = PopLSB(&movers);
         moves    = AddMove(moves, from, board->epSquare, Piece(PAWN, stm), NO_PROMO, EP);
       }
     }
@@ -120,17 +120,17 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
   BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
 
   while (sTargets) {
-    int to = popAndGetLsb(&sTargets);
+    int to = PopLSB(&sTargets);
     moves  = AddPromotions(moves, to - PawnDir(stm), to, Piece(PAWN, stm), QUIET, stm, type);
   }
 
   while (eTargets) {
-    int to = popAndGetLsb(&eTargets);
+    int to = PopLSB(&eTargets);
     moves  = AddPromotions(moves, to - (PawnDir(stm) + E), to, Piece(PAWN, stm), CAPTURE, stm, type);
   }
 
   while (wTargets) {
-    int to = popAndGetLsb(&wTargets);
+    int to = PopLSB(&wTargets);
     moves  = AddPromotions(moves, to - (PawnDir(stm) + W), to, Piece(PAWN, stm), CAPTURE, stm, type);
   }
 
@@ -147,13 +147,13 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
 
   BitBoard movers = PieceBB(piece, stm);
   while (movers) {
-    int from = popAndGetLsb(&movers);
+    int from = PopLSB(&movers);
 
     BitBoard valid   = GetPieceAttacks(from, OccBB(BOTH), piece) & opts;
     BitBoard targets = type == QUIET ? (valid & ~OccBB(BOTH)) : (valid & OccBB(xstm));
 
     while (targets) {
-      int to = popAndGetLsb(&targets);
+      int to = PopLSB(&targets);
       moves  = AddMove(moves, from, to, Piece(piece, stm), NO_PROMO, type == QUIET ? QUIET : CAPTURE);
     }
   }
