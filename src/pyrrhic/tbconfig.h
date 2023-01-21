@@ -45,7 +45,7 @@
 
 #define PYRRHIC_POPCOUNT(x) (BitCount(x))
 #define PYRRHIC_LSB(x)      (LSB(x))
-#define PYRRHIC_POPLSB(x)   (popAndGetLsb(x))
+#define PYRRHIC_POPLSB(x)   (PopLSB(x))
 
 #define PYRRHIC_PAWN_ATTACKS(sq, c)     (GetPawnAttacks(sq, c))
 #define PYRRHIC_KNIGHT_ATTACKS(sq)      (GetKnightAttacks(sq))

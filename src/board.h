@@ -37,10 +37,7 @@
 #define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
 #define PieceCount(pc)  (1ull << (pc * 4))
 
-extern const int8_t PSQT[64];
 extern const uint16_t KING_BUCKETS[64];
-
-extern const uint64_t PIECE_COUNT_IDX[];
 
 void ClearBoard(Board* board);
 void ParseFen(char* fen, Board* board);
@@ -48,7 +45,6 @@ void BoardToFen(char* fen, Board* board);
 void PrintBoard(Board* board);
 
 void SetSpecialPieces(Board* board);
-void SetOccupancies(Board* board);
 
 int DoesMoveCheck(Move move, Board* board);
 
@@ -58,7 +54,6 @@ int IsMaterialDraw(Board* board);
 int IsFiftyMoveRule(Board* board);
 
 int HasNonPawn(Board* board);
-int IsOCB(Board* board);
 
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);
