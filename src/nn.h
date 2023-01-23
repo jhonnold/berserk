@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <immintrin.h>
+
 #include "board.h"
 #include "types.h"
 #include "util.h"
@@ -30,3 +32,9 @@ void ApplyUpdates(Board* board, Move move, int captured, const int view);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);
+
+typedef struct {
+  uint8_t r, a;
+  int rem[32];
+  int add[32];
+} Delta;
