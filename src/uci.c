@@ -322,6 +322,13 @@ void UCILoop() {
 
       PrintBB(threats->pcs);
       PrintBB(threats->sqs);
+    } else if (!strncmp(in, "static", 6)) {
+      ThreadData* thread = Threads.threads[0];
+      board.accumulators = thread->accumulators;
+
+      int score = Predict(&board);
+      score     = board.stm == WHITE ? score : -score;
+      printf("Score: %dcp (white)\n", score);
     } else if (!strncmp(in, "eval", 4)) {
       ThreadData* thread = Threads.threads[0];
       board.accumulators = thread->accumulators;

@@ -194,7 +194,7 @@ INLINE void InitRootMove(RootMove* rm, Move move) {
   rm->previousScore = rm->score = -CHECKMATE;
 
   rm->pv.moves[0] = move;
-  rm->pv.count = 1;
+  rm->pv.count    = 1;
 
   rm->nodes = 0;
 }

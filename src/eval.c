@@ -94,7 +94,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
     return knownEval;
 
   Accumulator* acc = board->accumulators;
-  int score        = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
+  int score        = Propagate(acc->values[board->stm], acc->values[board->xstm]);
 
   // static contempt
   score += thread->contempt[board->stm];

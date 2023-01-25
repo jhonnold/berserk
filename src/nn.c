@@ -32,13 +32,17 @@
 
 INCBIN(Embed, EVALFILE);
 
-const int QUANTIZATION_PRECISION_IN  = 16;
-const int QUANTIZATION_PRECISION_OUT = 512;
-
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
-int16_t OUTPUT_WEIGHTS[2 * N_HIDDEN] ALIGN;
-int32_t OUTPUT_BIAS;
+
+int8_t L1_WEIGHTS[N_L1 * N_L2] ALIGN;
+int32_t L1_BIASES[N_L2] ALIGN;
+
+float L2_WEIGHTS[N_L2 * N_L3] ALIGN;
+float L2_BIASES[N_L3] ALIGN;
+
+float OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
+float OUTPUT_BIAS;
 
 #if defined(__AVX512F__)
 #define UNROLL     512
@@ -62,6 +66,182 @@ int32_t OUTPUT_BIAS;
 #define regi_add   _mm_add_epi16
 #define regi_store _mm_store_si128
 #endif
+
+INLINE void InputReLU(uint8_t* outputs, int16_t* stm, int16_t* xstm) {
+  const size_t WIDTH  = sizeof(__m256i) / sizeof(uint8_t);
+  const size_t CHUNKS = N_HIDDEN / WIDTH;
+
+  const __m256i* stmIn  = (__m256i*) stm;
+  const __m256i* xstmIn = (__m256i*) xstm;
+  __m256i* stmOut       = (__m256i*) &outputs[0];
+  __m256i* xstmOut      = (__m256i*) &outputs[N_HIDDEN];
+
+  for (size_t i = 0; i < CHUNKS; i++) {
+    const __m256i s0 = _mm256_srai_epi16(stmIn[2 * i], 6);
+    const __m256i s1 = _mm256_srai_epi16(stmIn[2 * i + 1], 6);
+
+    stmOut[i] = _mm256_permute4x64_epi64(_mm256_packus_epi16(s0, s1), 0b11011000);
+  }
+
+  for (size_t i = 0; i < CHUNKS; i++) {
+    const __m256i s0 = _mm256_srai_epi16(xstmIn[2 * i], 6);
+    const __m256i s1 = _mm256_srai_epi16(xstmIn[2 * i + 1], 6);
+
+    xstmOut[i] = _mm256_permute4x64_epi64(_mm256_packus_epi16(s0, s1), 0b11011000);
+  }
+}
+
+INLINE void L1AffineReLU(float* dest, uint8_t* src, int8_t* srcWeights, int32_t* srcBiases) {
+  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(uint8_t);
+  const size_t IN_CHUNKS  = (2 * N_HIDDEN) / IN_WIDTH;
+  const size_t OUT_CC     = 8;
+  const size_t OUT_CHUNKS = N_L2 / OUT_CC;
+
+  const __m256i one = _mm256_set1_epi16(1);
+
+  const __m256i* in      = (__m256i*) src;
+  const __m256i* weights = (__m256i*) srcWeights;
+  const __m256i* biases  = (__m256i*) srcBiases;
+  __m256* out            = (__m256*) dest;
+
+  for (size_t i = 0; i < OUT_CHUNKS; i++) {
+    __m256i a0 = _mm256_setzero_si256();
+    __m256i a1 = _mm256_setzero_si256();
+    __m256i a2 = _mm256_setzero_si256();
+    __m256i a3 = _mm256_setzero_si256();
+    __m256i a4 = _mm256_setzero_si256();
+    __m256i a5 = _mm256_setzero_si256();
+    __m256i a6 = _mm256_setzero_si256();
+    __m256i a7 = _mm256_setzero_si256();
+
+    const int o0 = (OUT_CC * i) * IN_CHUNKS;
+    const int o1 = (OUT_CC * i + 1) * IN_CHUNKS;
+    const int o2 = (OUT_CC * i + 2) * IN_CHUNKS;
+    const int o3 = (OUT_CC * i + 3) * IN_CHUNKS;
+    const int o4 = (OUT_CC * i + 4) * IN_CHUNKS;
+    const int o5 = (OUT_CC * i + 5) * IN_CHUNKS;
+    const int o6 = (OUT_CC * i + 6) * IN_CHUNKS;
+    const int o7 = (OUT_CC * i + 7) * IN_CHUNKS;
+
+    for (size_t j = 0; j < IN_CHUNKS; j++) {
+      a0 = _mm256_add_epi32(a0, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o0 + j])));
+      a1 = _mm256_add_epi32(a1, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o1 + j])));
+      a2 = _mm256_add_epi32(a2, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o2 + j])));
+      a3 = _mm256_add_epi32(a3, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o3 + j])));
+      a4 = _mm256_add_epi32(a4, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o4 + j])));
+      a5 = _mm256_add_epi32(a5, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o5 + j])));
+      a6 = _mm256_add_epi32(a6, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o6 + j])));
+      a7 = _mm256_add_epi32(a7, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o7 + j])));
+    }
+
+    a0 = _mm256_hadd_epi32(a0, a1);
+    a2 = _mm256_hadd_epi32(a2, a3);
+    a0 = _mm256_hadd_epi32(a0, a2);
+
+    a4 = _mm256_hadd_epi32(a4, a5);
+    a6 = _mm256_hadd_epi32(a6, a7);
+    a4 = _mm256_hadd_epi32(a4, a6);
+
+    const __m128i a0hi = _mm256_castsi256_si128(a0);
+    const __m128i a0lo = _mm256_extracti128_si256(a0, 1);
+    const __m128i t0   = _mm_add_epi32(a0hi, a0lo);
+
+    const __m128i a4hi = _mm256_castsi256_si128(a4);
+    const __m128i a4lo = _mm256_extracti128_si256(a4, 1);
+    const __m128i t4   = _mm_add_epi32(a4hi, a4lo);
+
+    __m256i sum = _mm256_inserti128_si256(_mm256_castsi128_si256(t0), t4, 1);
+
+    sum = _mm256_add_epi32(sum, biases[i]);
+    sum = _mm256_max_epi32(sum, _mm256_setzero_si256());
+
+    out[i] = _mm256_cvtepi32_ps(sum);
+  }
+}
+
+INLINE void L2AffineReLU(float* dest, float* src, float* srcWeights, float* srcBiases) {
+  const size_t IN_WIDTH   = sizeof(__m256) / sizeof(float);
+  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
+  const size_t OUT_CC     = 8;
+  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+
+  const __m256* in      = (__m256*) src;
+  const __m256* weights = (__m256*) srcWeights;
+  const __m256* biases  = (__m256*) srcBiases;
+  __m256* out           = (__m256*) dest;
+
+  for (size_t i = 0; i < OUT_CHUNKS; i++) {
+    __m256 a0 = _mm256_setzero_ps();
+    __m256 a1 = _mm256_setzero_ps();
+    __m256 a2 = _mm256_setzero_ps();
+    __m256 a3 = _mm256_setzero_ps();
+    __m256 a4 = _mm256_setzero_ps();
+    __m256 a5 = _mm256_setzero_ps();
+    __m256 a6 = _mm256_setzero_ps();
+    __m256 a7 = _mm256_setzero_ps();
+
+    const int o0 = (OUT_CC * i) * IN_CHUNKS;
+    const int o1 = (OUT_CC * i + 1) * IN_CHUNKS;
+    const int o2 = (OUT_CC * i + 2) * IN_CHUNKS;
+    const int o3 = (OUT_CC * i + 3) * IN_CHUNKS;
+    const int o4 = (OUT_CC * i + 4) * IN_CHUNKS;
+    const int o5 = (OUT_CC * i + 5) * IN_CHUNKS;
+    const int o6 = (OUT_CC * i + 6) * IN_CHUNKS;
+    const int o7 = (OUT_CC * i + 7) * IN_CHUNKS;
+
+    for (size_t j = 0; j < IN_CHUNKS; j++) {
+      a0 = _mm256_fmadd_ps(in[j], weights[o0 + j], a0);
+      a1 = _mm256_fmadd_ps(in[j], weights[o1 + j], a1);
+      a2 = _mm256_fmadd_ps(in[j], weights[o2 + j], a2);
+      a3 = _mm256_fmadd_ps(in[j], weights[o3 + j], a3);
+      a4 = _mm256_fmadd_ps(in[j], weights[o4 + j], a4);
+      a5 = _mm256_fmadd_ps(in[j], weights[o5 + j], a5);
+      a6 = _mm256_fmadd_ps(in[j], weights[o6 + j], a6);
+      a7 = _mm256_fmadd_ps(in[j], weights[o7 + j], a7);
+    }
+
+    a0 = _mm256_hadd_ps(a0, a1);
+    a2 = _mm256_hadd_ps(a2, a3);
+    a0 = _mm256_hadd_ps(a0, a2);
+
+    a4 = _mm256_hadd_ps(a4, a5);
+    a6 = _mm256_hadd_ps(a6, a7);
+    a4 = _mm256_hadd_ps(a4, a6);
+
+    const __m128 a0hi = _mm256_castps256_ps128(a0);
+    const __m128 a0lo = _mm256_extractf128_ps(a0, 1);
+    const __m128 t0   = _mm_add_ps(a0hi, a0lo);
+
+    const __m128 a4hi = _mm256_castps256_ps128(a4);
+    const __m128 a4lo = _mm256_extractf128_ps(a4, 1);
+    const __m128 t4   = _mm_add_ps(a4hi, a4lo);
+
+    __m256 sum = _mm256_insertf128_ps(_mm256_castps128_ps256(t0), t4, 1);
+
+    sum    = _mm256_add_ps(sum, biases[i]);
+    out[i] = _mm256_max_ps(sum, _mm256_setzero_ps());
+  }
+}
+
+INLINE float L3Transform(float* src, float* srcWeights, float bias) {
+  const size_t WIDTH  = sizeof(__m256) / sizeof(float);
+  const size_t CHUNKS = N_L3 / WIDTH;
+
+  const __m256* in      = (__m256*) src;
+  const __m256* weights = (__m256*) srcWeights;
+
+  __m256 a0 = _mm256_setzero_ps();
+  for (size_t i = 0; i < CHUNKS; i++)
+    a0 = _mm256_fmadd_ps(in[i], weights[i], a0);
+
+  const __m128 a0lo = _mm256_castps256_ps128(a0);
+  const __m128 a0hi = _mm256_extractf128_ps(a0, 1);
+  const __m128 a4   = _mm_add_ps(a0lo, a0hi);
+  const __m128 a2   = _mm_add_ps(a4, _mm_movehl_ps(a4, a4));
+  const __m128 a1   = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
+
+  return _mm_cvtss_f32(a1) + bias;
+}
 
 #define NUM_REGS 16
 
@@ -192,27 +372,22 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
   }
 }
 
-int OutputLayer(acc_t* stm, acc_t* xstm) {
-  int result = OUTPUT_BIAS;
+int Propagate(acc_t* stm, acc_t* xstm) {
+  uint8_t x0[N_L1] ALIGN;
+  float x1[N_L2] ALIGN;
+  float x2[N_L3] ALIGN;
 
-  for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++)
-      result += Max(stm[c + i], 0) * OUTPUT_WEIGHTS[c + i];
-
-  for (size_t c = 0; c < N_HIDDEN; c += UNROLL)
-    for (size_t i = 0; i < UNROLL; i++)
-      result += Max(xstm[c + i], 0) * OUTPUT_WEIGHTS[c + i + N_HIDDEN];
-
-  return result / QUANTIZATION_PRECISION_IN / QUANTIZATION_PRECISION_OUT;
+  InputReLU(x0, stm, xstm);
+  L1AffineReLU(x1, x0, L1_WEIGHTS, L1_BIASES);
+  L2AffineReLU(x2, x1, L2_WEIGHTS, L2_BIASES);
+  return L3Transform(x2, OUTPUT_WEIGHTS, OUTPUT_BIAS) / 32.0;
 }
 
 int Predict(Board* board) {
-  Accumulator acc[1];
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
 
-  ResetAccumulator(acc, board, board->stm);
-  ResetAccumulator(acc, board, board->xstm);
-
-  return OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
+  return Propagate(board->accumulators->values[board->stm], board->accumulators->values[board->xstm]);
 }
 
 void ResetRefreshTable(AccumulatorKingState* refreshTable) {
@@ -308,8 +483,12 @@ void ApplyUpdates(Board* board, const Move move, const int captured, const int v
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights
                             sizeof(int16_t) * N_HIDDEN +              // input biases
-                            sizeof(int16_t) * 2 * N_HIDDEN +          // output weights
-                            sizeof(int32_t);                          // output bias
+                            sizeof(int8_t) * N_L1 * N_L2 +            // input biases
+                            sizeof(int32_t) * N_L2 +                  // input biases
+                            sizeof(float) * N_L2 * N_L3 +             // input biases
+                            sizeof(float) * N_L3 +                    // input biases
+                            sizeof(float) * N_L3 +                    // output weights
+                            sizeof(float);                            // output bias
 
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
@@ -318,9 +497,20 @@ INLINE void CopyData(const unsigned char* in) {
   offset += N_FEATURES * N_HIDDEN * sizeof(int16_t);
   memcpy(INPUT_BIASES, &in[offset], N_HIDDEN * sizeof(int16_t));
   offset += N_HIDDEN * sizeof(int16_t);
-  memcpy(OUTPUT_WEIGHTS, &in[offset], 2 * N_HIDDEN * sizeof(int16_t));
-  offset += 2 * N_HIDDEN * sizeof(int16_t);
-  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
+
+  memcpy(L1_WEIGHTS, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
+  offset += N_L1 * N_L2 * sizeof(int8_t);
+  memcpy(L1_BIASES, &in[offset], N_L2 * sizeof(int32_t));
+  offset += N_L2 * sizeof(int32_t);
+
+  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * sizeof(float));
+  offset += N_L2 * N_L3 * sizeof(float);
+  memcpy(L2_BIASES, &in[offset], N_L3 * sizeof(float));
+  offset += N_L3 * sizeof(float);
+
+  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
+  offset += N_L3 * N_OUTPUT * sizeof(float);
+  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
 }
 
 void LoadDefaultNN() {
