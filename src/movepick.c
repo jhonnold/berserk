@@ -122,11 +122,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
           return move;
         }
       }
-
-      if (skipQuiets) {
-        picker->phase = PLAY_BAD_NOISY;
-        return NextMove(picker, board, skipQuiets);
-      }
+      
       picker->phase = PLAY_KILLER_1;
       // fallthrough
     case PLAY_KILLER_1:
