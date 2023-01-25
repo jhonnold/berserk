@@ -21,7 +21,7 @@
 #include "util.h"
 
 int Predict(Board* board);
-int Propagate(acc_t* stm, acc_t* xstm);
+int Propagate(Accumulator* accumulator, const int stm);
 
 void ResetRefreshTable(AccumulatorKingState* refreshTable);
 void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective);
