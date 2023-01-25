@@ -85,47 +85,11 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
   }
 }
 
-INLINE void m256_add_dpbusd_epi32x2(__m256i* acc, __m256i a0, __m256i b0, __m256i a1, __m256i b1) {
-  __m256i product0 = _mm256_maddubs_epi16(a0, b0);
-  __m256i product1 = _mm256_maddubs_epi16(a1, b1);
-  product0         = _mm256_adds_epi16(product0, product1);
-  product0         = _mm256_madd_epi16(product0, _mm256_set1_epi16(1));
-  *acc             = _mm256_add_epi32(*acc, product0);
-}
-
-INLINE void m256_add_dpbusd_epi32x4(__m256i* acc,
-                                    __m256i a0,
-                                    __m256i b0,
-                                    __m256i a1,
-                                    __m256i b1,
-                                    __m256i a2,
-                                    __m256i b2,
-                                    __m256i a3,
-                                    __m256i b3) {
-  __m256i product0 = _mm256_maddubs_epi16(a0, b0);
-  __m256i product1 = _mm256_maddubs_epi16(a1, b1);
-  __m256i product2 = _mm256_maddubs_epi16(a2, b2);
-  __m256i product3 = _mm256_maddubs_epi16(a3, b3);
-  product0         = _mm256_adds_epi16(product0, product1);
-  product0         = _mm256_adds_epi16(product0, product2);
-  product0         = _mm256_adds_epi16(product0, product3);
-  product0         = _mm256_madd_epi16(product0, _mm256_set1_epi16(1));
-  *acc             = _mm256_add_epi32(*acc, product0);
-}
-
-INLINE void m256_add_dpbusd_epi32x4_asm(__m256i* acc,
-                                        __m256i a0,
-                                        __m256i b0,
-                                        __m256i a1,
-                                        __m256i b1,
-                                        __m256i a2,
-                                        __m256i b2,
-                                        __m256i a3,
-                                        __m256i b3) {
-  __m256i tmp0 = _mm256_maddubs_epi16(a0, b0);
-  __m256i tmp1 = _mm256_maddubs_epi16(a1, b1);
-  __m256i tmp2 = _mm256_maddubs_epi16(a2, b2);
-  __m256i tmp3 = _mm256_maddubs_epi16(a3, b3);
+INLINE void m256_add_dpbusd_epi32x4(__m256i* acc, const __m256i* inputs, const __m256i* weights) {
+  __m256i tmp0 = _mm256_maddubs_epi16(inputs[0], weights[0]);
+  __m256i tmp1 = _mm256_maddubs_epi16(inputs[1], weights[1]);
+  __m256i tmp2 = _mm256_maddubs_epi16(inputs[2], weights[2]);
+  __m256i tmp3 = _mm256_maddubs_epi16(inputs[3], weights[3]);
   asm(
     "vpaddsw     %[tmp0], %[tmp1], %[tmp0]\n\t"
     "vpaddsw     %[tmp0], %[tmp2], %[tmp0]\n\t"
@@ -134,17 +98,6 @@ INLINE void m256_add_dpbusd_epi32x4_asm(__m256i* acc,
     "vpaddd      %[acc], %[tmp0], %[acc]"
     : [acc] "+v"(*acc), [tmp0] "+&v"(tmp0)
     : [tmp1] "v"(tmp1), [tmp2] "v"(tmp2), [tmp3] "v"(tmp3), [ones] "v"(_mm256_set1_epi16(1)));
-}
-
-INLINE void m256_add_dpbusd_epi32x2_asm(__m256i* acc, __m256i a0, __m256i b0, __m256i a1, __m256i b1) {
-  __m256i tmp0 = _mm256_maddubs_epi16(a0, b0);
-  __m256i tmp1 = _mm256_maddubs_epi16(a1, b1);
-  asm(
-    "vpaddsw     %[tmp0], %[tmp1], %[tmp0]\n\t"
-    "vpmaddwd    %[tmp0], %[ones], %[tmp0]\n\t"
-    "vpaddd      %[acc], %[tmp0], %[acc]\n\t"
-    : [acc] "+v"(*acc), [tmp0] "+&v"(tmp0)
-    : [tmp1] "v"(tmp1), [ones] "v"(_mm256_set1_epi16(1)));
 }
 
 INLINE void L1AffineReLU(float* dest, uint8_t* src, int8_t* srcWeights, int32_t* srcBiases) {
@@ -178,94 +131,14 @@ INLINE void L1AffineReLU(float* dest, uint8_t* src, int8_t* srcWeights, int32_t*
     const int o7 = (OUT_CC * i + 7) * IN_CHUNKS;
 
     for (size_t j = 0; j < IN_CHUNKS; j += 4) {
-      m256_add_dpbusd_epi32x4_asm(&a0,
-                                  in[j],
-                                  weights[o0 + j],
-                                  in[j + 1],
-                                  weights[o0 + j + 1],
-                                  in[j + 2],
-                                  weights[o0 + j + 2],
-                                  in[j + 3],
-                                  weights[o0 + j + 3]);
-      m256_add_dpbusd_epi32x4_asm(&a1,
-                                  in[j],
-                                  weights[o1 + j],
-                                  in[j + 1],
-                                  weights[o1 + j + 1],
-                                  in[j + 2],
-                                  weights[o1 + j + 2],
-                                  in[j + 3],
-                                  weights[o1 + j + 3]);
-      m256_add_dpbusd_epi32x4_asm(&a2,
-                                  in[j],
-                                  weights[o2 + j],
-                                  in[j + 1],
-                                  weights[o2 + j + 1],
-                                  in[j + 2],
-                                  weights[o2 + j + 2],
-                                  in[j + 3],
-                                  weights[o2 + j + 3]);
-      m256_add_dpbusd_epi32x4_asm(&a3,
-                                  in[j],
-                                  weights[o3 + j],
-                                  in[j + 1],
-                                  weights[o3 + j + 1],
-                                  in[j + 2],
-                                  weights[o3 + j + 2],
-                                  in[j + 3],
-                                  weights[o3 + j + 3]);
-      m256_add_dpbusd_epi32x4_asm(&a4,
-                                  in[j],
-                                  weights[o4 + j],
-                                  in[j + 1],
-                                  weights[o4 + j + 1],
-                                  in[j + 2],
-                                  weights[o4 + j + 2],
-                                  in[j + 3],
-                                  weights[o4 + j + 3]);
-      m256_add_dpbusd_epi32x4_asm(&a5,
-                                  in[j],
-                                  weights[o5 + j],
-                                  in[j + 1],
-                                  weights[o5 + j + 1],
-                                  in[j + 2],
-                                  weights[o5 + j + 2],
-                                  in[j + 3],
-                                  weights[o5 + j + 3]);
-      m256_add_dpbusd_epi32x4_asm(&a6,
-                                  in[j],
-                                  weights[o6 + j],
-                                  in[j + 1],
-                                  weights[o6 + j + 1],
-                                  in[j + 2],
-                                  weights[o6 + j + 2],
-                                  in[j + 3],
-                                  weights[o6 + j + 3]);
-      m256_add_dpbusd_epi32x4_asm(&a7,
-                                  in[j],
-                                  weights[o7 + j],
-                                  in[j + 1],
-                                  weights[o7 + j + 1],
-                                  in[j + 2],
-                                  weights[o7 + j + 2],
-                                  in[j + 3],
-                                  weights[o7 + j + 3]);
-      // m256_add_dpbusd_epi32x2_asm(&a0, in[j], weights[o0 + j], in[j + 1], weights[o0 + j + 1]);
-      // m256_add_dpbusd_epi32x2_asm(&a1, in[j], weights[o1 + j], in[j + 1], weights[o1 + j + 1]);
-      // m256_add_dpbusd_epi32x2_asm(&a2, in[j], weights[o2 + j], in[j + 1], weights[o2 + j + 1]);
-      // m256_add_dpbusd_epi32x2_asm(&a3, in[j], weights[o3 + j], in[j + 1], weights[o3 + j + 1]);
-      // m256_add_dpbusd_epi32x2_asm(&a4, in[j], weights[o4 + j], in[j + 1], weights[o4 + j + 1]);
-      // m256_add_dpbusd_epi32x2_asm(&a5, in[j], weights[o5 + j], in[j + 1], weights[o5 + j + 1]);
-      // m256_add_dpbusd_epi32x2_asm(&a6, in[j], weights[o6 + j], in[j + 1], weights[o6 + j + 1]);
-      // m256_add_dpbusd_epi32x2_asm(&a7, in[j], weights[o7 + j], in[j + 1], weights[o7 + j + 1]);
-      // a0 = _mm256_add_epi32(a0, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o0 + j])));
-      // a1 = _mm256_add_epi32(a1, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o1 + j])));
-      // a2 = _mm256_add_epi32(a2, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o2 + j])));
-      // a3 = _mm256_add_epi32(a3, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o3 + j])));
-      // a4 = _mm256_add_epi32(a4, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o4 + j])));
-      // a5 = _mm256_add_epi32(a5, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o5 + j])));
-      // a6 = _mm256_add_epi32(a6, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o6 + j])));
-      // a7 = _mm256_add_epi32(a7, _mm256_madd_epi16(one, _mm256_maddubs_epi16(in[j], weights[o7 + j])));
+      m256_add_dpbusd_epi32x4(&a0, &in[j], &weights[o0 + j]);
+      m256_add_dpbusd_epi32x4(&a1, &in[j], &weights[o1 + j]);
+      m256_add_dpbusd_epi32x4(&a2, &in[j], &weights[o2 + j]);
+      m256_add_dpbusd_epi32x4(&a3, &in[j], &weights[o3 + j]);
+      m256_add_dpbusd_epi32x4(&a4, &in[j], &weights[o4 + j]);
+      m256_add_dpbusd_epi32x4(&a5, &in[j], &weights[o5 + j]);
+      m256_add_dpbusd_epi32x4(&a6, &in[j], &weights[o6 + j]);
+      m256_add_dpbusd_epi32x4(&a7, &in[j], &weights[o7 + j]);
     }
 
     a0 = _mm256_hadd_epi32(a0, a1);
@@ -276,20 +149,10 @@ INLINE void L1AffineReLU(float* dest, uint8_t* src, int8_t* srcWeights, int32_t*
     a6 = _mm256_hadd_epi32(a6, a7);
     a4 = _mm256_hadd_epi32(a4, a6);
 
-    const __m128i a0hi = _mm256_castsi256_si128(a0);
-    const __m128i a0lo = _mm256_extracti128_si256(a0, 1);
-    const __m128i t0   = _mm_add_epi32(a0hi, a0lo);
-
-    const __m128i a4hi = _mm256_castsi256_si128(a4);
-    const __m128i a4lo = _mm256_extracti128_si256(a4, 1);
-    const __m128i t4   = _mm_add_epi32(a4hi, a4lo);
-
-    __m256i sum = _mm256_inserti128_si256(_mm256_castsi128_si256(t0), t4, 1);
-
-    sum = _mm256_add_epi32(sum, biases[i]);
-    sum = _mm256_max_epi32(sum, _mm256_setzero_si256());
-
-    out[i] = _mm256_cvtepi32_ps(sum);
+    const __m128i a0128 = _mm_add_epi32(_mm256_castsi256_si128(a0), _mm256_extracti128_si256(a0, 1));
+    const __m128i a4128 = _mm_add_epi32(_mm256_castsi256_si128(a4), _mm256_extracti128_si256(a4, 1));
+    __m256i sum         = _mm256_inserti128_si256(_mm256_castsi128_si256(a0128), a4128, 1);
+    out[i] = _mm256_cvtepi32_ps(_mm256_max_epi32(_mm256_add_epi32(sum, biases[i]), _mm256_setzero_si256()));
   }
 }
 
@@ -342,13 +205,8 @@ INLINE void L2AffineReLU(float* dest, float* src, float* srcWeights, float* srcB
     a6 = _mm256_hadd_ps(a6, a7);
     a4 = _mm256_hadd_ps(a4, a6);
 
-    const __m128 a0hi = _mm256_castps256_ps128(a0);
-    const __m128 a0lo = _mm256_extractf128_ps(a0, 1);
-    const __m128 t0   = _mm_add_ps(a0hi, a0lo);
-
-    const __m128 a4hi = _mm256_castps256_ps128(a4);
-    const __m128 a4lo = _mm256_extractf128_ps(a4, 1);
-    const __m128 t4   = _mm_add_ps(a4hi, a4lo);
+    const __m128 t0 = _mm_add_ps(_mm256_castps256_ps128(a0), _mm256_extractf128_ps(a0, 1));
+    const __m128 t4 = _mm_add_ps(_mm256_castps256_ps128(a4), _mm256_extractf128_ps(a4, 1));
 
     __m256 sum = _mm256_insertf128_ps(_mm256_castps128_ps256(t0), t4, 1);
 
@@ -368,11 +226,9 @@ INLINE float L3Transform(float* src, float* srcWeights, float bias) {
   for (size_t i = 0; i < CHUNKS; i++)
     a0 = _mm256_fmadd_ps(in[i], weights[i], a0);
 
-  const __m128 a0lo = _mm256_castps256_ps128(a0);
-  const __m128 a0hi = _mm256_extractf128_ps(a0, 1);
-  const __m128 a4   = _mm_add_ps(a0lo, a0hi);
-  const __m128 a2   = _mm_add_ps(a4, _mm_movehl_ps(a4, a4));
-  const __m128 a1   = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
+  const __m128 a4 = _mm_add_ps(_mm256_castps256_ps128(a0), _mm256_extractf128_ps(a0, 1));
+  const __m128 a2 = _mm_add_ps(a4, _mm_movehl_ps(a4, a4));
+  const __m128 a1 = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
 
   return _mm_cvtss_f32(a1) + bias;
 }
