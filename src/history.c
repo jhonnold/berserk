@@ -39,10 +39,12 @@ INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
 }
 
 INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
-  for (int i = 1; i < 3; i++) {
-    if ((ss - i)->move)
-      AddHistoryHeuristic(&(*(ss - i)->ch)[Moving(move)][To(move)], bonus);
-  }
+  if ((ss - 1)->move)
+    AddHistoryHeuristic(&(*(ss - 1)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 2)->move)
+    AddHistoryHeuristic(&(*(ss - 2)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 4)->move)
+    AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
 }
 
 void UpdateHistories(Board* board,
