@@ -50,6 +50,14 @@ extern const int CASTLE_MAP[4][3];
 
 #define CanCastle(dir) (board->castling & (dir))
 
+// Note: Any usage of & that matches 1 or 2 will match 3
+//       thus making GT_LEGAL generate all.
+enum {
+  GT_QUIET   = 0b01,
+  GT_CAPTURE = 0b10,
+  GT_LEGAL   = 0b11,
+};
+
 INLINE ScoredMove* AddMove(ScoredMove* moves, int from, int to, int moving, int promo, int flags) {
   *moves++ = (ScoredMove) {.move = BuildMove(from, to, moving, promo, flags), .score = 0};
   return moves;
@@ -57,20 +65,22 @@ INLINE ScoredMove* AddMove(ScoredMove* moves, int from, int to, int moving, int 
 
 INLINE ScoredMove*
 AddPromotions(ScoredMove* moves, int from, int to, int moving, int flags, const int stm, const int type) {
-  if (type != QUIET) {
+  if (type & GT_CAPTURE)
     moves = AddMove(moves, from, to, moving, Piece(QUEEN, stm), flags);
-  } else {
+
+  if (type & GT_QUIET) {
     moves = AddMove(moves, from, to, moving, Piece(ROOK, stm), flags);
     moves = AddMove(moves, from, to, moving, Piece(BISHOP, stm), flags);
     moves = AddMove(moves, from, to, moving, Piece(KNIGHT, stm), flags);
   }
+
   return moves;
 }
 
 INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, const int stm, const int type) {
   const int xstm = stm ^ 1;
 
-  if (type == QUIET) {
+  if (type & GT_QUIET) {
     // Quiet non-promotions
     BitBoard valid     = PieceBB(PAWN, stm) & ~PromoRank(stm);
     BitBoard targets   = ShiftPawnDir(valid, stm) & ~OccBB(BOTH);
@@ -87,8 +97,10 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
       int to = PopLSB(&dpTargets);
       moves  = AddMove(moves, to - PawnDir(stm) - PawnDir(stm), to, Piece(PAWN, stm), NO_PROMO, DP);
     }
-  } else {
-    // Captures
+  }
+
+  if (type & GT_CAPTURE) {
+    // Captures non-promotions
     BitBoard valid    = PieceBB(PAWN, stm) & ~PromoRank(stm);
     BitBoard eTargets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
     BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -149,12 +161,18 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
   while (movers) {
     int from = PopLSB(&movers);
 
-    BitBoard valid   = GetPieceAttacks(from, OccBB(BOTH), piece) & opts;
-    BitBoard targets = type == QUIET ? (valid & ~OccBB(BOTH)) : (valid & OccBB(xstm));
+    BitBoard valid = GetPieceAttacks(from, OccBB(BOTH), piece) & opts;
+    BitBoard targets = type == GT_QUIET ? valid & ~OccBB(BOTH) : //
+                       type == GT_CAPTURE ? valid & OccBB(xstm) : //
+                       valid & ~OccBB(stm);
 
     while (targets) {
       int to = PopLSB(&targets);
-      moves  = AddMove(moves, from, to, Piece(piece, stm), NO_PROMO, type == QUIET ? QUIET : CAPTURE);
+      int flags = type == GT_QUIET ? QUIET : //
+                  type == GT_CAPTURE ? CAPTURE : //
+                  GetBit(OccBB(xstm), to) ? CAPTURE : QUIET;
+
+      moves = AddMove(moves, from, to, Piece(piece, stm), NO_PROMO, flags);
     }
   }
 
@@ -162,9 +180,6 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
 }
 
 INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
-  if (!board->castling)
-    return moves;
-
   const int rookStart = stm == WHITE ? 0 : 2;
   const int rookEnd   = stm == WHITE ? 2 : 4;
   const int from      = LSB(PieceBB(KING, stm));
@@ -200,18 +215,18 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
   moves = AddPieceMoves(moves, opts, board, color, type, ROOK);
   moves = AddPieceMoves(moves, opts, board, color, type, QUEEN);
   moves = AddPieceMoves(moves, ALL, board, color, type, KING);
-  if (type == QUIET && !board->checkers)
+  if ((type & GT_QUIET) && !board->checkers)
     moves = AddCastles(moves, board, color);
 
   return moves;
 }
 
-INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
+INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int color) {
   ScoredMove* curr = moves;
   BitBoard pinned  = board->pinned;
   int king         = LSB(PieceBB(KING, board->stm));
 
-  moves = AddPseudoLegalMoves(moves, board, type, color);
+  moves = AddPseudoLegalMoves(moves, board, GT_LEGAL, color);
 
   while (curr != moves) {
     if (((pinned && GetBit(pinned, From(curr->move))) || From(curr->move) == king || IsEP(curr->move)) &&

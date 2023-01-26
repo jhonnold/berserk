@@ -84,7 +84,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   while (current < picker->end) {
     Move move = current->move;
 
-    if (type == QUIET)
+    if (type == GT_QUIET)
       current->score = GetQuietHistory(picker->ss, picker->thread, move, board->stm, picker->threats);
     else
       current->score =
@@ -105,7 +105,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->current = picker->endBad = picker->moves;
       picker->end                      = AddNoisyMoves(picker->current, board);
 
-      ScoreMoves(picker, board, !QUIET);
+      ScoreMoves(picker, board, GT_CAPTURE);
 
       picker->phase = PLAY_GOOD_NOISY;
       // fallthrough
@@ -146,7 +146,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
         picker->current = picker->endBad;
         picker->end     = AddQuietMoves(picker->current, board);
 
-        ScoreMoves(picker, board, QUIET);
+        ScoreMoves(picker, board, GT_QUIET);
       }
 
       picker->phase = PLAY_QUIETS;
