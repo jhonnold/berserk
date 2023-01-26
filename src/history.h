@@ -29,7 +29,8 @@
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats) {
   return (int) HH(stm, move, threats) +                  //
          (int) (*(ss - 1)->ch)[Moving(move)][To(move)] + //
-         (int) (*(ss - 2)->ch)[Moving(move)][To(move)];
+         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] + //
+         (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Board* board, Move move) {
