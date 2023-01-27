@@ -30,7 +30,7 @@ uint64_t Perft(int depth, Board* board) {
 
   Move move;
   MovePicker mp;
-  InitPerftMoves(&mp, board);
+  InitPerftMovePicker(&mp, board);
 
   if (depth == 1)
     return mp.end - mp.moves;
@@ -54,7 +54,7 @@ void PerftTest(int depth, Board* board) {
 
   Move move;
   MovePicker mp;
-  InitPerftMoves(&mp, board);
+  InitPerftMovePicker(&mp, board);
 
   while ((move = NextMove(&mp, board, 0))) {
     MakeMoveUpdate(move, board, 0);

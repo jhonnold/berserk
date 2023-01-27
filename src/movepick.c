@@ -29,41 +29,6 @@
 
 const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
 
-void InitAllMoves(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats) {
-  picker->type  = MP_ALL;
-  picker->phase = HASH_MOVE;
-
-  picker->hashMove = hashMove;
-  picker->killer1  = ss->killers[0];
-  picker->killer2  = ss->killers[1];
-  picker->counter  = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
-
-  picker->threats = threats;
-  picker->thread  = thread;
-  picker->ss      = ss;
-}
-
-void InitNoisyMoves(MovePicker* picker, ThreadData* thread, int probcut) {
-  picker->type  = probcut ? MP_PC : MP_QS;
-  picker->phase = GEN_NOISY_MOVES;
-
-  picker->hashMove = NULL_MOVE;
-  picker->killer1  = NULL_MOVE;
-  picker->killer2  = NULL_MOVE;
-  picker->counter  = NULL_MOVE;
-
-  picker->threats = 0;
-  picker->thread  = thread;
-}
-
-void InitPerftMoves(MovePicker* picker, Board* board) {
-  picker->type    = MP_PERFT;
-  picker->phase   = PERFT_MOVES;
-  picker->current = picker->moves;
-
-  picker->end = AddPerftMoves(picker->moves, board);
-}
-
 Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* orig = current;
   ScoredMove* max  = current;
@@ -115,7 +80,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
         if (move == picker->hashMove) {
           return NextMove(picker, board, skipQuiets);
-        } else if (picker->type != MP_QS && !SEE(board, move, 0)) {
+        } else if (!SEE(board, move, 0)) {
           *picker->endBad++ = *(picker->current - 1);
           return NextMove(picker, board, skipQuiets);
         } else {
@@ -175,6 +140,55 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
         return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
       }
+
+      picker->phase = -1;
+      return NULL_MOVE;
+
+    // Probcut MP Steps
+    case PC_GEN_NOISY_MOVES:
+      picker->current = picker->endBad = picker->moves;
+      picker->end                      = AddNoisyMoves(picker->current, board);
+
+      ScoreMoves(picker, board, GT_CAPTURE);
+
+      picker->phase = PC_PLAY_GOOD_NOISY;
+      // fallthrough
+    case PC_PLAY_GOOD_NOISY:
+      if (picker->current != picker->end) {
+        Move move = Best(picker->current++, picker->end);
+
+        if (!SEE(board, move, 0)) {
+          *picker->endBad++ = *(picker->current - 1);
+          return NextMove(picker, board, skipQuiets);
+        } else {
+          return move;
+        }
+      }
+
+      picker->current = picker->moves;
+      picker->end     = picker->endBad;
+
+      picker->phase = PC_PLAY_BAD_NOISY;
+      // fallthrough
+    case PC_PLAY_BAD_NOISY:
+      if (picker->current != picker->end)
+        return (picker->current++)->move;
+
+      picker->phase = -1;
+      return NULL_MOVE;
+
+    // QSearch MP Steps
+    case QS_GEN_NOISY_MOVES:
+      picker->current = picker->endBad = picker->moves;
+      picker->end                      = AddNoisyMoves(picker->current, board);
+
+      ScoreMoves(picker, board, GT_CAPTURE);
+
+      picker->phase = QS_PLAY_NOISY_MOVES;
+      // fallthrough
+    case QS_PLAY_NOISY_MOVES:
+      if (picker->current != picker->end)
+        return Best(picker->current++, picker->end);
 
       picker->phase = -1;
       return NULL_MOVE;
