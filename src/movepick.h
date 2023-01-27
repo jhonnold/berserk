@@ -22,7 +22,11 @@
 #include "types.h"
 #include "util.h"
 
-INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss, BitBoard threats) {
+INLINE void InitNormalMovePicker(MovePicker* picker,
+                                 Move hashMove,
+                                 ThreadData* thread,
+                                 SearchStack* ss,
+                                 BitBoard threats) {
   picker->phase = HASH_MOVE;
 
   picker->hashMove = hashMove;
@@ -36,13 +40,13 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
 }
 
 INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread) {
-  picker->phase = PC_GEN_NOISY_MOVES;
-  picker->thread  = thread;
+  picker->phase  = PC_GEN_NOISY_MOVES;
+  picker->thread = thread;
 }
 
 INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread) {
-  picker->phase = QS_GEN_NOISY_MOVES;
-  picker->thread  = thread;
+  picker->phase  = QS_GEN_NOISY_MOVES;
+  picker->thread = thread;
 }
 
 INLINE void InitPerftMovePicker(MovePicker* picker, Board* board) {

@@ -93,9 +93,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (knownEval != UNKNOWN)
     return knownEval;
 
-  int score = board->stm == WHITE ?
-    Propagate(board->accumulators, WHITE) :
-    Propagate(board->accumulators, BLACK);
+  int score = board->stm == WHITE ? Propagate(board->accumulators, WHITE) : Propagate(board->accumulators, BLACK);
 
   // static contempt
   score += thread->contempt[board->stm];

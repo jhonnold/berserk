@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "accumulator.h"
 #include "board.h"
 #include "endgame.h"
 #include "eval.h"

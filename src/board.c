@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "accumulator.h"
 #include "attacks.h"
 #include "bits.h"
 #include "eval.h"

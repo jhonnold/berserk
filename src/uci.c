@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "accumulator.h"
 #include "board.h"
 #include "eval.h"
 #include "move.h"

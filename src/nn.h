@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#ifndef NN_H
+#define NN_H
+
 #include <immintrin.h>
 
 #include "board.h"
@@ -23,18 +26,7 @@
 int Predict(Board* board);
 int Propagate(Accumulator* accumulator, const int stm);
 
-void ResetRefreshTable(AccumulatorKingState* refreshTable);
-void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective);
-
-void ResetAccumulator(Accumulator* dest, Board* board, const int perspective);
-
-void ApplyUpdates(Board* board, Move move, int captured, const int view);
-
 void LoadDefaultNN();
 int LoadNetwork(char* path);
 
-typedef struct {
-  uint8_t r, a;
-  int rem[32];
-  int add[32];
-} Delta;
+#endif
