@@ -283,6 +283,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int bestScore = -CHECKMATE;        //
   int maxScore  = CHECKMATE;         // best possible
   int origAlpha = alpha;             // remember first alpha for tt storage
+  int ttHit     = 0;
   int ttScore   = UNKNOWN;
   int ttPv      = 0;
   int inCheck   = !!board->checkers;
@@ -327,14 +328,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // check the transposition table for previous info
   // we ignore the tt on singular extension searches
-  TTEntry* tt = ss->skip ? NULL : TTProbe(board->zobrist);
-  ttScore     = tt ? TTScore(tt, ss->ply) : UNKNOWN;
-  ttPv        = isPV || (tt && (tt->flags & TT_PV));
-  hashMove    = isRoot ? thread->rootMoves[thread->multiPV].move : tt ? tt->move : NULL_MOVE;
+  TTEntry* tt = ss->skip ? NULL : TTProbe(board->zobrist, &ttHit);
+  ttScore     = ttHit ? TTScore(tt, ss->ply) : UNKNOWN;
+  ttPv        = isPV || (ttHit && (tt->flags & TT_PV));
+  hashMove    = isRoot ? thread->rootMoves[thread->multiPV].move : ttHit ? tt->move : NULL_MOVE;
 
   // if the TT has a value that fits our position and has been searched to an
   // equal or greater depth, then we accept this score and prune
-  if (!isPV && tt && ttScore != UNKNOWN && TTDepth(tt) >= depth &&
+  if (!isPV && ttScore != UNKNOWN && TTDepth(tt) >= depth &&
       ((tt->flags & TT_EXACT) ||                      //
        ((tt->flags & TT_LOWER) && ttScore >= beta) || //
        ((tt->flags & TT_UPPER) && ttScore <= alpha)))
@@ -366,7 +367,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // if the tablebase gives us what we want, then we accept it's score and
       // return
       if ((flag & TT_EXACT) || ((flag & TT_LOWER) && score >= beta) || ((flag & TT_UPPER) && score <= alpha)) {
-        TTPut(board->zobrist, depth, score, flag, 0, ss->ply, 0, ttPv);
+        TTPut(tt, board->zobrist, depth, score, flag, 0, ss->ply, 0, ttPv);
         return score;
       }
 
@@ -384,7 +385,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (inCheck) {
     eval = ss->staticEval = UNKNOWN;
   } else {
-    if (tt) {
+    if (ttHit) {
       eval = ss->staticEval = tt->eval;
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
@@ -394,7 +395,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     } else if (!ss->skip) {
       eval = ss->staticEval = Evaluate(board, thread);
 
-      TTPut(board->zobrist, -1, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+      TTPut(tt, board->zobrist, -1, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
 
     // Improving
@@ -553,7 +554,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // the tt evaluation implemented using "skip move" recursion like in SF
     // (allows for reductions when doing singular search)
     if (ss->ply < thread->depth * 2) {
-      if (!isRoot && depth >= 7 && tt && move == hashMove && TTDepth(tt) >= depth - 3 && (tt->flags & TT_LOWER) &&
+      // ttHit is implied for move == hashMove to ever be true
+      if (!isRoot && depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (tt->flags & TT_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
         int sBeta  = Max(ttScore - 3 * depth / 2, -CHECKMATE);
         int sDepth = depth / 2 - 1;
@@ -580,7 +582,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // history extension - if the tt move has a really good history score,
       // extend. thank you to Connor, author of Seer for this idea
-      else if (!isRoot && depth >= 7 && tt && move == hashMove && history >= 24576 && abs(ttScore) < WINNING_ENDGAME)
+      else if (!isRoot && depth >= 7 && move == hashMove && history >= 24576 && abs(ttScore) < WINNING_ENDGAME)
         extension = 1;
 
       // re-capture extension - looks for a follow up capture on the same square
@@ -717,8 +719,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // save to the TT
     // TT_LOWER = we failed high, TT_UPPER = we didnt raise alpha, TT_EXACT = in
     int TTFlag       = bestScore >= beta ? TT_LOWER : bestScore <= origAlpha ? TT_UPPER : TT_EXACT;
-    Move moveToStore = tt && TTFlag == TT_UPPER && (tt->flags & TT_LOWER) ? hashMove : bestMove;
-    TTPut(board->zobrist, depth, bestScore, TTFlag, moveToStore, ss->ply, ss->staticEval, ttPv);
+    Move moveToStore = ttHit && TTFlag == TT_UPPER && (tt->flags & TT_LOWER) ? hashMove : bestMove;
+    TTPut(tt, board->zobrist, depth, bestScore, TTFlag, moveToStore, ss->ply, ss->staticEval, ttPv);
   }
 
   return bestScore;
@@ -730,6 +732,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   int score     = -CHECKMATE;
   int bestScore = -CHECKMATE + ss->ply;
   int isPV      = beta - alpha != 1;
+  int ttHit     = 0;
   int ttPv      = 0;
   int inCheck   = !!board->checkers;
   int ttScore   = UNKNOWN;
@@ -754,12 +757,12 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     return inCheck ? 0 : Evaluate(board, thread);
 
   // check the transposition table for previous info
-  TTEntry* tt = TTProbe(board->zobrist);
-  ttScore     = tt ? TTScore(tt, ss->ply) : UNKNOWN;
-  ttPv        = isPV || (tt && (tt->flags & TT_PV));
-  // TT score pruning - no depth check required since everything in QS is depth
-  // 0
-  if (!isPV && tt && ttScore != UNKNOWN &&
+  TTEntry* tt = TTProbe(board->zobrist, &ttHit);
+  ttScore     = ttHit ? TTScore(tt, ss->ply) : UNKNOWN;
+  ttPv        = isPV || (ttHit && (tt->flags & TT_PV));
+
+  // TT score pruning, ttHit implied with adjusted score
+  if (!isPV && ttScore != UNKNOWN &&
       ((tt->flags & TT_EXACT) ||                      //
        ((tt->flags & TT_LOWER) && ttScore >= beta) || //
        ((tt->flags & TT_UPPER) && ttScore <= alpha)))
@@ -768,7 +771,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   if (inCheck) {
     eval = ss->staticEval = UNKNOWN;
   } else {
-    if (tt) {
+    if (ttHit) {
       eval = ss->staticEval = tt->eval;
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
@@ -778,7 +781,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     } else {
       eval = ss->staticEval = Evaluate(board, thread);
 
-      TTPut(board->zobrist, -1, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+      TTPut(tt, board->zobrist, -1, UNKNOWN, TT_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
 
     // stand pat
@@ -822,7 +825,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   }
 
   int TTFlag = bestScore >= beta ? TT_LOWER : TT_UPPER;
-  TTPut(board->zobrist, 0, bestScore, TTFlag, bestMove, ss->ply, ss->staticEval, ttPv);
+  TTPut(tt, board->zobrist, 0, bestScore, TTFlag, bestMove, ss->ply, ss->staticEval, ttPv);
 
   return bestScore;
 }
