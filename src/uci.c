@@ -50,7 +50,7 @@ void RootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
 
   MovePicker mp;
-  InitPerftMoves(&mp, board);
+  InitPerftMovePicker(&mp, board);
 
   Move mv;
   while ((mv = NextMove(&mp, board, 0)))

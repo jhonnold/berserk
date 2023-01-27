@@ -466,7 +466,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int probBeta = beta + 110 - 30 * improving;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
-      InitNoisyMoves(&mp, thread, 1);
+      InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
         if (ss->skip == move)
           continue;
@@ -496,7 +496,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move quiets[64], captures[32];
 
   int legalMoves = 0, playedMoves = 0, skipQuiets = 0, singularExtension = 0;
-  InitAllMoves(&mp, hashMove, thread, ss, oppThreat.sqs);
+  InitNormalMovePicker(&mp, hashMove, thread, ss, oppThreat.sqs);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
@@ -791,7 +791,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     bestScore = eval;
   }
 
-  InitNoisyMoves(&mp, thread, 0);
+  InitQSMovePicker(&mp, thread);
 
   while ((move = NextMove(&mp, board, 1))) {
     if (!IsLegal(move, board))
