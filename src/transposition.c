@@ -97,23 +97,32 @@ inline void TTPrefetch(uint64_t hash) {
   __builtin_prefetch(&TT.buckets[TTIdx(hash)]);
 }
 
-inline TTEntry* TTProbe(uint64_t hash) {
+inline TTEntry* TTProbe(uint64_t hash, int* hit) {
   TTEntry* bucket    = TT.buckets[TTIdx(hash)].entries;
   uint16_t shortHash = (uint16_t) hash;
 
-  for (int i = 0; i < BUCKET_SIZE; i++)
-    if (bucket[i].hash == shortHash) {
+  for (int i = 0; i < BUCKET_SIZE; i++) {
+    if (bucket[i].hash == shortHash || !bucket[i].depth) {
       bucket[i].flags = TT.age | (bucket[i].flags & 0x0F);
+      *hit            = !!bucket[i].depth;
       return &bucket[i];
     }
+  }
 
-  return NULL;
+  *hit = 0;
+
+  TTEntry* replace = bucket;
+  for (int i = 1; i < BUCKET_SIZE; i++)
+    if (replace->depth - ((271 + TT.age - replace->flags) & 0xF0) / 4 >
+        bucket[i].depth - ((271 + TT.age - bucket[i].flags) & 0xF0) / 4)
+      replace = &bucket[i];
+
+  return replace;
 }
 
-inline void TTPut(uint64_t hash, int depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
-  TTBucket* bucket   = &TT.buckets[TTIdx(hash)];
+inline void
+TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
   uint16_t shortHash = (uint16_t) hash;
-  TTEntry* toReplace = bucket->entries;
 
   if (score > MATE_BOUND)
     score += ply;
@@ -123,33 +132,14 @@ inline void TTPut(uint64_t hash, int depth, int16_t score, uint8_t flag, Move mo
   if (pv)
     flag |= TT_PV;
 
-  for (TTEntry* entry = bucket->entries; entry < bucket->entries + BUCKET_SIZE; entry++) {
-    if (!entry->depth) { // raw depth of 0 means empty
-      toReplace = entry;
-      break;
-    }
-
-    if (entry->hash == shortHash) {
-      if (TTDepth(entry) > depth * 2 && !(flag & TT_EXACT))
-        return;
-
-      toReplace = entry;
-      break;
-    }
-
-    int existingReplaceFactor = entry->depth - ((271 + TT.age - entry->flags) & 0xF0) / 4;
-    int currentReplaceFactor  = toReplace->depth - ((271 + TT.age - toReplace->flags) & 0xF0) / 4;
-
-    if (existingReplaceFactor < currentReplaceFactor)
-      toReplace = entry;
+  if ((flag & TT_EXACT) || shortHash != tt->hash || TTDepth(tt) <= depth * 2) {
+    tt->hash  = shortHash;
+    tt->depth = depth - DEPTH_OFFSET;
+    tt->flags = TT.age | flag;
+    tt->move  = move;
+    tt->score = score;
+    tt->eval  = eval;
   }
-
-  toReplace->hash  = shortHash;
-  toReplace->depth = depth - DEPTH_OFFSET;
-  toReplace->flags = TT.age | flag;
-  toReplace->move  = move;
-  toReplace->score = score;
-  toReplace->eval  = eval;
 }
 
 inline int TTFull() {
