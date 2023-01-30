@@ -28,7 +28,7 @@
 #define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-#define N_HIDDEN   512
+#define N_HIDDEN   768
 #define N_OUTPUT   1
 
 #define ALIGN_ON 64
@@ -46,7 +46,7 @@ enum {
 typedef int16_t acc_t;
 
 typedef struct {
-  acc_t values[2][512] ALIGN;
+  acc_t values[2][N_HIDDEN] ALIGN;
 } Accumulator;
 
 typedef struct {
