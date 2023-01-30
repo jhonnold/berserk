@@ -55,11 +55,14 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
     const __m256i* in = (__m256i*) acc->values[views[v]];
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
-    for (size_t i = 0; i < CHUNKS / 2; i++) {
+    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
       __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 6);
       __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 6);
+      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
+      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
 
-      out[i] = _mm256_permute4x64_epi64(_mm256_packus_epi16(s0, s1), 0b11011000);
+      out[i] = _mm256_packus_epi16(s0, s1);
+      out[i + 1] = _mm256_packus_epi16(s2, s3);
     }
   }
 }
@@ -355,6 +358,31 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
   offset += N_L3 * N_OUTPUT * sizeof(float);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
+
+#if defined(__AVX2__)
+  const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
+  const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
+  const size_t BIAS_CHUNKS   = N_HIDDEN / WIDTH;
+
+  __m256i* weights = (__m256i*) INPUT_WEIGHTS;
+  __m256i* biases  = (__m256i*) INPUT_BIASES;
+
+  for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
+    __m128i a = _mm256_extracti128_si256(weights[i], 1);     // 64->128
+    __m128i b = _mm256_extracti128_si256(weights[i + 1], 0); // 128->192
+
+    weights[i]     = _mm256_inserti128_si256(weights[i], b, 1);     // insert 128->192 into 64->128
+    weights[i + 1] = _mm256_inserti128_si256(weights[i + 1], a, 0); // insert 64->128 into 128->192
+  }
+
+  for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
+    __m128i a = _mm256_extracti128_si256(biases[i], 1);     // 64->128
+    __m128i b = _mm256_extracti128_si256(biases[i + 1], 0); // 128->192
+
+    biases[i]     = _mm256_inserti128_si256(biases[i], b, 1);     // insert 128->192 into 64->128
+    biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a, 0); // insert 64->128 into 128->192
+  }
+#endif
 }
 
 void LoadDefaultNN() {
