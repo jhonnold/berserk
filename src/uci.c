@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "accumulator.h"
+#include "bench.h"
 #include "board.h"
 #include "eval.h"
 #include "move.h"
@@ -317,6 +318,12 @@ void UCILoop() {
       ParseFen(fen, &board);
 
       PerftTest(depth, &board);
+    } else if (!strncmp(in, "bench", 5)) {
+      strtok(in, " ");
+      char* d   = strtok(NULL, " ") ?: "13";
+
+      int depth = atoi(d);
+      Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
       Threat threats[1];
       Threats(threats, &board, board.stm);

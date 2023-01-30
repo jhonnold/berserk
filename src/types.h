@@ -49,7 +49,7 @@ enum {
 typedef int16_t acc_t;
 
 typedef struct {
-  acc_t values[2][512] ALIGN;
+  acc_t values[2][N_HIDDEN] ALIGN;
 } Accumulator;
 
 typedef struct {

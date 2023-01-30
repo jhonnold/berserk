@@ -343,7 +343,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     return ttScore;
 
   // tablebase - we do not do this at root
-  if (!isRoot) {
+  if (!isRoot && !ss->skip) {
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
