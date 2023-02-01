@@ -98,8 +98,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // static contempt
   score += thread->contempt[board->stm];
 
-  // scaled based on phase [1, 2]
-  score = (64 + board->phase) * score / 64;
+  // scaled based on phase [1.72, 2.6]
+  score = (220 + 7 * board->phase / 4) * score / 128;
 
   return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
 }
