@@ -397,7 +397,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
-      if (!isPV && ttScore != UNKNOWN && (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)))
+      if (ttScore != UNKNOWN && ((tt->flags & TT_EXACT) || (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER))))
         eval = ttScore;
     } else if (!ss->skip) {
       eval = ss->staticEval = Evaluate(board, thread);
@@ -782,9 +782,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
       eval = ss->staticEval = tt->eval;
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
-
-      if (!isPV && ttScore != UNKNOWN && (tt->flags & (ttScore > eval ? TT_LOWER : TT_UPPER)))
-        eval = ttScore;
     } else {
       eval = ss->staticEval = Evaluate(board, thread);
 
