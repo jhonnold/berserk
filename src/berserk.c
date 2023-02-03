@@ -30,6 +30,8 @@
 #include "util.h"
 #include "zobrist.h"
 
+int INTERACTIVE_OUTPUT = 0;
+
 // Welcome to berserk
 int main(int argc, char** argv) {
   SeedRandom(0);
@@ -49,9 +51,12 @@ int main(int argc, char** argv) {
       depth = Max(1, atoi(argv[2]));
 
     Bench(depth);
-  } else {
-    UCILoop();
+    return 0;
+  } else if (argc > 1 && !strncmp(argv[1], "-i", 2)) {
+    INTERACTIVE_OUTPUT = 1;
   }
+
+  UCILoop();
 
   return 0;
 }

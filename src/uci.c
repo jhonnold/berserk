@@ -171,18 +171,7 @@ void ParseGo(char* in, Board* board) {
     Limits.max = Min(250, Limits.max);
 
   if (depth <= 0)
-    Limits.depth = MAX_SEARCH_PLY - 1;
-
-  printf(
-    "info string time %d start %ld alloc %d max %d depth %d timeset %d "
-    "searchmoves %d\n",
-    time,
-    Limits.start,
-    Limits.alloc,
-    Limits.max,
-    Limits.depth,
-    Limits.timeset,
-    Limits.searchable.count);
+    Limits.depth = MAX_SEARCH_PLY;
 
   StartSearch(board, ponder);
 }

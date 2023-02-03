@@ -50,6 +50,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss);
 
 void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board);
 void PrintPV(PV* pv, Board* board);
+void PrintInteractive(ThreadData* thread, int alpha, int beta);
 
 void SortRootMoves(ThreadData* thread, int offset);
 int MoveSearchedByMultiPV(ThreadData* thread, Move move);

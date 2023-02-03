@@ -41,6 +41,8 @@
 #include "uci.h"
 #include "util.h"
 
+extern int INTERACTIVE_OUTPUT;
+
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
@@ -195,7 +197,7 @@ void Search(ThreadData* thread) {
         SortRootMoves(thread, thread->multiPV);
 
         if (mainThread && (score <= alpha || score >= beta) && Limits.multiPV == 1 &&
-            GetTimeMS() - Limits.start >= 2500)
+            GetTimeMS() - Limits.start >= 2500 && !INTERACTIVE_OUTPUT)
           PrintUCI(thread, alpha, beta, board);
 
         if (score <= alpha) {
@@ -221,8 +223,13 @@ void Search(ThreadData* thread) {
       SortRootMoves(thread, 0);
 
       // Print if final multipv or time elapsed
-      if (mainThread && (thread->multiPV + 1 == Limits.multiPV || GetTimeMS() - Limits.start >= 2500))
-        PrintUCI(thread, -CHECKMATE, CHECKMATE, board);
+      if (mainThread &&
+          (thread->multiPV + 1 == Limits.multiPV || (!INTERACTIVE_OUTPUT && GetTimeMS() - Limits.start >= 2500))) {
+        if (!INTERACTIVE_OUTPUT)
+          PrintUCI(thread, -CHECKMATE, CHECKMATE, board);
+        else
+          PrintInteractive(thread, -CHECKMATE, CHECKMATE);
+      }
     }
 
     if (!mainThread)
@@ -536,7 +543,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     playedMoves++;
 
-    if (isRoot && !thread->idx && GetTimeMS() - Limits.start > 2500)
+    if (isRoot && !thread->idx && !INTERACTIVE_OUTPUT && GetTimeMS() - Limits.start > 2500)
       printf("info depth %d currmove %s currmovenumber %d\n",
              thread->depth,
              MoveToStr(move, board),
@@ -880,6 +887,73 @@ void PrintPV(PV* pv, Board* board) {
   for (int i = 0; i < pv->count; i++)
     printf("%s ", MoveToStr(pv->moves[i], board));
   printf("\n");
+}
+
+void PrintInteractive(ThreadData* thread, int alpha, int beta) {
+  int depth      = thread->depth;
+  int seldepth   = thread->seldepth;
+  uint64_t nodes = NodesSearched();
+  uint64_t time  = Max(1, GetTimeMS() - Limits.start);
+  uint64_t nps   = 1000 * nodes / time;
+
+  for (int i = 0; i < Limits.multiPV; i++) {
+    int updated = (thread->rootMoves[i].score != -CHECKMATE);
+    if (depth == 1 && i > 0 && !updated)
+      break;
+
+    int realDepth = updated ? depth : Max(1, depth - 1);
+    int bounded   = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
+
+    if (!i) {
+      printf("%3d/%-3d", realDepth, seldepth);
+      if (time < 1000)
+        printf("  %3" PRId64 "ms", time);
+      else if (time < 10000)
+        printf("  %1.2fs", time / 1000.0);
+      else if (time < 100000)
+        printf("  %2.1fs", time / 1000.0);
+      else
+        printf("  %4" PRId64 "s", time / 1000);
+
+      printf("  %7" PRId64 "kn", nodes / 1000);
+      printf("  %5" PRId64 "kn/s", nps / 1000);
+    } else {
+      printf("                                    ");
+    }
+
+    int printable = bounded > MATE_BOUND    ? (CHECKMATE - bounded + 1) / 2 :
+                    bounded > TB_WIN_BOUND  ? (TB_WIN_SCORE - bounded + 1) / 2 :
+                    bounded < -MATE_BOUND   ? -(CHECKMATE + bounded) / 2 :
+                    bounded < -TB_WIN_BOUND ? -(TB_WIN_SCORE + bounded) / 2 :
+                                              bounded;
+    if (bounded > MATE_BOUND) {
+      printf("\033[0;%dm     +M%-2d  \033[0;%dm", 32, abs(printable), 37);
+    } else if (bounded > TB_WIN_BOUND) {
+      printf("\033[0;%dm    +TB%-2d  \033[0;%dm", 32, abs(printable), 37);
+    } else if (bounded < -MATE_BOUND) {
+      printf("\033[0;%dm     -M%-2d  \033[0;%dm", 31, abs(printable), 37);
+    } else if (bounded < -TB_WIN_BOUND) {
+      printf("\033[0;%dm    -TB%-2d  \033[0;%dm", 31, abs(printable), 37);
+    } else {
+      double pawnScore = bounded / 100.0;
+      int color        = pawnScore >= 2.5 ? 32 : // green
+                         pawnScore >= 1 ? 36 : // cyan
+                        pawnScore <= -2.5 ? 31 : // red
+                        pawnScore <= -1 ? 33 : // yellow
+                          37; // white
+
+      printf("\033[0;%dm  %+7.2f  \033[0;%dm", color, pawnScore, 37);
+    }
+
+    RootMove rm = thread->rootMoves[i];
+    if (!rm.pv.count)
+      printf("%s\n", MoveToSan(rm.move));
+    else {
+      for (int j = 0; j < rm.pv.count; j++)
+        printf("%s ", MoveToSan(rm.pv.moves[j]));
+      printf("\n");
+    }
+  }
 }
 
 void SortRootMoves(ThreadData* thread, int offset) {

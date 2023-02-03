@@ -24,9 +24,11 @@
 #include "types.h"
 #include "uci.h"
 
-const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
+const char* PIECE_TO_CHAR  = "PpNnBbRrQqKk";
+const char* SAN_PC_TO_CHAR = "--NNBBRRQQKK";
 
 const char* PROMOTION_TO_CHAR = "--nnbbrrqq--";
+const char* SAN_PROMO_TO_CHAR = "--NNBBRRQQ--";
 
 const int CHAR_TO_PIECE[] = {
   ['P'] = WHITE_PAWN,   //
@@ -94,6 +96,53 @@ char* MoveToStr(Move move, Board* board) {
     sprintf(buffer, "%s%s", SQ_TO_COORD[from], SQ_TO_COORD[to]);
   }
 
+  return buffer;
+}
+
+char* MoveToSan(Move move) {
+  static char buffer[8];
+
+  if (IsCas(move)) {
+    if (To(move) == G1 || To(move) == G8) {
+      buffer[0] = 'O';
+      buffer[1] = '-';
+      buffer[2] = 'O';
+      buffer[3] = '\0';
+    } else {
+      buffer[0] = 'O';
+      buffer[1] = '-';
+      buffer[2] = 'O';
+      buffer[3] = '-';
+      buffer[4] = 'O';
+      buffer[5] = '\0';
+    }
+
+    return buffer;
+  }
+
+  int idx = 0;
+
+  if (IsCap(move)) {
+    if (PieceType(Moving(move)) == PAWN)
+      buffer[idx++] = 'a' + File(From(move));
+    else
+      buffer[idx++] = SAN_PC_TO_CHAR[Moving(move)];
+
+    buffer[idx++] = 'x';
+  } else if (PieceType(Moving(move)) != PAWN) {
+    buffer[idx++] = SAN_PC_TO_CHAR[Moving(move)];
+  }
+
+  const char* to = SQ_TO_COORD[To(move)];
+  buffer[idx++]  = to[0];
+  buffer[idx++]  = to[1];
+
+  if (Promo(move)) {
+    buffer[idx++] = '=';
+    buffer[idx++] = SAN_PROMO_TO_CHAR[Promo(move)];
+  }
+
+  buffer[idx] = '\0';
   return buffer;
 }
 
