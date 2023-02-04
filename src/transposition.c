@@ -129,7 +129,7 @@ TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move 
   else if (score < -MATE_BOUND)
     score -= ply;
 
-  if ((bound == BOUND_EXACT) || shortHash != tt->hash || TTDepth(tt) <= depth * 2) {
+  if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 4 > TTDepth(tt)) {
     tt->hash       = shortHash;
     tt->depth      = depth - DEPTH_OFFSET;
     tt->agePvBound = TT.age | (pv << 2) | bound;
