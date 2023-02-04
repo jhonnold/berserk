@@ -319,7 +319,7 @@ void UCILoop() {
       PerftTest(depth, &board);
     } else if (!strncmp(in, "bench", 5)) {
       strtok(in, " ");
-      char* d   = strtok(NULL, " ") ?: "13";
+      char* d = strtok(NULL, " ") ?: "13";
 
       int depth = atoi(d);
       Bench(depth);

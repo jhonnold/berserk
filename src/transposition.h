@@ -24,9 +24,15 @@
 #define MEGABYTE    (1024ull * 1024ull)
 #define BUCKET_SIZE 5
 
+#define BOUND_MASK (0x3)
+#define PV_MASK    (0x4)
+#define AGE_MASK   (0xF8)
+#define AGE_INC    (0x8)
+#define AGE_CYCLE  (255 + AGE_INC)
+
 typedef struct {
   uint16_t hash;
-  uint8_t depth, flags;
+  uint8_t depth, agePvBound;
   Move move;
   int16_t score, eval;
 } TTEntry;
@@ -44,11 +50,10 @@ typedef struct {
 } TTTable;
 
 enum {
-  TT_UNKNOWN = 0,
-  TT_LOWER   = 1,
-  TT_UPPER   = 2,
-  TT_EXACT   = 4,
-  TT_PV      = 8
+  BOUND_UNKNOWN = 0,
+  BOUND_LOWER   = 1,
+  BOUND_UPPER   = 2,
+  BOUND_EXACT   = 3
 };
 
 extern TTTable TT;
@@ -64,7 +69,7 @@ void TTPut(TTEntry* tt,
            uint64_t hash,
            int depth,
            int16_t score,
-           uint8_t flag,
+           uint8_t bound,
            Move move,
            int ply,
            int16_t eval,
@@ -84,6 +89,14 @@ extern const int DEPTH_OFFSET;
 
 INLINE int TTDepth(TTEntry* e) {
   return e->depth + DEPTH_OFFSET;
+}
+
+INLINE int TTBound(TTEntry* e) {
+  return e->agePvBound & BOUND_MASK; // 2 bottom bits
+}
+
+INLINE int TTPV(TTEntry* e) {
+  return e->agePvBound & PV_MASK; // 3rd to bottom bit
 }
 
 #endif
