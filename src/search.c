@@ -420,8 +420,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
-  if (depth >= 4 && !hashMove && !ss->skip)
-    depth--;
+  if (!(ss->skip || inCheck)) {
+    if ((isPV || cutnode) && depth >= 4 && !hashMove)
+      depth--;
+  }
 
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
@@ -717,15 +719,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // prevent saving when in singular search
   if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
     int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
-    TTPut(tt,
-          board->zobrist,
-          depth,
-          bestScore,
-          bound,
-          ttHit && bound == BOUND_UPPER && TTBound(tt) == BOUND_LOWER ? hashMove : bestMove,
-          ss->ply,
-          ss->staticEval,
-          ttPv);
+    Move newMove = (bound != BOUND_UPPER || !ttHit) ? bestMove : // Always store bestmove on non-lower bound or no entry
+                   (TTBound(tt) & BOUND_LOWER)      ? hashMove : // if we failed low after a good move, don't update the move
+                    bestMove == hashMove            ? bestMove : // otherwise if we failed low and previous search failed low 
+                                                      NULL_MOVE; // and moves don't agree, then we clear best move
+    TTPut(tt, board->zobrist, depth, bestScore, bound, newMove, ss->ply, ss->staticEval, ttPv);
   }
 
   return bestScore;
@@ -823,8 +821,16 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     }
   }
 
-  int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
-  TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
+  if (bestMove)
+    TTPut(tt,
+          board->zobrist,
+          0,
+          bestScore,
+          bestScore >= beta ? BOUND_LOWER : BOUND_UPPER,
+          bestMove,
+          ss->ply,
+          ss->staticEval,
+          ttPv);
 
   return bestScore;
 }
