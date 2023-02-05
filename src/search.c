@@ -557,7 +557,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // (allows for reductions when doing singular search)
     if (ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (!isRoot && depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && TTBound(tt) == BOUND_LOWER &&
+      if (!isRoot && depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
         int sBeta  = Max(ttScore - 3 * depth / 2, -CHECKMATE);
         int sDepth = depth / 2 - 1;
@@ -581,11 +581,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         else if (ttScore >= beta)
           extension = -1;
       }
-
-      // history extension - if the tt move has a really good history score,
-      // extend. thank you to Connor, author of Seer for this idea
-      else if (!isRoot && depth >= 7 && move == hashMove && history >= 24576 && abs(ttScore) < WINNING_ENDGAME)
-        extension = 1;
 
       // re-capture extension - looks for a follow up capture on the same square
       // as the previous capture
