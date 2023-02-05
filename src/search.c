@@ -299,12 +299,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
 
   // drop into noisy moves only
-  if (depth <= 0) {
-    if (inCheck)
-      depth = 1;
-    else
-      return Quiesce(alpha, beta, thread, ss);
-  }
+  if (depth <= 0)
+    return Quiesce(alpha, beta, thread, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
