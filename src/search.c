@@ -211,7 +211,7 @@ void Search(ThreadData* thread) {
         } else if (score >= beta) {
           beta = Min(beta + delta, CHECKMATE);
 
-          if (abs(score) < TB_WIN_BOUND)
+          if (abs(score) < WINNING_ENDGAME)
             searchDepth--;
         } else
           break;
@@ -235,12 +235,14 @@ void Search(ThreadData* thread) {
     if (!mainThread)
       continue;
 
-    // Time Management stuff
-    //
-    long elapsed = GetTimeMS() - Limits.start;
-
     Move bestMove = thread->rootMoves[0].move;
     int bestScore = thread->rootMoves[0].score;
+
+    // Found mate?
+    if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate)) break;
+
+    // Time Management stuff
+    long elapsed = GetTimeMS() - Limits.start;
 
     // Maximum time exceeded, hard exit
     if (Limits.timeset && elapsed >= Limits.max) {
@@ -262,7 +264,7 @@ void Search(ThreadData* thread) {
       uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
       double nodeCountFactor = Max(0.5, pctNodesNotBest * 2 + 0.4);
-      if (bestScore >= TB_WIN_BOUND)
+      if (bestScore >= WINNING_ENDGAME)
         nodeCountFactor = 0.5;
 
       if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
@@ -470,7 +472,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     Threat ownThreat;
     Threats(&ownThreat, board, board->stm);
     int probBeta = beta + 110 - 30 * improving;
-    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
+    if (depth > 4 && abs(beta) < WINNING_ENDGAME && ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
@@ -523,7 +525,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = !IsCap(move) ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
                                          GetCaptureHistory(thread, board, move);
 
-    if (bestScore > -MATE_BOUND) {
+    if (bestScore > -WINNING_ENDGAME) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
@@ -804,7 +806,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     if (!IsLegal(move, board))
       continue;
 
-    if (bestScore > -MATE_BOUND && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
+    if (bestScore > -WINNING_ENDGAME && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
       continue;
 
     ss->move = move;

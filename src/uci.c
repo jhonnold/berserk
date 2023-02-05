@@ -71,9 +71,10 @@ void ParseGo(char* in, Board* board) {
   Limits.searchMoves      = 0;
   Limits.searchable.count = 0;
   Limits.infinite         = 0;
+  Limits.mate             = 0;
 
   char* ptrChar = in;
-  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0, ponder = 0;
+  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0, ponder = 0, mate = 0;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
@@ -105,6 +106,9 @@ void ParseGo(char* in, Board* board) {
   if ((ptrChar = strstr(in, "depth")))
     depth = Min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
 
+  if ((ptrChar = strstr(in, "mate")))
+    mate = Min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 5));
+
   if ((ptrChar = strstr(in, "nodes")))
     nodes = Max(1, atol(ptrChar + 6));
 
@@ -132,6 +136,7 @@ void ParseGo(char* in, Board* board) {
   }
 
   Limits.depth = depth;
+  Limits.mate  = mate;
   Limits.nodes = nodes;
 
   if (Limits.nodes)
