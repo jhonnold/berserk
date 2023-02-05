@@ -232,7 +232,8 @@ void Search(ThreadData* thread) {
     int bestScore = thread->rootMoves[0].score;
 
     // Found mate?
-    if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate)) break;
+    if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate))
+      break;
 
     // Time Management stuff
     long elapsed = GetTimeMS() - Limits.start;
@@ -675,7 +676,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     if (score > bestScore) {
       bestScore = score;
-      bestMove  = move;
 
       if (isPV && !isRoot && score > alpha) {
         pv->count    = childPv.count + 1;
@@ -683,8 +683,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
       }
 
-      if (score > alpha)
-        alpha = score;
+      if (score > alpha) {
+        bestMove = move;
+        alpha    = score;
+      }
 
       // we're failing high
       if (alpha >= beta) {
@@ -714,11 +716,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // prevent saving when in singular search
   if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
     int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
-    Move newMove = (bound != BOUND_UPPER || !ttHit) ? bestMove : // Always store bestmove on non-lower bound or no entry
-                   (TTBound(tt) & BOUND_LOWER)      ? hashMove : // if we failed low after a good move, don't update the move
-                    bestMove == hashMove            ? bestMove : // otherwise if we failed low and previous search failed low 
-                                                      NULL_MOVE; // and moves don't agree, then we clear best move
-    TTPut(tt, board->zobrist, depth, bestScore, bound, newMove, ss->ply, ss->staticEval, ttPv);
+    TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
   }
 
   return bestScore;
@@ -805,10 +803,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     if (score > bestScore) {
       bestScore = score;
-      bestMove  = move;
 
-      if (score > alpha)
-        alpha = score;
+      if (score > alpha) {
+        bestMove = move;
+        alpha    = score;
+      }
 
       // failed high
       if (alpha >= beta)
@@ -816,16 +815,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     }
   }
 
-  if (bestMove)
-    TTPut(tt,
-          board->zobrist,
-          0,
-          bestScore,
-          bestScore >= beta ? BOUND_LOWER : BOUND_UPPER,
-          bestMove,
-          ss->ply,
-          ss->staticEval,
-          ttPv);
+  int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
+  TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
 
   return bestScore;
 }
