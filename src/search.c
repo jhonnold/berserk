@@ -583,6 +583,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           extension = -1;
       }
 
+      // history extension - if the tt move has a really good history score,
+      // extend. thank you to Connor, author of Seer for this idea
+      else if (!isRoot && depth >= 7 && move == hashMove && history >= 24576 && abs(ttScore) < WINNING_ENDGAME)
+        extension = 1;
+
       // re-capture extension - looks for a follow up capture on the same square
       // as the previous capture
       else if (!isRoot && isPV && IsRecapture(ss, move))
