@@ -241,6 +241,7 @@ INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int colo
 
 ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board);
+ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board);
 
 #endif
