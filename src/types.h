@@ -130,6 +130,7 @@ typedef struct {
 
   int timeset;
   int depth;
+  int mate;
   int movesToGo;
   int stopped;
   int quit;

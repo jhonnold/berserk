@@ -86,7 +86,7 @@ inline void TTClear() {
 }
 
 inline void TTUpdate() {
-  TT.age += 0x10;
+  TT.age += AGE_INC;
 }
 
 inline uint64_t TTIdx(uint64_t hash) {
@@ -103,8 +103,8 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
 
   for (int i = 0; i < BUCKET_SIZE; i++) {
     if (bucket[i].hash == shortHash || !bucket[i].depth) {
-      bucket[i].flags = TT.age | (bucket[i].flags & 0x0F);
-      *hit            = !!bucket[i].depth;
+      bucket[i].agePvBound = TT.age | (bucket[i].agePvBound & (PV_MASK | BOUND_MASK));
+      *hit                 = !!bucket[i].depth;
       return &bucket[i];
     }
   }
@@ -113,15 +113,15 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
 
   TTEntry* replace = bucket;
   for (int i = 1; i < BUCKET_SIZE; i++)
-    if (replace->depth - ((271 + TT.age - replace->flags) & 0xF0) / 4 >
-        bucket[i].depth - ((271 + TT.age - bucket[i].flags) & 0xF0) / 4)
+    if (replace->depth - ((AGE_CYCLE + TT.age - replace->agePvBound) & AGE_MASK) / 2 >
+        bucket[i].depth - ((AGE_CYCLE + TT.age - bucket[i].agePvBound) & AGE_MASK) / 2)
       replace = &bucket[i];
 
   return replace;
 }
 
 inline void
-TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t flag, Move move, int ply, int16_t eval, int pv) {
+TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
   uint16_t shortHash = (uint16_t) hash;
 
   if (score > MATE_BOUND)
@@ -129,16 +129,13 @@ TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t flag, Move m
   else if (score < -MATE_BOUND)
     score -= ply;
 
-  if (pv)
-    flag |= TT_PV;
-
-  if ((flag & TT_EXACT) || shortHash != tt->hash || TTDepth(tt) <= depth * 2) {
-    tt->hash  = shortHash;
-    tt->depth = depth - DEPTH_OFFSET;
-    tt->flags = TT.age | flag;
-    tt->move  = move;
-    tt->score = score;
-    tt->eval  = eval;
+  if ((bound == BOUND_EXACT) || shortHash != tt->hash || TTDepth(tt) <= depth * 2) {
+    tt->hash       = shortHash;
+    tt->depth      = depth - DEPTH_OFFSET;
+    tt->agePvBound = TT.age | (pv << 2) | bound;
+    tt->move       = move;
+    tt->score      = score;
+    tt->eval       = eval;
   }
 }
 
@@ -149,7 +146,7 @@ inline int TTFull() {
   for (int i = 0; i < c; i++) {
     TTBucket b = TT.buckets[i];
     for (int j = 0; j < BUCKET_SIZE; j++) {
-      if (b.entries[j].depth && (b.entries[j].flags & 0xF0) == TT.age)
+      if (b.entries[j].depth && (b.entries[j].agePvBound & AGE_MASK) == TT.age)
         t++;
     }
   }
