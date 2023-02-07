@@ -772,6 +772,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
       eval = ss->staticEval = tt->eval;
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
+
+      if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
+        eval = ttScore;
     } else {
       eval = ss->staticEval = Evaluate(board, thread);
 
