@@ -194,7 +194,7 @@ void Search(ThreadData* thread) {
 
       while (1) {
         // search!
-        score = Negamax(alpha, beta, searchDepth, 0, thread, &nullPv, ss);
+        score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
 
         SortRootMoves(thread, thread->multiPV);
 
