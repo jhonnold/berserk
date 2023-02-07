@@ -299,12 +299,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
 
   // drop into noisy moves only
-  if (depth <= 0) {
-    if (inCheck)
-      depth = 1;
-    else
-      return Quiesce(alpha, beta, thread, ss);
-  }
+  if (depth <= 0)
+    return Quiesce(alpha, beta, thread, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
@@ -780,12 +776,24 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     bestScore = eval;
   }
 
-  InitQSMovePicker(&mp, thread);
+  if (!inCheck)
+    InitQSMovePicker(&mp, thread);
+  else {
+    Threat oppThreats;
+    Threats(&oppThreats, board, board->xstm);
+
+    InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss, oppThreats.sqs);
+  }
+
+  int legalMoves = 0;
 
   while ((move = NextMove(&mp, board, 1))) {
     if (!IsLegal(move, board))
       continue;
 
+    legalMoves++;
+
+    // if we're in check, final condition in SEE always 0
     if (bestScore > -WINNING_ENDGAME && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
       continue;
 
@@ -810,6 +818,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
         break;
     }
   }
+
+  if (!legalMoves && inCheck)
+    return -CHECKMATE + ss->ply;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);

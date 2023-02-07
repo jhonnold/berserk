@@ -33,6 +33,11 @@ ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
                                AddPseudoLegalMoves(moves, board, GT_QUIET, BLACK);
 }
 
+ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_LEGAL, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, GT_LEGAL, BLACK);
+}
+
 ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
   return board->stm == WHITE ? AddLegalMoves(moves, board, WHITE) : //
                                AddLegalMoves(moves, board, BLACK);
