@@ -308,12 +308,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
 
   // drop into noisy moves only
-  if (depth <= 0) {
-    if (inCheck)
-      depth = 1;
-    else
-      return Quiesce(alpha, beta, thread, ss);
-  }
+  if (depth <= 0)
+    return Quiesce(alpha, beta, thread, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
@@ -431,8 +427,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
-  if (depth >= 4 && !hashMove && !ss->skip)
-    depth--;
+  if (!(ss->skip || inCheck)) {
+    if ((isPV || cutnode) && depth >= 4 && !hashMove)
+      depth--;
+  }
 
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
@@ -564,9 +562,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // other moves at a shallow depth on a nullwindow that is somewhere below
     // the tt evaluation implemented using "skip move" recursion like in SF
     // (allows for reductions when doing singular search)
-    if (ss->ply < thread->depth * 2) {
+    if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (!isRoot && depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && TTBound(tt) == BOUND_LOWER &&
+      if (depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
         int sBeta  = Max(ttScore - 3 * depth / 2, -CHECKMATE);
         int sDepth = depth / 2 - 1;
@@ -591,14 +589,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           extension = -1;
       }
 
-      // history extension - if the tt move has a really good history score,
-      // extend. thank you to Connor, author of Seer for this idea
-      else if (!isRoot && depth >= 7 && move == hashMove && history >= 24576 && abs(ttScore) < WINNING_ENDGAME)
-        extension = 1;
-
       // re-capture extension - looks for a follow up capture on the same square
       // as the previous capture
-      else if (!isRoot && isPV && IsRecapture(ss, move))
+      else if (isPV && IsRecapture(ss, move))
         extension = 1;
     }
 
@@ -634,10 +627,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // move GAVE check
       if (board->checkers)
         R--;
-
-      // Ethereal king evasions
-      if (inCheck && PieceType(Moving(move)) == KING)
-        R++;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
@@ -691,7 +680,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     if (score > bestScore) {
       bestScore = score;
-      bestMove  = move;
 
       if (isPV && !isRoot && score > alpha) {
         pv->count    = childPv.count + 1;
@@ -699,8 +687,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
       }
 
-      if (score > alpha)
-        alpha = score;
+      if (score > alpha) {
+        bestMove = move;
+        alpha    = score;
+      }
 
       // we're failing high
       if (alpha >= beta) {
@@ -730,15 +720,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // prevent saving when in singular search
   if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
     int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
-    TTPut(tt,
-          board->zobrist,
-          depth,
-          bestScore,
-          bound,
-          ttHit && bound == BOUND_UPPER && TTBound(tt) == BOUND_LOWER ? hashMove : bestMove,
-          ss->ply,
-          ss->staticEval,
-          ttPv);
+    TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
   }
 
   return bestScore;
@@ -806,12 +788,24 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     bestScore = eval;
   }
 
-  InitQSMovePicker(&mp, thread);
+  if (!inCheck)
+    InitQSMovePicker(&mp, thread);
+  else {
+    Threat oppThreats;
+    Threats(&oppThreats, board, board->xstm);
+
+    InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss, oppThreats.sqs);
+  }
+
+  int legalMoves = 0;
 
   while ((move = NextMove(&mp, board, 1))) {
     if (!IsLegal(move, board))
       continue;
 
+    legalMoves++;
+
+    // if we're in check, final condition in SEE always 0
     if (bestScore > -WINNING_ENDGAME && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
       continue;
 
@@ -825,16 +819,20 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     if (score > bestScore) {
       bestScore = score;
-      bestMove  = move;
 
-      if (score > alpha)
-        alpha = score;
+      if (score > alpha) {
+        bestMove = move;
+        alpha    = score;
+      }
 
       // failed high
       if (alpha >= beta)
         break;
     }
   }
+
+  if (!legalMoves && inCheck)
+    return -CHECKMATE + ss->ply;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);

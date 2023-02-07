@@ -22,6 +22,12 @@
 #include "types.h"
 #include "util.h"
 
+enum {
+  ST_QUIET,
+  ST_CAPTURE,
+  ST_EVASION
+};
+
 INLINE void InitNormalMovePicker(MovePicker* picker,
                                  Move hashMove,
                                  ThreadData* thread,
@@ -47,6 +53,20 @@ INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread) {
 INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread) {
   picker->phase  = QS_GEN_NOISY_MOVES;
   picker->thread = thread;
+}
+
+INLINE void InitQSEvasionsPicker(MovePicker* picker,
+                                 Move hashMove,
+                                 ThreadData* thread,
+                                 SearchStack* ss,
+                                 BitBoard threats) {
+  picker->phase = QS_EVASION_HASH_MOVE;
+
+  picker->hashMove = hashMove;
+
+  picker->threats = threats;
+  picker->thread  = thread;
+  picker->ss      = ss;
 }
 
 INLINE void InitPerftMovePicker(MovePicker* picker, Board* board) {
