@@ -224,7 +224,7 @@ void ParsePosition(char* in, Board* board) {
     MakeMoveUpdate(enteredMove, board, 0);
 
     if (board->fmr == 0)
-      board->histPly = 0;
+      board->histPly = board->nullply = 0;
   }
 }
 

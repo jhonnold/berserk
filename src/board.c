@@ -61,6 +61,7 @@ void ClearBoard(Board* board) {
   board->histPly  = 0;
   board->moveNo   = 1;
   board->fmr      = 0;
+  board->nullply  = 0;
   board->phase    = 0;
 }
 
@@ -289,11 +290,13 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->history[board->histPly].castling = board->castling;
   board->history[board->histPly].ep       = board->epSquare;
   board->history[board->histPly].fmr      = board->fmr;
+  board->history[board->histPly].nullply  = board->nullply;
   board->history[board->histPly].zobrist  = board->zobrist;
   board->history[board->histPly].checkers = board->checkers;
   board->history[board->histPly].pinned   = board->pinned;
 
   board->fmr++;
+  board->nullply++;
 
   FlipBits(board->pieces[piece], from, to);
   FlipBits(OccBB(board->stm), from, to);
@@ -416,6 +419,7 @@ void UndoMove(Move move, Board* board) {
   board->castling = board->history[board->histPly].castling;
   board->epSquare = board->history[board->histPly].ep;
   board->fmr      = board->history[board->histPly].fmr;
+  board->nullply  = board->history[board->histPly].nullply;
   board->zobrist  = board->history[board->histPly].zobrist;
   board->checkers = board->history[board->histPly].checkers;
   board->pinned   = board->history[board->histPly].pinned;
@@ -468,11 +472,13 @@ void MakeNullMove(Board* board) {
   board->history[board->histPly].castling = board->castling;
   board->history[board->histPly].ep       = board->epSquare;
   board->history[board->histPly].fmr      = board->fmr;
+  board->history[board->histPly].nullply  = board->nullply;
   board->history[board->histPly].zobrist  = board->zobrist;
   board->history[board->histPly].checkers = board->checkers;
   board->history[board->histPly].pinned   = board->pinned;
 
   board->fmr++;
+  board->nullply = 0;
 
   if (board->epSquare)
     board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];
@@ -499,6 +505,7 @@ void UndoNullMove(Board* board) {
   board->castling = board->history[board->histPly].castling;
   board->epSquare = board->history[board->histPly].ep;
   board->fmr      = board->history[board->histPly].fmr;
+  board->nullply  = board->history[board->histPly].nullply;
   board->zobrist  = board->history[board->histPly].zobrist;
   board->checkers = board->history[board->histPly].checkers;
   board->pinned   = board->history[board->histPly].pinned;
@@ -509,10 +516,10 @@ inline int IsDraw(Board* board, int ply) {
 }
 
 inline int IsRepetition(Board* board, int ply) {
-  int reps = 0;
+  int reps = 0, distance = Min(board->fmr, board->nullply);
 
   // Check as far back as the last non-reversible move
-  for (int i = board->histPly - 2; i >= 0 && i >= board->histPly - board->fmr; i -= 2) {
+  for (int i = board->histPly - 4; i >= 0 && i >= board->histPly - distance; i -= 2) {
     if (board->history[i].zobrist == board->zobrist) {
       if (i > board->histPly - ply) // within our search tree
         return 1;
