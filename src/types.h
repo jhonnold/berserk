@@ -139,6 +139,7 @@ typedef struct {
 
 typedef struct {
   Move move;
+  int seldepth;
   int score, previousScore;
   uint64_t nodes;
   PV pv;

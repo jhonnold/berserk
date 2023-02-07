@@ -204,7 +204,6 @@ void SetupMainThread(Board* board) {
   mainThread->calls      = 0;
   mainThread->nodes      = 0;
   mainThread->tbhits     = 0;
-  mainThread->seldepth   = 1;
 
   memcpy(&mainThread->board, board, offsetof(Board, accumulators));
 
@@ -232,7 +231,6 @@ void SetupOtherThreads(Board* board) {
     thread->calls      = 0;
     thread->nodes      = 0;
     thread->tbhits     = 0;
-    thread->seldepth   = 1;
 
     for (int j = 0; j < mainThread->numRootMoves; j++)
       InitRootMove(&thread->rootMoves[j], mainThread->rootMoves[j].move);
