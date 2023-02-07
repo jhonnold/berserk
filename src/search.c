@@ -556,9 +556,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // other moves at a shallow depth on a nullwindow that is somewhere below
     // the tt evaluation implemented using "skip move" recursion like in SF
     // (allows for reductions when doing singular search)
-    if (ss->ply < thread->depth * 2) {
+    if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (!isRoot && depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
+      if (depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
         int sBeta  = Max(ttScore - 3 * depth / 2, -CHECKMATE);
         int sDepth = depth / 2 - 1;
@@ -583,14 +583,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           extension = -1;
       }
 
-      // history extension - if the tt move has a really good history score,
-      // extend. thank you to Connor, author of Seer for this idea
-      else if (!isRoot && depth >= 7 && move == hashMove && history >= 24576 && abs(ttScore) < WINNING_ENDGAME)
-        extension = 1;
-
       // re-capture extension - looks for a follow up capture on the same square
       // as the previous capture
-      else if (!isRoot && isPV && IsRecapture(ss, move))
+      else if (isPV && IsRecapture(ss, move))
         extension = 1;
     }
 
@@ -626,10 +621,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // move GAVE check
       if (board->checkers)
         R--;
-
-      // Ethereal king evasions
-      if (inCheck && PieceType(Moving(move)) == KING)
-        R++;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
