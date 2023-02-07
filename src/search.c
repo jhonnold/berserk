@@ -181,6 +181,8 @@ void Search(ThreadData* thread) {
       int searchDepth = thread->depth;
       int score       = thread->rootMoves[thread->multiPV].previousScore;
 
+      thread->seldepth = 0;
+
       // One at depth 5 or later, start search at a reduced window
       if (thread->depth >= 5) {
         alpha = Max(score - WINDOW, -CHECKMATE);
@@ -232,7 +234,8 @@ void Search(ThreadData* thread) {
     int bestScore = thread->rootMoves[0].score;
 
     // Found mate?
-    if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate)) break;
+    if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate))
+      break;
 
     // Time Management stuff
     long elapsed = GetTimeMS() - Limits.start;
@@ -310,7 +313,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     longjmp(thread->exit, 1);
 
   thread->nodes++;
-  thread->seldepth = Max(ss->ply + 1, thread->seldepth);
+  if (isPV && thread->seldepth < ss->ply + 1)
+    thread->seldepth = ss->ply + 1;
 
   if (!isRoot) {
     // draw
@@ -667,7 +671,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rm->nodes += thread->nodes - startingNodeCount;
 
       if (playedMoves == 1 || score > alpha) {
-        rm->score       = score;
+        rm->score    = score;
+        rm->seldepth = thread->seldepth;
+
         rm->pv.count    = childPv.count + 1;
         rm->pv.moves[0] = move;
         memcpy(rm->pv.moves + 1, childPv.moves, childPv.count * sizeof(Move));
@@ -831,7 +837,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
 void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board) {
   int depth       = thread->depth;
-  int seldepth    = thread->seldepth;
   uint64_t nodes  = NodesSearched();
   uint64_t tbhits = TBHits();
   uint64_t time   = Max(1, GetTimeMS() - Limits.start);
@@ -856,7 +861,7 @@ void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board) {
     printf("info depth %d seldepth %d multipv %d score %s %d%snodes %" PRId64 " nps %" PRId64
            " hashfull %d tbhits %" PRId64 " time %" PRId64 " pv ",
            realDepth,
-           seldepth,
+           thread->rootMoves[i].seldepth,
            i + 1,
            type,
            printable,
