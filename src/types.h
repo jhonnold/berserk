@@ -142,6 +142,7 @@ typedef struct {
 
 typedef struct {
   Move move;
+  int seldepth;
   int score, previousScore;
   uint64_t nodes;
   PV pv;
@@ -212,6 +213,11 @@ enum {
   // QSearch
   QS_GEN_NOISY_MOVES,
   QS_PLAY_NOISY_MOVES,
+  // QSearch Evasions
+  QS_EVASION_HASH_MOVE,
+  QS_GEN_EVASIONS,
+  QS_PLAY_EVASIONS,
+  // ...
   NO_MORE_MOVES,
   PERFT_MOVES,
 };

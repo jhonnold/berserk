@@ -46,14 +46,20 @@ Move Best(ScoredMove* current, ScoredMove* end) {
 
 void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   ScoredMove* current = picker->current;
+  ThreadData* thread  = picker->thread;
+  SearchStack* ss     = picker->ss;
+
   while (current < picker->end) {
     Move move = current->move;
 
-    if (type == GT_QUIET)
+    if (type == ST_QUIET)
       current->score = GetQuietHistory(picker->ss, picker->thread, move, board->stm, picker->threats);
-    else
+    else if (type == ST_CAPTURE)
       current->score =
         GetCaptureHistory(picker->thread, board, move) + MATERIAL_VALUES[PieceType(board->squares[To(move)])] * 8;
+    else if (type == ST_EVASION)
+      current->score = IsCap(move) ? 1e7 + MATERIAL_VALUES[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] :
+                                     GetQuietHistory(ss, thread, move, board->stm, picker->threats);
 
     current++;
   }
@@ -70,7 +76,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->current = picker->endBad = picker->moves;
       picker->end                      = AddNoisyMoves(picker->current, board);
 
-      ScoreMoves(picker, board, GT_CAPTURE);
+      ScoreMoves(picker, board, ST_CAPTURE);
 
       picker->phase = PLAY_GOOD_NOISY;
       // fallthrough
@@ -111,7 +117,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
         picker->current = picker->endBad;
         picker->end     = AddQuietMoves(picker->current, board);
 
-        ScoreMoves(picker, board, GT_QUIET);
+        ScoreMoves(picker, board, ST_QUIET);
       }
 
       picker->phase = PLAY_QUIETS;
@@ -149,7 +155,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->current = picker->endBad = picker->moves;
       picker->end                      = AddNoisyMoves(picker->current, board);
 
-      ScoreMoves(picker, board, GT_CAPTURE);
+      ScoreMoves(picker, board, ST_CAPTURE);
 
       picker->phase = PC_PLAY_GOOD_NOISY;
       // fallthrough
@@ -182,7 +188,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->current = picker->endBad = picker->moves;
       picker->end                      = AddNoisyMoves(picker->current, board);
 
-      ScoreMoves(picker, board, GT_CAPTURE);
+      ScoreMoves(picker, board, ST_CAPTURE);
 
       picker->phase = QS_PLAY_NOISY_MOVES;
       // fallthrough
@@ -192,6 +198,31 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       picker->phase = -1;
       return NULL_MOVE;
+
+    // QSearch Evasion Steps
+    case QS_EVASION_HASH_MOVE:
+      picker->phase = QS_GEN_EVASIONS;
+      if (IsPseudoLegal(picker->hashMove, board))
+        return picker->hashMove;
+      // fallthrough
+    case QS_GEN_EVASIONS:
+      picker->current = picker->endBad = picker->moves;
+      picker->end                      = AddEvasionMoves(picker->current, board);
+
+      ScoreMoves(picker, board, ST_EVASION);
+
+      picker->phase = QS_PLAY_EVASIONS;
+      // fallthrough
+    case QS_PLAY_EVASIONS:
+      if (picker->current != picker->end) {
+        Move move = Best(picker->current++, picker->end);
+
+        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
+      }
+
+      picker->phase = -1;
+      return NULL_MOVE;
+
     case PERFT_MOVES:
       if (picker->current != picker->end)
         return (picker->current++)->move;
