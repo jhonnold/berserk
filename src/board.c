@@ -797,8 +797,8 @@ int HasCycle(Board* board, int ply) {
       if ((pc & 1) != board->stm)
         continue;
 
-      BoardHistory* prev2 = prev;
-      for (int j = i + 2; j <= distance; j += 2) {
+      BoardHistory* prev2 = prev - 2;
+      for (int j = i + 4; j <= distance; j += 2) {
         prev2 -= 2;
         if (prev2->zobrist == prev->zobrist)
           return 1;
