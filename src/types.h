@@ -63,6 +63,7 @@ typedef struct {
   int castling;
   int ep;
   int fmr;
+  int nullply;
   uint64_t zobrist;
   BitBoard checkers;
   BitBoard pinned;
@@ -74,6 +75,7 @@ typedef struct {
   int histPly;  // ply for historical state
   int moveNo;   // game move number
   int fmr;      // half move count for 50 move rule
+  int nullply;  // distance from last nullmove
   int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
   int phase;    // efficiently updated phase for scaling
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no
