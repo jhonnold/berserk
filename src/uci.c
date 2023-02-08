@@ -224,7 +224,7 @@ void ParsePosition(char* in, Board* board) {
     MakeMoveUpdate(enteredMove, board, 0);
 
     if (board->fmr == 0)
-      board->histPly = 0;
+      board->histPly = board->nullply = 0;
   }
 }
 
@@ -313,6 +313,9 @@ void UCILoop() {
       pthread_mutex_unlock(&Threads.lock);
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
+    } else if (!strncmp(in, "cycle", 5)) {
+      int cycle = HasCycle(&board, MAX_SEARCH_PLY);
+      printf(cycle ? "yes\n" : "no\n");
     } else if (!strncmp(in, "perft", 5)) {
       strtok(in, " ");
       char* d   = strtok(NULL, " ") ?: "5";

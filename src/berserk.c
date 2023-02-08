@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
   InitZobristKeys();
   InitPruningAndReductionTables();
   InitAttacks();
+  InitCuckoo();
 
   LoadDefaultNN();
   ThreadsInit();
