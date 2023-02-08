@@ -313,6 +313,9 @@ void UCILoop() {
       pthread_mutex_unlock(&Threads.lock);
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
+    } else if (!strncmp(in, "cycle", 5)) {
+      int cycle = HasCycle(&board, MAX_SEARCH_PLY);
+      printf(cycle ? "yes\n" : "no\n");
     } else if (!strncmp(in, "perft", 5)) {
       strtok(in, " ");
       char* d   = strtok(NULL, " ") ?: "5";
