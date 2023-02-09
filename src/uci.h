@@ -19,9 +19,15 @@
 
 #include "types.h"
 
+extern int SHOW_WDL;
 extern int CHESS_960;
 extern int CONTEMPT;
 extern SearchParams Limits;
+
+// Normalization of a score to 50% WR at 100cp
+#define Normalize(s) ((s) / 1.63)
+
+int WRModel(Score s, int ply);
 
 void RootMoves(SimpleMoveList* moves, Board* board);
 
