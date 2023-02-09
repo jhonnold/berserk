@@ -73,7 +73,7 @@ void Bench(int depth) {
     printf("Bench [#%2d]: bestmove %5s score %5d %12" PRIu64 " nodes %8d nps | %71s\n",
            i + 1,
            MoveToStr(bestMoves[i], &board),
-           scores[i],
+           (int) Normalize(scores[i]),
            nodes[i],
            (int) (1000.0 * nodes[i] / (times[i] + 1)),
            benchmarks[i]);
