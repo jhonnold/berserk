@@ -538,10 +538,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         skipQuiets = 1;
 
       if (!IsCap(move)) {
-        if (depth < 9 && eval + 100 + 50 * depth + history / 128 <= alpha)
+        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+
+        if (lmrDepth < 9 && eval + 100 + 50 * lmrDepth + history / 128 <= alpha)
           skipQuiets = 1;
 
-        if (!SEE(board, move, STATIC_PRUNE[0][depth]))
+        if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
       } else {
         if (mp.phase > PLAY_GOOD_NOISY && !SEE(board, move, STATIC_PRUNE[1][depth]))
