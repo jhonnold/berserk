@@ -531,10 +531,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         skipQuiets = 1;
 
       if (!IsCap(move)) {
-        if (depth < 4 && history < -4096 * (depth - 1))
-          continue;
-
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+
+        if (lmrDepth < 4 && history < -4096 * (depth - 1))
+          continue;
 
         if (lmrDepth < 9 && eval + 100 + 50 * lmrDepth + history / 128 <= alpha)
           skipQuiets = 1;
