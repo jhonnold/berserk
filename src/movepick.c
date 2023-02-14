@@ -56,7 +56,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       current->score = GetQuietHistory(picker->ss, picker->thread, move, board->stm, picker->threats);
     else if (type == ST_CAPTURE)
       current->score =
-        GetCaptureHistory(picker->thread, board, move) + MATERIAL_VALUES[PieceType(board->squares[To(move)])] * 8;
+        GetCaptureHistory(picker->thread, board, move) / 16 + MATERIAL_VALUES[PieceType(board->squares[To(move)])];
     else if (type == ST_EVASION)
       current->score = IsCap(move) ? 1e7 + MATERIAL_VALUES[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] :
                                      GetQuietHistory(ss, thread, move, board->stm, picker->threats);
@@ -88,7 +88,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
         if (move == picker->hashMove) {
           return NextMove(picker, board, skipQuiets);
-        } else if (score < 10000 && !SEE(board, move, 0)) {
+        } else if (!SEE(board, move, -score / 2)) {
           *picker->endBad++ = *(picker->current - 1);
           return NextMove(picker, board, skipQuiets);
         } else {
