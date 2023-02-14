@@ -69,7 +69,7 @@ void UpdateHistories(Board* board,
       AddCounterMove(thread, bestMove, (ss - 1)->move);
 
   } else {
-    int piece    = PieceType(Moving(bestMove));
+    int piece    = Moving(bestMove);
     int to       = To(bestMove);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
@@ -94,7 +94,7 @@ void UpdateHistories(Board* board,
     if (m == bestMove)
       continue;
 
-    int piece    = PieceType(Moving(m));
+    int piece    = Moving(m);
     int to       = To(m);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 

@@ -82,11 +82,13 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       // fallthrough
     case PLAY_GOOD_NOISY:
       if (picker->current != picker->end) {
-        Move move = Best(picker->current++, picker->end);
+        Move move = Best(picker->current, picker->end);
+        int score = picker->current->score;
+        picker->current++;
 
         if (move == picker->hashMove) {
           return NextMove(picker, board, skipQuiets);
-        } else if (!SEE(board, move, 0)) {
+        } else if (score < 10000 && !SEE(board, move, 0)) {
           *picker->endBad++ = *(picker->current - 1);
           return NextMove(picker, board, skipQuiets);
         } else {
