@@ -27,8 +27,6 @@
 #include "transposition.h"
 #include "types.h"
 
-const int MATERIAL_VALUES[7] = {100, 325, 325, 550, 1100, 0, 0};
-
 Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* orig = current;
   ScoredMove* max  = current;
@@ -56,9 +54,9 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       current->score = GetQuietHistory(picker->ss, picker->thread, move, board->stm, picker->threats);
     else if (type == ST_CAPTURE)
       current->score =
-        GetCaptureHistory(picker->thread, board, move) / 16 + MATERIAL_VALUES[PieceType(board->squares[To(move)])];
+        GetCaptureHistory(picker->thread, board, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
     else if (type == ST_EVASION)
-      current->score = IsCap(move) ? 1e7 + MATERIAL_VALUES[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] :
+      current->score = IsCap(move) ? 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] :
                                      GetQuietHistory(ss, thread, move, board->stm, picker->threats);
 
     current++;
