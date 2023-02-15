@@ -544,7 +544,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
       } else {
-        if (mp.phase > PLAY_GOOD_NOISY && !SEE(board, move, STATIC_PRUNE[1][depth]))
+        if (!SEE(board, move, STATIC_PRUNE[1][depth]))
           continue;
       }
     }
