@@ -34,7 +34,7 @@ INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int s
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Board* board, Move move) {
-  return TH(PieceType(Moving(move)), To(move), IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
+  return TH(Moving(move), To(move), IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
 }
 
 void UpdateHistories(Board* board,
