@@ -49,7 +49,7 @@ int SHOW_WDL       = 1;
 
 SearchParams Limits;
 
-// All WDL work below is thanks to the work of vondele@ and 
+// All WDL work below is thanks to the work of vondele@ and
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
@@ -178,13 +178,13 @@ void ParseGo(char* in, Board* board) {
         int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * 0.33, total / 20.0);
+        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * 0.9, (0.9 * total) / Max(1, movesToGo / 2.5));
+        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
       }
-
-      Limits.max = Min(time * 0.75, Limits.alloc * 5.5);
     } else {
       // no time control
       Limits.timeset = 0;
