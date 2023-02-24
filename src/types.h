@@ -30,8 +30,8 @@
 #define N_FEATURES (N_KING_BUCKETS * 10 * 64)
 #define N_HIDDEN   512
 #define N_L1       (2 * N_HIDDEN)
-#define N_L2       16
-#define N_L3       16
+#define N_L2       8
+#define N_L3       32
 #define N_OUTPUT   1
 
 #define ALIGN_ON 64
