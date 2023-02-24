@@ -380,9 +380,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->stm ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
 
-  // Prefetch the hash entry for this board position
-  TTPrefetch(board->zobrist);
-
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
   SetSpecialPieces(board);
@@ -481,9 +478,6 @@ void MakeNullMove(Board* board) {
   board->histPly++;
   board->stm = board->xstm;
   board->xstm ^= 1;
-
-  // Prefetch the hash entry for this board position
-  TTPrefetch(board->zobrist);
 
   SetSpecialPieces(board);
 }
