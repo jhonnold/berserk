@@ -17,6 +17,7 @@
 #include "uci.h"
 
 #include <limits.h>
+#include <math.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,8 +46,28 @@ int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
 int CONTEMPT       = 0;
+int SHOW_WDL       = 1;
 
 SearchParams Limits;
+
+// All WDL work below is thanks to the work of vondele@ and
+// this repo: https://github.com/vondele/WLD_model
+
+// Third order polynomial fit of Berserk data
+const double as[4] = {-1.68125836, 11.41046251, 5.20533001, 148.35377268};
+const double bs[4] = {-4.82778820, 36.43974997, -77.01990896, 88.22413014};
+
+// win% as permilli given score and ply
+int WRModel(Score s, int ply) {
+  double m = Min(240, ply) / 64.0;
+
+  double a = (((as[0] * m + as[1]) * m + as[2]) * m) + as[3];
+  double b = (((bs[0] * m + bs[1]) * m + bs[2]) * m) + bs[3];
+
+  double x = Min(4000.0, Max(-4000.0, s));
+
+  return 0.5 + 1000 / (1 + exp((a - x) / b));
+}
 
 void RootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
@@ -158,13 +179,13 @@ void ParseGo(char* in, Board* board) {
         int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * 0.33, total / 20.0);
+        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * 0.9, (0.9 * total) / Max(1, movesToGo / 2.5));
+        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
       }
-
-      Limits.max = Min(time * 0.75, Limits.alloc * 5.5);
     } else {
       // no time control
       Limits.timeset = 0;
@@ -225,7 +246,7 @@ void ParsePosition(char* in, Board* board) {
     MakeMoveUpdate(enteredMove, board, 0);
 
     if (board->fmr == 0)
-      board->histPly = 0;
+      board->histPly = board->nullply = 0;
   }
 }
 
@@ -237,6 +258,7 @@ void PrintUCIOptions() {
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
   printf("option name Ponder type check default false\n");
+  printf("option name UCI_ShowWDL type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
   printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
@@ -314,6 +336,9 @@ void UCILoop() {
       pthread_mutex_unlock(&Threads.lock);
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
+    } else if (!strncmp(in, "cycle", 5)) {
+      int cycle = HasCycle(&board, MAX_SEARCH_PLY);
+      printf(cycle ? "yes\n" : "no\n");
     } else if (!strncmp(in, "perft", 5)) {
       strtok(in, " ");
       char* d   = strtok(NULL, " ") ?: "5";
@@ -377,7 +402,7 @@ void UCILoop() {
             new     = board.stm == WHITE ? new : -new;
 
             int diff = score - new;
-            printf("%+7d|", diff);
+            printf("%+7d|", (int) Normalize(diff));
             SetBit(board.occupancies[BOTH], sq);
           } else {
             printf("       |");
@@ -387,7 +412,7 @@ void UCILoop() {
       }
       printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 
-      printf("Score: %dcp (white)\n", score);
+      printf("Score: %dcp (white)\n", (int) Normalize(score));
     } else if (!strncmp(in, "see ", 4)) {
       Move m = ParseMove(in + 4, &board);
       if (m)
@@ -431,6 +456,12 @@ void UCILoop() {
 
       PONDER_ENABLED = !strncmp(opt, "true", 4);
       printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
+    } else if (!strncmp(in, "setoption name UCI_ShowWDL value ", 33)) {
+      char opt[5];
+      sscanf(in, "%*s %*s %*s %*s %5s", opt);
+
+      SHOW_WDL = !strncmp(opt, "true", 4);
+      printf("info string set SHOW_WDL to value %s\n", SHOW_WDL ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_Chess960 value ", 34)) {
       char opt[5];
       sscanf(in, "%*s %*s %*s %*s %5s", opt);

@@ -301,6 +301,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move move     = NULL_MOVE;
   MovePicker mp;
 
+  if (!isRoot && board->fmr >= 3 && alpha < 0 && HasCycle(board, ss->ply)) {
+    alpha = 2 - (thread->nodes & 0x3);
+    if (alpha >= beta)
+      return alpha;
+  }
+
   // drop into noisy moves only
   if (depth <= 0)
     return Quiesce(alpha, beta, thread, ss);
@@ -526,13 +532,20 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         skipQuiets = 1;
 
       if (!IsCap(move)) {
-        if (depth < 9 && eval + 100 + 50 * depth + history / 128 <= alpha)
+        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+
+        if (!killerOrCounter && lmrDepth < 6 && history < -4096 * (depth - 1)) {
+          skipQuiets = 1;
+          continue;
+        }
+
+        if (lmrDepth < 9 && eval + 100 + 50 * lmrDepth + history / 128 <= alpha)
           skipQuiets = 1;
 
-        if (!SEE(board, move, STATIC_PRUNE[0][depth]))
+        if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
       } else {
-        if (mp.phase > PLAY_GOOD_NOISY && !SEE(board, move, STATIC_PRUNE[1][depth]))
+        if (!SEE(board, move, STATIC_PRUNE[1][depth]))
           continue;
       }
     }
@@ -630,7 +643,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       // adjust reduction based on historical score
-      R -= history / 6144;
+      R -= history / 8192;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, !singularExtension));
@@ -852,22 +865,33 @@ void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board) {
 
     int realDepth = updated ? depth : Max(1, depth - 1);
     int bounded   = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
-    int printable = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
-                    bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
-                                            bounded;
-    char* type    = abs(bounded) > MATE_BOUND ? "mate" : "cp";
-    char* bound   = " ";
+    int printable = bounded > MATE_BOUND           ? (CHECKMATE - bounded + 1) / 2 :
+                    bounded < -MATE_BOUND          ? -(CHECKMATE + bounded) / 2 :
+                    abs(bounded) > WINNING_ENDGAME ? bounded : // don't normalize our fake tb scores or real tb scores
+                                                     Normalize(bounded); // convert to 50% WR at 100cp
+    char* type  = abs(bounded) > MATE_BOUND ? "mate" : "cp";
+    char* bound = " ";
     if (updated)
       bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
 
-    printf("info depth %d seldepth %d multipv %d score %s %d%snodes %" PRId64 " nps %" PRId64
-           " hashfull %d tbhits %" PRId64 " time %" PRId64 " pv ",
+    printf("info depth %d seldepth %d multipv %d score %s %d%s",
            realDepth,
            thread->rootMoves[i].seldepth,
            i + 1,
            type,
            printable,
-           bound,
+           bound);
+
+    if (SHOW_WDL) {
+      int ply  = Max(0, 2 * (board->moveNo - 1)) + board->stm;
+      int wdlW = WRModel(bounded, ply);
+      int wdlL = WRModel(-bounded, ply);
+      int wdlD = 1000 - wdlW - wdlL;
+
+      printf("wdl %d %d %d ", wdlW, wdlD, wdlL);
+    }
+
+    printf("nodes %" PRId64 " nps %" PRId64 " hashfull %d tbhits %" PRId64 " time %" PRId64 " pv ",
            nodes,
            nps,
            hashfull,

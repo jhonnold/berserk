@@ -62,6 +62,7 @@ void ClearBoard(Board* board) {
   board->histPly  = 0;
   board->moveNo   = 1;
   board->fmr      = 0;
+  board->nullply  = 0;
   board->phase    = 0;
 }
 
@@ -290,11 +291,13 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->history[board->histPly].castling = board->castling;
   board->history[board->histPly].ep       = board->epSquare;
   board->history[board->histPly].fmr      = board->fmr;
+  board->history[board->histPly].nullply  = board->nullply;
   board->history[board->histPly].zobrist  = board->zobrist;
   board->history[board->histPly].checkers = board->checkers;
   board->history[board->histPly].pinned   = board->pinned;
 
   board->fmr++;
+  board->nullply++;
 
   FlipBits(board->pieces[piece], from, to);
   FlipBits(OccBB(board->stm), from, to);
@@ -417,6 +420,7 @@ void UndoMove(Move move, Board* board) {
   board->castling = board->history[board->histPly].castling;
   board->epSquare = board->history[board->histPly].ep;
   board->fmr      = board->history[board->histPly].fmr;
+  board->nullply  = board->history[board->histPly].nullply;
   board->zobrist  = board->history[board->histPly].zobrist;
   board->checkers = board->history[board->histPly].checkers;
   board->pinned   = board->history[board->histPly].pinned;
@@ -469,11 +473,13 @@ void MakeNullMove(Board* board) {
   board->history[board->histPly].castling = board->castling;
   board->history[board->histPly].ep       = board->epSquare;
   board->history[board->histPly].fmr      = board->fmr;
+  board->history[board->histPly].nullply  = board->nullply;
   board->history[board->histPly].zobrist  = board->zobrist;
   board->history[board->histPly].checkers = board->checkers;
   board->history[board->histPly].pinned   = board->pinned;
 
   board->fmr++;
+  board->nullply = 0;
 
   if (board->epSquare)
     board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];
@@ -500,6 +506,7 @@ void UndoNullMove(Board* board) {
   board->castling = board->history[board->histPly].castling;
   board->epSquare = board->history[board->histPly].ep;
   board->fmr      = board->history[board->histPly].fmr;
+  board->nullply  = board->history[board->histPly].nullply;
   board->zobrist  = board->history[board->histPly].zobrist;
   board->checkers = board->history[board->histPly].checkers;
   board->pinned   = board->history[board->histPly].pinned;
@@ -510,10 +517,10 @@ inline int IsDraw(Board* board, int ply) {
 }
 
 inline int IsRepetition(Board* board, int ply) {
-  int reps = 0;
+  int reps = 0, distance = Min(board->fmr, board->nullply);
 
   // Check as far back as the last non-reversible move
-  for (int i = board->histPly - 2; i >= 0 && i >= board->histPly - board->fmr; i -= 2) {
+  for (int i = board->histPly - 4; i >= 0 && i >= board->histPly - distance; i -= 2) {
     if (board->history[i].zobrist == board->zobrist) {
       if (i > board->histPly - ply) // within our search tree
         return 1;
@@ -707,4 +714,98 @@ int IsLegal(Move move, Board* board) {
     return !(AttacksToSquare(board, to, OccBB(BOTH) ^ PieceBB(KING, board->stm)) & OccBB(board->xstm));
 
   return !GetBit(board->pinned, from) || GetBit(PinnedMoves(from, kingSq), to);
+}
+
+uint64_t cuckoo[8192];
+Move cuckooMove[8192];
+
+inline uint64_t Hash1(uint64_t hash) {
+  return hash & 0x1fff;
+}
+
+inline uint64_t Hash2(uint64_t hash) {
+  return (hash >> 16) & 0x1fff;
+}
+
+void InitCuckoo() {
+  int validate = 0;
+
+  for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+    int pcType = PieceType(pc);
+    if (pcType == PAWN)
+      continue;
+
+    for (int s1 = 0; s1 < 64; s1++) {
+      for (int s2 = s1 + 1; s2 < 64; s2++) {
+        if (!GetBit(GetPieceAttacks(s1, 0, pcType), s2))
+          continue;
+
+        Move move     = BuildMove(s1, s2, pc, NO_PROMO, QUIET);
+        uint64_t hash = ZOBRIST_PIECES[pc][s1] ^ ZOBRIST_PIECES[pc][s2] ^ ZOBRIST_SIDE_KEY;
+
+        uint32_t i = Hash1(hash);
+        while (1) {
+          uint64_t temp = cuckoo[i];
+          cuckoo[i]     = hash;
+          hash          = temp;
+
+          Move tempMove = cuckooMove[i];
+          cuckooMove[i] = move;
+          move          = tempMove;
+
+          if (move == 0)
+            break;
+
+          i = (i == Hash1(hash)) ? Hash2(hash) : Hash1(hash);
+        }
+
+        validate++;
+      }
+    }
+  }
+
+  if (validate != 3668)
+    printf("Failed to set cuckoo tables.\n"), exit(1);
+}
+
+// Upcoming repetition detection
+// http://www.open-chess.org/viewtopic.php?f=5&t=2300
+// Implemented originally in SF
+// Paper no longer seems accessible @ http://marcelk.net/2013-04-06/paper/upcoming-rep-v2.pdf
+int HasCycle(Board* board, int ply) {
+  int distance = Min(board->fmr, board->nullply);
+  if (distance < 3)
+    return 0;
+
+  uint64_t original  = board->zobrist;
+  BoardHistory* prev = &board->history[board->histPly - 1];
+
+  for (int i = 3; i <= distance; i += 2) {
+    prev -= 2;
+
+    uint32_t h;
+    uint64_t moveKey = original ^ prev->zobrist;
+    if ((h = Hash1(moveKey), cuckoo[h] == moveKey) || (h = Hash2(moveKey), cuckoo[h] == moveKey)) {
+      Move move        = cuckooMove[h];
+      BitBoard between = BetweenSquares(From(move), To(move));
+      if (between & OccBB(BOTH))
+        continue;
+
+      if (ply > i)
+        return 1;
+
+      int pc = board->squares[From(move)] != NO_PIECE ? board->squares[From(move)] : board->squares[To(move)];
+      if ((pc & 1) != board->stm)
+        continue;
+
+      BoardHistory* prev2 = prev - 2;
+      for (int j = i + 4; j <= distance; j += 2) {
+        prev2 -= 2;
+        if (prev2->zobrist == prev->zobrist)
+          return 1;
+      }
+    }
+  }
+
+  return 0;
 }

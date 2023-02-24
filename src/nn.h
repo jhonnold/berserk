@@ -17,8 +17,6 @@
 #ifndef NN_H
 #define NN_H
 
-#include <immintrin.h>
-
 #include "board.h"
 #include "types.h"
 #include "util.h"

@@ -66,6 +66,7 @@ typedef struct {
   int castling;
   int ep;
   int fmr;
+  int nullply;
   uint64_t zobrist;
   BitBoard checkers;
   BitBoard pinned;
@@ -77,6 +78,7 @@ typedef struct {
   int histPly;  // ply for historical state
   int moveNo;   // game move number
   int fmr;      // half move count for 50 move rule
+  int nullply;  // distance from last nullmove
   int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
   int phase;    // efficiently updated phase for scaling
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no
@@ -176,7 +178,7 @@ struct ThreadData {
   Move counters[12][64];         // counter move butterfly table
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64]; // continuation move history table
-  int16_t caph[6][64][7];        // capture history
+  int16_t caph[12][64][7];       // capture history
 
   int action, calls;
   pthread_t nativeThread;

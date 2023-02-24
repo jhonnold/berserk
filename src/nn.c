@@ -16,6 +16,7 @@
 
 #include "nn.h"
 
+#include <immintrin.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
