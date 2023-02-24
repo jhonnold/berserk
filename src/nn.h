@@ -26,7 +26,8 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective);
 
 void ResetAccumulator(Accumulator* dest, Board* board, const int perspective);
 
-void ApplyUpdates(Board* board, Move move, int captured, const int view);
+void ApplyLazyUpdates(Accumulator* live, Board* board, const int view);
+int CanEfficientlyUpdate(Accumulator* live, const int view);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);

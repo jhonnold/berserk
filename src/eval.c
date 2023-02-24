@@ -94,7 +94,16 @@ Score Evaluate(Board* board, ThreadData* thread) {
     return knownEval;
 
   Accumulator* acc = board->accumulators;
-  int score        = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
+  for (int c = WHITE; c <= BLACK; c++) {
+    if (!acc->correct[c]) {
+      if (CanEfficientlyUpdate(acc, c))
+        ApplyLazyUpdates(acc, board, c);
+      else
+        RefreshAccumulator(acc, board, c);
+    }
+  }
+
+  int score = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
 
   // static contempt
   score += thread->contempt[board->stm];
