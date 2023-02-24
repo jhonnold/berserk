@@ -46,6 +46,9 @@ enum {
 typedef int16_t acc_t;
 
 typedef struct {
+  uint8_t correct[2];
+  uint16_t captured;
+  Move move;
   acc_t values[2][N_HIDDEN] ALIGN;
 } Accumulator;
 

@@ -272,6 +272,7 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
 
   // Copy in state
   memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
+  dest->correct[perspective] = 1;
 }
 
 // Resets an accumulator from pieces on the board
@@ -291,12 +292,10 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   acc_t* values = dest->values[perspective];
   memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
   ApplyDelta(values, values, delta);
+  dest->correct[perspective] = 1;
 }
 
-void ApplyUpdates(Board* board, const Move move, const int captured, const int view) {
-  acc_t* output = board->accumulators->values[view];
-  acc_t* prev   = (board->accumulators - 1)->values[view];
-
+void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
 
@@ -315,6 +314,32 @@ void ApplyUpdates(Board* board, const Move move, const int captured, const int v
     ApplySubSubAdd(output, prev, from, capturedTo, to);
   } else {
     ApplySubAdd(output, prev, from, to);
+  }
+}
+
+void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
+  Accumulator* curr = live;
+  while (!(--curr)->correct[view])
+    ; // go back to the latest correct accumulator
+
+  do {
+    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr->move, curr->captured, view);
+    (curr + 1)->correct[view] = 1;
+  } while (++curr != live);
+}
+
+int CanEfficientlyUpdate(Accumulator* live, const int view) {
+  Accumulator* curr = live;
+
+  while (1) {
+    curr--;
+
+    int from  = From(curr->move) ^ (56 * view); // invert for black
+    int to    = To(curr->move) ^ (56 * view);   // invert for black
+    int piece = Moving(curr->move);
+
+    if ((piece & 1) == view && MoveRequiresRefresh(piece, from, to)) return 0; // refresh only necessary for our view
+    if (curr->correct[view]) return 1;
   }
 }
 
