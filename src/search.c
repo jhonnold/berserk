@@ -522,7 +522,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
-  int legalMoves = 0, playedMoves = 0, skipQuiets = 0, singularExtension = 0;
+  int legalMoves = 0, playedMoves = 0, skipQuiets = 0;
   InitNormalMovePicker(&mp, hashMove, thread, ss, oppThreat.sqs);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
@@ -599,8 +599,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          singularExtension = 1;
-
           if (!isPV && score < sBeta - 35 && ss->de <= 6) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
@@ -664,7 +662,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       R -= history / 8192;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(depth - 1, Max(R, !singularExtension));
+      R = Min(depth - 1, Max(R, 1));
 
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
 
