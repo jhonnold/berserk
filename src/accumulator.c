@@ -60,6 +60,28 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
   }
 }
 
+INLINE void ApplySub(acc_t* dest, acc_t* src, int f1) {
+  regi_t regs[NUM_REGS];
+
+  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
+    const size_t unrollOffset = c * UNROLL;
+
+    const regi_t* inputs = (regi_t*) &src[unrollOffset];
+    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_load(&inputs[i]);
+
+    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
+    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_sub(regs[i], w1[i]);
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regi_store(&outputs[i], regs[i]);
+  }
+}
+
 INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
   regi_t regs[NUM_REGS];
 
@@ -119,49 +141,12 @@ INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
   }
 }
 
-INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4) {
-  regi_t regs[NUM_REGS];
-
-  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
-    const size_t unrollOffset = c * UNROLL;
-
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
-
-    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
-    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
-
-    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
-    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w2[i]);
-
-    const size_t o3  = f3 * N_HIDDEN + unrollOffset;
-    const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w3[i]);
-
-    const size_t o4  = f4 * N_HIDDEN + unrollOffset;
-    const regi_t* w4 = (regi_t*) &INPUT_WEIGHTS[o4];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w4[i]);
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
-  }
-}
-
 void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
     AccumulatorKingState* state = refreshTable + b;
 
     memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
-    memset(state->pcs, 0, sizeof(BitBoard) * 12);
+    memset(state->pcs, 0, sizeof(BitBoard) * 10);
   }
 }
 
@@ -173,11 +158,11 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
 
   int kingSq     = LSB(PieceBB(KING, perspective));
   int pBucket    = perspective == WHITE ? 0 : 2 * N_KING_BUCKETS;
-  int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
+  int kingBucket = sq64_to_sq32(kingSq ^ (56 * !perspective)) + N_KING_BUCKETS * (File(kingSq) > 3);
 
   AccumulatorKingState* state = &board->refreshTable[pBucket + kingBucket];
 
-  for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+  for (int pc = WHITE_PAWN; pc <= BLACK_QUEEN; pc++) {
     BitBoard curr = board->pieces[pc];
     BitBoard prev = state->pcs[pc];
 
@@ -210,7 +195,7 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
 
   int kingSq = LSB(PieceBB(KING, perspective));
 
-  BitBoard occ = OccBB(BOTH);
+  BitBoard occ = OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ PieceBB(KING, BLACK);
   while (occ) {
     int sq                 = PopLSB(&occ);
     int pc                 = board->squares[sq];
@@ -228,6 +213,7 @@ void ApplyUpdates(Board* board, const Move move, const int captured, const int v
 
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
+  const int kingMove   = PieceType(Moving(move)) == KING;
 
   int from = FeatureIdx(Moving(move), From(move), king, view);
   int to   = FeatureIdx(Promo(move) ?: Moving(move), To(move), king, view);
@@ -236,13 +222,18 @@ void ApplyUpdates(Board* board, const Move move, const int captured, const int v
     int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
     int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
-    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
+    ApplySubAdd(output, prev, rookFrom, rookTo);
   } else if (IsCap(move)) {
     int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
-    ApplySubSubAdd(output, prev, from, capturedTo, to);
-  } else {
+    if (!kingMove)
+      ApplySubSubAdd(output, prev, from, capturedTo, to);
+    else
+      ApplySub(output, prev, capturedTo);
+  } else if (!kingMove) {
     ApplySubAdd(output, prev, from, to);
+  } else {
+    memcpy(output, prev, sizeof(acc_t) * N_HIDDEN);
   }
 }

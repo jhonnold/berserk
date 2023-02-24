@@ -341,25 +341,32 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
 
-  memcpy(INPUT_WEIGHTS, &in[offset], N_FEATURES * N_HIDDEN * sizeof(int16_t));
-  offset += N_FEATURES * N_HIDDEN * sizeof(int16_t);
   memcpy(INPUT_BIASES, &in[offset], N_HIDDEN * sizeof(int16_t));
   offset += N_HIDDEN * sizeof(int16_t);
+  memcpy(INPUT_WEIGHTS, &in[offset], N_FEATURES * N_HIDDEN * sizeof(int16_t));
+  offset += N_FEATURES * N_HIDDEN * sizeof(int16_t);
 
-  memcpy(L1_WEIGHTS, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
-  offset += N_L1 * N_L2 * sizeof(int8_t);
   memcpy(L1_BIASES, &in[offset], N_L2 * sizeof(int32_t));
   offset += N_L2 * sizeof(int32_t);
+  memcpy(L1_WEIGHTS, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
+  offset += N_L1 * N_L2 * sizeof(int8_t);
 
-  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * sizeof(float));
-  offset += N_L2 * N_L3 * sizeof(float);
   memcpy(L2_BIASES, &in[offset], N_L3 * sizeof(float));
   offset += N_L3 * sizeof(float);
+  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * sizeof(float));
+  offset += N_L2 * N_L3 * sizeof(float);
 
+  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
+  offset += 1 * sizeof(float);
   memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
   offset += N_L3 * N_OUTPUT * sizeof(float);
-  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
 
+  // scale weights
+  for (int i = 0; i < N_L3; i++)
+    L2_BIASES[i] *= 32.0;
+  OUTPUT_BIAS *= 32.0;
+
+  // shuffle_input_layer
 #if defined(__AVX2__)
   const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
   const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
@@ -384,6 +391,22 @@ INLINE void CopyData(const unsigned char* in) {
     biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a, 0); // insert 64->128 into 128->192
   }
 #endif
+
+  // quant transpose
+  int8_t* cpy = malloc(sizeof(int8_t) * N_L1 * N_L2);
+  for (int i = 0; i < N_L1; i++)
+    for (int j = 0; j < N_L2; j++)
+      cpy[j * N_L1 + i] = L1_WEIGHTS[i * N_L2 + j];
+  memcpy(L1_WEIGHTS, cpy, sizeof(int8_t) * N_L1 * N_L2);
+  free(cpy);
+
+  // float transpose
+  float* cpy2 = malloc(sizeof(float) * N_L2 * N_L3);
+  for (int i = 0; i < N_L2; i++)
+    for (int j = 0; j < N_L3; j++)
+      cpy2[j * N_L2 + i] = L2_WEIGHTS[i * N_L3 + j];
+  memcpy(L2_WEIGHTS, cpy2, sizeof(float) * N_L2 * N_L3);
+  free(cpy2);
 }
 
 void LoadDefaultNN() {

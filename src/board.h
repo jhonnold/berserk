@@ -37,8 +37,6 @@
 #define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
 #define PieceCount(pc)  (1ull << (pc * 4))
 
-extern const uint16_t KING_BUCKETS[64];
-
 void ClearBoard(Board* board);
 void ParseFen(char* fen, Board* board);
 void BoardToFen(char* fen, Board* board);
@@ -67,21 +65,23 @@ int IsLegal(Move move, Board* board);
 void InitCuckoo();
 int HasCycle(Board* board, int ply);
 
-INLINE int MoveRequiresRefresh(int piece, int from, int to) {
-  if (PieceType(piece) != KING)
-    return 0;
+INLINE int MoveRequiresRefresh(int piece) {
+  return PieceType(piece) == KING;
+}
 
-  if ((from & 4) != (to & 4))
-    return 1;
-  return KING_BUCKETS[from] != KING_BUCKETS[to];
+INLINE int sq64_to_sq32(int sq) {
+  static const int Mirror[] = {3, 2, 1, 0, 0, 1, 2, 3};
+  return ((sq >> 1) & ~0x3) + Mirror[sq & 0x7];
 }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
-  int oP  = 6 * ((piece ^ view) & 0x1) + PieceType(piece);
-  int oK  = (7 * !(kingsq & 4)) ^ (56 * view) ^ kingsq;
-  int oSq = (7 * !(kingsq & 4)) ^ (56 * view) ^ sq;
+  const int ptype  = PieceType(piece);
+  const int pcolor = piece & 1;
 
-  return KING_BUCKETS[oK] * 12 * 64 + oP * 64 + oSq;
+  const int mksq = (7 * !(kingsq & 4)) ^ (56 * !view) ^ kingsq;
+  const int mpsq = (7 * !(kingsq & 4)) ^ (56 * !view) ^ sq;
+
+  return 640 * sq64_to_sq32(mksq) + (64 * (5 * (view == pcolor) + ptype)) + mpsq;
 }
 
 #endif
