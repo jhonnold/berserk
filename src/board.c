@@ -373,34 +373,23 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->fmr = 0;
   }
 
-  int stm = board->stm;
 
   board->histPly++;
   board->moveNo += (board->stm == BLACK);
   board->xstm = board->stm;
   board->stm ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
-  board->accumulators++;
-
-  // Prefetch the hash entry for this board position
-  TTPrefetch(board->zobrist);
 
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
   SetSpecialPieces(board);
 
   if (update) {
-    if (stm == BLACK)
-      from ^= 56, to ^= 56;
-
-    if (MoveRequiresRefresh(piece, from, to)) {
-      int colorToRefresh = piece & 1;
-      RefreshAccumulator(board->accumulators, board, colorToRefresh);
-      ApplyUpdates(board, move, captured, !colorToRefresh);
-    } else {
-      ApplyUpdates(board, move, captured, WHITE);
-      ApplyUpdates(board, move, captured, BLACK);
-    }
+    board->accumulators->move = move;
+    board->accumulators->captured = captured;
+    
+    board->accumulators++;
+    board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
   }
 }
 
@@ -489,9 +478,6 @@ void MakeNullMove(Board* board) {
   board->histPly++;
   board->stm = board->xstm;
   board->xstm ^= 1;
-
-  // Prefetch the hash entry for this board position
-  TTPrefetch(board->zobrist);
 
   SetSpecialPieces(board);
 }
