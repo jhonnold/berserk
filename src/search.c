@@ -98,8 +98,8 @@ void StartSearch(Board* board, uint8_t ponder) {
 }
 
 void MainSearch() {
-  ThreadData* thread = Threads.threads[0];
-  Board* board       = &thread->board;
+  ThreadData* mainThread = Threads.threads[0];
+  Board* board           = &mainThread->board;
 
   TTUpdate();
 
@@ -108,14 +108,14 @@ void MainSearch() {
   if (!bestMove) {
     for (int i = 1; i < Threads.count; i++)
       ThreadWake(Threads.threads[i], THREAD_SEARCH);
-    Search(thread);
+    Search(mainThread);
   }
 
   pthread_mutex_lock(&Threads.lock);
   if (!Threads.stop && (Threads.ponder || Limits.infinite)) {
     Threads.sleeping = 1;
     pthread_mutex_unlock(&Threads.lock);
-    ThreadWait(thread, &Threads.stop);
+    ThreadWait(mainThread, &Threads.stop);
   } else {
     pthread_mutex_unlock(&Threads.lock);
   }
@@ -126,12 +126,26 @@ void MainSearch() {
     for (int i = 1; i < Threads.count; i++)
       ThreadWaitUntilSleep(Threads.threads[i]);
 
-    bestMove = thread->rootMoves[0].move;
-    if (thread->rootMoves[0].pv.count > 1)
-      ponderMove = thread->rootMoves[0].pv.moves[1];
-  }
+    ThreadData* bestThread = mainThread;
+    for (int i = 1; i < Threads.count; i++) {
+      ThreadData* curr = Threads.threads[i];
 
-  thread->previousScore = thread->rootMoves[0].score;
+      int s = curr->rootMoves[0].score - bestThread->rootMoves[0].score;
+      int d = curr->depth - bestThread->depth;
+
+      if (s > 0 && (d >= 0 || curr->rootMoves[0].score >= MATE_BOUND))
+        bestThread = curr;
+    }
+
+    if (bestThread != mainThread)
+      PrintUCI(bestThread, -CHECKMATE, CHECKMATE, board);
+
+    bestMove = bestThread->rootMoves[0].move;
+    if (bestThread->rootMoves[0].pv.count > 1)
+      ponderMove = bestThread->rootMoves[0].pv.moves[1];
+
+    mainThread->previousScore = bestThread->rootMoves[0].score;
+  }
 
   printf("bestmove %s", MoveToStr(bestMove, board));
   if (ponderMove)
@@ -164,12 +178,13 @@ void Search(ThreadData* thread) {
 
   while (++thread->depth < MAX_SEARCH_PLY) {
 #if defined(_WIN32) || defined(_WIN64)
-    if (_setjmp(thread->exit, NULL))
-      break;
+    if (_setjmp(thread->exit, NULL)) {
 #else
-    if (setjmp(thread->exit))
-      break;
+    if (setjmp(thread->exit)) {
 #endif
+      thread->depth--; // hot exit means we didn't finish this depth.
+      break;
+    }
 
     if (Limits.depth && mainThread && thread->depth > Limits.depth)
       break;
