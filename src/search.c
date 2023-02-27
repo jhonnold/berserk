@@ -268,6 +268,11 @@ void Search(ThreadData* thread) {
 
       Score searchScoreDiff    = scores[thread->depth - 3] - bestScore;
       Score prevScoreDiff      = thread->previousScore - bestScore;
+
+      // if we don't know the previous score, work only on the searchscore
+      if (thread->previousScore == UNKNOWN)
+        searchScoreDiff *= 2, prevScoreDiff = 0; 
+
       double scoreChangeFactor = 0.1 +                                              //
                                  0.0275 * searchScoreDiff * (searchScoreDiff > 0) + //
                                  0.0275 * prevScoreDiff * (prevScoreDiff > 0);
