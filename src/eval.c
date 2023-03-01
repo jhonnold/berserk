@@ -103,7 +103,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
+  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
 
   // static contempt
   score += thread->contempt[board->stm];
