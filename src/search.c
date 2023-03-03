@@ -596,7 +596,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
         int sBeta  = Max(ttScore - depth, -CHECKMATE);
-        int sDepth = depth / 2 - 1;
+        int sDepth = (depth - 1) / 2;
 
         ss->skip = move;
         score    = Negamax(sBeta - 1, sBeta, sDepth, cutnode, thread, pv, ss);
