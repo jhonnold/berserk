@@ -82,7 +82,7 @@ INLINE int TTScore(TTEntry* e, int ply) {
   if (e->score == UNKNOWN)
     return UNKNOWN;
 
-  return e->score > MATE_BOUND ? e->score - ply : e->score < -MATE_BOUND ? e->score + ply : e->score;
+  return e->score >= TB_WIN_BOUND ? e->score - ply : e->score <= -TB_WIN_BOUND ? e->score + ply : e->score;
 }
 
 extern const int DEPTH_OFFSET;

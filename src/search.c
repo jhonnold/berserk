@@ -227,7 +227,7 @@ void Search(ThreadData* thread) {
         } else if (score >= beta) {
           beta = Min(beta + delta, CHECKMATE);
 
-          if (abs(score) < WINNING_ENDGAME)
+          if (abs(score) < TB_WIN_BOUND)
             searchDepth--;
         } else
           break;
@@ -281,7 +281,7 @@ void Search(ThreadData* thread) {
       uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
       double nodeCountFactor = Max(0.5, pctNodesNotBest * 2 + 0.4);
-      if (bestScore >= WINNING_ENDGAME)
+      if (bestScore >= TB_WIN_BOUND)
         nodeCountFactor = 0.5;
 
       if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
@@ -486,7 +486,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       UndoNullMove(board);
 
       if (score >= beta)
-        return score < WINNING_ENDGAME ? score : beta;
+        return score < TB_WIN_BOUND ? score : beta;
     }
 
     // Prob cut
@@ -495,7 +495,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     Threat ownThreat;
     Threats(&ownThreat, board, board->stm);
     int probBeta = beta + 110 - 30 * improving;
-    if (depth > 4 && abs(beta) < WINNING_ENDGAME && ownThreat.pcs &&
+    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
@@ -549,7 +549,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = !IsCap(move) ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
                                          GetCaptureHistory(thread, board, move);
 
-    if (bestScore > -WINNING_ENDGAME) {
+    if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
@@ -837,7 +837,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     legalMoves++;
 
     // if we're in check, final condition in SEE always 0
-    if (bestScore > -WINNING_ENDGAME && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
+    if (bestScore > -TB_WIN_BOUND && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
       continue;
 
     TTPrefetch(KeyAfter(board, move));
