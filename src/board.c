@@ -26,7 +26,6 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
-#include "nn.h"
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
@@ -373,7 +372,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->fmr = 0;
   }
 
-
   board->histPly++;
   board->moveNo += (board->stm == BLACK);
   board->xstm = board->stm;
@@ -385,9 +383,9 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
 
   if (update) {
-    board->accumulators->move = move;
+    board->accumulators->move     = move;
     board->accumulators->captured = captured;
-    
+
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
   }

@@ -2,7 +2,7 @@
 
 # General
 EXE      = berserk
-SRC      = *.c pyrrhic/tbprobe.c
+SRC      = *.c nn/*.c pyrrhic/tbprobe.c
 CC       = gcc
 VERSION  = 20230304
 MAIN_NETWORK = networks/berserk-e3f526b26f50.nn

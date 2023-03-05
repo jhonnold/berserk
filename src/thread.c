@@ -23,7 +23,7 @@
 #include <string.h>
 
 #include "eval.h"
-#include "nn.h"
+#include "nn/accumulator.h"
 #include "search.h"
 #include "transposition.h"
 #include "types.h"
