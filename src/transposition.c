@@ -124,9 +124,9 @@ inline void
 TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
   uint16_t shortHash = (uint16_t) hash;
 
-  if (score > MATE_BOUND)
+  if (score >= TB_WIN_BOUND)
     score += ply;
-  else if (score < -MATE_BOUND)
+  else if (score <= -TB_WIN_BOUND)
     score -= ply;
 
   if (move || shortHash != tt->hash)
