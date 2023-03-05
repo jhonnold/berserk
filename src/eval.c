@@ -22,7 +22,8 @@
 #include "bits.h"
 #include "board.h"
 #include "endgame.h"
-#include "nn.h"
+#include "nn/accumulator.h"
+#include "nn/eval.h"
 #include "search.h"
 #include "uci.h"
 #include "util.h"
@@ -103,7 +104,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = OutputLayer(acc->values[board->stm], acc->values[board->xstm]);
+  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
 
   // static contempt
   score += thread->contempt[board->stm];

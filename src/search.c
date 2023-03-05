@@ -31,7 +31,7 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
-#include "nn.h"
+#include "nn/accumulator.h"
 #include "pyrrhic/tbprobe.h"
 #include "see.h"
 #include "tb.h"
@@ -273,12 +273,12 @@ void Search(ThreadData* thread) {
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.25 - 0.05 * searchStability;
 
-      Score searchScoreDiff    = scores[thread->depth - 3] - bestScore;
-      Score prevScoreDiff      = thread->previousScore - bestScore;
+      Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
+      Score prevScoreDiff   = thread->previousScore - bestScore;
 
       // if we don't know the previous score, work only on the searchscore
       if (thread->previousScore == UNKNOWN)
-        searchScoreDiff *= 2, prevScoreDiff = 0; 
+        searchScoreDiff *= 2, prevScoreDiff = 0;
 
       double scoreChangeFactor = 0.1 +                                              //
                                  0.0275 * searchScoreDiff * (searchScoreDiff > 0) + //
