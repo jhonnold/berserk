@@ -20,7 +20,7 @@
 #include "bench.h"
 #include "bits.h"
 #include "eval.h"
-#include "nn.h"
+#include "nn/eval.h"
 #include "random.h"
 #include "search.h"
 #include "thread.h"
