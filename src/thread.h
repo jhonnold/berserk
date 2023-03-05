@@ -29,7 +29,7 @@ typedef struct {
   pthread_mutex_t mutex, lock;
   pthread_cond_t sleep;
 
-  uint8_t init, searching, sleeping, stopOnPonderHit;
+  uint8_t init, searching, sleeping, stopOnPonderHit, tbProbe;
   atomic_uchar ponder, stop;
 } ThreadPool;
 

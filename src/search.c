@@ -88,6 +88,7 @@ void StartSearch(Board* board, uint8_t ponder) {
   Threads.stopOnPonderHit = 0;
   Threads.stop            = 0;
   Threads.ponder          = ponder;
+  Threads.tbProbe         = 1;
 
   // Setup Threads
   SetupMainThread(board);
@@ -103,13 +104,9 @@ void MainSearch() {
 
   TTUpdate();
 
-  Move bestMove   = TBRootProbe(board);
-  Move ponderMove = NULL_MOVE;
-  if (!bestMove) {
-    for (int i = 1; i < Threads.count; i++)
-      ThreadWake(Threads.threads[i], THREAD_SEARCH);
-    Search(mainThread);
-  }
+  for (int i = 1; i < Threads.count; i++)
+    ThreadWake(Threads.threads[i], THREAD_SEARCH);
+  Search(mainThread);
 
   pthread_mutex_lock(&Threads.lock);
   if (!Threads.stop && (Threads.ponder || Limits.infinite)) {
@@ -122,30 +119,29 @@ void MainSearch() {
 
   Threads.stop = 1;
 
-  if (!bestMove) {
-    for (int i = 1; i < Threads.count; i++)
-      ThreadWaitUntilSleep(Threads.threads[i]);
+  for (int i = 1; i < Threads.count; i++)
+    ThreadWaitUntilSleep(Threads.threads[i]);
 
-    ThreadData* bestThread = mainThread;
-    for (int i = 1; i < Threads.count; i++) {
-      ThreadData* curr = Threads.threads[i];
+  ThreadData* bestThread = mainThread;
+  for (int i = 1; i < Threads.count; i++) {
+    ThreadData* curr = Threads.threads[i];
 
-      int s = curr->rootMoves[0].score - bestThread->rootMoves[0].score;
-      int d = curr->depth - bestThread->depth;
+    int s = curr->rootMoves[0].score - bestThread->rootMoves[0].score;
+    int d = curr->depth - bestThread->depth;
 
-      if (s > 0 && (d >= 0 || curr->rootMoves[0].score >= MATE_BOUND))
-        bestThread = curr;
-    }
-
-    if (bestThread != mainThread)
-      PrintUCI(bestThread, -CHECKMATE, CHECKMATE, board);
-
-    bestMove = bestThread->rootMoves[0].move;
-    if (bestThread->rootMoves[0].pv.count > 1)
-      ponderMove = bestThread->rootMoves[0].pv.moves[1];
-
-    mainThread->previousScore = bestThread->rootMoves[0].score;
+    if (s > 0 && (d >= 0 || curr->rootMoves[0].score >= MATE_BOUND))
+      bestThread = curr;
   }
+
+  if (bestThread != mainThread)
+    PrintUCI(bestThread, -CHECKMATE, CHECKMATE, board);
+
+  Move bestMove   = bestThread->rootMoves[0].move;
+  Move ponderMove = NULL_MOVE;
+  if (bestThread->rootMoves[0].pv.count > 1)
+    ponderMove = bestThread->rootMoves[0].pv.moves[1];
+
+  mainThread->previousScore = bestThread->rootMoves[0].score;
 
   printf("bestmove %s", MoveToStr(bestMove, board));
   if (ponderMove)
@@ -376,7 +372,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     return ttScore;
 
   // tablebase - we do not do this at root
-  if (!isRoot && !ss->skip) {
+  if (!isRoot && !ss->skip && Threads.tbProbe) {
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
