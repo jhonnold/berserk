@@ -23,7 +23,7 @@
 #include "board.h"
 #include "endgame.h"
 #include "nn/accumulator.h"
-#include "nn/eval.h"
+#include "nn/evaluate.h"
 #include "search.h"
 #include "uci.h"
 #include "util.h"
