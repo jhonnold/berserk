@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#ifndef EVALUATE_H
+#define EVALUATE_H
+
 #include "../types.h"
 
 int Predict(Board* board);
@@ -21,3 +24,5 @@ int Propagate(Accumulator* accumulator, const int stm);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);
+
+#endif

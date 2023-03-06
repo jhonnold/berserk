@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#ifndef ACCUMULATOR_H
+#define ACCUMULATOR_H
+
 #include <immintrin.h>
 
 #include "../board.h"
@@ -192,3 +195,5 @@ int CanEfficientlyUpdate(Accumulator* live, const int view);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);
+
+#endif
