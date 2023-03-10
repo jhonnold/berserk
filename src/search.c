@@ -66,17 +66,18 @@ void InitPruningAndReductionTables() {
   }
 }
 
-INLINE int CheckLimits(ThreadData* thread) {
+INLINE void CheckLimits(ThreadData* thread) {
   if (--thread->calls > 0)
-    return 0;
+    return;
+
   thread->calls = Limits.hitrate;
 
   if (Threads.ponder)
-    return 0;
+    return;
 
-  long elapsed = GetTimeMS() - Limits.start;
-  return (Limits.timeset && elapsed >= Limits.max) || //
-         (Limits.nodes && NodesSearched() >= Limits.nodes);
+  if ((Limits.timeset && (GetTimeMS() - Limits.start) >= Limits.max) || //
+      (Limits.nodes && NodesSearched() >= Limits.nodes))
+    Threads.stop = 1;
 }
 
 void StartSearch(Board* board, uint8_t ponder) {
@@ -170,23 +171,14 @@ void Search(ThreadData* thread) {
   for (size_t i = 1; i <= 4; i++)
     (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
 
-  while (++thread->depth < MAX_SEARCH_PLY) {
-#if defined(_WIN32) || defined(_WIN64)
-    if (_setjmp(thread->exit, NULL)) {
-#else
-    if (setjmp(thread->exit)) {
-#endif
-      thread->depth--; // hot exit means we didn't finish this depth.
-      break;
-    }
-
+  while (++thread->depth < MAX_SEARCH_PLY && !Threads.stop) {
     if (Limits.depth && mainThread && thread->depth > Limits.depth)
       break;
 
     for (int i = 0; i < thread->numRootMoves; i++)
       thread->rootMoves[i].previousScore = thread->rootMoves[i].score;
 
-    for (thread->multiPV = 0; thread->multiPV < Limits.multiPV; thread->multiPV++) {
+    for (thread->multiPV = 0; thread->multiPV < Limits.multiPV && !Threads.stop; thread->multiPV++) {
       int alpha       = -CHECKMATE;
       int beta        = CHECKMATE;
       int delta       = CHECKMATE;
@@ -207,6 +199,9 @@ void Search(ThreadData* thread) {
         score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
 
         SortRootMoves(thread, thread->multiPV);
+
+        if (Threads.stop)
+          break;
 
         if (mainThread && (score <= alpha || score >= beta) && Limits.multiPV == 1 &&
             GetTimeMS() - Limits.start >= 2500)
@@ -235,9 +230,14 @@ void Search(ThreadData* thread) {
       SortRootMoves(thread, 0);
 
       // Print if final multipv or time elapsed
-      if (mainThread && (thread->multiPV + 1 == Limits.multiPV || GetTimeMS() - Limits.start >= 2500))
+      if (mainThread && (thread->multiPV + 1 == Limits.multiPV || GetTimeMS() - Limits.start >= 2500 || Threads.stop))
         PrintUCI(thread, -CHECKMATE, CHECKMATE, board);
     }
+
+    // Don't the let the voting scheme on SMP
+    // use a higher depth than what was actually completed
+    if (Threads.stop)
+      thread->depth--;
 
     if (!mainThread)
       continue;
@@ -247,17 +247,17 @@ void Search(ThreadData* thread) {
 
     // Found mate?
     if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate))
-      break;
+      Threads.stop = 1;
 
     // Time Management stuff
     long elapsed = GetTimeMS() - Limits.start;
 
     // Maximum time exceeded, hard exit
-    if (Limits.timeset && elapsed >= Limits.max) {
-      break;
+    if (!Threads.stop && !Threads.stopOnPonderHit && Limits.timeset && elapsed >= Limits.max) {
+      Threads.stop = 1;
     }
     // Soft TM checks
-    else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
+    else if (!Threads.stop && !Threads.stopOnPonderHit && Limits.timeset && thread->depth >= 5) {
       int sameBestMove       = bestMove == previousBestMove;                    // same move?
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.25 - 0.05 * searchStability;
@@ -284,7 +284,7 @@ void Search(ThreadData* thread) {
         if (Threads.ponder)
           Threads.stopOnPonderHit = 1;
         else
-          break;
+          Threads.stop = 1;
       }
     }
 
@@ -327,15 +327,17 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (depth <= 0)
     return Quiesce(alpha, beta, thread, ss);
 
-  if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
-    // hot exit
-    longjmp(thread->exit, 1);
+  if (!thread->idx)
+    CheckLimits(thread);
 
   thread->nodes++;
   if (isPV && thread->seldepth < ss->ply + 1)
     thread->seldepth = ss->ply + 1;
 
   if (!isRoot) {
+    if (LoadRlx(Threads.stop))
+      return 0;
+
     // draw
     if (IsDraw(board, ss->ply))
       return 2 - (thread->nodes & 0x3);
@@ -680,6 +682,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     UndoMove(move, board);
 
+    if (LoadRlx(Threads.stop))
+      return 0;
+
     if (isRoot) {
       RootMove* rm = thread->rootMoves;
       for (int i = 1; i < thread->numRootMoves; i++)
@@ -765,10 +770,6 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   Move bestMove = NULL_MOVE;
   Move move     = NULL_MOVE;
   MovePicker mp;
-
-  if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
-    // hot exit
-    longjmp(thread->exit, 1);
 
   thread->nodes++;
 
