@@ -60,7 +60,7 @@ void UpdateHistories(Board* board,
                      BitBoard threats) {
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
-  if (!IsCap(bestMove)) {
+  if (!IsCap(bestMove) && PieceType(Promo(bestMove)) != QUEEN) {
     AddKillerMove(ss, bestMove);
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
     UpdateCH(ss, bestMove, inc);
@@ -77,7 +77,7 @@ void UpdateHistories(Board* board,
   }
 
   // Update quiets
-  if (!IsCap(bestMove)) {
+  if (!IsCap(bestMove) && PieceType(Promo(bestMove)) != QUEEN) {
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
       if (m == bestMove)
