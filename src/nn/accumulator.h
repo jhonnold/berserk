@@ -41,7 +41,7 @@
 #define regi_store _mm256_store_si256
 #else
 #define UNROLL     128
-#define UNROLL     16
+#define NUM_REGS   16
 #define regi_t     __m128i
 #define regi_load  _mm_load_si128
 #define regi_sub   _mm_sub_epi16
