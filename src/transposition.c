@@ -99,7 +99,7 @@ inline void TTPrefetch(uint64_t hash) {
 
 inline TTEntry* TTProbe(uint64_t hash, int* hit) {
   TTEntry* bucket    = TT.buckets[TTIdx(hash)].entries;
-  uint16_t shortHash = (uint16_t) hash;
+  uint32_t shortHash = (uint32_t) hash;
 
   for (int i = 0; i < BUCKET_SIZE; i++) {
     if (bucket[i].hash == shortHash || !bucket[i].depth) {
@@ -122,7 +122,7 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
 
 inline void
 TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
-  uint16_t shortHash = (uint16_t) hash;
+  uint32_t shortHash = (uint32_t) hash;
 
   if (score >= TB_WIN_BOUND)
     score += ply;
