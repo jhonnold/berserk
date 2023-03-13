@@ -360,7 +360,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // if the TT has a value that fits our position and has been searched to an
   // equal or greater depth, then we accept this score and prune
-  if (!isPV && ttScore != UNKNOWN && TTDepth(tt) >= depth &&
+  if (!isPV && ttScore != UNKNOWN && TTDepth(tt) > depth - (TTBound(tt) == BOUND_EXACT) &&
       (TTBound(tt) & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
     return ttScore;
 
