@@ -438,8 +438,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   ss->de               = (ss - 1)->de;
 
   // Build threats for use search
-  Threat oppThreat;
+  Threat oppThreat, ownThreat;
   Threats(&oppThreat, board, board->xstm);
+  Threats(&ownThreat, board, board->stm);
 
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
@@ -488,8 +489,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Prob cut
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
-    Threat ownThreat;
-    Threats(&ownThreat, board, board->stm);
     int probBeta = beta + 110 - 30 * improving;
     if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
@@ -524,7 +523,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move quiets[64], captures[32];
 
   int legalMoves = 0, playedMoves = 0, skipQuiets = 0;
-  InitNormalMovePicker(&mp, hashMove, thread, ss, oppThreat.sqs);
+  InitNormalMovePicker(&mp, hashMove, thread, ss, oppThreat.sqs, ownThreat.sqs);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
@@ -542,7 +541,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     int extension       = 0;
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
-    int history         = !IsCap(move) ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
+    int history         = !IsCap(move) ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs, ownThreat.sqs) :
                                          GetCaptureHistory(thread, board, move);
 
     if (bestScore > -TB_WIN_BOUND) {
@@ -728,7 +727,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
                         numQuiets,
                         captures,
                         numCaptures,
-                        oppThreat.sqs);
+                        oppThreat.sqs,
+                        ownThreat.sqs);
         break;
       }
     }
@@ -818,10 +818,11 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   if (!inCheck)
     InitQSMovePicker(&mp, thread);
   else {
-    Threat oppThreats;
+    Threat oppThreats, ownThreats;
     Threats(&oppThreats, board, board->xstm);
+    Threats(&ownThreats, board, board->stm);
 
-    InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss, oppThreats.sqs);
+    InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss, oppThreats.sqs, ownThreats.sqs);
   }
 
   int legalMoves = 0;

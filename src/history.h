@@ -23,11 +23,17 @@
 #include "types.h"
 #include "util.h"
 
-#define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
-#define TH(p, e, c)         (thread->caph[p][e][c])
+#define HH(stm, m, thr, cov) \
+  (thread->hh[stm][!GetBit(thr, From(m))][!GetBit(thr, To(m))][!GetBit(cov, To(m))][FromTo(m)])
+#define TH(p, e, c) (thread->caph[p][e][c])
 
-INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move, int stm, BitBoard threats) {
-  return (int) HH(stm, move, threats) +                  //
+INLINE int GetQuietHistory(SearchStack* ss,
+                           ThreadData* thread,
+                           Move move,
+                           int stm,
+                           BitBoard threats,
+                           BitBoard covered) {
+  return (int) HH(stm, move, threats, covered) +         //
          (int) (*(ss - 1)->ch)[Moving(move)][To(move)] + //
          (int) (*(ss - 2)->ch)[Moving(move)][To(move)] + //
          (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
@@ -47,6 +53,7 @@ void UpdateHistories(Board* board,
                      int nQ,
                      Move captures[],
                      int nC,
-                     BitBoard threats);
+                     BitBoard threats,
+                     BitBoard covered);
 
 #endif

@@ -32,7 +32,8 @@ INLINE void InitNormalMovePicker(MovePicker* picker,
                                  Move hashMove,
                                  ThreadData* thread,
                                  SearchStack* ss,
-                                 BitBoard threats) {
+                                 BitBoard threats,
+                                 BitBoard covered) {
   picker->phase = HASH_MOVE;
 
   picker->hashMove = hashMove;
@@ -41,6 +42,7 @@ INLINE void InitNormalMovePicker(MovePicker* picker,
   picker->counter  = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
   picker->threats = threats;
+  picker->covered = covered;
   picker->thread  = thread;
   picker->ss      = ss;
 }
@@ -59,12 +61,14 @@ INLINE void InitQSEvasionsPicker(MovePicker* picker,
                                  Move hashMove,
                                  ThreadData* thread,
                                  SearchStack* ss,
-                                 BitBoard threats) {
+                                 BitBoard threats,
+                                 BitBoard covered) {
   picker->phase = QS_EVASION_HASH_MOVE;
 
   picker->hashMove = hashMove;
 
   picker->threats = threats;
+  picker->covered = covered;
   picker->thread  = thread;
   picker->ss      = ss;
 }

@@ -57,12 +57,13 @@ void UpdateHistories(Board* board,
                      int nQ,
                      Move captures[],
                      int nC,
-                     BitBoard threats) {
+                     BitBoard threats,
+                     BitBoard covered) {
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
     AddKillerMove(ss, bestMove);
-    AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
+    AddHistoryHeuristic(&HH(stm, bestMove, threats, covered), inc);
     UpdateCH(ss, bestMove, inc);
 
     if ((ss - 1)->move)
@@ -83,7 +84,7 @@ void UpdateHistories(Board* board,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, threats), -inc);
+      AddHistoryHeuristic(&HH(stm, m, threats, covered), -inc);
       UpdateCH(ss, m, -inc);
     }
   }

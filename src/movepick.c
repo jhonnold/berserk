@@ -51,13 +51,13 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     Move move = current->move;
 
     if (type == ST_QUIET)
-      current->score = GetQuietHistory(picker->ss, picker->thread, move, board->stm, picker->threats);
+      current->score = GetQuietHistory(picker->ss, picker->thread, move, board->stm, picker->threats, picker->covered);
     else if (type == ST_CAPTURE)
       current->score =
         GetCaptureHistory(picker->thread, board, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
     else if (type == ST_EVASION)
       current->score = IsCap(move) ? 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] :
-                                     GetQuietHistory(ss, thread, move, board->stm, picker->threats);
+                                     GetQuietHistory(ss, thread, move, board->stm, picker->threats, picker->covered);
 
     current++;
   }
