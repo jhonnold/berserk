@@ -451,7 +451,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 9 && !ss->skip && eval - 75 * depth + 100 * (improving && !oppThreat.pcs) >= beta && eval >= beta &&
+    if (depth <= 9 && !ss->skip && eval - 75 * depth + 100 * (improving && !oppThreat.pcs && cutnode) >= beta && eval >= beta &&
         eval < WINNING_ENDGAME)
       return eval;
 
