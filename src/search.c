@@ -722,7 +722,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
                         ss,
                         thread,
                         move,
-                        depth + (bestScore > beta + 100),
+                        depth + (bestScore > beta + 75),
                         board->stm,
                         quiets,
                         numQuiets,
