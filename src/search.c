@@ -413,10 +413,16 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
+      // correct eval on fmr
+      eval = (200 - board->fmr) * eval / 200;
+
       if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
       eval = ss->staticEval = Evaluate(board, thread);
+
+      // correct eval on fmr
+      eval = (200 - board->fmr) * eval / 200;
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
@@ -799,10 +805,15 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
+      // correct eval on fmr
+      eval = (200 - board->fmr) * eval / 200;
+
       if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       eval = ss->staticEval = Evaluate(board, thread);
+      // correct eval on fmr
+      eval = (200 - board->fmr) * eval / 200;
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
