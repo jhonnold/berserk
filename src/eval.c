@@ -112,5 +112,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
 
+  // scale on fifty move rule
+  score = (400 - board->fmr) * score / 400;
+
   return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
 }
