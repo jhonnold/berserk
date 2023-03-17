@@ -610,6 +610,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           return sBeta;
         else if (ttScore >= beta)
           extension = -1;
+        else if (ttScore <= alpha)
+          extension = -1;
       }
 
       // re-capture extension - looks for a follow up capture on the same square
