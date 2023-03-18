@@ -80,7 +80,7 @@ INLINE int CheckLimits(ThreadData* thread) {
 }
 
 INLINE int AdjustEvalOnFMR(Board* board, int eval) {
-  return board->fmr > 16 ? (144 - board->fmr) * eval / 128 : eval;
+  return (200 - board->fmr) * eval / 200;
 }
 
 void StartSearch(Board* board, uint8_t ponder) {
