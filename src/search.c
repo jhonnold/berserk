@@ -81,6 +81,10 @@ INLINE int CheckLimits(ThreadData* thread) {
          (Limits.nodes && NodesSearched() >= Limits.nodes);
 }
 
+INLINE int AdjustEvalOnFMR(Board* board, int eval) {
+  return (200 - board->fmr) * eval / 200;
+}
+
 void StartSearch(Board* board, uint8_t ponder) {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
@@ -420,10 +424,16 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
+      // correct eval on fmr
+      eval = AdjustEvalOnFMR(board, eval);
+
       if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
       eval = ss->staticEval = Evaluate(board, thread);
+
+      // correct eval on fmr
+      eval = AdjustEvalOnFMR(board, eval);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
@@ -806,10 +816,15 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
+      // correct eval on fmr
+      eval = AdjustEvalOnFMR(board, eval);
+
       if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       eval = ss->staticEval = Evaluate(board, thread);
+      // correct eval on fmr
+      eval = AdjustEvalOnFMR(board, eval);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
