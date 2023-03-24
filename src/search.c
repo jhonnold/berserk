@@ -50,7 +50,7 @@ int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 0.25;
+      LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 0.75;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -832,14 +832,13 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     bestScore = eval;
   }
 
+  Threat oppThreats;
+  Threats(&oppThreats, board, board->xstm);
+
   if (!inCheck)
     InitQSMovePicker(&mp, thread);
-  else {
-    Threat oppThreats;
-    Threats(&oppThreats, board, board->xstm);
-
+  else
     InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss, oppThreats.sqs);
-  }
 
   int legalMoves = 0;
 
@@ -849,9 +848,14 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     legalMoves++;
 
-    // if we're in check, final condition in SEE always 0
-    if (bestScore > -TB_WIN_BOUND && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
-      continue;
+    if (bestScore > -TB_WIN_BOUND) {
+      if (!IsCap(move) && GetQuietHistory(ss, thread, move, board->stm, oppThreats.sqs) < 0)
+        continue;
+
+      // if we're in check, final condition in SEE always 0
+      if (!SEE(board, move, eval <= alpha - DELTA_CUTOFF))
+        continue;
+    }
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
