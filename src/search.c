@@ -849,8 +849,8 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     legalMoves++;
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (!IsCap(move) && GetQuietHistory(ss, thread, move, board->stm, oppThreats.sqs) < 0)
-        continue;
+      if (!IsCap(move) && !Promo(move) && GetQuietHistory(ss, thread, move, board->stm, oppThreats.sqs) < 0)
+        break;
 
       // if we're in check, final condition in SEE always 0
       if (!SEE(board, move, eval <= alpha - DELTA_CUTOFF))
