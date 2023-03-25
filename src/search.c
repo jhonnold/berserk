@@ -278,13 +278,13 @@ void Search(ThreadData* thread) {
                                  0.0275 * prevScoreDiff * (prevScoreDiff > 0);
       scoreChangeFactor = Max(0.5, Min(1.5, scoreChangeFactor));
 
-      uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
-      double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
-      double nodeCountFactor = Max(0.5, pctNodesNotBest * 2 + 0.4);
-      if (bestScore >= TB_WIN_BOUND)
-        nodeCountFactor = 0.5;
+      // uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
+      // double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
+      // double nodeCountFactor = Max(0.5, pctNodesNotBest * 2 + 0.4);
+      // if (bestScore >= TB_WIN_BOUND)
+      //   nodeCountFactor = 0.5;
 
-      if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
+      if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * 0.8) {
         if (Threads.ponder)
           Threads.stopOnPonderHit = 1;
         else
