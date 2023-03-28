@@ -219,8 +219,6 @@ void SetupMainThread(Board* board) {
 
     if (!ml->count)
       RootMoves(ml, board);
-    else
-      Threads.tbProbe = 0; // disable probing in search when root in tb
 
     for (int i = 0; i < ml->count; i++)
       InitRootMove(&mainThread->rootMoves[i], ml->moves[i]);
