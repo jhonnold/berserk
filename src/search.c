@@ -92,7 +92,6 @@ void StartSearch(Board* board, uint8_t ponder) {
   Threads.stopOnPonderHit = 0;
   Threads.stop            = 0;
   Threads.ponder          = ponder;
-  Threads.tbProbe         = 1;
 
   // Setup Threads
   SetupMainThread(board);
@@ -376,7 +375,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     return ttScore;
 
   // tablebase - we do not do this at root
-  if (!isRoot && !ss->skip && Threads.tbProbe) {
+  if (!isRoot && !ss->skip) {
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
