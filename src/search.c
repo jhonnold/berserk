@@ -627,6 +627,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // as the previous capture
       else if (isPV && IsRecapture(ss, move))
         extension = 1;
+
+      // last capture extension - extend when entering a pawn only endgame
+      else if (IsCap(move) && board->phase <= PHASE_VALUES[PieceType(board->squares[To(move)])])
+        extension = 1;
     }
 
     TTPrefetch(KeyAfter(board, move));
