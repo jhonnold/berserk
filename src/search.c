@@ -50,7 +50,7 @@ int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 0.25;
+      LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 1.25;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -643,9 +643,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth > 2 && legalMoves > 1 && !(ttPv && IsCap(move))) {
       int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
 
-      // increase reduction on non-pv
-      if (!ttPv)
-        R++;
+      // decrease reduction on non-pv
+      if (ttPv && !(ttHit && (tt->agePvBound & BOUND_UPPER) && TTDepth(tt) >= depth))
+        R--;
 
       // increase reduction if our eval is declining
       if (!improving)
