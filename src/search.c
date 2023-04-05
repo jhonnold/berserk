@@ -475,7 +475,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
+    if (!ss->skip && (ss - 1)->move != NULL_MOVE && !(tt && TTDepth(tt) >= depth - 3 && ttScore < beta) &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
       int R = 4 + depth / 6 + Min((eval - beta) / 256, 3) + !oppThreat.pcs;
