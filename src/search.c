@@ -359,7 +359,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   TTEntry* tt = ss->skip ? NULL : TTProbe(board->zobrist, &ttHit);
   ttScore     = ttHit ? TTScore(tt, ss->ply) : UNKNOWN;
   ttPv        = isPV || (ttHit && TTPV(tt));
-  hashMove    = isRoot ? thread->rootMoves[thread->multiPV].move : ttHit ? tt->move : NULL_MOVE;
+  hashMove    = ttHit ? tt->move : NULL_MOVE;
 
   // if the TT has a value that fits our position and has been searched to an
   // equal or greater depth, then we accept this score and prune
