@@ -1,3 +1,5 @@
+![AUR version](https://img.shields.io/aur/version/berserk)
+
 # Berserk Chess Engine
 
 <img src="resources/berserk.jpg" alt="Berserk" width="400" />
