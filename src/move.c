@@ -72,9 +72,16 @@ Move ParseMove(char* moveStr, Board* board) {
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
 
-  for (int i = 0; i < rootMoves.count; i++)
-    if (!strcmp(MoveToStr(rootMoves.moves[i], board), moveStr))
+  for (int i = 0; i < rootMoves.count; i++) {
+    if (!strcmp("O-O", moveStr) && IsCas(rootMoves.moves[i]) &&
+        To(rootMoves.moves[i]) == (board->stm == WHITE ? G1 : G8))
       return rootMoves.moves[i];
+    else if (!strcmp("O-O-O", moveStr) && IsCas(rootMoves.moves[i]) &&
+             To(rootMoves.moves[i]) == (board->stm == WHITE ? C1 : C8))
+      return rootMoves.moves[i];
+    else if (!strcmp(MoveToStr(rootMoves.moves[i], board), moveStr))
+      return rootMoves.moves[i];
+  }
 
   return NULL_MOVE;
 }
