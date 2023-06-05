@@ -602,7 +602,7 @@ int IsPseudoLegal(Move move, Board* board) {
         if (GetBit(board->pinned, board->cr[3]))
           return 0;
         BitBoard between = BetweenSquares(kingsq, C8) | BetweenSquares(board->cr[3], D8) | Bit(C8) | Bit(D8);
-        if ((OccBB(BOTH) ^ PieceBB(KING, WHITE) ^ Bit(board->cr[3])) & between)
+        if ((OccBB(BOTH) ^ PieceBB(KING, BLACK) ^ Bit(board->cr[3])) & between)
           return 0;
         break;
       }
