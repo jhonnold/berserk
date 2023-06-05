@@ -61,12 +61,15 @@ void UpdateHistories(Board* board,
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
-    AddKillerMove(ss, bestMove);
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
     UpdateCH(ss, bestMove, inc);
 
-    if ((ss - 1)->move)
-      AddCounterMove(thread, bestMove, (ss - 1)->move);
+    if (Promo(bestMove) < WHITE_QUEEN) {
+      AddKillerMove(ss, bestMove);
+
+      if ((ss - 1)->move)
+        AddCounterMove(thread, bestMove, (ss - 1)->move);
+    }
 
   } else {
     int piece    = Moving(bestMove);
