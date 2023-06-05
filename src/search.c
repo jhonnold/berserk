@@ -618,7 +618,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         } else if (sBeta >= beta)
           return sBeta;
         else if (ttScore >= beta)
-          extension = -1;
+          extension = -2 + isPV;
         else if (ttScore <= alpha)
           extension = -1;
       }
