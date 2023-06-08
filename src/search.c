@@ -656,7 +656,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R -= 2;
 
       // less likely a non-capture is best
-      if (IsCap(hashMove))
+      if (IsCap(hashMove) || Promo(hashMove))
         R++;
 
       // move GAVE check
