@@ -64,6 +64,9 @@ void InitPruningAndReductionTables() {
     STATIC_PRUNE[0][depth] = -SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
     STATIC_PRUNE[1][depth] = -SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
   }
+
+  LMP[0][0] = 2;
+  LMP[1][0] = 4;
 }
 
 INLINE int CheckLimits(ThreadData* thread) {
@@ -555,7 +558,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
                                          GetCaptureHistory(thread, board, move);
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (!isRoot && legalMoves >= LMP[improving][depth])
+      if (!isRoot && legalMoves >= LMP[improving][depth - IsCap(hashMove)])
         skipQuiets = 1;
 
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
