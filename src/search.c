@@ -660,7 +660,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R++;
 
       // move GAVE check
-      if (board->checkers)
+      if (IsCap(move) && board->checkers)
         R--;
 
       // Reduce more on expected cut nodes
