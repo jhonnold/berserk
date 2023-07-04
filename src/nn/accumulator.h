@@ -14,6 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#ifndef ACCUMULATOR_H
+#define ACCUMULATOR_H
+
 #include <immintrin.h>
 
 #include "../board.h"
@@ -38,7 +41,7 @@
 #define regi_store _mm256_store_si256
 #else
 #define UNROLL     128
-#define UNROLL     16
+#define NUM_REGS   16
 #define regi_t     __m128i
 #define regi_load  _mm_load_si128
 #define regi_sub   _mm_sub_epi16
@@ -192,3 +195,5 @@ int CanEfficientlyUpdate(Accumulator* live, const int view);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);
+
+#endif

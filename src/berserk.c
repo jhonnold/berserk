@@ -24,7 +24,7 @@
 #include "bench.h"
 #include "bits.h"
 #include "nn/accumulator.h"
-#include "nn/eval.h"
+#include "nn/evaluate.h"
 #include "fengen/fengen.h"
 #include "random.h"
 #include "search.h"

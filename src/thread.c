@@ -25,6 +25,7 @@
 #include "eval.h"
 #include "nn/accumulator.h"
 #include "search.h"
+#include "tb.h"
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
@@ -214,7 +215,10 @@ void SetupMainThread(Board* board) {
     mainThread->numRootMoves = Limits.searchable.count;
   } else {
     SimpleMoveList ml[1];
-    RootMoves(ml, board);
+    TBRootMoves(ml, board);
+
+    if (!ml->count)
+      RootMoves(ml, board);
 
     for (int i = 0; i < ml->count; i++)
       InitRootMove(&mainThread->rootMoves[i], ml->moves[i]);

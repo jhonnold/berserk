@@ -32,7 +32,7 @@
 #include "../endgame.h"
 #include "../move.h"
 #include "../nn/accumulator.h"
-#include "../nn/eval.h"
+#include "../nn/evaluate.h"
 #include "../pyrrhic/tbprobe.h"
 #include "../random.h"
 #include "../search.h"
