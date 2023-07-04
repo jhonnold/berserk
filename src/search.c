@@ -994,12 +994,15 @@ void SearchClear() {
     ThreadWaitUntilSleep(Threads.threads[i]);
 }
 
-void FixedSeach(ThreadData* thread, Board* uciBoard, uint64_t nodes, int mpv) {
+void FixedSeach(ThreadData* thread, Board* uciBoard, uint64_t nodes, int maxDepth, int mpv) {
   SetupFenGenThread(thread, uciBoard);
   Board* board = &thread->board;
 
   mpv = Min(thread->numRootMoves, mpv);
   nodes *= mpv;
+
+  if (!maxDepth)
+    maxDepth = MAX_SEARCH_PLY;
 
   SearchStack searchStack[MAX_SEARCH_PLY + 4];
   SearchStack* ss = searchStack + 4;
@@ -1018,7 +1021,7 @@ void FixedSeach(ThreadData* thread, Board* uciBoard, uint64_t nodes, int mpv) {
   thread->depth    = 0;
   thread->maxNodes = 10 * nodes;
 
-  while (++thread->depth <= MAX_SEARCH_PLY && !(nodes && thread->nodes >= nodes)) {
+  while (++thread->depth <= maxDepth && !(nodes && thread->nodes >= nodes)) {
 #if defined(_WIN32) || defined(_WIN64)
     if (_setjmp(thread->exit, NULL))
       break;

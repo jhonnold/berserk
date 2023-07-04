@@ -51,6 +51,7 @@ int main(int argc, char** argv) {
   fenGenParams.book = NULL;
   fenGenParams.evalLimit = 1500;
   fenGenParams.nodes = 5000;
+  fenGenParams.depth = 0;
   fenGenParams.randomMoveCount = 5;
   fenGenParams.randomMoveMax = 24;
   fenGenParams.randomMoveMin = 1;
@@ -72,6 +73,7 @@ int main(int argc, char** argv) {
 
     OPT_GROUP("Search Level Options"),
     OPT_INTEGER(0, "nodes", &fenGenParams.nodes, "Min nodes", NULL, 0, 0),
+    OPT_INTEGER(0, "depth", &fenGenParams.depth, "Max depth", NULL, 0, 0),
 
     OPT_GROUP("Randomization Options"),
     OPT_INTEGER(0, "random-move-count", &fenGenParams.randomMoveCount, "Number of random moves", NULL, 0, 0),
@@ -83,7 +85,9 @@ int main(int argc, char** argv) {
     OPT_GROUP("Write Options"),
     OPT_INTEGER(0, "eval-limit", &fenGenParams.evalLimit, "Eval max for game cutoff", NULL, 0, 0),
     OPT_INTEGER(0, "write-min", &fenGenParams.writeMin, "Write min ply", NULL, 0, 0),
-    OPT_INTEGER(0, "write-max", &fenGenParams.writeMax, "Write max ply", NULL, 0, 0)
+    OPT_INTEGER(0, "write-max", &fenGenParams.writeMax, "Write max ply", NULL, 0, 0),
+
+    OPT_END()
   };
 
   struct argparse argparse;
@@ -98,6 +102,7 @@ int main(int argc, char** argv) {
   printf("Chess 960: %d\n", CHESS_960);
   printf("Book: %s\n", fenGenParams.book);
   printf("Nodes: %llu\n", fenGenParams.nodes);
+  printf("Depth: %d\n", fenGenParams.depth);
   printf("Random Move Count: %d\n", fenGenParams.randomMoveCount);
   printf("Random Move Min Ply: %d\n", fenGenParams.randomMoveMin);
   printf("Random Move Max Ply: %d\n", fenGenParams.randomMoveMax);

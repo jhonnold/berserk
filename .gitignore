@@ -57,3 +57,4 @@ berserk-popcnt
 dist
 
 *.log
+*.fens

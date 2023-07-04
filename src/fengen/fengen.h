@@ -50,6 +50,7 @@ typedef struct {
 
   int writeMin, writeMax;
 
+  int depth;
   uint64_t nodes;
 } FenGenParams;
 

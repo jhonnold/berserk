@@ -167,7 +167,7 @@ void* PlayGames(void* arg) {
       if (result)
         break;
 
-      FixedSeach(thread, board, fenGenParams.nodes, 1);
+      FixedSeach(thread, board, fenGenParams.nodes, fenGenParams.depth, 1);
       int score = scores[ply] = thread->rootMoves[0].score;
 
       if (abs(score) >= fenGenParams.evalLimit) {
@@ -190,7 +190,7 @@ void* PlayGames(void* arg) {
       // Make it a random move if needed
       if (ply < fenGenParams.randomMoveMax && randoms[ply]) {
         if (fenGenParams.randomMpv > 0) {
-          FixedSeach(thread, board, fenGenParams.nodes, fenGenParams.randomMpv);
+          FixedSeach(thread, board, fenGenParams.nodes, fenGenParams.depth, fenGenParams.randomMpv);
 
           uint64_t possible = min(thread->numRootMoves, fenGenParams.randomMpv);
           for (uint64_t i = 1; i < possible; i++) {
