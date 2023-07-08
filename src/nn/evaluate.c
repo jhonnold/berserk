@@ -94,19 +94,8 @@ INLINE void m256_add_dpbusd_epi32x4(__m256i* acc, const __m256i* inputs, const _
   __m256i tmp2 = _mm256_maddubs_epi16(inputs[2], weights[2]);
   __m256i tmp3 = _mm256_maddubs_epi16(inputs[3], weights[3]);
 
-#if (defined(__GNUC__) && !defined(__clang__))
-  asm(
-    "vpaddsw     %[tmp0], %[tmp1], %[tmp0]\n\t"
-    "vpaddsw     %[tmp0], %[tmp2], %[tmp0]\n\t"
-    "vpaddsw     %[tmp0], %[tmp3], %[tmp0]\n\t"
-    "vpmaddwd    %[tmp0], %[ones], %[tmp0]\n\t"
-    "vpaddd      %[acc], %[tmp0], %[acc]"
-    : [acc] "+v"(*acc), [tmp0] "+&v"(tmp0)
-    : [tmp1] "v"(tmp1), [tmp2] "v"(tmp2), [tmp3] "v"(tmp3), [ones] "v"(_mm256_set1_epi16(1)));
-#else
   tmp0 = _mm256_add_epi16(tmp0, _mm256_add_epi16(tmp1, _mm256_add_epi16(tmp2, tmp3)));
   *acc = _mm256_add_epi32(*acc, _mm256_madd_epi16(tmp0, _mm256_set1_epi16(1)));
-#endif
 }
 
 INLINE void m256_hadd_epi32x4(__m256i* regs) {
@@ -153,19 +142,8 @@ INLINE void m128_add_dpbusd_epi32x4(__m128i* acc, const __m128i* inputs, const _
   __m128i tmp2 = _mm_maddubs_epi16(inputs[2], weights[2]);
   __m128i tmp3 = _mm_maddubs_epi16(inputs[3], weights[3]);
 
-#if (defined(__GNUC__) && !defined(__clang__))
-  asm(
-    "paddsw     %[tmp1], %[tmp0]\n\t"
-    "paddsw     %[tmp2], %[tmp0]\n\t"
-    "paddsw     %[tmp3], %[tmp0]\n\t"
-    "pmaddwd    %[ones], %[tmp0]\n\t"
-    "paddd      %[tmp0], %[acc]"
-    : [acc] "+v"(*acc), [tmp0] "+&v"(tmp0)
-    : [tmp1] "v"(tmp1), [tmp2] "v"(tmp2), [tmp3] "v"(tmp3), [ones] "v"(_mm_set1_epi16(1)));
-#else
   tmp0 = _mm_add_epi16(tmp0, _mm_add_epi16(tmp1, _mm_add_epi16(tmp2, tmp3)));
   *acc = _mm_add_epi32(*acc, _mm_madd_epi16(tmp0, _mm_set1_epi16(1)));
-#endif
 }
 
 INLINE void m128_hadd_epi32x4(__m128i* regs) {
