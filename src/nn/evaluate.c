@@ -88,31 +88,30 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
 #endif
 
 #if defined(__AVX2__)
-INLINE void m256_add_dpbusd_epi32x4(__m256i* acc, const __m256i* inputs, const __m256i* weights) {
-  __m256i tmp0 = _mm256_maddubs_epi16(inputs[0], weights[0]);
-  __m256i tmp1 = _mm256_maddubs_epi16(inputs[1], weights[1]);
-  __m256i tmp2 = _mm256_maddubs_epi16(inputs[2], weights[2]);
-  __m256i tmp3 = _mm256_maddubs_epi16(inputs[3], weights[3]);
+INLINE void m256_add_dpbusd_epi32x1(__m256i* acc, 
+                                    const __m256i i0, 
+                                    const __m256i w0) {
+  __m256i tmp0 = _mm256_maddubs_epi16(i0, w0);
 
 #if (defined(__GNUC__) && !defined(__clang__))
   asm(
-    "vpaddsw     %[tmp0], %[tmp1], %[tmp0]\n\t"
-    "vpaddsw     %[tmp0], %[tmp2], %[tmp0]\n\t"
-    "vpaddsw     %[tmp0], %[tmp3], %[tmp0]\n\t"
     "vpmaddwd    %[tmp0], %[ones], %[tmp0]\n\t"
     "vpaddd      %[acc], %[tmp0], %[acc]"
     : [acc] "+v"(*acc), [tmp0] "+&v"(tmp0)
-    : [tmp1] "v"(tmp1), [tmp2] "v"(tmp2), [tmp3] "v"(tmp3), [ones] "v"(_mm256_set1_epi16(1)));
+    : [ones] "v"(_mm256_set1_epi16(1)));
 #else
-  tmp0 = _mm256_add_epi16(tmp0, _mm256_add_epi16(tmp1, _mm256_add_epi16(tmp2, tmp3)));
   *acc = _mm256_add_epi32(*acc, _mm256_madd_epi16(tmp0, _mm256_set1_epi16(1)));
 #endif
 }
 
-INLINE void m256_hadd_epi32x4(__m256i* regs) {
-  regs[0] = _mm256_hadd_epi32(regs[0], regs[1]);
-  regs[2] = _mm256_hadd_epi32(regs[2], regs[3]);
-  regs[0] = _mm256_hadd_epi32(regs[0], regs[2]);
+INLINE void m256_hadd_epi32x4(__m256i* acc,
+                              const __m256i r0,
+                              const __m256i r1,
+                              const __m256i r2,
+                              const __m256i r3) {
+  __m256i a0 = _mm256_hadd_epi32(r0, r1);
+  __m256i b0 = _mm256_hadd_epi32(r2, r3);
+  *acc = _mm256_hadd_epi32(a0, b0);
 }
 
 INLINE void L1AffineReLU(float* dest, uint8_t* src) {
@@ -126,21 +125,32 @@ INLINE void L1AffineReLU(float* dest, uint8_t* src) {
   const __m256i* biases  = (__m256i*) L1_BIASES;
   __m256* out            = (__m256*) dest;
 
-  __m256i regs[OUT_CC];
-
   for (size_t i = 0; i < OUT_CHUNKS; i++) {
-    for (size_t k = 0; k < OUT_CC; k++)
-      regs[k] = _mm256_setzero_si256();
+    __m256i a0 = _mm256_setzero_si256();
+    __m256i a1 = _mm256_setzero_si256();
+    __m256i a2 = _mm256_setzero_si256();
+    __m256i a3 = _mm256_setzero_si256();
+    __m256i a4 = _mm256_setzero_si256();
+    __m256i a5 = _mm256_setzero_si256();
+    __m256i a6 = _mm256_setzero_si256();
+    __m256i a7 = _mm256_setzero_si256();
 
-    for (size_t j = 0; j < IN_CHUNKS; j += 4)
-      for (size_t k = 0; k < OUT_CC; k++)
-        m256_add_dpbusd_epi32x4(&regs[k], &in[j], &weights[j + IN_CHUNKS * (OUT_CC * i + k)]);
+    for (size_t j = 0; j < IN_CHUNKS; j++) {
+      m256_add_dpbusd_epi32x1(&a0, in[j], weights[j + IN_CHUNKS * (OUT_CC * i + 0)]);
+      m256_add_dpbusd_epi32x1(&a1, in[j], weights[j + IN_CHUNKS * (OUT_CC * i + 1)]);
+      m256_add_dpbusd_epi32x1(&a2, in[j], weights[j + IN_CHUNKS * (OUT_CC * i + 2)]);
+      m256_add_dpbusd_epi32x1(&a3, in[j], weights[j + IN_CHUNKS * (OUT_CC * i + 3)]);
+      m256_add_dpbusd_epi32x1(&a4, in[j], weights[j + IN_CHUNKS * (OUT_CC * i + 4)]);
+      m256_add_dpbusd_epi32x1(&a5, in[j], weights[j + IN_CHUNKS * (OUT_CC * i + 5)]);
+      m256_add_dpbusd_epi32x1(&a6, in[j], weights[j + IN_CHUNKS * (OUT_CC * i + 6)]);
+      m256_add_dpbusd_epi32x1(&a7, in[j], weights[j + IN_CHUNKS * (OUT_CC * i + 7)]);
+    }
 
-    m256_hadd_epi32x4(regs);
-    m256_hadd_epi32x4(&regs[4]);
+    m256_hadd_epi32x4(&a0, a0, a1, a2, a3);
+    m256_hadd_epi32x4(&a4, a4, a5, a6, a7);
 
-    const __m128i t0 = _mm_add_epi32(_mm256_castsi256_si128(regs[0]), _mm256_extracti128_si256(regs[0], 1));
-    const __m128i t4 = _mm_add_epi32(_mm256_castsi256_si128(regs[4]), _mm256_extracti128_si256(regs[4], 1));
+    const __m128i t0 = _mm_add_epi32(_mm256_castsi256_si128(a0), _mm256_extracti128_si256(a0, 1));
+    const __m128i t4 = _mm_add_epi32(_mm256_castsi256_si128(a4), _mm256_extracti128_si256(a4, 1));
     __m256i sum      = _mm256_inserti128_si256(_mm256_castsi128_si256(t0), t4, 1);
     out[i]           = _mm256_cvtepi32_ps(_mm256_max_epi32(_mm256_add_epi32(sum, biases[i]), _mm256_setzero_si256()));
   }
