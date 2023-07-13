@@ -192,7 +192,7 @@ void* PlayGames(void* arg) {
         if (fenGenParams.randomMpv > 0) {
           FixedSeach(thread, board, fenGenParams.nodes, fenGenParams.depth, fenGenParams.randomMpv);
 
-          uint64_t possible = min(thread->numRootMoves, fenGenParams.randomMpv);
+          uint64_t possible = Min(thread->numRootMoves, fenGenParams.randomMpv);
           for (uint64_t i = 1; i < possible; i++) {
             if (thread->rootMoves[0].score > thread->rootMoves[i].score + fenGenParams.randomMpvDiff) {
               possible = i;
