@@ -598,8 +598,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // (allows for reductions when doing singular search)
     if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
-          abs(ttScore) < WINNING_ENDGAME) {
+      if (depth >= 6 + 2 * (isPV && TTPV(tt)) && move == hashMove && TTDepth(tt) >= depth - 3 &&
+          (TTBound(tt) & BOUND_LOWER) && abs(ttScore) < WINNING_ENDGAME) {
         int sBeta  = Max(ttScore - depth, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
 
