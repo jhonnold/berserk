@@ -461,6 +461,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 9 && !ss->skip && eval - 75 * depth + 100 * (improving && !oppThreat.pcs) >= beta && eval >= beta &&
+        (!hashMove || (IsCap(hashMove) ? GetCaptureHistory(thread, board, hashMove) :
+                                         GetQuietHistory(ss, thread, hashMove, board->stm, oppThreat.sqs)) > 8192) &&
         eval < WINNING_ENDGAME)
       return eval;
 
