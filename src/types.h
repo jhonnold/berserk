@@ -122,6 +122,7 @@ typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
   Move move, skip;
+  Threat oppThreat, ownThreat;
   Move killers[2];
 } SearchStack;
 
@@ -236,7 +237,6 @@ typedef struct {
   ThreadData* thread;
   SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
-  BitBoard threats;
   int seeCutoff, phase;
 
   ScoredMove *current, *end, *endBad;
