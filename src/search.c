@@ -638,7 +638,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int doFullSearch = 0;
 
     // Late move reductions
-    if (depth > 2 && legalMoves > 1 && !(ttPv && IsCap(move))) {
+    if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
       int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
 
       // increase reduction on non-pv
