@@ -445,6 +445,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->killers[0] = NULL_MOVE;
   (ss + 1)->killers[1] = NULL_MOVE;
   ss->de               = (ss - 1)->de;
+  ss->history          = 0;
 
   // Build threats for use search
   Threats(&ss->oppThreat, board, board->xstm);
@@ -461,7 +462,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 9 && !ss->skip && eval < WINNING_ENDGAME &&
-        eval - 75 * depth + 100 * (improving && !oppThreatPcs) >= beta && eval >= beta)
+        eval - 75 * depth + 100 * (improving && !oppThreatPcs) - (ss - 1)->history / 512 >= beta && eval >= beta)
       return eval;
 
     // Razoring
@@ -550,7 +551,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     int extension       = 0;
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
-    int history         = GetHistory(ss, thread, move);
+
+    ss->history = GetHistory(ss, thread, move);
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
@@ -559,12 +561,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
-        if (!killerOrCounter && lmrDepth < 6 && history < -4096 * (depth - 1)) {
+        if (!killerOrCounter && lmrDepth < 6 && ss->history < -4096 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
 
-        if (lmrDepth < 9 && eval + 100 + 50 * lmrDepth + history / 128 <= alpha)
+        if (lmrDepth < 9 && eval + 100 + 50 * lmrDepth + ss->history / 128 <= alpha)
           skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
@@ -669,7 +671,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       // adjust reduction based on historical score
-      R -= history / 8192;
+      R -= ss->history / 8192;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
