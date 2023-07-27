@@ -93,6 +93,12 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
         }
       }
 
+      // Skip bad captures if skip quiets is called during good captures
+      if (skipQuiets) {
+        picker->phase = NO_MORE_MOVES;
+        return NULL_MOVE;
+      }
+
       picker->phase = PLAY_KILLER_1;
       // fallthrough
     case PLAY_KILLER_1:
