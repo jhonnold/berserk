@@ -321,7 +321,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
 
   if (!isRoot && board->fmr >= 3 && alpha < 0 && HasCycle(board, ss->ply)) {
-    alpha = 2 - (thread->nodes & 0x3);
+    alpha = 0;
     if (alpha >= beta)
       return alpha;
   }
@@ -341,7 +341,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isRoot) {
     // draw
     if (IsDraw(board, ss->ply))
-      return 2 - (thread->nodes & 0x3);
+      return 0;
 
     // Prevent overflows
     if (ss->ply >= MAX_SEARCH_PLY - 1)
