@@ -207,6 +207,8 @@ void Search(ThreadData* thread) {
 
       while (1) {
         // search!
+        thread->delta = beta - alpha;
+
         score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
 
         SortRootMoves(thread, thread->multiPV);
@@ -724,7 +726,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         bestMove = move;
         alpha    = score;
 
-        if (score > -TB_WIN_BOUND) depth -= (depth > 1 && alpha < beta);
+        if (depth > 1 && score > -TB_WIN_BOUND && alpha < beta && thread->delta / 2 >= beta - alpha)
+          depth--;
       }
 
       // we're failing high

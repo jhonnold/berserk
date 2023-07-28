@@ -166,7 +166,7 @@ enum {
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int idx, multiPV, depth, seldepth;
+  int idx, multiPV, depth, seldepth, delta;
   uint64_t nodes, tbhits;
 
   Accumulator* accumulators;
