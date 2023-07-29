@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
   LoadDefaultNN();
   ThreadsInit();
   TTInit(16);
-  
+
   // Set all defaults
   fenGenParams.book = NULL;
   fenGenParams.evalLimit = 1500;
@@ -59,6 +59,7 @@ int main(int argc, char** argv) {
   fenGenParams.randomMpvDiff = 50;
   fenGenParams.writeMax = 400;
   fenGenParams.writeMin = 16;
+  fenGenParams.filterDuplicates = 0;
 
   int threads    = 1;
   uint64_t total = 1024 * 1024 * 1024;
@@ -68,6 +69,7 @@ int main(int argc, char** argv) {
     OPT_GROUP("Top Level Options"),
     OPT_INTEGER(0, "threads", &threads, "Threads to run on", NULL, 0, 0),
     OPT_INTEGER(0, "total", &total, "Total positions to generate", NULL, 0, 0),
+    OPT_BOOLEAN(0, "filter-duplicates", &fenGenParams.filterDuplicates, "Filter duplicates?", NULL, 0, 0),
     OPT_BOOLEAN(0, "chess960", &CHESS_960, "Fischer random?", NULL, 0, 0),
     OPT_STRING(0, "book", &fenGenParams.book, "EPD book", NULL, 0, 0),
 
@@ -99,6 +101,7 @@ int main(int argc, char** argv) {
   printf("Executing generator with the following:\n");
   printf("Threads: %d\n", threads);
   printf("Total: %llu\n", total);
+  printf("Filter Duplicates: %d\n", fenGenParams.filterDuplicates);
   printf("Chess 960: %d\n", CHESS_960);
   printf("Book: %s\n", fenGenParams.book);
   printf("Nodes: %llu\n", fenGenParams.nodes);

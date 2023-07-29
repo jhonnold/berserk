@@ -181,7 +181,11 @@ void* PlayGames(void* arg) {
 
       Move bestMove = thread->rootMoves[0].move;
 
-      if (!(ply < fenGenParams.writeMin || IsCap(bestMove) || board->checkers || SeenBefore(board->zobrist))) {
+      if ( !(ply < fenGenParams.writeMin
+          || IsCap(bestMove)
+          || board->checkers
+          || (fenGenParams.filterDuplicates && SeenBefore(board->zobrist)))) {
+
         PositionData* p = &game->positions[game->n++];
         BoardToFen(p->fen, board);
         p->eval = board->stm == WHITE ? score : -score;
@@ -231,7 +235,7 @@ void* PlayGames(void* arg) {
 void Generate(uint64_t total) {
   signal(SIGINT, SigintHandler);
 
-  int hashSize = 256 * Threads.count;
+  int hashSize = 40.96 * Threads.count;
   TTInit(hashSize);
   printf("Initiating hash table to size: %d\n", hashSize);
 

@@ -43,6 +43,7 @@ typedef struct {
 typedef struct {
   char* book;
 
+  int filterDuplicates;
   int evalLimit;
 
   int randomMoveMin, randomMoveMax, randomMoveCount;
