@@ -47,17 +47,18 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
     AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
 }
 
-void UpdateHistories(Board* board,
-                     SearchStack* ss,
+void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
                      int depth,
-                     int stm,
                      Move quiets[],
                      int nQ,
                      Move captures[],
-                     int nC,
-                     BitBoard threats) {
+                     int nC) {
+  Board* board     = &thread->board;
+  int stm          = board->stm;
+  BitBoard threats = ss->oppThreat.sqs;
+
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {

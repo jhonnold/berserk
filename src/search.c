@@ -446,8 +446,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   ss->de               = (ss - 1)->de;
 
   // Build threats for use search
-  Threat oppThreat;
-  Threats(&oppThreat, board, board->xstm);
+  Threats(&ss->oppThreat, board, board->xstm);
+  BitBoard oppThreatPcs = ss->oppThreat.pcs;
 
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
@@ -459,8 +459,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 9 && !ss->skip && eval - 75 * depth + 100 * (improving && !oppThreat.pcs) >= beta && eval >= beta &&
-        eval < WINNING_ENDGAME)
+    if (depth <= 9 && !ss->skip && eval < WINNING_ENDGAME &&
+        eval - 75 * depth + 100 * (improving && !oppThreatPcs) >= beta && eval >= beta)
       return eval;
 
     // Razoring
@@ -477,7 +477,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + depth / 6 + Min((eval - beta) / 256, 3) + !oppThreat.pcs;
+      int R = 4 + depth / 6 + Min((eval - beta) / 256, 3) + !oppThreatPcs;
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
@@ -496,10 +496,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Prob cut
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
-    Threat ownThreat;
-    Threats(&ownThreat, board, board->stm);
+    Threats(&ss->ownThreat, board, board->stm);
     int probBeta = beta + 110 - 30 * improving;
-    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ownThreat.pcs &&
+    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
@@ -532,7 +531,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move quiets[64], captures[32];
 
   int legalMoves = 0, playedMoves = 0, skipQuiets = 0;
-  InitNormalMovePicker(&mp, hashMove, thread, ss, oppThreat.sqs);
+  InitNormalMovePicker(&mp, hashMove, thread, ss);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
@@ -550,8 +549,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     int extension       = 0;
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
-    int history         = !IsCap(move) ? GetQuietHistory(ss, thread, move, board->stm, oppThreat.sqs) :
-                                         GetCaptureHistory(thread, board, move);
+    int history         = GetHistory(ss, thread, move);
 
     if (bestScore > -WINNING_ENDGAME && !isPV) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
@@ -728,17 +726,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(board,
-                        ss,
-                        thread,
-                        move,
-                        depth + (bestScore > beta + 100),
-                        board->stm,
-                        quiets,
-                        numQuiets,
-                        captures,
-                        numCaptures,
-                        oppThreat.sqs);
+        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 100), quiets, numQuiets, captures, numCaptures);
         break;
       }
     }
@@ -833,10 +821,9 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   if (!inCheck)
     InitQSMovePicker(&mp, thread);
   else {
-    Threat oppThreats;
-    Threats(&oppThreats, board, board->xstm);
+    Threats(&ss->oppThreat, board, board->xstm);
 
-    InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss, oppThreats.sqs);
+    InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss);
   }
 
   int legalMoves = 0;

@@ -28,11 +28,7 @@ enum {
   ST_EVASION
 };
 
-INLINE void InitNormalMovePicker(MovePicker* picker,
-                                 Move hashMove,
-                                 ThreadData* thread,
-                                 SearchStack* ss,
-                                 BitBoard threats) {
+INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {
   picker->phase = HASH_MOVE;
 
   picker->hashMove = hashMove;
@@ -40,9 +36,8 @@ INLINE void InitNormalMovePicker(MovePicker* picker,
   picker->killer2  = ss->killers[1];
   picker->counter  = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
-  picker->threats = threats;
-  picker->thread  = thread;
-  picker->ss      = ss;
+  picker->thread = thread;
+  picker->ss     = ss;
 }
 
 INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread) {
@@ -55,18 +50,13 @@ INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread) {
   picker->thread = thread;
 }
 
-INLINE void InitQSEvasionsPicker(MovePicker* picker,
-                                 Move hashMove,
-                                 ThreadData* thread,
-                                 SearchStack* ss,
-                                 BitBoard threats) {
+INLINE void InitQSEvasionsPicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {
   picker->phase = QS_EVASION_HASH_MOVE;
 
   picker->hashMove = hashMove;
 
-  picker->threats = threats;
-  picker->thread  = thread;
-  picker->ss      = ss;
+  picker->thread = thread;
+  picker->ss     = ss;
 }
 
 INLINE void InitPerftMovePicker(MovePicker* picker, Board* board) {
