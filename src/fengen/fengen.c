@@ -231,7 +231,7 @@ void* PlayGames(void* arg) {
 void Generate(uint64_t total) {
   signal(SIGINT, SigintHandler);
 
-  int hashSize = 40.96 * Threads.count;
+  int hashSize = 256 * Threads.count;
   TTInit(hashSize);
   printf("Initiating hash table to size: %d\n", hashSize);
 
