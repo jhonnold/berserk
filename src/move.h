@@ -46,9 +46,9 @@ extern const int CASTLING_ROOK[64];
 #define Flags(move)                (((int) (move) &0xf000) >> 12)
 
 #define IsCas(move)           (Flags(move) == CASTLE)
-#define IsCap(move)           (Flags(move) & CAPTURE)
+#define IsCap(move)           (!!(Flags(move) & CAPTURE))
 #define IsEP(move)            (Flags(move) == EP)
-#define IsPromo(move)         (Flags(move) & PROMO)
+#define IsPromo(move)         (!!(Flags(move) & PROMO))
 #define PromoPT(move)         ((Flags(move) & 0x3) + KNIGHT)
 #define PromoPiece(move, stm) (Piece(PromoPT(move), stm))
 
