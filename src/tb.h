@@ -28,19 +28,23 @@ INLINE Move TBMoveFromResult(unsigned res, Board* board) {
   unsigned to    = TB_GET_TO(res) ^ 56;
   unsigned ep    = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
-  int piece      = board->squares[from];
-  int capture    = board->squares[to] != NO_PIECE;
-  int promoPiece = promo ? Piece(KING - promo, board->stm) : 0;
 
   int flags = QUIET;
   if (ep)
     flags = EP;
-  else if (capture)
+  else if (board->squares[to] != NO_PIECE)
     flags = CAPTURE;
-  else if (PieceType(piece) == PAWN && (from ^ to) == 16)
-    flags = DP;
 
-  return BuildMove(from, to, piece, promoPiece, flags);
+  if (promo) {
+    switch (KING - promo) {
+      case KNIGHT: flags |= KNIGHT_PROMO; break;
+      case BISHOP: flags |= BISHOP_PROMO; break;
+      case ROOK: flags |= ROOK_PROMO; break;
+      case QUEEN: flags |= QUEEN_PROMO; break;
+    }
+  }
+
+  return BuildMove(from, to, flags);
 }
 
 void TBRootMoves(SimpleMoveList* moves, Board* board);

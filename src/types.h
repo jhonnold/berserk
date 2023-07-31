@@ -39,7 +39,7 @@
 
 typedef int Score;
 typedef uint64_t BitBoard;
-typedef uint32_t Move;
+typedef uint16_t Move;
 
 enum {
   SUB = 0,
@@ -51,6 +51,7 @@ typedef int16_t acc_t;
 typedef struct {
   uint8_t correct[2];
   uint16_t captured;
+  int moving;
   Move move;
   acc_t values[2][N_HIDDEN] ALIGN;
 } Accumulator;

@@ -30,21 +30,21 @@ INLINE void AddKillerMove(SearchStack* ss, Move move) {
   }
 }
 
-INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
-  thread->counters[Moving(parent)][To(parent)] = move;
+INLINE void AddCounterMove(ThreadData* thread, Move move, int moving, int to) {
+  thread->counters[moving][to] = move;
 }
 
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
   *entry += inc - *entry * abs(inc) / 16384;
 }
 
-INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
+INLINE void UpdateCH(SearchStack* ss, int moving, int to, int16_t bonus) {
   if ((ss - 1)->move)
-    AddHistoryHeuristic(&(*(ss - 1)->ch)[Moving(move)][To(move)], bonus);
+    AddHistoryHeuristic(&(*(ss - 1)->ch)[moving][to], bonus);
   if ((ss - 2)->move)
-    AddHistoryHeuristic(&(*(ss - 2)->ch)[Moving(move)][To(move)], bonus);
+    AddHistoryHeuristic(&(*(ss - 2)->ch)[moving][to], bonus);
   if ((ss - 4)->move)
-    AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
+    AddHistoryHeuristic(&(*(ss - 4)->ch)[moving][to], bonus);
 }
 
 void UpdateHistories(SearchStack* ss,
@@ -63,17 +63,24 @@ void UpdateHistories(SearchStack* ss,
 
   if (!IsCap(bestMove)) {
     AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
-    UpdateCH(ss, bestMove, inc);
 
-    if (Promo(bestMove) < WHITE_QUEEN) {
+    int to     = To(bestMove);
+    int moving = board->squares[From(bestMove)];
+    UpdateCH(ss, moving, to, inc);
+
+    if (!(IsPromo(bestMove) && PromoPT(bestMove) == QUEEN)) {
       AddKillerMove(ss, bestMove);
 
-      if ((ss - 1)->move)
-        AddCounterMove(thread, bestMove, (ss - 1)->move);
+      if ((ss - 1)->move) {
+        int counterTo     = To((ss - 1)->move);
+        int counterMoving = IsPromo((ss - 1)->move) ? Piece(PAWN, !stm) : board->squares[counterTo];
+
+        AddCounterMove(thread, bestMove, counterMoving, counterTo);
+      }
     }
 
   } else {
-    int piece    = Moving(bestMove);
+    int piece    = board->squares[From(bestMove)];
     int to       = To(bestMove);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
@@ -88,7 +95,10 @@ void UpdateHistories(SearchStack* ss,
         continue;
 
       AddHistoryHeuristic(&HH(stm, m, threats), -inc);
-      UpdateCH(ss, m, -inc);
+
+      int to     = To(m);
+      int moving = board->squares[From(m)];
+      UpdateCH(ss, moving, to, -inc);
     }
   }
 
@@ -98,7 +108,7 @@ void UpdateHistories(SearchStack* ss,
     if (m == bestMove)
       continue;
 
-    int piece    = Moving(m);
+    int piece    = board->squares[From(m)];
     int to       = To(m);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 

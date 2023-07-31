@@ -510,7 +510,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         TTPrefetch(KeyAfter(board, move));
         ss->move = move;
-        ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        ss->ch   = &thread->ch[IsCap(move)][board->squares[From(move)]][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -556,7 +556,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
-      if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
+      if (!IsCap(move) && !(IsPromo(move) && PromoPT(move) == QUEEN)) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
         if (!killerOrCounter && lmrDepth < 6 && history < -4096 * (depth - 1)) {
@@ -629,7 +629,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->ch   = &thread->ch[IsCap(move)][board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
     // apply extensions
@@ -841,7 +841,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->ch   = &thread->ch[IsCap(move)][board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
     score = -Quiesce(-beta, -alpha, thread, ss + 1);

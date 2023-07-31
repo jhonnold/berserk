@@ -36,7 +36,7 @@ INLINE uint64_t KeyAfter(Board* board, const Move move) {
 
   const int from   = From(move);
   const int to     = To(move);
-  const int moving = Moving(move);
+  const int moving = board->squares[from];
 
   uint64_t newKey = board->zobrist ^ ZOBRIST_SIDE_KEY ^ ZOBRIST_PIECES[moving][from] ^ ZOBRIST_PIECES[moving][to];
 
