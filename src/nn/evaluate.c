@@ -25,8 +25,10 @@
 #include "../board.h"
 #include "../move.h"
 #include "../movegen.h"
+#include "../thread.h"
 #include "../util.h"
 #include "accumulator.h"
+
 
 #define INCBIN_PREFIX
 #define INCBIN_STYLE INCBIN_STYLE_CAMEL
@@ -382,6 +384,9 @@ int LoadNetwork(char* path) {
   }
 
   CopyData(data);
+
+  for (int i = 0; i < Threads.count; i++)
+    ResetRefreshTable(Threads.threads[i]->refreshTable);
 
   fclose(fin);
   free(data);
