@@ -620,11 +620,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         else if (ttScore <= alpha)
           extension = -1;
       }
-
-      // re-capture extension - looks for a follow up capture on the same square
-      // as the previous capture
-      else if (isPV && IsRecapture(ss, move))
-        extension = 1;
     }
 
     TTPrefetch(KeyAfter(board, move));
