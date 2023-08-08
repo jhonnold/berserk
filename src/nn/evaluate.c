@@ -52,20 +52,26 @@ float OUTPUT_BIAS;
 INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const __m256i zero  = _mm256_setzero_si256();
+  const __m256i max   = _mm256_set1_epi16(127);
   const int views[2]  = {stm, !stm};
 
   for (int v = 0; v < 2; v++) {
-    const __m256i* in = (__m256i*) acc->values[views[v]];
-    __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
+    const __m256i* in0 = (__m256i*) &acc->values[views[v]][0];
+    const __m256i* in1 = (__m256i*) &acc->values[views[v]][N_HIDDEN / 2];
+    __m256i* out       = (__m256i*) &outputs[N_HIDDEN / 2 * v];
 
-    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 6);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 6);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
+    for (size_t i = 0; i < CHUNKS / 4; i++) {
+      __m256i r0 = _mm256_min_epi16(_mm256_max_epi16(in0[2 * i + 0], zero), max);
+      __m256i s0 = _mm256_min_epi16(_mm256_max_epi16(in1[2 * i + 0], zero), max);
 
-      out[i]     = _mm256_packus_epi16(s0, s1);
-      out[i + 1] = _mm256_packus_epi16(s2, s3);
+      __m256i r1 = _mm256_min_epi16(_mm256_max_epi16(in0[2 * i + 1], zero), max);
+      __m256i s1 = _mm256_min_epi16(_mm256_max_epi16(in1[2 * i + 1], zero), max);
+
+      __m256i p0 = _mm256_srli_epi16(_mm256_mullo_epi16(s0, r0), 7);
+      __m256i p1 = _mm256_srli_epi16(_mm256_mullo_epi16(s1, r1), 7);
+
+      out[i]     = _mm256_packs_epi16(p0, p1);
     }
   }
 }
@@ -299,7 +305,7 @@ int Propagate(Accumulator* accumulator, const int stm) {
   InputReLU(x0, accumulator, stm);
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
-  return L3Transform(x2) / 32.0;
+  return L3Transform(x2) / (127 * 32);
 }
 
 int Predict(Board* board) {
