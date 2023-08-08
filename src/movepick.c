@@ -101,9 +101,15 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
         return picker->killer1;
       // fallthrough
     case PLAY_KILLER_2:
-      picker->phase = GEN_QUIET_MOVES;
+      picker->phase = PLAY_COUNTER;
       if (!skipQuiets && picker->killer2 != picker->hashMove && IsPseudoLegal(picker->killer2, board))
         return picker->killer2;
+      // fallthrough
+    case PLAY_COUNTER:
+      picker->phase = GEN_QUIET_MOVES;
+      if (!skipQuiets && picker->counter != picker->hashMove && picker->counter != picker->killer1 &&
+          picker->counter != picker->killer2 && IsPseudoLegal(picker->counter, board))
+        return picker->counter;
       // fallthrough
     case GEN_QUIET_MOVES:
       if (!skipQuiets) {
@@ -121,7 +127,8 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
         if (move == picker->hashMove || //
             move == picker->killer1 ||  //
-            move == picker->killer2)
+            move == picker->killer2 ||  //
+            move == picker->counter)
           return NextMove(picker, board, skipQuiets);
         else
           return move;
@@ -233,6 +240,7 @@ char* PhaseName(MovePicker* picker) {
     case PLAY_GOOD_NOISY: return "PLAY_GOOD_NOISY";
     case PLAY_KILLER_1: return "PLAY_KILLER_1";
     case PLAY_KILLER_2: return "PLAY_KILLER_2";
+    case PLAY_COUNTER: return "PLAY_COUNTER";
     case PLAY_QUIETS: return "PLAY_QUIETS";
     case PLAY_BAD_NOISY: return "PLAY_BAD_NOISY";
     default: return "UNKNOWN";
