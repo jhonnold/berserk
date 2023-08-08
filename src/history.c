@@ -30,10 +30,6 @@ INLINE void AddKillerMove(SearchStack* ss, Move move) {
   }
 }
 
-INLINE void AddCounterMove(ThreadData* thread, Move move, int moving, int to) {
-  thread->counters[moving][to] = move;
-}
-
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
   *entry += inc - *entry * abs(inc) / 16384;
 }
@@ -68,16 +64,8 @@ void UpdateHistories(SearchStack* ss,
     int moving = board->squares[From(bestMove)];
     UpdateCH(ss, moving, to, inc);
 
-    if (!(IsPromo(bestMove) && PromoPT(bestMove) == QUEEN)) {
+    if (!(IsPromo(bestMove) && PromoPT(bestMove) == QUEEN))
       AddKillerMove(ss, bestMove);
-
-      if ((ss - 1)->move) {
-        int counterTo     = To((ss - 1)->move);
-        int counterMoving = IsPromo((ss - 1)->move) ? Piece(PAWN, !stm) : board->squares[counterTo];
-
-        AddCounterMove(thread, bestMove, counterMoving, counterTo);
-      }
-    }
 
   } else {
     int piece    = board->squares[From(bestMove)];

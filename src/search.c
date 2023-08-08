@@ -549,7 +549,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     legalMoves++;
 
     int extension       = 0;
-    int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
+    int isKiller = move == mp.killer1 || move == mp.killer2;
     int history         = GetHistory(ss, thread, move);
 
     if (bestScore > -TB_WIN_BOUND) {
@@ -559,7 +559,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && !(IsPromo(move) && PromoPT(move) == QUEEN)) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
-        if (!killerOrCounter && lmrDepth < 6 && history < -4096 * (depth - 1)) {
+        if (!isKiller && lmrDepth < 6 && history < -4096 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
@@ -650,7 +650,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R++;
 
       // reduce these special quiets less
-      if (killerOrCounter)
+      if (isKiller)
         R -= 2;
 
       // less likely a non-capture is best
@@ -966,7 +966,6 @@ int MoveSearchable(ThreadData* thread, Move move) {
 }
 
 void SearchClearThread(ThreadData* thread) {
-  memset(&thread->counters, 0, sizeof(thread->counters));
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));

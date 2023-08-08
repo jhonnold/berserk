@@ -180,7 +180,6 @@ struct ThreadData {
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
 
-  Move counters[12][64];         // counter move butterfly table
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][7];       // capture history
@@ -209,7 +208,6 @@ enum {
   PLAY_GOOD_NOISY,
   PLAY_KILLER_1,
   PLAY_KILLER_2,
-  PLAY_COUNTER,
   GEN_QUIET_MOVES,
   PLAY_QUIETS,
   PLAY_BAD_NOISY,
@@ -237,7 +235,7 @@ typedef struct {
 typedef struct {
   ThreadData* thread;
   SearchStack* ss;
-  Move hashMove, killer1, killer2, counter;
+  Move hashMove, killer1, killer2;
   int seeCutoff, phase;
 
   ScoredMove *current, *end, *endBad;
