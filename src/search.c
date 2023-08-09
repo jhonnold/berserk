@@ -296,6 +296,23 @@ void Search(ThreadData* thread) {
   }
 }
 
+extern int a0;
+extern int a1;
+extern int ad;
+
+extern int b0;
+extern int bd;
+
+extern int cd;
+extern int c0;
+extern int c1;
+extern int c2;
+extern int c3;
+
+extern int dd;
+extern int d0;
+extern int d1;
+
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
   Board* board = &thread->board;
 
@@ -460,12 +477,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 9 && !ss->skip && eval < WINNING_ENDGAME &&
-        eval - 75 * depth + 100 * (improving && !oppThreatPcs) >= beta && eval >= beta)
+    if (depth <= ad && !ss->skip && eval < WINNING_ENDGAME &&
+        eval - a0 * depth + a1 * (improving && !oppThreatPcs) >= beta && eval >= beta)
       return eval;
 
     // Razoring
-    if (depth <= 5 && eval + 200 * depth <= alpha) {
+    if (depth <= bd && eval + b0 * depth <= alpha) {
       score = Quiesce(alpha, beta, thread, ss);
       if (score <= alpha)
         return score;
@@ -475,10 +492,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
+    if (depth >= cd && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + depth / 6 + Min((eval - beta) / 256, 3) + !oppThreatPcs;
+      int R = c0 + c1 * depth / 360 + Min(c2 * (eval - beta) / 2048, c3) + !oppThreatPcs;
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
@@ -498,8 +515,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     Threats(&ss->ownThreat, board, board->stm);
-    int probBeta = beta + 110 - 30 * improving;
-    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
+    int probBeta = beta + d0 - d1 * improving;
+    if (depth > dd && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {

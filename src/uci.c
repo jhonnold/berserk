@@ -48,6 +48,23 @@ int CHESS_960      = 0;
 int CONTEMPT       = 0;
 int SHOW_WDL       = 1;
 
+int a0 = 75;
+int a1 = 100;
+int ad = 9;
+
+int b0 = 200;
+int bd = 5;
+
+int cd = 3;
+int c0 = 4;
+int c1 = 60;
+int c2 = 8;
+int c3 = 3;
+
+int dd = 4;
+int d0 = 110;
+int d1 = 30;
+
 SearchParams Limits;
 
 // All WDL work below is thanks to the work of vondele@ and
@@ -263,6 +280,19 @@ void PrintUCIOptions() {
   printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
+  printf("option name a0 type spin default 75\n");
+  printf("option name a1 type spin default 100\n");
+  printf("option name ad type spin default 9\n");
+  printf("option name b0 type spin default 200\n");
+  printf("option name bd type spin default 5\n");
+  printf("option name cd type spin default 3\n");
+  printf("option name c0 type spin default 4\n");
+  printf("option name c1 type spin default 60\n");
+  printf("option name c2 type spin default 8\n");
+  printf("option name c3 type spin default 3\n");
+  printf("option name dd type spin default 4\n");
+  printf("option name d0 type spin default 110\n");
+  printf("option name d1 type spin default 30\n");
   printf("uciok\n");
 }
 
@@ -483,6 +513,32 @@ void UCILoop() {
 
       if (success)
         printf("info string set EvalFile to value %s\n", path);
+    } else if (!strncmp(in, "setoption name a0 value ", 24)) {
+      a0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name a1 value ", 24)) {
+      a1 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name ad value ", 24)) {
+      ad = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name b0 value ", 24)) {
+      b0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name bd value ", 24)) {
+      bd = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name cd value ", 24)) {
+      cd = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name c0 value ", 24)) {
+      c0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name c1 value ", 24)) {
+      c1 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name c2 value ", 24)) {
+      c2 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name c3 value ", 24)) {
+      c3 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name dd value ", 24)) {
+      dd = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name d0 value ", 24)) {
+      d0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name d1 value ", 24)) {
+      d1 = GetOptionIntValue(in);
     } else
       printf("Unknown command: %s \n", in);
   }
