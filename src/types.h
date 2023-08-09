@@ -73,6 +73,7 @@ typedef struct {
   uint64_t zobrist;
   BitBoard checkers;
   BitBoard pinned;
+  BitBoard checkSqs[5];
 } BoardHistory;
 
 typedef struct {
@@ -91,6 +92,7 @@ typedef struct {
   BitBoard pinned;       // pinned pieces
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
+  BitBoard checkSqs[5];  // Squares that give check
 
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both

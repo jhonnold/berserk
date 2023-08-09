@@ -754,6 +754,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
   int score     = -CHECKMATE;
   int bestScore = -CHECKMATE + ss->ply;
+  int futility  = bestScore;
   int isPV      = beta - alpha != 1;
   int ttHit     = 0;
   int ttPv      = 0;
@@ -817,6 +818,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
       alpha = eval;
 
     bestScore = eval;
+    futility  = bestScore + 100;
   }
 
   if (!inCheck)
@@ -835,9 +837,17 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     legalMoves++;
 
-    // if we're in check, final condition in SEE always 0
-    if (bestScore > -TB_WIN_BOUND && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
-      continue;
+    if (bestScore > -TB_WIN_BOUND) {
+      if (!inCheck && To(move) != To((ss - 1)->move) && !Promo(move) && !GivesCheck(move, board)) {
+        if (futility <= alpha && !SEE(board, move, 1)) {
+          bestScore = Max(bestScore, futility);
+          continue;
+        }
+      }
+
+      if (!SEE(board, move, 0))
+        continue;
+    }
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;

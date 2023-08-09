@@ -272,6 +272,13 @@ inline void SetSpecialPieces(Board* board) {
     else if (BitCount(blockers) == 1)
       board->pinned |= (blockers & OccBB(stm));
   }
+
+  int enemyKingSq         = LSB(PieceBB(KING, xstm));
+  board->checkSqs[PAWN]   = GetPawnAttacks(enemyKingSq, xstm);
+  board->checkSqs[KNIGHT] = GetKnightAttacks(enemyKingSq);
+  board->checkSqs[BISHOP] = GetBishopAttacks(enemyKingSq, OccBB(BOTH));
+  board->checkSqs[ROOK]   = GetRookAttacks(enemyKingSq, OccBB(BOTH));
+  board->checkSqs[QUEEN]  = (board->checkSqs[BISHOP] | board->checkSqs[ROOK]);
 }
 
 void MakeMove(Move move, Board* board) {
@@ -293,6 +300,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->history[board->histPly].zobrist  = board->zobrist;
   board->history[board->histPly].checkers = board->checkers;
   board->history[board->histPly].pinned   = board->pinned;
+  for (int i = PAWN; i <= QUEEN; i++)
+    board->history[board->histPly].checkSqs[i] = board->checkSqs[i];
 
   board->fmr++;
   board->nullply++;
@@ -410,6 +419,8 @@ void UndoMove(Move move, Board* board) {
   board->zobrist  = board->history[board->histPly].zobrist;
   board->checkers = board->history[board->histPly].checkers;
   board->pinned   = board->history[board->histPly].pinned;
+  for (int i = PAWN; i <= QUEEN; i++)
+    board->checkSqs[i] = board->history[board->histPly].checkSqs[i];
 
   if (Promo(move)) {
     int promoted = Promo(move);
@@ -463,6 +474,8 @@ void MakeNullMove(Board* board) {
   board->history[board->histPly].zobrist  = board->zobrist;
   board->history[board->histPly].checkers = board->checkers;
   board->history[board->histPly].pinned   = board->pinned;
+  for (int i = PAWN; i <= QUEEN; i++)
+    board->history[board->histPly].checkSqs[i] = board->checkSqs[i];
 
   board->fmr++;
   board->nullply = 0;
@@ -493,6 +506,8 @@ void UndoNullMove(Board* board) {
   board->zobrist  = board->history[board->histPly].zobrist;
   board->checkers = board->history[board->histPly].checkers;
   board->pinned   = board->history[board->histPly].pinned;
+  for (int i = PAWN; i <= QUEEN; i++)
+    board->checkSqs[i] = board->history[board->histPly].checkSqs[i];
 }
 
 inline int IsDraw(Board* board, int ply) {
@@ -697,6 +712,30 @@ int IsLegal(Move move, Board* board) {
     return !(AttacksToSquare(board, to, OccBB(BOTH) ^ PieceBB(KING, board->stm)) & OccBB(board->xstm));
 
   return !GetBit(board->pinned, from) || GetBit(PinnedMoves(from, kingSq), to);
+}
+
+int GivesCheck(Move move, Board* board) {
+  const int stm  = board->stm;
+  const int xstm = board->xstm;
+  const int from = From(move);
+  const int to   = To(move);
+  const int pc   = Moving(move);
+  const int pt   = PieceType(pc);
+
+  if (pt != KING) {
+    if (GetBit(board->checkSqs[pt], to))
+      return 1;
+
+    else if (Promo(move) &&
+             (GetPieceAttacks(to, OccBB(BOTH) ^ Bit(from), PieceType(Promo(move))) & PieceBB(KING, xstm)))
+      return 1;
+  }
+
+  BitBoard occ =
+    IsEP(move) ? ((OccBB(BOTH) ^ Bit(from) ^ Bit(to - PawnDir(stm))) | Bit(to)) : ((OccBB(BOTH) ^ Bit(from)) | Bit(to));
+
+  return !!(IsCas(move) ? (GetRookAttacks(CASTLE_ROOK_DEST[to], occ) & PieceBB(KING, xstm)) :
+                          (AttacksToSquare(board, LSB(PieceBB(KING, xstm)), occ) & OccBB(stm)));
 }
 
 uint64_t cuckoo[8192];
