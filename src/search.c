@@ -460,12 +460,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 10 && !ss->skip && eval < WINNING_ENDGAME &&
-        eval - 65 * depth + 106 * (improving && !oppThreatPcs) >= beta && eval >= beta)
+    if (depth <= 8 && !ss->skip && eval < WINNING_ENDGAME &&
+        eval - 60 * depth + 119 * (improving && !oppThreatPcs) >= beta && eval >= beta)
       return eval;
 
     // Razoring
-    if (depth <= 3 && eval + 198 * depth <= alpha) {
+    if (depth <= 3 && eval + 204 * depth <= alpha) {
       score = Quiesce(alpha, beta, thread, ss);
       if (score <= alpha)
         return score;
@@ -475,10 +475,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
+    if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + 2 * depth / 9 + Min(7 * (eval - beta) / 1024, 3) + !oppThreatPcs;
+      int R = 4 + 216 * depth / 1024 + Min(6 * (eval - beta) / 1024, 4) + !oppThreatPcs;
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
@@ -498,7 +498,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     Threats(&ss->ownThreat, board, board->stm);
-    int probBeta = beta + 112 - 29 * improving;
+    int probBeta = beta + 116 - 29 * improving;
     if (depth > 5 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
