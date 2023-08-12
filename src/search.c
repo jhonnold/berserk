@@ -461,11 +461,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 9 && !ss->skip && eval < WINNING_ENDGAME &&
-        eval - 67 * depth + 124 * (improving && !oppThreatPcs) >= beta && eval >= beta)
+        eval - 68 * depth + 120 * (improving && !oppThreatPcs) >= beta && eval >= beta)
       return eval;
 
     // Razoring
-    if (depth <= 3 && eval + 178 * depth <= alpha) {
+    if (depth <= 3 && eval + 137 * depth <= alpha) {
       score = Quiesce(alpha, beta, thread, ss);
       if (score <= alpha)
         return score;
@@ -475,10 +475,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
+    if (depth >= 5 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 5 + 228 * depth / 1024 + Min(2 * (eval - beta) / 1024, 5) + !oppThreatPcs;
+      int R = 4 + 81 * depth / 360 + Min(5 * (eval - beta) / 2048, 7) + !oppThreatPcs;
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
@@ -498,8 +498,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     Threats(&ss->ownThreat, board, board->stm);
-    int probBeta = beta + 107 - 37 * improving;
-    if (depth > 5 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
+    int probBeta = beta + 102 - 38 * improving;
+    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
