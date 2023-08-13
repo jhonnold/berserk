@@ -315,6 +315,20 @@ void PrintUCIOptions() {
   printf("option name dd type spin default 4\n");
   printf("option name d0 type spin default 110\n");
   printf("option name d1 type spin default 30\n");
+  printf("option name ed type spin default 30\n");
+  printf("option name e0 type spin default 30\n");
+  printf("option name fd type spin default 30\n");
+  printf("option name f0 type spin default 30\n");
+  printf("option name f1 type spin default 30\n");
+  printf("option name f2 type spin default 30\n");
+  printf("option name g0 type spin default 30\n");
+  printf("option name h0 type spin default 30\n");
+  printf("option name id type spin default 30\n");
+  printf("option name i0 type spin default 30\n");
+  printf("option name i1 type spin default 30\n");
+  printf("option name j0 type spin default 30\n");
+  printf("option name k0 type spin default 30\n");
+  printf("option name l0 type spin default 30\n");
   printf("uciok\n");
 }
 
