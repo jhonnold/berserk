@@ -18,7 +18,10 @@
 
 #include <inttypes.h>
 #include <math.h>
+#ifndef _WIN32
 #include <pthread.h>
+#endif
+#include <setjmp.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -109,6 +112,7 @@ void MainSearch() {
     ThreadWake(Threads.threads[i], THREAD_SEARCH);
   Search(mainThread);
 
+#ifndef _WIN32
   pthread_mutex_lock(&Threads.lock);
   if (!Threads.stop && (Threads.ponder || Limits.infinite)) {
     Threads.sleeping = 1;
@@ -117,6 +121,16 @@ void MainSearch() {
   } else {
     pthread_mutex_unlock(&Threads.lock);
   }
+#else
+  WaitForSingleObject(Threads.lock, INFINITE);
+  if (!Threads.stop && (Threads.ponder || Limits.infinite)) {
+    Threads.sleeping = 1;
+    ReleaseMutex(Threads.lock);
+    ThreadWait(mainThread, &Threads.stop);
+  } else {
+    ReleaseMutex(Threads.lock);
+  }
+#endif
 
   Threads.stop = 1;
 
@@ -174,7 +188,7 @@ void Search(ThreadData* thread) {
     (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
 
   while (++thread->depth < MAX_SEARCH_PLY) {
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32) && !defined(__clang__)
     if (_setjmp(thread->exit, NULL)) {
 #else
     if (setjmp(thread->exit)) {

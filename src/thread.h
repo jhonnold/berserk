@@ -17,7 +17,9 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#ifndef _WIN32
 #include <pthread.h>
+#endif
 #include <stdatomic.h>
 
 #include "types.h"
@@ -26,8 +28,12 @@ typedef struct {
   ThreadData* threads[256];
   int count;
 
+#ifndef _WIN32
   pthread_mutex_t mutex, lock;
   pthread_cond_t sleep;
+#else
+  HANDLE event, lock;
+#endif
 
   uint8_t init, searching, sleeping, stopOnPonderHit;
   atomic_uchar ponder, stop;
@@ -39,7 +45,11 @@ void ThreadWaitUntilSleep(ThreadData* thread);
 void ThreadWait(ThreadData* thread, atomic_uchar* cond);
 void ThreadWake(ThreadData* thread, int action);
 void ThreadIdle(ThreadData* thread);
+#ifndef _WIN32
 void* ThreadInit(void* arg);
+#else
+DWORD WINAPI ThreadInit(void* arg);
+#endif
 void ThreadCreate(int i);
 void ThreadDestroy(ThreadData* thread);
 void ThreadsSetNumber(int n);

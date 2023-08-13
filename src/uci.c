@@ -18,7 +18,9 @@
 
 #include <limits.h>
 #include <math.h>
+#ifndef _WIN32
 #include <pthread.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -286,6 +288,11 @@ void UCILoop() {
   setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
+#ifndef _WIN32
+  pthread_mutex_init(&Threads.lock, NULL);
+#else
+  Threads.lock = CreateMutex(NULL, FALSE, NULL);
+#endif
   Threads.searching = Threads.sleeping = 0;
 
   while (ReadLine(in)) {
@@ -305,35 +312,62 @@ void UCILoop() {
     } else if (!strncmp(in, "stop", 4)) {
       if (Threads.searching) {
         Threads.stop = 1;
+#ifndef _WIN32
         pthread_mutex_lock(&Threads.lock);
         if (Threads.sleeping)
-          ThreadWake(Threads.threads[0], THREAD_RESUME);
+          ThreadWake(Threads.threads[0], THREAD_RES);
         Threads.sleeping = 0;
         pthread_mutex_unlock(&Threads.lock);
+#else
+        WaitForSingleObject(Threads.lock, INFINITE);
+        if (Threads.sleeping)
+          ThreadWake(Threads.threads[0], THREAD_RES);
+        Threads.sleeping = 0;
+        ReleaseMutex(Threads.lock);
+#endif
       }
     } else if (!strncmp(in, "quit", 4)) {
       if (Threads.searching) {
         Threads.stop = 1;
+#ifndef _WIN32
         pthread_mutex_lock(&Threads.lock);
         if (Threads.sleeping)
-          ThreadWake(Threads.threads[0], THREAD_RESUME);
+          ThreadWake(Threads.threads[0], THREAD_RES);
         Threads.sleeping = 0;
         pthread_mutex_unlock(&Threads.lock);
+#else
+        WaitForSingleObject(Threads.lock, INFINITE);
+        if (Threads.sleeping)
+          ThreadWake(Threads.threads[0], THREAD_RES);
+        Threads.sleeping = 0;
+        ReleaseMutex(Threads.lock);
+#endif
       }
-      break;
+
+      break; // only difference from "stop"
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
     } else if (!strncmp(in, "ponderhit", 9)) {
       Threads.ponder = 0;
       if (Threads.stopOnPonderHit)
         Threads.stop = 1;
+#ifndef _WIN32
       pthread_mutex_lock(&Threads.lock);
       if (Threads.sleeping) {
         Threads.stop = 1;
-        ThreadWake(Threads.threads[0], THREAD_RESUME);
+        ThreadWake(Threads.threads[0], THREAD_RES);
         Threads.sleeping = 0;
       }
       pthread_mutex_unlock(&Threads.lock);
+#else
+      WaitForSingleObject(Threads.lock, INFINITE);
+      if (Threads.sleeping) {
+        Threads.stop = 1;
+        ThreadWake(Threads.threads[0], THREAD_RES);
+        Threads.sleeping = 0;
+      }
+      ReleaseMutex(Threads.lock);
+#endif
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "cycle", 5)) {
@@ -490,7 +524,12 @@ void UCILoop() {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
 
+#ifndef _WIN32
   pthread_mutex_destroy(&Threads.lock);
+#else
+  CloseHandle(Threads.lock);
+#endif
+
   ThreadsExit();
 }
 

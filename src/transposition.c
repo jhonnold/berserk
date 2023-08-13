@@ -16,7 +16,6 @@
 
 #include <inttypes.h>
 #include <math.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +89,7 @@ inline void TTUpdate() {
 }
 
 inline uint64_t TTIdx(uint64_t hash) {
-  return ((unsigned __int128) hash * (unsigned __int128) TT.count) >> 64;
+  return mulHi64(hash, TT.count);
 }
 
 inline void TTPrefetch(uint64_t hash) {

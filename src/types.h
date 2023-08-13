@@ -19,7 +19,11 @@
 
 #include <inttypes.h>
 #include <limits.h>
+#ifndef _WIN32
 #include <pthread.h>
+#else
+#include <windows.h>
+#endif
 #include <setjmp.h>
 
 #define MAX_SEARCH_PLY 251 // effective max depth 250
@@ -160,7 +164,7 @@ enum {
   THREAD_TT_CLEAR,
   THREAD_SEARCH_CLEAR,
   THREAD_EXIT,
-  THREAD_RESUME
+  THREAD_RES
 };
 
 typedef struct ThreadData ThreadData;
@@ -185,9 +189,14 @@ struct ThreadData {
   int16_t caph[12][64][7];       // capture history
 
   int action, calls;
+#ifndef _WIN32
   pthread_t nativeThread;
   pthread_mutex_t mutex;
   pthread_cond_t sleep;
+#else
+  HANDLE nativeThread;
+  HANDLE start, stop;
+#endif
   jmp_buf exit;
 };
 

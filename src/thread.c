@@ -16,7 +16,9 @@
 
 #include "thread.h"
 
+#ifndef _WIN32
 #include <pthread.h>
+#endif
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,12 +39,16 @@ ThreadPool Threads;
 
 // Block until requested thread is sleeping
 void ThreadWaitUntilSleep(ThreadData* thread) {
+#ifndef _WIN32
   pthread_mutex_lock(&thread->mutex);
 
   while (thread->action != THREAD_SLEEP)
     pthread_cond_wait(&thread->sleep, &thread->mutex);
 
   pthread_mutex_unlock(&thread->mutex);
+#else
+  WaitForSingleObject(thread->stop, INFINITE);
+#endif
 
   if (thread->idx == 0)
     Threads.searching = 0;
@@ -50,28 +56,40 @@ void ThreadWaitUntilSleep(ThreadData* thread) {
 
 // Block thread until on condition
 void ThreadWait(ThreadData* thread, atomic_uchar* cond) {
+#ifndef _WIN32
   pthread_mutex_lock(&thread->mutex);
 
   while (!atomic_load(cond))
     pthread_cond_wait(&thread->sleep, &thread->mutex);
 
   pthread_mutex_unlock(&thread->mutex);
+#else
+  (void) cond;
+  WaitForSingleObject(thread->start, INFINITE);
+#endif
 }
 
 // Wake a thread up with an action
 void ThreadWake(ThreadData* thread, int action) {
+#ifndef _WIN32
   pthread_mutex_lock(&thread->mutex);
+#endif
 
-  if (action != THREAD_RESUME)
+  if (action != THREAD_RES)
     thread->action = action;
 
+#ifndef _WIN32
   pthread_cond_signal(&thread->sleep);
   pthread_mutex_unlock(&thread->mutex);
+#else
+  SetEvent(thread->start);
+#endif
 }
 
 // Idle loop that wakes into an action
 void ThreadIdle(ThreadData* thread) {
   while (1) {
+#ifndef _WIN32
     pthread_mutex_lock(&thread->mutex);
 
     while (thread->action == THREAD_SLEEP) {
@@ -80,6 +98,9 @@ void ThreadIdle(ThreadData* thread) {
     }
 
     pthread_mutex_unlock(&thread->mutex);
+#else
+    WaitForSingleObject(thread->start, INFINITE);
+#endif
 
     if (thread->action == THREAD_EXIT)
       break;
@@ -95,11 +116,20 @@ void ThreadIdle(ThreadData* thread) {
     }
 
     thread->action = THREAD_SLEEP;
+
+#ifdef _WIN32
+    SetEvent(thread->stop);
+#endif
   }
 }
 
 // Build a thread
+#ifndef _WIN32
 void* ThreadInit(void* arg) {
+#else
+DWORD WINAPI ThreadInit(void* arg) {
+#endif
+
   int i = (intptr_t) arg;
 
   ThreadData* thread = calloc(1, sizeof(ThreadData));
@@ -114,6 +144,7 @@ void* ThreadInit(void* arg) {
   thread->board.accumulators = thread->accumulators;
   thread->board.refreshTable = thread->refreshTable;
 
+#ifndef _WIN32
   pthread_mutex_init(&thread->mutex, NULL);
   pthread_cond_init(&thread->sleep, NULL);
 
@@ -123,14 +154,23 @@ void* ThreadInit(void* arg) {
   Threads.init = 0;
   pthread_cond_signal(&Threads.sleep);
   pthread_mutex_unlock(&Threads.mutex);
+#else
+  thread->start = CreateEvent(NULL, FALSE, FALSE, NULL);
+  thread->stop = CreateEvent(NULL, FALSE, FALSE, NULL);
+
+  Threads.threads[i] = thread;
+
+  SetEvent(Threads.event);
+#endif
 
   ThreadIdle(thread);
 
-  return NULL;
+  return 0;
 }
 
 // Create a thread with idx i
 void ThreadCreate(int i) {
+#ifndef _WIN32
   pthread_t thread;
 
   Threads.init = 1;
@@ -140,12 +180,17 @@ void ThreadCreate(int i) {
   while (Threads.init)
     pthread_cond_wait(&Threads.sleep, &Threads.mutex);
   pthread_mutex_unlock(&Threads.mutex);
+#else
+  HANDLE thread = CreateThread(NULL, 0, ThreadInit, (void*) (intptr_t) i, 0, NULL);
+  WaitForSingleObject(Threads.event, INFINITE);
+#endif
 
   Threads.threads[i]->nativeThread = thread;
 }
 
 // Teardown and free a thread
 void ThreadDestroy(ThreadData* thread) {
+#ifndef _WIN32
   pthread_mutex_lock(&thread->mutex);
   thread->action = THREAD_EXIT;
   pthread_cond_signal(&thread->sleep);
@@ -154,6 +199,13 @@ void ThreadDestroy(ThreadData* thread) {
   pthread_join(thread->nativeThread, NULL);
   pthread_cond_destroy(&thread->sleep);
   pthread_mutex_destroy(&thread->mutex);
+#else
+  thread->action = THREAD_EXIT;
+  SetEvent(thread->start);
+  WaitForSingleObject(thread->nativeThread, INFINITE);
+  CloseHandle(thread->start);
+  CloseHandle(thread->stop);
+#endif
 
   AlignedFree(thread->accumulators);
   AlignedFree(thread->refreshTable);
@@ -176,14 +228,22 @@ void ThreadsSetNumber(int n) {
 void ThreadsExit() {
   ThreadsSetNumber(0);
 
+#ifndef _WIN32
   pthread_cond_destroy(&Threads.sleep);
   pthread_mutex_destroy(&Threads.mutex);
+#else
+  CloseHandle(Threads.event);
+#endif
 }
 
 // Start
 void ThreadsInit() {
+#ifndef _WIN32
   pthread_mutex_init(&Threads.mutex, NULL);
   pthread_cond_init(&Threads.sleep, NULL);
+#else
+  Threads.event = CreateEvent(NULL, FALSE, FALSE, NULL);
+#endif
 
   Threads.count = 1;
   ThreadCreate(0);

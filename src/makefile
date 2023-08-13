@@ -11,12 +11,17 @@ DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
 # Flags
 STD    = -std=gnu11
-LIBS   = -pthread -lm
-WARN   = -Wall -Wextra -Wshadow -Werror
+LIBS   = -lm
+WARN   = -Wall -Wextra -Wshadow
 
 FLAGS  = $(STD) $(WARN) -O3 -flto -g $(DEFS)
 CFLAGS = $(FLAGS) -march=native
 RFLAGS = $(FLAGS) -static
+
+# PThread
+ifneq ($(OS), Windows_NT)
+    LIBS += -pthread
+endif
 
 # PGO
 ifneq ($(findstring gcc, $(CC)),)
