@@ -48,45 +48,6 @@ int CHESS_960      = 0;
 int CONTEMPT       = 0;
 int SHOW_WDL       = 1;
 
-int ad = 9;
-int a0 = 75;
-int a1 = 100;
-
-int bd = 5;
-int b0 = 200;
-
-int cd = 3;
-int c0 = 4;
-int c1 = 60;
-int c2 = 8;
-int c3 = 3;
-
-int dd = 4;
-int d0 = 110;
-int d1 = 30;
-
-int ed = 6;
-int e0 = 4096;
-
-int fd = 9;
-int f0 = 100;
-int f1 = 50;
-int f2 = 16;
-
-int g0 = 15;
-
-int h0 = 90;
-
-int id = 7;
-int i0 = 8;
-int i1 = 20;
-
-int j0_ = 100;
-
-int k0 = 50;
-
-int l0 = 8;
-
 SearchParams Limits;
 
 // All WDL work below is thanks to the work of vondele@ and
