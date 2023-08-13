@@ -48,12 +48,12 @@ int CHESS_960      = 0;
 int CONTEMPT       = 0;
 int SHOW_WDL       = 1;
 
+int ad = 9;
 int a0 = 75;
 int a1 = 100;
-int ad = 9;
 
-int b0 = 200;
 int bd = 5;
+int b0 = 200;
 
 int cd = 3;
 int c0 = 4;
@@ -64,6 +64,28 @@ int c3 = 3;
 int dd = 4;
 int d0 = 110;
 int d1 = 30;
+
+int ed = 6;
+int e0 = 4096;
+
+int fd = 9;
+int f0 = 100;
+int f1 = 50;
+int f2 = 16;
+
+int g0 = 15;
+
+int h0 = 90;
+
+int id = 7;
+int i0 = 8;
+int i1 = 20;
+
+int j0_ = 100;
+
+int k0 = 50;
+
+int l0 = 8;
 
 SearchParams Limits;
 
@@ -539,6 +561,34 @@ void UCILoop() {
       d0 = GetOptionIntValue(in);
     } else if (!strncmp(in, "setoption name d1 value ", 24)) {
       d1 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name ed value ", 24)) {
+      ed = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name e0 value ", 24)) {
+      e0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name fd value ", 24)) {
+      fd = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name f0 value ", 24)) {
+      f0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name f1 value ", 24)) {
+      f1 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name f2 value ", 24)) {
+      f2 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name g0 value ", 24)) {
+      g0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name h0 value ", 24)) {
+      h0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name id value ", 24)) {
+      id = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name i0 value ", 24)) {
+      i0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name i1 value ", 24)) {
+      i1 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name j0 value ", 24)) {
+      j0_ = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name k0 value ", 24)) {
+      k0 = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name l0 value ", 24)) {
+      l0 = GetOptionIntValue(in);
     } else
       printf("Unknown command: %s \n", in);
   }

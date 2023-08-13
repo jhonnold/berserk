@@ -45,7 +45,6 @@
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
-int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
@@ -60,9 +59,6 @@ void InitPruningAndReductionTables() {
     // more
     LMP[0][depth] = (3 + depth * depth) / 2;
     LMP[1][depth] = 3 + depth * depth;
-
-    STATIC_PRUNE[0][depth] = -SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
   }
 }
 
@@ -296,22 +292,18 @@ void Search(ThreadData* thread) {
   }
 }
 
-extern int a0;
-extern int a1;
-extern int ad;
-
-extern int b0;
-extern int bd;
-
-extern int cd;
-extern int c0;
-extern int c1;
-extern int c2;
-extern int c3;
-
-extern int dd;
-extern int d0;
-extern int d1;
+extern int ad, a0, a1;
+extern int bd, b0;
+extern int cd, c0, c1, c2, c3;
+extern int dd, d0, d1;
+extern int ed, e0;
+extern int fd, f0, f1, f2;
+extern int g0;
+extern int h0;
+extern int id, i0, i1;
+extern int j0_;
+extern int k0;
+extern int l0;
 
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
   Board* board = &thread->board;
@@ -576,18 +568,18 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
-        if (!killerOrCounter && lmrDepth < 6 && history < -4096 * (depth - 1)) {
+        if (!killerOrCounter && lmrDepth < ed && history < -e0 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
 
-        if (lmrDepth < 9 && eval + 100 + 50 * lmrDepth + history / 128 <= alpha)
+        if (lmrDepth < fd && eval + f0 + f1 * lmrDepth + f2 * history / 2048 <= alpha)
           skipQuiets = 1;
 
-        if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
+        if (!SEE(board, move, -g0 * lmrDepth * lmrDepth))
           continue;
       } else {
-        if (!SEE(board, move, STATIC_PRUNE[1][depth]))
+        if (!SEE(board, move, -h0 * depth))
           continue;
       }
     }
@@ -613,9 +605,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // (allows for reductions when doing singular search)
     if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
+      if (depth >= id && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
-        int sBeta  = Max(ttScore - depth, -CHECKMATE);
+        int sBeta  = Max(ttScore - i0 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
 
         ss->skip = move;
@@ -624,7 +616,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          if (!isPV && score < sBeta - 20 && ss->de <= 6) {
+          if (!isPV && score < sBeta - i1 && ss->de <= 6) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
           } else {
@@ -686,7 +678,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       // adjust reduction based on historical score
-      R -= history / 8192;
+      R -= l0 * history / 65536;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
@@ -744,7 +736,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 100), quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss, thread, move, depth + (bestScore > beta + j0_), quiets, numQuiets, captures, numCaptures);
         break;
       }
     }
@@ -853,7 +845,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     legalMoves++;
 
     // if we're in check, final condition in SEE always 0
-    if (bestScore > -TB_WIN_BOUND && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
+    if (bestScore > -TB_WIN_BOUND && !SEE(board, move, eval <= alpha - k0))
       continue;
 
     TTPrefetch(KeyAfter(board, move));
