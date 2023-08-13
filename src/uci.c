@@ -302,33 +302,6 @@ void PrintUCIOptions() {
   printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
-  printf("option name a0 type spin default 75\n");
-  printf("option name a1 type spin default 100\n");
-  printf("option name ad type spin default 9\n");
-  printf("option name b0 type spin default 200\n");
-  printf("option name bd type spin default 5\n");
-  printf("option name cd type spin default 3\n");
-  printf("option name c0 type spin default 4\n");
-  printf("option name c1 type spin default 60\n");
-  printf("option name c2 type spin default 8\n");
-  printf("option name c3 type spin default 3\n");
-  printf("option name dd type spin default 4\n");
-  printf("option name d0 type spin default 110\n");
-  printf("option name d1 type spin default 30\n");
-  printf("option name ed type spin default 30\n");
-  printf("option name e0 type spin default 30\n");
-  printf("option name fd type spin default 30\n");
-  printf("option name f0 type spin default 30\n");
-  printf("option name f1 type spin default 30\n");
-  printf("option name f2 type spin default 30\n");
-  printf("option name g0 type spin default 30\n");
-  printf("option name h0 type spin default 30\n");
-  printf("option name id type spin default 30\n");
-  printf("option name i0 type spin default 30\n");
-  printf("option name i1 type spin default 30\n");
-  printf("option name j0 type spin default 30\n");
-  printf("option name k0 type spin default 30\n");
-  printf("option name l0 type spin default 30\n");
   printf("uciok\n");
 }
 
@@ -549,60 +522,6 @@ void UCILoop() {
 
       if (success)
         printf("info string set EvalFile to value %s\n", path);
-    } else if (!strncmp(in, "setoption name a0 value ", 24)) {
-      a0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name a1 value ", 24)) {
-      a1 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name ad value ", 24)) {
-      ad = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name b0 value ", 24)) {
-      b0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name bd value ", 24)) {
-      bd = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name cd value ", 24)) {
-      cd = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name c0 value ", 24)) {
-      c0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name c1 value ", 24)) {
-      c1 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name c2 value ", 24)) {
-      c2 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name c3 value ", 24)) {
-      c3 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name dd value ", 24)) {
-      dd = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name d0 value ", 24)) {
-      d0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name d1 value ", 24)) {
-      d1 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name ed value ", 24)) {
-      ed = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name e0 value ", 24)) {
-      e0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name fd value ", 24)) {
-      fd = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name f0 value ", 24)) {
-      f0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name f1 value ", 24)) {
-      f1 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name f2 value ", 24)) {
-      f2 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name g0 value ", 24)) {
-      g0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name h0 value ", 24)) {
-      h0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name id value ", 24)) {
-      id = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name i0 value ", 24)) {
-      i0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name i1 value ", 24)) {
-      i1 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name j0 value ", 24)) {
-      j0_ = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name k0 value ", 24)) {
-      k0 = GetOptionIntValue(in);
-    } else if (!strncmp(in, "setoption name l0 value ", 24)) {
-      l0 = GetOptionIntValue(in);
     } else
       printf("Unknown command: %s \n", in);
   }
