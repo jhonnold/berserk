@@ -320,12 +320,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move move     = NULL_MOVE;
   MovePicker mp;
 
-  if (!isRoot && board->fmr >= 3 && alpha < 0 && HasCycle(board, ss->ply)) {
-    alpha = 2 - (thread->nodes & 0x3);
-    if (alpha >= beta)
-      return alpha;
-  }
-
   // drop into noisy moves only
   if (depth <= 0)
     return Quiesce(alpha, beta, thread, ss);
@@ -339,6 +333,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     thread->seldepth = ss->ply + 1;
 
   if (!isRoot) {
+    // cycle
+    if (alpha < 0 && HasCycle(board, ss->ply)) {
+      alpha = 2 - (thread->nodes & 0x3);
+      if (alpha >= beta)
+        return alpha;
+    }
+
     // draw
     if (IsDraw(board, ss->ply))
       return 2 - (thread->nodes & 0x3);
@@ -770,6 +771,13 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     longjmp(thread->exit, 1);
 
   thread->nodes++;
+
+  // cycle
+  if (alpha < 0 && HasCycle(board, ss->ply)) {
+    alpha = 0;
+    if (alpha >= beta)
+      return alpha;
+  }
 
   // draw check
   if (IsDraw(board, ss->ply))
