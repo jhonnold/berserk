@@ -835,9 +835,13 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     legalMoves++;
 
-    // if we're in check, final condition in SEE always 0
-    if (bestScore > -TB_WIN_BOUND && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
-      continue;
+    if (bestScore > -TB_WIN_BOUND) {
+      if (!(IsCap(move) || Promo(move)))
+        break;
+
+      if (!SEE(board, move, eval <= alpha - DELTA_CUTOFF))
+        continue;
+    }
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
