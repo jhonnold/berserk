@@ -321,9 +321,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
 
   if (!isRoot && board->fmr >= 3 && alpha < 0 && HasCycle(board, ss->ply)) {
-    alpha = 2 - (thread->nodes & 0x3);
-    if (0 >= beta)
-      return alpha;
+    alpha = 0;
+    if (alpha >= beta)
+      return 2 - (thread->nodes & 0x3);
   }
 
   // drop into noisy moves only
