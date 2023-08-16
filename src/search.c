@@ -165,12 +165,12 @@ void Search(ThreadData* thread) {
   int searchStability   = 0;
   Move previousBestMove = NULL_MOVE;
 
-  SearchStack searchStack[MAX_SEARCH_PLY + 4];
-  SearchStack* ss = searchStack + 4;
+  SearchStack searchStack[MAX_SEARCH_PLY + 6];
+  SearchStack* ss = searchStack + 6;
   memset(searchStack, 0, 5 * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
     (ss + i)->ply = i;
-  for (size_t i = 1; i <= 4; i++)
+  for (size_t i = 1; i <= 6; i++)
     (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
 
   while (++thread->depth < MAX_SEARCH_PLY) {

@@ -45,6 +45,8 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
     AddHistoryHeuristic(&(*(ss - 2)->ch)[Moving(move)][To(move)], bonus);
   if ((ss - 4)->move)
     AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 6)->move)
+    AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
 }
 
 void UpdateHistories(SearchStack* ss,
