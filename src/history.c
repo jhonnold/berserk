@@ -62,7 +62,8 @@ void UpdateHistories(SearchStack* ss,
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
-    AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
+    AddHistoryHeuristic(&HH(stm, bestMove), inc);
+    AddHistoryHeuristic(&TH(stm, bestMove, threats), inc);
     UpdateCH(ss, bestMove, inc);
 
     if (Promo(bestMove) < WHITE_QUEEN) {
@@ -77,7 +78,7 @@ void UpdateHistories(SearchStack* ss,
     int to       = To(bestMove);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, captured), inc);
+    AddHistoryHeuristic(&CH(piece, to, captured), inc);
   }
 
   // Update quiets
@@ -87,7 +88,8 @@ void UpdateHistories(SearchStack* ss,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, threats), -inc);
+      AddHistoryHeuristic(&HH(stm, m), -inc);
+      AddHistoryHeuristic(&TH(stm, m, threats), -inc);
       UpdateCH(ss, m, -inc);
     }
   }
@@ -102,6 +104,6 @@ void UpdateHistories(SearchStack* ss,
     int to       = To(m);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, captured), -inc);
+    AddHistoryHeuristic(&CH(piece, to, captured), -inc);
   }
 }

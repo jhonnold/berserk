@@ -51,7 +51,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     Move move = current->move;
 
     if (type == ST_QUIET)
-      current->score = GetQuietHistory(picker->ss, picker->thread, move);
+      current->score = GetQuietHistory(picker->ss, picker->thread, move) + GetThreatHistory(picker->ss, picker->thread, move);
     else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
     else if (type == ST_EVASION)
