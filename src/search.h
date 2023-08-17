@@ -29,13 +29,11 @@
 #define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
 
 // static evaluation pruning
-// capture cutoff is linear 70x
-// quiet cutoff is quadratic 20x^2
-#define SEE_PRUNE_CAPTURE_CUTOFF 90
-#define SEE_PRUNE_CUTOFF         15
+#define SEE_PRUNE_CAPTURE_CUTOFF 104
+#define SEE_PRUNE_CUTOFF         17
 
 // delta pruning in QS
-#define DELTA_CUTOFF 50
+#define DELTA_CUTOFF 55
 
 // base window value
 #define WINDOW 10
