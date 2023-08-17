@@ -22,7 +22,7 @@
 #include <pthread.h>
 #include <setjmp.h>
 
-#define MAX_SEARCH_PLY 251 // effective max depth 250
+#define MAX_SEARCH_PLY 201 // effective max depth 250
 #define MAX_MOVES      128
 
 #define N_KING_BUCKETS 16
