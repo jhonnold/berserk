@@ -45,9 +45,10 @@ INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread) {
   picker->thread = thread;
 }
 
-INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread) {
+INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, int genChecks) {
   picker->phase  = QS_GEN_NOISY_MOVES;
   picker->thread = thread;
+  picker->genChecks = genChecks;
 }
 
 INLINE void InitQSEvasionsPicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {
