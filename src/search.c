@@ -840,7 +840,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     legalMoves++;
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (!(IsCap(move) || Promo(move)))
+      if (inCheck && !(IsCap(move) || Promo(move)))
         break;
 
       if (!inCheck && futility <= alpha && !SEE(board, move, 1)) {
