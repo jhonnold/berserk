@@ -824,7 +824,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   }
 
   if (!inCheck)
-    InitQSMovePicker(&mp, thread, depth >= -1);
+    InitQSMovePicker(&mp, thread, depth == 0);
   else {
     Threats(&ss->oppThreat, board, board->xstm);
 
