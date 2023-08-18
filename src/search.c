@@ -328,7 +328,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // drop into noisy moves only
   if (depth <= 0)
-    return Quiesce(alpha, beta, thread, ss);
+    return Quiesce(alpha, beta, 0, thread, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
@@ -467,7 +467,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Razoring
     if (depth <= 6 && eval + 250 * depth <= alpha) {
-      score = Quiesce(alpha, beta, thread, ss);
+      score = Quiesce(alpha, beta, 0, thread, ss);
       if (score <= alpha)
         return score;
     }
@@ -515,7 +515,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         MakeMove(move, board);
 
         // qsearch to quickly check
-        score = -Quiesce(-probBeta, -probBeta + 1, thread, ss + 1);
+        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
 
         // if it's still above our cutoff, revalidate
         if (score >= probBeta)
@@ -750,7 +750,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   return bestScore;
 }
 
-int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
+int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
   Board* board = &thread->board;
 
   int score     = -CHECKMATE;
@@ -824,7 +824,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
   }
 
   if (!inCheck)
-    InitQSMovePicker(&mp, thread);
+    InitQSMovePicker(&mp, thread, depth >= -1);
   else {
     Threats(&ss->oppThreat, board, board->xstm);
 
@@ -843,7 +843,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
       if (inCheck && !(IsCap(move) || Promo(move)))
         break;
 
-      if (!inCheck && futility <= alpha && !SEE(board, move, 1)) {
+      if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
         bestScore = Max(bestScore, futility);
         continue;
       }
@@ -857,7 +857,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
-    score = -Quiesce(-beta, -alpha, thread, ss + 1);
+    score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
 
     UndoMove(move, board);
 
