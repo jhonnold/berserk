@@ -403,7 +403,24 @@ void UCILoop() {
         }
         printf("\n");
       }
-      printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+      printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
+
+      ResetAccumulator(board.accumulators, &board, WHITE);
+      ResetAccumulator(board.accumulators, &board, BLACK);
+
+      printf("+-------+-------+\n");
+      printf("|Bucket | Eval  |\n");
+      printf("+-------+-------+\n");
+      for (int i = 0; i < N_BUCKETS; i++) {
+        Score s = TraceEvaluate(&board, thread, i);
+        s       = board.stm == WHITE ? s : -s;
+        printf("| %d     | %5d |", i, (int) Normalize(s));
+
+        if (i == BucketIdx(&board))
+          printf(" <---");
+        printf("\n");
+      }
+      printf("+-------+-------+\n\n");
 
       printf("Score: %dcp (white)\n", (int) Normalize(score));
     } else if (!strncmp(in, "see ", 4)) {

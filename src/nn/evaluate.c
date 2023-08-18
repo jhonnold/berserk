@@ -29,7 +29,6 @@
 #include "../util.h"
 #include "accumulator.h"
 
-
 #define INCBIN_PREFIX
 #define INCBIN_STYLE INCBIN_STYLE_CAMEL
 #include "../incbin.h"
@@ -39,14 +38,14 @@ INCBIN(Embed, EVALFILE);
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 
-int8_t L1_WEIGHTS[N_L1 * N_L2] ALIGN;
-int32_t L1_BIASES[N_L2] ALIGN;
+int8_t L1_WEIGHTS[N_BUCKETS][N_L1 * N_L2] ALIGN;
+int32_t L1_BIASES[N_BUCKETS][N_L2] ALIGN;
 
-float L2_WEIGHTS[N_L2 * N_L3] ALIGN;
-float L2_BIASES[N_L3] ALIGN;
+float L2_WEIGHTS[N_BUCKETS][N_L2 * N_L3] ALIGN;
+float L2_BIASES[N_BUCKETS][N_L3] ALIGN;
 
-float OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
-float OUTPUT_BIAS;
+float OUTPUT_WEIGHTS[N_BUCKETS][N_L3 * N_OUTPUT] ALIGN;
+float OUTPUT_BIAS[N_BUCKETS] ALIGN;
 
 #if defined(__AVX2__)
 INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
@@ -106,15 +105,15 @@ INLINE void m256_hadd_epi32x4(__m256i* regs) {
   regs[0] = _mm256_hadd_epi32(regs[0], regs[2]);
 }
 
-INLINE void L1AffineReLU(float* dest, uint8_t* src) {
+INLINE void L1AffineReLU(float* dest, uint8_t* src, const int bucket) {
   const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(uint8_t);
   const size_t IN_CHUNKS  = N_L1 / IN_WIDTH;
   const size_t OUT_CC     = 8;
   const size_t OUT_CHUNKS = N_L2 / OUT_CC;
 
   const __m256i* in      = (__m256i*) src;
-  const __m256i* weights = (__m256i*) L1_WEIGHTS;
-  const __m256i* biases  = (__m256i*) L1_BIASES;
+  const __m256i* weights = (__m256i*) L1_WEIGHTS[bucket];
+  const __m256i* biases  = (__m256i*) L1_BIASES[bucket];
   __m256* out            = (__m256*) dest;
 
   __m256i regs[OUT_CC];
@@ -138,7 +137,7 @@ INLINE void L1AffineReLU(float* dest, uint8_t* src) {
 }
 
 #else
-INLINE void m128_add_dpbusd_epi32x4(__m128i* acc, const __m128i* inputs, const __m128i* weights) {
+INLINE void m128_add_dpbusd_epi32x4(__m128i* acc, const __m128i* inputs, const __m128i* weights, const int bucket) {
   __m128i tmp0 = _mm_maddubs_epi16(inputs[0], weights[0]);
   __m128i tmp1 = _mm_maddubs_epi16(inputs[1], weights[1]);
   __m128i tmp2 = _mm_maddubs_epi16(inputs[2], weights[2]);
@@ -161,8 +160,8 @@ INLINE void L1AffineReLU(float* dest, uint8_t* src) {
   const size_t OUT_CHUNKS = N_L2 / OUT_CC;
 
   const __m128i* in      = (__m128i*) src;
-  const __m128i* weights = (__m128i*) L1_WEIGHTS;
-  const __m128i* biases  = (__m128i*) L1_BIASES;
+  const __m128i* weights = (__m128i*) L1_WEIGHTS[bucket];
+  const __m128i* biases  = (__m128i*) L1_BIASES[bucket];
   __m128* out            = (__m128*) dest;
 
   __m128i regs[OUT_CC];
@@ -189,15 +188,15 @@ INLINE void m256_hadd_psx4(__m256* regs) {
   regs[0] = _mm256_hadd_ps(regs[0], regs[2]);
 }
 
-INLINE void L2AffineReLU(float* dest, float* src) {
+INLINE void L2AffineReLU(float* dest, float* src, const int bucket) {
   const size_t IN_WIDTH   = sizeof(__m256) / sizeof(float);
   const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
   const size_t OUT_CC     = 8;
   const size_t OUT_CHUNKS = N_L3 / OUT_CC;
 
   const __m256* in      = (__m256*) src;
-  const __m256* weights = (__m256*) L2_WEIGHTS;
-  const __m256* biases  = (__m256*) L2_BIASES;
+  const __m256* weights = (__m256*) L2_WEIGHTS[bucket];
+  const __m256* biases  = (__m256*) L2_BIASES[bucket];
   __m256* out           = (__m256*) dest;
 
   __m256 regs[OUT_CC];
@@ -226,15 +225,15 @@ INLINE void m128_hadd_psx4(__m128* regs) {
   regs[0] = _mm_hadd_ps(regs[0], regs[2]);
 }
 
-INLINE void L2AffineReLU(float* dest, float* src) {
+INLINE void L2AffineReLU(float* dest, float* src, const int bucket) {
   const size_t IN_WIDTH   = sizeof(__m128) / sizeof(float);
   const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
   const size_t OUT_CC     = 4;
   const size_t OUT_CHUNKS = N_L3 / OUT_CC;
 
   const __m128* in      = (__m128*) src;
-  const __m128* weights = (__m128*) L2_WEIGHTS;
-  const __m128* biases  = (__m128*) L2_BIASES;
+  const __m128* weights = (__m128*) L2_WEIGHTS[bucket];
+  const __m128* biases  = (__m128*) L2_BIASES[bucket];
   __m128* out           = (__m128*) dest;
 
   __m128 regs[OUT_CC];
@@ -255,12 +254,12 @@ INLINE void L2AffineReLU(float* dest, float* src) {
 #endif
 
 #if defined(__AVX2__)
-INLINE float L3Transform(float* src) {
+INLINE float L3Transform(float* src, const int bucket) {
   const size_t WIDTH  = sizeof(__m256) / sizeof(float);
   const size_t CHUNKS = N_L3 / WIDTH;
 
   const __m256* in      = (__m256*) src;
-  const __m256* weights = (__m256*) OUTPUT_WEIGHTS;
+  const __m256* weights = (__m256*) OUTPUT_WEIGHTS[bucket];
 
   __m256 a0 = _mm256_setzero_ps();
   for (size_t i = 0; i < CHUNKS; i++)
@@ -270,15 +269,15 @@ INLINE float L3Transform(float* src) {
   const __m128 a2 = _mm_add_ps(a4, _mm_movehl_ps(a4, a4));
   const __m128 a1 = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
 
-  return _mm_cvtss_f32(a1) + OUTPUT_BIAS;
+  return _mm_cvtss_f32(a1) + OUTPUT_BIAS[bucket];
 }
 #else
-INLINE float L3Transform(float* src) {
+INLINE float L3Transform(float* src, const int bucket) {
   const size_t WIDTH  = sizeof(__m128) / sizeof(float);
   const size_t CHUNKS = N_L3 / WIDTH;
 
   const __m128* in      = (__m128*) src;
-  const __m128* weights = (__m128*) OUTPUT_WEIGHTS;
+  const __m128* weights = (__m128*) OUTPUT_WEIGHTS[bucket];
 
   __m128 a0 = _mm_setzero_ps();
   for (size_t i = 0; i < CHUNKS; i++)
@@ -287,36 +286,37 @@ INLINE float L3Transform(float* src) {
   const __m128 a2 = _mm_add_ps(a0, _mm_movehl_ps(a0, a0));
   const __m128 a1 = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
 
-  return _mm_cvtss_f32(a1) + OUTPUT_BIAS;
+  return _mm_cvtss_f32(a1) + OUTPUT_BIAS[bucket];
 }
 #endif
 
-int Propagate(Accumulator* accumulator, const int stm) {
+int Propagate(Accumulator* accumulator, const int stm, const int bucket) {
   uint8_t x0[N_L1] ALIGN;
   float x1[N_L2] ALIGN;
   float x2[N_L3] ALIGN;
 
   InputReLU(x0, accumulator, stm);
-  L1AffineReLU(x1, x0);
-  L2AffineReLU(x2, x1);
-  return L3Transform(x2) / 32.0;
+  L1AffineReLU(x1, x0, bucket);
+  L2AffineReLU(x2, x1, bucket);
+  return L3Transform(x2, bucket) / 32.0;
 }
 
 int Predict(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  return board->stm == WHITE ? Propagate(board->accumulators, WHITE) : Propagate(board->accumulators, BLACK);
+  return board->stm == WHITE ? Propagate(board->accumulators, WHITE, BucketIdx(board)) :
+                               Propagate(board->accumulators, BLACK, BucketIdx(board));
 }
 
-const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights
-                            sizeof(int16_t) * N_HIDDEN +              // input biases
-                            sizeof(int8_t) * N_L1 * N_L2 +            // input biases
-                            sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(float) * N_L2 * N_L3 +             // input biases
-                            sizeof(float) * N_L3 +                    // input biases
-                            sizeof(float) * N_L3 +                    // output weights
-                            sizeof(float);                            // output bias
+const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +  // input weights
+                            sizeof(int16_t) * N_HIDDEN +               // input biases
+                            sizeof(int8_t) * N_L1 * N_L2 * N_BUCKETS + // input biases
+                            sizeof(int32_t) * N_L2 * N_BUCKETS +       // input biases
+                            sizeof(float) * N_L2 * N_L3 * N_BUCKETS +  // input biases
+                            sizeof(float) * N_L3 * N_BUCKETS +         // input biases
+                            sizeof(float) * N_L3 * N_BUCKETS +         // output weights
+                            sizeof(float) * N_BUCKETS;                 // output bias
 
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
@@ -326,19 +326,19 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(INPUT_BIASES, &in[offset], N_HIDDEN * sizeof(int16_t));
   offset += N_HIDDEN * sizeof(int16_t);
 
-  memcpy(L1_WEIGHTS, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
-  offset += N_L1 * N_L2 * sizeof(int8_t);
-  memcpy(L1_BIASES, &in[offset], N_L2 * sizeof(int32_t));
-  offset += N_L2 * sizeof(int32_t);
+  memcpy(L1_WEIGHTS, &in[offset], N_L1 * N_L2 * N_BUCKETS * sizeof(int8_t));
+  offset += N_L1 * N_L2 * N_BUCKETS * sizeof(int8_t);
+  memcpy(L1_BIASES, &in[offset], N_L2 * N_BUCKETS * sizeof(int32_t));
+  offset += N_L2 * N_BUCKETS * sizeof(int32_t);
 
-  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * sizeof(float));
-  offset += N_L2 * N_L3 * sizeof(float);
-  memcpy(L2_BIASES, &in[offset], N_L3 * sizeof(float));
-  offset += N_L3 * sizeof(float);
+  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * N_BUCKETS * sizeof(float));
+  offset += N_L2 * N_L3 * N_BUCKETS * sizeof(float);
+  memcpy(L2_BIASES, &in[offset], N_L3 * N_BUCKETS * sizeof(float));
+  offset += N_L3 * N_BUCKETS * sizeof(float);
 
-  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
-  offset += N_L3 * N_OUTPUT * sizeof(float);
-  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
+  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * N_BUCKETS * sizeof(float));
+  offset += N_L3 * N_OUTPUT * N_BUCKETS * sizeof(float);
+  memcpy(OUTPUT_BIAS, &in[offset], N_BUCKETS * sizeof(float));
 
 #if defined(__AVX2__)
   const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);

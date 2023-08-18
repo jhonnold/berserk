@@ -19,6 +19,7 @@
 
 #include <math.h>
 
+#include "bits.h"
 #include "types.h"
 #include "util.h"
 
@@ -82,6 +83,10 @@ INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
   int oSq = (7 * !(kingsq & 4)) ^ (56 * view) ^ sq;
 
   return KING_BUCKETS[oK] * 12 * 64 + oP * 64 + oSq;
+}
+
+INLINE int BucketIdx(Board* board) {
+  return (BitCount(OccBB(BOTH)) - 1) / 4;
 }
 
 #endif

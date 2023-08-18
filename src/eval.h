@@ -27,5 +27,6 @@ extern const int MAX_PHASE;
 void SetContempt(int* dest, int stm);
 void Threats(Threat* threats, Board* board, int stm);
 Score Evaluate(Board* board, ThreadData* thread);
+Score TraceEvaluate(Board* board, ThreadData* thread, const int bucket);
 
 #endif

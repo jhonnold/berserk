@@ -88,12 +88,7 @@ void Threats(Threat* threats, Board* board, int stm) {
   threats->sqs |= GetKingAttacks(LSB(PieceBB(KING, stm)));
 }
 
-// Main evalution method
-Score Evaluate(Board* board, ThreadData* thread) {
-  Score knownEval = EvaluateKnownPositions(board);
-  if (knownEval != UNKNOWN)
-    return knownEval;
-
+INLINE void UpdateAccumulators(Board* board) {
   Accumulator* acc = board->accumulators;
   for (int c = WHITE; c <= BLACK; c++) {
     if (!acc->correct[c]) {
@@ -103,14 +98,35 @@ Score Evaluate(Board* board, ThreadData* thread) {
         RefreshAccumulator(acc, board, c);
     }
   }
+}
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+INLINE int PropagateBucket(Board* board, const int bucket) {
+  return board->stm == WHITE ? Propagate(board->accumulators, WHITE, bucket) :
+                               Propagate(board->accumulators, BLACK, bucket);
+}
 
-  // static contempt
-  score += thread->contempt[board->stm];
+// Main evalution method
+Score Evaluate(Board* board, ThreadData* thread) {
+  Score knownEval = EvaluateKnownPositions(board);
+  if (knownEval != UNKNOWN)
+    return knownEval;
 
-  // scaled based on phase [1, 1.5]
-  score = (128 + board->phase) * score / 128;
+  UpdateAccumulators(board);
+  int score = PropagateBucket(board, BucketIdx(board));
 
+  score = (128 + board->phase) * (score + thread->contempt[board->stm]) / 128;
+  return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
+}
+
+// Trace evalution method
+Score TraceEvaluate(Board* board, ThreadData* thread, const int bucket) {
+  Score knownEval = EvaluateKnownPositions(board);
+  if (knownEval != UNKNOWN)
+    return knownEval;
+
+  UpdateAccumulators(board);
+  int score = PropagateBucket(board, bucket);
+
+  score = (128 + board->phase) * (score + thread->contempt[board->stm]) / 128;
   return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
 }
