@@ -84,4 +84,13 @@ INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
   return KING_BUCKETS[oK] * 12 * 64 + oP * 64 + oSq;
 }
 
+INLINE uint64_t FMRKey(uint64_t seed) {
+  // https://en.wikipedia.org/wiki/Linear_congruential_generator#Parameters_in_common_use
+  return seed * 6364136223846793005ULL + 1ULL;
+}
+
+INLINE uint64_t Key(Board* board) {
+  return board->fmr < 14 ? board->zobrist : board->zobrist ^ FMRKey((board->fmr - 14) / 8);
+}
+
 #endif

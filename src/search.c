@@ -79,10 +79,6 @@ INLINE int CheckLimits(ThreadData* thread) {
          (Limits.nodes && NodesSearched() >= Limits.nodes);
 }
 
-INLINE int AdjustEvalOnFMR(Board* board, int eval) {
-  return (200 - board->fmr) * eval / 200;
-}
-
 void StartSearch(Board* board, uint8_t ponder) {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
@@ -356,7 +352,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // check the transposition table for previous info
   // we ignore the tt on singular extension searches
-  TTEntry* tt = ss->skip ? NULL : TTProbe(board->zobrist, &ttHit);
+  uint64_t ttkey = Key(board);
+  TTEntry* tt = ss->skip ? NULL : TTProbe(ttkey, &ttHit);
   ttScore     = ttHit ? TTScore(tt, ss->ply) : UNKNOWN;
   ttPv        = isPV || (ttHit && TTPV(tt));
   hashMove    = isRoot ? thread->rootMoves[thread->multiPV].move : ttHit ? tt->move : NULL_MOVE;
@@ -393,7 +390,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // if the tablebase gives us what we want, then we accept it's score and
       // return
       if ((bound == BOUND_EXACT) || (bound == BOUND_LOWER ? score >= beta : score <= alpha)) {
-        TTPut(tt, board->zobrist, depth, score, bound, 0, ss->ply, 0, ttPv);
+        TTPut(tt, ttkey, depth, score, bound, 0, ss->ply, 0, ttPv);
         return score;
       }
 
@@ -416,18 +413,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
       if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
       eval = ss->staticEval = Evaluate(board, thread);
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
-      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+      TTPut(tt, ttkey, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
 
     // Improving
@@ -744,7 +735,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // prevent saving when in singular search
   if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
     int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
-    TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
+    TTPut(tt, ttkey, depth, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
   }
 
   return bestScore;
@@ -782,7 +773,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return inCheck ? 0 : Evaluate(board, thread);
 
   // check the transposition table for previous info
-  TTEntry* tt = TTProbe(board->zobrist, &ttHit);
+  uint64_t ttkey = Key(board);
+  TTEntry* tt = TTProbe(ttkey, &ttHit);
   ttScore     = ttHit ? TTScore(tt, ss->ply) : UNKNOWN;
   ttPv        = isPV || (ttHit && TTPV(tt));
 
@@ -798,17 +790,12 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
       if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       eval = ss->staticEval = Evaluate(board, thread);
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
 
-      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+      TTPut(tt, ttkey, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
 
     // stand pat
@@ -879,7 +866,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return -CHECKMATE + ss->ply;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
-  TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
+  TTPut(tt, ttkey, 0, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
 
   return bestScore;
 }
