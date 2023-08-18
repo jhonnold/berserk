@@ -208,6 +208,20 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       if (picker->current != picker->end)
         return Best(picker->current++, picker->end);
 
+      picker->phase = QS_GEN_QUIET_CHECKS;
+
+      // fallthrough
+    case QS_GEN_QUIET_CHECKS:
+      picker->current = picker->moves;
+      picker->end = AddQuietCheckMoves(picker->current, board);
+
+      picker->phase = QS_PLAY_QUIET_CHECKS;
+
+      // fallthrough
+    case QS_PLAY_QUIET_CHECKS:
+      if (picker->current != picker->end)
+        return (picker->current++)->move;
+
       picker->phase = -1;
       return NULL_MOVE;
 
