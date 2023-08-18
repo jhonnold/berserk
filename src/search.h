@@ -29,11 +29,11 @@
 #define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
 
 // static evaluation pruning
-#define SEE_PRUNE_CAPTURE_CUTOFF 104
-#define SEE_PRUNE_CUTOFF         17
+#define SEE_PRUNE_CAPTURE_CUTOFF 94
+#define SEE_PRUNE_CUTOFF         18
 
 // delta pruning in QS
-#define DELTA_CUTOFF 55
+#define DELTA_CUTOFF 57
 
 // base window value
 #define WINDOW 10
