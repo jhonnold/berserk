@@ -60,7 +60,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                        (int) (*(ss - 2)->ch)[moving][to] * 2 +                    //
                        (int) (*(ss - 4)->ch)[moving][to] +                        //
                        (int) (*(ss - 6)->ch)[moving][to] +                        //
-                       (16384 * (moving != KING && GetBit(board->checkSqs[pt], to)));
+                       (16384 * (moving != KING && GetBit(board->checkSqs[pt] & ~ss->oppThreat.sqs, to)));
 
     else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[to])];
