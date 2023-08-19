@@ -55,14 +55,14 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     const int pt     = PieceType(moving);
 
     if (type == ST_QUIET) {
-      const BitBoard safeCheckSqs = pt == KING ? 0ull : board->checkSqs[pt] & ~(ss->oppThreat.sqs);
+      const BitBoard safeCheckSqs = pt == KING ? 0ull : (board->checkSqs[pt] & ~(ss->oppThreat.sqs));
 
       current->score = (int) HH(thread->board.stm, move, ss->oppThreat.sqs) * 2 + //
                        (int) (*(ss - 1)->ch)[moving][to] * 2 +                    //
                        (int) (*(ss - 2)->ch)[moving][to] * 2 +                    //
                        (int) (*(ss - 4)->ch)[moving][to] +                        //
                        (int) (*(ss - 6)->ch)[moving][to] +                        //
-                       (16384 * !!GetBit(safeCheckSqs, to));
+                       (4096 * !!GetBit(safeCheckSqs, to));
 
     } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[to])];
