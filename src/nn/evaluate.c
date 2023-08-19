@@ -53,20 +53,18 @@ int32_t PSQT_WEIGHTS[N_FEATURES] ALIGN;
 INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
-  const int views[2]  = {stm, !stm};
+
+  const __m256i zero = _mm256_setzero_si256();
+
+  const int views[2] = {stm, !stm};
 
   for (int v = 0; v < 2; v++) {
     const __m256i* in = (__m256i*) acc->values[views[v]];
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 6);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 6);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
-
-      out[i]     = _mm256_packus_epi16(s0, s1);
-      out[i + 1] = _mm256_packus_epi16(s2, s3);
+      out[i]     = _mm256_max_epi8(zero, _mm256_packs_epi16(in[2 * i + 0], in[2 * i + 1]));
+      out[i + 1] = _mm256_max_epi8(zero, _mm256_packs_epi16(in[2 * i + 2], in[2 * i + 3]));
     }
   }
 }
@@ -300,11 +298,11 @@ int Propagate(Accumulator* accumulator, const int stm) {
   InputReLU(x0, accumulator, stm);
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
-  float positional = 600.0 * L3Transform(x2);
+  float positional = L3Transform(x2);
 
   int psqt = (accumulator->psqt[stm] - accumulator->psqt[!stm]) / 2;
 
-  return (positional + psqt) / 32;
+  return (positional + psqt) / 64;
 }
 
 int Predict(Board* board) {
