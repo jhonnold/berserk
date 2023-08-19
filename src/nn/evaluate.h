@@ -19,6 +19,8 @@
 
 #include "../types.h"
 
+extern int32_t PSQT_WEIGHTS[N_FEATURES];
+
 int Predict(Board* board);
 int Propagate(Accumulator* accumulator, const int stm);
 

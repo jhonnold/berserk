@@ -26,10 +26,13 @@
 #include "../move.h"
 #include "../movegen.h"
 #include "../util.h"
+#include "evaluate.h"
 
 void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
     AccumulatorKingState* state = refreshTable + b;
+
+    state->psqt = 0;
 
     memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
     memset(state->pcs, 0, sizeof(BitBoard) * 12);
@@ -56,13 +59,19 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
     BitBoard add = curr & ~prev;
 
     while (rem) {
-      int sq                 = PopLSB(&rem);
-      delta->rem[delta->r++] = FeatureIdx(pc, sq, kingSq, perspective);
+      int sq   = PopLSB(&rem);
+      int fidx = FeatureIdx(pc, sq, kingSq, perspective);
+
+      delta->rem[delta->r++] = fidx;
+      state->psqt -= PSQT_WEIGHTS[fidx];
     }
 
     while (add) {
-      int sq                 = PopLSB(&add);
-      delta->add[delta->a++] = FeatureIdx(pc, sq, kingSq, perspective);
+      int sq   = PopLSB(&add);
+      int fidx = FeatureIdx(pc, sq, kingSq, perspective);
+
+      delta->add[delta->a++] = fidx;
+      state->psqt += PSQT_WEIGHTS[fidx];
     }
 
     state->pcs[pc] = curr;
@@ -72,6 +81,7 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
 
   // Copy in state
   memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
+  dest->psqt[perspective]    = state->psqt;
   dest->correct[perspective] = 1;
 }
 
@@ -80,13 +90,17 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   Delta delta[1];
   delta->r = delta->a = 0;
 
+  dest->psqt[perspective] = 0;
+
   int kingSq = LSB(PieceBB(KING, perspective));
 
   BitBoard occ = OccBB(BOTH);
   while (occ) {
     int sq                 = PopLSB(&occ);
     int pc                 = board->squares[sq];
-    delta->add[delta->a++] = FeatureIdx(pc, sq, kingSq, perspective);
+    int fidx               = FeatureIdx(pc, sq, kingSq, perspective);
+    delta->add[delta->a++] = fidx;
+    dest->psqt[perspective] += PSQT_WEIGHTS[fidx];
   }
 
   acc_t* values = dest->values[perspective];
@@ -95,7 +109,12 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   dest->correct[perspective] = 1;
 }
 
-void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
+void ApplyUpdates(Accumulator* output,
+                  Accumulator* prev,
+                  Board* board,
+                  const Move move,
+                  const int captured,
+                  const int view) {
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
 
@@ -106,14 +125,22 @@ void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, con
     int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
     int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
-    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
+    ApplySubSubAddAdd(output->values[view], prev->values[view], from, rookFrom, to, rookTo);
+
+    output->psqt[view] =
+      prev->psqt[view] - PSQT_WEIGHTS[from] - PSQT_WEIGHTS[rookFrom] + PSQT_WEIGHTS[to] + PSQT_WEIGHTS[rookTo];
+
   } else if (IsCap(move)) {
     int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
-    ApplySubSubAdd(output, prev, from, capturedTo, to);
+    ApplySubSubAdd(output->values[view], prev->values[view], from, capturedTo, to);
+
+    output->psqt[view] = prev->psqt[view] - PSQT_WEIGHTS[from] - PSQT_WEIGHTS[capturedTo] + PSQT_WEIGHTS[to];
   } else {
-    ApplySubAdd(output, prev, from, to);
+    ApplySubAdd(output->values[view], prev->values[view], from, to);
+
+    output->psqt[view] = prev->psqt[view] - PSQT_WEIGHTS[from] + PSQT_WEIGHTS[to];
   }
 }
 
@@ -123,7 +150,7 @@ void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
     ; // go back to the latest correct accumulator
 
   do {
-    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr->move, curr->captured, view);
+    ApplyUpdates(curr + 1, curr, board, curr->move, curr->captured, view);
     (curr + 1)->correct[view] = 1;
   } while (++curr != live);
 }

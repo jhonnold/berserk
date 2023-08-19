@@ -29,7 +29,6 @@
 #include "../util.h"
 #include "accumulator.h"
 
-
 #define INCBIN_PREFIX
 #define INCBIN_STYLE INCBIN_STYLE_CAMEL
 #include "../incbin.h"
@@ -47,6 +46,8 @@ float L2_BIASES[N_L3] ALIGN;
 
 float OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
 float OUTPUT_BIAS;
+
+int32_t PSQT_WEIGHTS[N_FEATURES] ALIGN;
 
 #if defined(__AVX2__)
 INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
@@ -299,7 +300,10 @@ int Propagate(Accumulator* accumulator, const int stm) {
   InputReLU(x0, accumulator, stm);
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
-  return L3Transform(x2) / 32.0;
+  float netout = L3Transform(x2);
+
+  int psqt = (accumulator->psqt[stm] - accumulator->psqt[!stm]) / 2;
+  return (600.0 * netout + psqt) / 32.0;
 }
 
 int Predict(Board* board) {
@@ -311,12 +315,13 @@ int Predict(Board* board) {
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights
                             sizeof(int16_t) * N_HIDDEN +              // input biases
-                            sizeof(int8_t) * N_L1 * N_L2 +            // input biases
-                            sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(float) * N_L2 * N_L3 +             // input biases
-                            sizeof(float) * N_L3 +                    // input biases
+                            sizeof(int8_t) * N_L1 * N_L2 +            // l1 weights
+                            sizeof(int32_t) * N_L2 +                  // l1 biases
+                            sizeof(float) * N_L2 * N_L3 +             // l2 weights
+                            sizeof(float) * N_L3 +                    // l2 biases
                             sizeof(float) * N_L3 +                    // output weights
-                            sizeof(float);                            // output bias
+                            sizeof(float) +                           // output bias
+                            sizeof(int32_t) * N_FEATURES;             // psqt weights
 
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
@@ -339,6 +344,10 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
   offset += N_L3 * N_OUTPUT * sizeof(float);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
+  offset += sizeof(float);
+
+  memcpy(PSQT_WEIGHTS, &in[offset], N_FEATURES * sizeof(int32_t));
+  offset += N_FEATURES * sizeof(int32_t);
 
 #if defined(__AVX2__)
   const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
