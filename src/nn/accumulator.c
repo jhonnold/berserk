@@ -106,6 +106,7 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   acc_t* values = dest->values[perspective];
   memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
   ApplyDelta(values, values, delta);
+
   dest->correct[perspective] = 1;
 }
 

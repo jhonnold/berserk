@@ -300,10 +300,11 @@ int Propagate(Accumulator* accumulator, const int stm) {
   InputReLU(x0, accumulator, stm);
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
-  float netout = L3Transform(x2);
+  float positional = 600.0 * L3Transform(x2);
 
   int psqt = (accumulator->psqt[stm] - accumulator->psqt[!stm]) / 2;
-  return (600.0 * netout + psqt) / 32.0;
+
+  return (positional + psqt) / 32;
 }
 
 int Predict(Board* board) {
