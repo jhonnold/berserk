@@ -203,17 +203,12 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
 }
 
 INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm) {
-  const int xstm            = !stm;
-  const int oppKingSq       = LSB(PieceBB(KING, xstm));
-  const BitBoard bishopMask = GetBishopAttacks(oppKingSq, OccBB(BOTH));
-  const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(BOTH));
+  moves = AddPieceMoves(moves, board->checkSqs[QUEEN], board, stm, GT_QUIET, QUEEN);
+  moves = AddPieceMoves(moves, board->checkSqs[ROOK], board, stm, GT_QUIET, ROOK);
+  moves = AddPieceMoves(moves, board->checkSqs[BISHOP], board, stm, GT_QUIET, BISHOP);
+  moves = AddPieceMoves(moves, board->checkSqs[KNIGHT], board, stm, GT_QUIET, KNIGHT);
 
-  moves = AddPieceMoves(moves, bishopMask | rookMask, board, stm, GT_QUIET, QUEEN);
-  moves = AddPieceMoves(moves, rookMask, board, stm, GT_QUIET, ROOK);
-  moves = AddPieceMoves(moves, bishopMask, board, stm, GT_QUIET, BISHOP);
-  moves = AddPieceMoves(moves, GetKnightAttacks(oppKingSq), board, stm, GT_QUIET, KNIGHT);
-
-  return AddPawnMoves(moves, GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
+  return AddPawnMoves(moves, board->checkSqs[PAWN], board, stm, GT_QUIET);
 }
 
 INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {

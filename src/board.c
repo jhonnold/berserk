@@ -272,6 +272,13 @@ inline void SetSpecialPieces(Board* board) {
     else if (BitCount(blockers) == 1)
       board->pinned |= (blockers & OccBB(stm));
   }
+
+  int oppKingSq           = LSB(PieceBB(KING, xstm));
+  board->checkSqs[PAWN]   = GetPawnAttacks(oppKingSq, xstm);
+  board->checkSqs[KNIGHT] = GetKnightAttacks(oppKingSq);
+  board->checkSqs[BISHOP] = GetBishopAttacks(oppKingSq, OccBB(BOTH));
+  board->checkSqs[ROOK]   = GetRookAttacks(oppKingSq, OccBB(BOTH));
+  board->checkSqs[QUEEN]  = board->checkSqs[BISHOP] | board->checkSqs[ROOK];
 }
 
 void MakeMove(Move move, Board* board) {
@@ -293,6 +300,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->history[board->histPly].zobrist  = board->zobrist;
   board->history[board->histPly].checkers = board->checkers;
   board->history[board->histPly].pinned   = board->pinned;
+  for (int i = PAWN; i <= QUEEN; i++)
+    board->history[board->histPly].checkSqs[i] = board->checkSqs[i];
 
   board->fmr++;
   board->nullply++;
@@ -410,6 +419,8 @@ void UndoMove(Move move, Board* board) {
   board->zobrist  = board->history[board->histPly].zobrist;
   board->checkers = board->history[board->histPly].checkers;
   board->pinned   = board->history[board->histPly].pinned;
+  for (int i = PAWN; i <= QUEEN; i++)
+    board->checkSqs[i] = board->history[board->histPly].checkSqs[i];
 
   if (Promo(move)) {
     int promoted = Promo(move);
@@ -463,6 +474,8 @@ void MakeNullMove(Board* board) {
   board->history[board->histPly].zobrist  = board->zobrist;
   board->history[board->histPly].checkers = board->checkers;
   board->history[board->histPly].pinned   = board->pinned;
+  for (int i = PAWN; i <= QUEEN; i++)
+    board->history[board->histPly].checkSqs[i] = board->checkSqs[i];
 
   board->fmr++;
   board->nullply = 0;
@@ -493,6 +506,8 @@ void UndoNullMove(Board* board) {
   board->zobrist  = board->history[board->histPly].zobrist;
   board->checkers = board->history[board->histPly].checkers;
   board->pinned   = board->history[board->histPly].pinned;
+  for (int i = PAWN; i <= QUEEN; i++)
+    board->checkSqs[i] = board->history[board->histPly].checkSqs[i];
 }
 
 inline int IsDraw(Board* board, int ply) {
