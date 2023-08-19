@@ -113,7 +113,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   score = (128 + board->phase) * score / 128;
 
   // adjust based on FMR
-  score = (200 - board->fmr) * score / 200;
+  score = (100 - board->fmr) * score / 100;
 
   return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
 }
