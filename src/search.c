@@ -461,12 +461,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 8 && !ss->skip && eval < WINNING_ENDGAME && eval >= beta &&
-        eval - 69 * depth + 112 * (improving && !oppThreatPcs) >= beta &&
+        eval - 64 * depth + 122 * (improving && !oppThreatPcs) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12288))
       return eval;
 
     // Razoring
-    if (depth <= 6 && eval + 250 * depth <= alpha) {
+    if (depth <= 7 && eval + 236 * depth <= alpha) {
       score = Quiesce(alpha, beta, 0, thread, ss);
       if (score <= alpha)
         return score;
@@ -479,7 +479,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !oppThreatPcs;
+      int R = 4 + 185 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !oppThreatPcs;
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
@@ -499,8 +499,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     Threats(&ss->ownThreat, board, board->stm);
-    int probBeta = beta + 111 - 26 * improving;
-    if (depth > 6 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
+    int probBeta = beta + 127 - 30 * improving;
+    if (depth > 5 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
@@ -560,12 +560,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
-        if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
+        if (!killerOrCounter && lmrDepth < 7 && history < -2340 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
 
-        if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
+        if (lmrDepth < 11 && eval + 115 + 44 * lmrDepth + 13 * history / 2048 <= alpha)
           skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
@@ -597,9 +597,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // (allows for reductions when doing singular search)
     if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
+      if (depth >= 6 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
-        int sBeta  = Max(ttScore - 5 * depth / 8, -CHECKMATE);
+        int sBeta  = Max(ttScore - 6 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
 
         ss->skip = move;
@@ -608,7 +608,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          if (!isPV && score < sBeta - 18 && ss->de <= 6) {
+          if (!isPV && score < sBeta - 20 && ss->de <= 6) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
           } else {
@@ -670,7 +670,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       // adjust reduction based on historical score
-      R -= 9 * history / 65536;
+      R -= 7 * history / 65536;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
@@ -728,7 +728,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 86), quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 83), quiets, numQuiets, captures, numCaptures);
         break;
       }
     }
