@@ -90,7 +90,7 @@ INLINE uint64_t FMRKey(uint64_t seed) {
 }
 
 INLINE uint64_t Key(Board* board) {
-  return board->fmr < 14 ? board->zobrist : board->zobrist ^ FMRKey((board->fmr - 14) / 8);
+  return board->fmr < 10 ? board->zobrist : board->zobrist ^ FMRKey((board->fmr - 20) / 10);
 }
 
 #endif
