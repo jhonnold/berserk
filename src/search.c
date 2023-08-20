@@ -560,17 +560,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
-        const int pt = PieceType(Moving(move));
-        const int to = To(move);
+        const int givesCheck = GivesCheck(move, board);
 
-        const int givesCheck = pt != KING && GetBit(board->checkSqs[pt], to);
-        if (!givesCheck) {
-          if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1))
-            continue;
+        if (lmrDepth < 6 && history < -2500 * (depth - 1) && !killerOrCounter && !givesCheck)
+          continue;
 
-          if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
-            continue;
-        }
+        if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha && !givesCheck)
+          continue;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
@@ -635,6 +631,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+
     MakeMove(move, board);
 
     // apply extensions

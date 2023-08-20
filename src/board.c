@@ -714,6 +714,30 @@ int IsLegal(Move move, Board* board) {
   return !GetBit(board->pinned, from) || GetBit(PinnedMoves(from, kingSq), to);
 }
 
+int GivesCheck(Move move, Board* board) {
+  const int stm  = board->stm;
+  const int xstm = board->xstm;
+  const int from = From(move);
+  const int to   = To(move);
+  const int pc   = Moving(move);
+  const int pt   = PieceType(pc);
+
+  if (pt != KING) {
+    if (GetBit(board->checkSqs[pt], to))
+      return 1;
+
+    else if (Promo(move) &&
+             (GetPieceAttacks(to, OccBB(BOTH) ^ Bit(from), PieceType(Promo(move))) & PieceBB(KING, xstm)))
+      return 1;
+  }
+
+  BitBoard occ =
+    IsEP(move) ? ((OccBB(BOTH) ^ Bit(from) ^ Bit(to - PawnDir(stm))) | Bit(to)) : ((OccBB(BOTH) ^ Bit(from)) | Bit(to));
+
+  return !!(IsCas(move) ? (GetRookAttacks(CASTLE_ROOK_DEST[to], occ) & PieceBB(KING, xstm)) :
+                          (AttacksToSquare(board, LSB(PieceBB(KING, xstm)), occ) & OccBB(stm)));
+}
+
 uint64_t cuckoo[8192];
 Move cuckooMove[8192];
 
