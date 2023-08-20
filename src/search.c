@@ -560,7 +560,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
-        if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
+        const int pt = PieceType(Moving(move));
+        const int to = To(move);
+
+        const int givesCheck = pt != KING && GetBit(board->checkSqs[pt], to);
+
+        if (!killerOrCounter && !givesCheck && lmrDepth < 6 && history < -2500 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
