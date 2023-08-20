@@ -564,14 +564,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         const int to = To(move);
 
         const int givesCheck = pt != KING && GetBit(board->checkSqs[pt], to);
+        if (!givesCheck) {
+          if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1))
+            continue;
 
-        if (!killerOrCounter && !givesCheck && lmrDepth < 6 && history < -2500 * (depth - 1)) {
-          skipQuiets = 1;
-          continue;
+          if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
+            continue;
         }
-
-        if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
-          skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
