@@ -95,12 +95,18 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   dest->correct[perspective] = 1;
 }
 
-void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
+void ApplyUpdates(acc_t* output,
+                  acc_t* prev,
+                  Board* board,
+                  const Move move,
+                  const int moving,
+                  const int captured,
+                  const int view) {
   const int king       = LSB(PieceBB(KING, view));
-  const int movingSide = Moving(move) & 1;
+  const int movingSide = moving & 1;
 
-  int from = FeatureIdx(Moving(move), From(move), king, view);
-  int to   = FeatureIdx(Promo(move) ?: Moving(move), To(move), king, view);
+  int from = FeatureIdx(moving, From(move), king, view);
+  int to   = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : moving, To(move), king, view);
 
   if (IsCas(move)) {
     int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
@@ -123,7 +129,7 @@ void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
     ; // go back to the latest correct accumulator
 
   do {
-    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr->move, curr->captured, view);
+    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr->move, curr->moving, curr->captured, view);
     (curr + 1)->correct[view] = 1;
   } while (++curr != live);
 }
@@ -134,11 +140,10 @@ int CanEfficientlyUpdate(Accumulator* live, const int view) {
   while (1) {
     curr--;
 
-    int from  = From(curr->move) ^ (56 * view); // invert for black
-    int to    = To(curr->move) ^ (56 * view);   // invert for black
-    int piece = Moving(curr->move);
+    int from = From(curr->move) ^ (56 * view); // invert for black
+    int to   = To(curr->move) ^ (56 * view);   // invert for black
 
-    if ((piece & 1) == view && MoveRequiresRefresh(piece, from, to))
+    if ((curr->moving & 1) == view && MoveRequiresRefresh(curr->moving, from, to))
       return 0; // refresh only necessary for our view
     if (curr->correct[view])
       return 1;

@@ -34,7 +34,13 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
   picker->hashMove = hashMove;
   picker->killer1  = ss->killers[0];
   picker->killer2  = ss->killers[1];
-  picker->counter  = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
+
+  if ((ss - 1)->move) {
+    int to     = To((ss - 1)->move);
+    int moving = IsPromo((ss - 1)->move) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[to];
+
+    picker->counter = thread->counters[moving][to];
+  }
 
   picker->thread = thread;
   picker->ss     = ss;

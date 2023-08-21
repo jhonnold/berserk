@@ -502,7 +502,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         TTPrefetch(KeyAfter(board, move));
         ss->move = move;
-        ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        ss->ch   = &thread->ch[IsCap(move)][board->squares[From(move)]][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -548,7 +548,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
-      if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
+      if (!IsCap(move) && !(IsPromo(move) && PromoPT(move) == QUEEN)) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
         if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
@@ -621,7 +621,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->ch   = &thread->ch[IsCap(move)][board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
     // apply extensions
@@ -646,7 +646,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R -= 2;
 
       // less likely a non-capture is best
-      if (IsCap(hashMove) || Promo(hashMove))
+      if (IsCap(hashMove) || IsPromo(hashMove))
         R++;
 
       // move GAVE check
@@ -827,7 +827,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     legalMoves++;
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (inCheck && !(IsCap(move) || Promo(move)))
+      if (inCheck && !(IsCap(move) || IsPromo(move)))
         break;
 
       if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
@@ -841,7 +841,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->ch   = &thread->ch[IsCap(move)][board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);

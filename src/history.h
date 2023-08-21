@@ -27,16 +27,18 @@
 #define TH(p, e, c)         (thread->caph[p][e][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return (int) HH(thread->board.stm, move, ss->oppThreat.sqs) + //
-         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
-         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +        //
-         (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
+  Board* board = &thread->board;
+
+  return (int) HH(thread->board.stm, move, ss->oppThreat.sqs) +        //
+         (int) (*(ss - 1)->ch)[board->squares[From(move)]][To(move)] + //
+         (int) (*(ss - 2)->ch)[board->squares[From(move)]][To(move)] + //
+         (int) (*(ss - 4)->ch)[board->squares[From(move)]][To(move)];
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
   Board* board = &thread->board;
 
-  return TH(Moving(move), To(move), IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
+  return TH(board->squares[From(move)], To(move), IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
 }
 
 INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
