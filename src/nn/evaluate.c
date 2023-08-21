@@ -29,7 +29,6 @@
 #include "../util.h"
 #include "accumulator.h"
 
-
 #define INCBIN_PREFIX
 #define INCBIN_STYLE INCBIN_STYLE_CAMEL
 #include "../incbin.h"
@@ -69,7 +68,7 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
     }
   }
 }
-#else
+#elif defined(__SSE2__)
 INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
@@ -85,6 +84,18 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
 
       out[i] = _mm_packus_epi16(s0, s1);
     }
+  }
+}
+#else
+INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
+  const int views[2] = {stm, !stm};
+
+  for (int v = 0; v < 2; v++) {
+    const acc_t* in = acc->values[views[v]];
+    uint8_t* out    = &outputs[N_HIDDEN * v];
+
+    for (size_t i = 0; i < N_HIDDEN; i++)
+      out[i] = Max(0, in[i]) >> 6;
   }
 }
 #endif
@@ -137,7 +148,7 @@ INLINE void L1AffineReLU(float* dest, uint8_t* src) {
   }
 }
 
-#else
+#elif defined(__SSSE3__)
 INLINE void m128_add_dpbusd_epi32x4(__m128i* acc, const __m128i* inputs, const __m128i* weights) {
   __m128i tmp0 = _mm_maddubs_epi16(inputs[0], weights[0]);
   __m128i tmp1 = _mm_maddubs_epi16(inputs[1], weights[1]);
@@ -177,7 +188,19 @@ INLINE void L1AffineReLU(float* dest, uint8_t* src) {
 
     m128_hadd_epi32x4(regs);
 
-    out[i] = _mm_cvtepi32_ps(_mm_max_epi32(_mm_add_epi32(regs[0], biases[i]), _mm_setzero_si128()));
+    out[i] = _mm_max_ps(_mm_cvtepi32_ps(_mm_add_epi32(regs[0], biases[i])), _mm_setzero_ps());
+  }
+}
+#else
+INLINE void L1AffineReLU(float* dest, uint8_t* src) {
+  for (int i = 0; i < N_L2; i++) {
+    const int offset = i * N_L1;
+
+    dest[i] = L1_BIASES[i];
+    for (int j = 0; j < N_L1; j++)
+      dest[i] += src[j] * L1_WEIGHTS[offset + j];
+
+    dest[i] = Max(0, dest[i]);
   }
 }
 #endif
@@ -219,7 +242,7 @@ INLINE void L2AffineReLU(float* dest, float* src) {
     out[i]          = _mm256_max_ps(_mm256_add_ps(sum, biases[i]), _mm256_setzero_ps());
   }
 }
-#else
+#elif defined(__SSE3__)
 INLINE void m128_hadd_psx4(__m128* regs) {
   regs[0] = _mm_hadd_ps(regs[0], regs[1]);
   regs[2] = _mm_hadd_ps(regs[2], regs[3]);
@@ -252,6 +275,18 @@ INLINE void L2AffineReLU(float* dest, float* src) {
     out[i] = _mm_max_ps(_mm_add_ps(regs[0], biases[i]), _mm_setzero_ps());
   }
 }
+#else
+INLINE void L2AffineReLU(float* dest, float* src) {
+    for (int i = 0; i < N_L3; i++) {
+    const int offset = i * N_L2;
+
+    dest[i] = L2_BIASES[i];
+    for (int j = 0; j < N_L2; j++)
+      dest[i] += src[j] * L2_WEIGHTS[offset + j];
+
+    dest[i] = Max(0, dest[i]);
+  }
+}
 #endif
 
 #if defined(__AVX2__)
@@ -272,7 +307,7 @@ INLINE float L3Transform(float* src) {
 
   return _mm_cvtss_f32(a1) + OUTPUT_BIAS;
 }
-#else
+#elif defined(__SSE__)
 INLINE float L3Transform(float* src) {
   const size_t WIDTH  = sizeof(__m128) / sizeof(float);
   const size_t CHUNKS = N_L3 / WIDTH;
@@ -288,6 +323,15 @@ INLINE float L3Transform(float* src) {
   const __m128 a1 = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
 
   return _mm_cvtss_f32(a1) + OUTPUT_BIAS;
+}
+#else
+INLINE float L3Transform(float* src) {
+  float result = OUTPUT_BIAS;
+
+  for (int i = 0; i < N_L3; i++)
+    result += src[i] * OUTPUT_WEIGHTS[i];
+
+  return result;
 }
 #endif
 

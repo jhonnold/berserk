@@ -194,6 +194,20 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
   return moves;
 }
 
+INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm) {
+  const int xstm            = !stm;
+  const int oppKingSq       = LSB(PieceBB(KING, xstm));
+  const BitBoard bishopMask = GetBishopAttacks(oppKingSq, OccBB(BOTH));
+  const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(BOTH));
+
+  moves = AddPieceMoves(moves, bishopMask | rookMask, board, stm, GT_QUIET, QUEEN);
+  moves = AddPieceMoves(moves, rookMask, board, stm, GT_QUIET, ROOK);
+  moves = AddPieceMoves(moves, bishopMask, board, stm, GT_QUIET, BISHOP);
+  moves = AddPieceMoves(moves, GetKnightAttacks(oppKingSq), board, stm, GT_QUIET, KNIGHT);
+
+  return AddPawnMoves(moves, GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
+}
+
 INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
   if (BitCount(board->checkers) > 1)
     return AddPieceMoves(moves, ALL, board, color, type, KING);
@@ -234,6 +248,7 @@ INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int colo
 ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board);
+ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board);
 
 #endif
