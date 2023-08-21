@@ -560,13 +560,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
-        if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
-          skipQuiets = 1;
-          continue;
-        }
+        const int givesCheck = GivesCheck(move, board);
+        if (!givesCheck) {
+          if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1))
+            continue;
 
-        if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
-          skipQuiets = 1;
+          if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
+            continue;
+        }
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
