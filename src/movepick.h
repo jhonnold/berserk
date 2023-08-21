@@ -40,6 +40,8 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
     int moving = IsPromo((ss - 1)->move) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[to];
 
     picker->counter = thread->counters[moving][to];
+  } else {
+    picker->counter = NULL_MOVE;
   }
 
   picker->thread = thread;
