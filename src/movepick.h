@@ -40,6 +40,8 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
     int moving = IsPromo((ss - 1)->move) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[to];
 
     picker->counter = thread->counters[moving][to];
+  } else {
+    picker->counter = NULL_MOVE;
   }
 
   picker->thread = thread;
@@ -52,8 +54,8 @@ INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread) {
 }
 
 INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, int genChecks) {
-  picker->phase  = QS_GEN_NOISY_MOVES;
-  picker->thread = thread;
+  picker->phase     = QS_GEN_NOISY_MOVES;
+  picker->thread    = thread;
   picker->genChecks = genChecks;
 }
 
