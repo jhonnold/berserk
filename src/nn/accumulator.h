@@ -39,7 +39,7 @@
 #define regi_sub   _mm256_sub_epi16
 #define regi_add   _mm256_add_epi16
 #define regi_store _mm256_store_si256
-#else
+#elif defined(__SSE2__)
 #define UNROLL     128
 #define NUM_REGS   16
 #define regi_t     __m128i
@@ -47,6 +47,14 @@
 #define regi_sub   _mm_sub_epi16
 #define regi_add   _mm_add_epi16
 #define regi_store _mm_store_si128
+#else
+#define UNROLL           16
+#define NUM_REGS         16
+#define regi_t           acc_t
+#define regi_load(a)     (*(a))
+#define regi_sub(a, b)   ((a) - (b))
+#define regi_add(a, b)   ((a) + (b))
+#define regi_store(a, b) (*(a) = (b))
 #endif
 
 extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
