@@ -657,7 +657,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R++;
 
       // move GAVE check
-      if (board->checkers)
+      if (board->checkers && mp.phase < PLAY_BAD_NOISY)
         R--;
 
       // Reduce more on expected cut nodes
