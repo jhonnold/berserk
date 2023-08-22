@@ -32,10 +32,9 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
     AccumulatorKingState* state = refreshTable + b;
 
-    state->psqt = 0;
-
     memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
     memset(state->pcs, 0, sizeof(BitBoard) * 12);
+    memset(state->psqt, 0, sizeof(int32_t) * N_LAYERS);
   }
 }
 
@@ -63,7 +62,6 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
       int fidx = FeatureIdx(pc, sq, kingSq, perspective);
 
       delta->rem[delta->r++] = fidx;
-      state->psqt -= PSQT_WEIGHTS[fidx];
     }
 
     while (add) {
@@ -71,17 +69,18 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
       int fidx = FeatureIdx(pc, sq, kingSq, perspective);
 
       delta->add[delta->a++] = fidx;
-      state->psqt += PSQT_WEIGHTS[fidx];
     }
 
     state->pcs[pc] = curr;
   }
 
   ApplyDelta(state->values, state->values, delta);
+  ApplyPSQTDelta(state->psqt, state->psqt, delta);
 
   // Copy in state
   memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
-  dest->psqt[perspective]    = state->psqt;
+  memcpy(dest->psqt[perspective], state->psqt, sizeof(int32_t) * N_LAYERS);
+
   dest->correct[perspective] = 1;
 }
 
@@ -89,8 +88,6 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
 void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   Delta delta[1];
   delta->r = delta->a = 0;
-
-  dest->psqt[perspective] = 0;
 
   int kingSq = LSB(PieceBB(KING, perspective));
 
@@ -100,12 +97,15 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
     int pc                 = board->squares[sq];
     int fidx               = FeatureIdx(pc, sq, kingSq, perspective);
     delta->add[delta->a++] = fidx;
-    dest->psqt[perspective] += PSQT_WEIGHTS[fidx];
   }
 
   acc_t* values = dest->values[perspective];
   memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
   ApplyDelta(values, values, delta);
+
+  int32_t* psqts = dest->psqt[perspective];
+  memset(psqts, 0, sizeof(int32_t) * N_LAYERS);
+  ApplyPSQTDelta(psqts, psqts, delta);
 
   dest->correct[perspective] = 1;
 }
@@ -127,21 +127,16 @@ void ApplyUpdates(Accumulator* output,
     int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
     ApplySubSubAddAdd(output->values[view], prev->values[view], from, rookFrom, to, rookTo);
-
-    output->psqt[view] =
-      prev->psqt[view] - PSQT_WEIGHTS[from] - PSQT_WEIGHTS[rookFrom] + PSQT_WEIGHTS[to] + PSQT_WEIGHTS[rookTo];
-
+    ApplyPSQTSubSubAddAdd(output->psqt[view], prev->psqt[view], from, rookFrom, to, rookTo);
   } else if (IsCap(move)) {
     int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
     ApplySubSubAdd(output->values[view], prev->values[view], from, capturedTo, to);
-
-    output->psqt[view] = prev->psqt[view] - PSQT_WEIGHTS[from] - PSQT_WEIGHTS[capturedTo] + PSQT_WEIGHTS[to];
+    ApplyPSQTSubSubAdd(output->psqt[view], prev->psqt[view], from, capturedTo, to);
   } else {
     ApplySubAdd(output->values[view], prev->values[view], from, to);
-
-    output->psqt[view] = prev->psqt[view] - PSQT_WEIGHTS[from] + PSQT_WEIGHTS[to];
+    ApplyPSQTSubAdd(output->psqt[view], prev->psqt[view], from, to);
   }
 }
 

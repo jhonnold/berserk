@@ -59,6 +59,7 @@
 
 extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
 extern int16_t INPUT_BIASES[N_HIDDEN];
+extern int32_t PSQT_WEIGHTS[N_FEATURES * N_LAYERS];
 
 typedef struct {
   uint8_t r, a;
@@ -97,6 +98,18 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
   }
 }
 
+INLINE void ApplyPSQTDelta(int32_t* dest, int32_t* src, Delta* delta) {
+  for (size_t i = 0; i < N_LAYERS; i++) {
+    dest[i] = src[i];
+
+    for (size_t r = 0; r < delta->r; r++)
+      dest[i] -= PSQT_WEIGHTS[i * N_FEATURES + delta->rem[r]];
+
+    for (size_t a = 0; a < delta->a; a++)
+      dest[i] += PSQT_WEIGHTS[i * N_FEATURES + delta->add[a]];
+  }
+}
+
 INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
   regi_t regs[NUM_REGS];
 
@@ -121,6 +134,14 @@ INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
 
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);
+  }
+}
+
+INLINE void ApplyPSQTSubAdd(int32_t* dest, int32_t* src, int f1, int f2) {
+  for (size_t i = 0; i < N_LAYERS; i++) {
+    dest[i] = src[i] - PSQT_WEIGHTS[i * N_FEATURES + f1];
+
+    dest[i] += PSQT_WEIGHTS[i * N_FEATURES + f2];
   }
 }
 
@@ -153,6 +174,16 @@ INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
 
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);
+  }
+}
+
+INLINE void ApplyPSQTSubSubAdd(int32_t* dest, int32_t* src, int f1, int f2, int f3) {
+  for (size_t i = 0; i < N_LAYERS; i++) {
+    dest[i] = src[i] - PSQT_WEIGHTS[i * N_FEATURES + f1];
+
+    dest[i] -= PSQT_WEIGHTS[i * N_FEATURES + f2];
+
+    dest[i] += PSQT_WEIGHTS[i * N_FEATURES + f3];
   }
 }
 
@@ -190,6 +221,18 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
 
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);
+  }
+}
+
+INLINE void ApplyPSQTSubSubAddAdd(int32_t* dest, int32_t* src, int f1, int f2, int f3, int f4) {
+  for (size_t i = 0; i < N_LAYERS; i++) {
+    dest[i] = src[i] - PSQT_WEIGHTS[i * N_FEATURES + f1];
+
+    dest[i] -= PSQT_WEIGHTS[i * N_FEATURES + f2];
+
+    dest[i] += PSQT_WEIGHTS[i * N_FEATURES + f3];
+
+    dest[i] += PSQT_WEIGHTS[i * N_FEATURES + f4];
   }
 }
 

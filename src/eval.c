@@ -104,7 +104,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  int score = NNEvaluate(board);
 
   // static contempt
   score += thread->contempt[board->stm];
