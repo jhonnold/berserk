@@ -405,6 +405,10 @@ void UCILoop() {
       }
       printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
 
+      ResetAccumulator(board.accumulators, &board, WHITE);
+      ResetAccumulator(board.accumulators, &board, BLACK);
+      NNTrace(&board);
+
       printf("Score: %dcp (white)\n", (int) Normalize(score));
     } else if (!strncmp(in, "see ", 4)) {
       Move m = ParseMove(in + 4, &board);

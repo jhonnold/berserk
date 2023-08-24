@@ -356,6 +356,44 @@ int NNEvaluate(Board* board) {
   return (positional + psqt) / 64;
 }
 
+void NNTrace(Board* board) {
+  const int stm       = board->stm;
+  const size_t realLayer = (BitCount(OccBB(BOTH)) - 1) / 4;
+  Accumulator* acc    = board->accumulators;
+
+  printf("+------------+------------+------------+------------+\n");
+  printf("|   Bucket   |  Material  | Positional |   Total    |\n");
+  printf("|            |   (PSQT)   |  (Layers)  |            |\n");
+  printf("+------------+------------+------------+------------+\n");
+
+  for (size_t layer = 0; layer < N_LAYERS; layer++) {
+    printf("|  %8lld  |", layer);
+
+    int psqt = (acc->psqt[stm][layer] - acc->psqt[!stm][layer]) / 2;
+    printf("  %8.2f  |", psqt / 6400.0f);
+
+    int8_t x0[N_L1] ALIGN;
+    float x1[N_L2] ALIGN;
+    float x2[N_L3] ALIGN;
+
+    InputCReLU(x0, acc, stm);
+    L1AffineReLU(x1, x0, L1_WEIGHTS[layer], L1_BIASES[layer]);
+    L2AffineReLU(x2, x1, L2_WEIGHTS[layer], L2_BIASES[layer]);
+    float positional = L3Transform(x2, OUTPUT_WEIGHTS[layer], OUTPUT_BIAS[layer]);
+
+    printf("  %s%7.2f  |", positional >= 0 ? "+" : "-", positional / 6400.0f);
+
+    float score = (psqt + positional) / 64.0f;
+    printf("  %8.2f  |", score / 100.0f);
+
+    if (layer == realLayer)
+      printf(" <-- this bucket is used");
+    printf("\n");
+  }
+
+  printf("+------------+------------+------------+------------+\n");
+}
+
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +  // input weights
                             sizeof(int16_t) * N_HIDDEN +               // input biases
                             N_LAYERS * (sizeof(int8_t) * N_L1 * N_L2 + // l1 weights

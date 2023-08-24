@@ -20,6 +20,7 @@
 #include "../types.h"
 
 int NNEvaluate(Board* board);
+void NNTrace(Board* board);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);
