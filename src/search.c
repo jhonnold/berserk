@@ -444,6 +444,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->skip       = NULL_MOVE;
   (ss + 1)->killers[0] = NULL_MOVE;
   (ss + 1)->killers[1] = NULL_MOVE;
+  (ss + 1)->cutoffs    = 0;
   ss->de               = (ss - 1)->de;
 
   // Build threats for use search
@@ -662,6 +663,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (board->checkers)
         R--;
 
+      // Increase reductions when next ply is producing many cutoffs
+      if ((ss + 1)->cutoffs > 3)
+        R++;
+
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
@@ -728,6 +733,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
+        ss->cutoffs++;
+
         UpdateHistories(ss, thread, move, depth + (bestScore > beta + 86), quiets, numQuiets, captures, numCaptures);
         break;
       }
