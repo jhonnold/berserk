@@ -733,7 +733,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
-        ss->cutoffs++;
+        ss->cutoffs += 1 + !hashMove;
 
         UpdateHistories(ss, thread, move, depth + (bestScore > beta + 86), quiets, numQuiets, captures, numCaptures);
         break;
