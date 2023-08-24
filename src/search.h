@@ -50,8 +50,7 @@ void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board);
 void PrintPV(PV* pv, Board* board);
 
 void SortRootMoves(ThreadData* thread, int offset);
-int MoveSearchedByMultiPV(ThreadData* thread, Move move);
-int MoveSearchable(ThreadData* thread, Move move);
+int ValidRootMove(ThreadData* thread, Move move);
 
 void SearchClearThread(ThreadData* thread);
 void SearchClear();

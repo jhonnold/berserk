@@ -539,9 +539,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
       continue;
-    if (isRoot && MoveSearchedByMultiPV(thread, move))
-      continue;
-    if (isRoot && !MoveSearchable(thread, move))
+    if (isRoot && !ValidRootMove(thread, move))
       continue;
     if (!isRoot && !IsLegal(move, board))
       continue;
@@ -969,16 +967,8 @@ void SortRootMoves(ThreadData* thread, int offset) {
   }
 }
 
-int MoveSearchedByMultiPV(ThreadData* thread, Move move) {
-  for (int i = 0; i < thread->multiPV; i++)
-    if (thread->rootMoves[i].move == move)
-      return 1;
-
-  return 0;
-}
-
-int MoveSearchable(ThreadData* thread, Move move) {
-  for (int i = 0; i < thread->numRootMoves; i++)
+int ValidRootMove(ThreadData* thread, Move move) {
+  for (int i = thread->multiPV; i < thread->numRootMoves; i++)
     if (move == thread->rootMoves[i].move)
       return 1;
 
