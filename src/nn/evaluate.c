@@ -358,7 +358,7 @@ int NNEvaluate(Board* board) {
 
 void NNTrace(Board* board) {
   const int stm       = board->stm;
-  const size_t realLayer = (BitCount(OccBB(BOTH)) - 1) / 4;
+  const int realLayer = (BitCount(OccBB(BOTH)) - 1) / 4;
   Accumulator* acc    = board->accumulators;
 
   printf("+------------+------------+------------+------------+\n");
@@ -366,8 +366,8 @@ void NNTrace(Board* board) {
   printf("|            |   (PSQT)   |  (Layers)  |            |\n");
   printf("+------------+------------+------------+------------+\n");
 
-  for (size_t layer = 0; layer < N_LAYERS; layer++) {
-    printf("|  %8lld  |", layer);
+  for (int layer = 0; layer < N_LAYERS; layer++) {
+    printf("|  %8d  |", layer);
 
     int psqt = (acc->psqt[stm][layer] - acc->psqt[!stm][layer]) / 2;
     printf("  %8.2f  |", psqt / 6400.0f);
