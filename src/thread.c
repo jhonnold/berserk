@@ -105,9 +105,15 @@ void* ThreadInit(void* arg) {
   ThreadData* thread = calloc(1, sizeof(ThreadData));
   thread->idx        = i;
 
+#if defined(__linx__)
+  const size_t alignment = MEGABYTE * 2;
+#else
+  const size_t alignment = 4096;
+#endif
+
   // Alloc all the necessary accumulators
-  thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1));
-  thread->refreshTable = (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS);
+  thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
+  thread->refreshTable = (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
   ResetRefreshTable(thread->refreshTable);
 
   // Copy these onto the board for easier access within the engine
@@ -249,7 +255,7 @@ void SetupOtherThreads(Board* board) {
 uint64_t NodesSearched() {
   uint64_t nodes = 0;
   for (int i = 0; i < Threads.count; i++)
-    nodes += Threads.threads[i]->nodes;
+    nodes += LoadRlx(Threads.threads[i]->nodes);
 
   return nodes;
 }
@@ -257,7 +263,7 @@ uint64_t NodesSearched() {
 uint64_t TBHits() {
   uint64_t tbhits = 0;
   for (int i = 0; i < Threads.count; i++)
-    tbhits += Threads.threads[i]->tbhits;
+    tbhits += LoadRlx(Threads.threads[i]->tbhits);
 
   return tbhits;
 }

@@ -27,12 +27,13 @@
 #define INLINE static inline __attribute__((always_inline))
 
 #define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
+#define IncRlx(x) atomic_fetch_add_explicit(&(x), 1, memory_order_relaxed)
 
 long GetTimeMS();
 
-INLINE void* AlignedMalloc(uint64_t size) {
-  void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
-  void** ptr = (void**) ((uintptr_t) (mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
+INLINE void* AlignedMalloc(uint64_t size, size_t alignment) {
+  void* mem  = malloc(size + alignment + sizeof(void*));
+  void** ptr = (void**) ((uintptr_t) (mem + alignment + sizeof(void*)) & ~(alignment - 1));
   ptr[-1]    = mem;
   return ptr;
 }

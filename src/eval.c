@@ -25,6 +25,7 @@
 #include "nn/accumulator.h"
 #include "nn/evaluate.h"
 #include "search.h"
+#include "thread.h"
 #include "uci.h"
 #include "util.h"
 
@@ -113,4 +114,18 @@ Score Evaluate(Board* board, ThreadData* thread) {
   score = (128 + board->phase) * score / 128;
 
   return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
+}
+
+void EvalTrace(Board* board) {
+  // The UCI board has no guarantee of accumulator allocation
+  // so we have to set that up here.
+  board->accumulators = AlignedMalloc(sizeof(Accumulator), 64);
+
+  NNTrace(board);
+
+  int eval = Evaluate(board, Threads.threads[0]);
+  eval     = board->stm == WHITE ? eval : -eval;
+  printf("Final Score: %dcp (white)\n\n", (int) Normalize(eval));
+
+  AlignedFree(board->accumulators);
 }

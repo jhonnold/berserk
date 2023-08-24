@@ -26,6 +26,7 @@
 #include "../move.h"
 #include "../movegen.h"
 #include "../thread.h"
+#include "../uci.h"
 #include "../util.h"
 #include "accumulator.h"
 
@@ -50,27 +51,28 @@ float OUTPUT_BIAS[N_LAYERS] ALIGN;
 int32_t PSQT_WEIGHTS[N_FEATURES * N_LAYERS] ALIGN;
 
 #if defined(__AVX2__)
-INLINE void InputCReLU(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
-
-  const __m256i zero = _mm256_setzero_si256();
-
-  const int views[2] = {stm, !stm};
+  const int views[2]  = {stm, !stm};
 
   for (int v = 0; v < 2; v++) {
     const __m256i* in = (__m256i*) acc->values[views[v]];
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      out[i]     = _mm256_max_epi8(zero, _mm256_packs_epi16(in[2 * i + 0], in[2 * i + 1]));
-      out[i + 1] = _mm256_max_epi8(zero, _mm256_packs_epi16(in[2 * i + 2], in[2 * i + 3]));
+      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 6);
+      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 6);
+      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
+      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
+
+      out[i]     = _mm256_packus_epi16(s0, s1);
+      out[i + 1] = _mm256_packus_epi16(s2, s3);
     }
   }
 }
 #elif defined(__SSE2__)
-INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
-  // TODO: Update for CReLU
+INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
@@ -88,8 +90,7 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   }
 }
 #else
-INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
-  // TODO: Update for CReLU
+INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
 
   for (int v = 0; v < 2; v++) {
@@ -119,7 +120,7 @@ INLINE void m256_hadd_epi32x4(__m256i* regs) {
   regs[0] = _mm256_hadd_epi32(regs[0], regs[2]);
 }
 
-INLINE void L1AffineReLU(float* dest, int8_t* src, int8_t* wei, int32_t* bia) {
+INLINE void L1AffineReLU(float* dest, uint8_t* src, int8_t* wei, int32_t* bia) {
   const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(int8_t);
   const size_t IN_CHUNKS  = N_L1 / IN_WIDTH;
   const size_t OUT_CC     = 8;
@@ -167,7 +168,7 @@ INLINE void m128_hadd_epi32x4(__m128i* regs) {
   regs[0] = _mm_hadd_epi32(regs[0], regs[2]);
 }
 
-INLINE void L1AffineReLU(float* dest, int8_t* src, int8_t* wei, int32_t* bia) {
+INLINE void L1AffineReLU(float* dest, uint8_t* src, int8_t* wei, int32_t* bia) {
   const size_t IN_WIDTH   = sizeof(__m128i) / sizeof(int8_t);
   const size_t IN_CHUNKS  = N_L1 / IN_WIDTH;
   const size_t OUT_CC     = 4;
@@ -194,7 +195,7 @@ INLINE void L1AffineReLU(float* dest, int8_t* src, int8_t* wei, int32_t* bia) {
   }
 }
 #else
-INLINE void L1AffineReLU(float* dest, int8_t* src, int8_t* wei, int32_t* bia) {
+INLINE void L1AffineReLU(float* dest, uint8_t* src, int8_t* wei, int32_t* bia) {
   for (int i = 0; i < N_L2; i++) {
     const int offset = i * N_L1;
 
@@ -337,61 +338,126 @@ INLINE float L3Transform(float* src, float* wei, float bia) {
 }
 #endif
 
-int NNEvaluate(Board* board) {
-  const int stm    = board->stm;
-  const int layer  = (BitCount(OccBB(BOTH)) - 1) / 4;
-  Accumulator* acc = board->accumulators;
-
-  int psqt = (acc->psqt[stm][layer] - acc->psqt[!stm][layer]) / 2;
-
-  int8_t x0[N_L1] ALIGN;
+INLINE int Positional(Accumulator* acc, const int stm, const int layer) {
+  uint8_t x0[N_L1] ALIGN;
   float x1[N_L2] ALIGN;
   float x2[N_L3] ALIGN;
 
-  InputCReLU(x0, acc, stm);
+  InputReLU(x0, acc, stm);
   L1AffineReLU(x1, x0, L1_WEIGHTS[layer], L1_BIASES[layer]);
   L2AffineReLU(x2, x1, L2_WEIGHTS[layer], L2_BIASES[layer]);
-  float positional = L3Transform(x2, OUTPUT_WEIGHTS[layer], OUTPUT_BIAS[layer]);
+  return L3Transform(x2, OUTPUT_WEIGHTS[layer], OUTPUT_BIAS[layer]);
+}
 
-  return (positional + psqt) / 64;
+INLINE int Psqt(Accumulator* acc, const int stm, const int layer) {
+  return (acc->psqt[stm][layer] - acc->psqt[!stm][layer]) / 2;
+}
+
+int NNEvaluate(Board* board) {
+  const int stm   = board->stm;
+  const int layer = (BitCount(OccBB(BOTH)) - 1) / 4;
+
+  const int psqt       = Psqt(board->accumulators, stm, layer);
+  const int positional = Positional(board->accumulators, stm, layer);
+
+  return (positional + psqt) / 32;
 }
 
 void NNTrace(Board* board) {
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
+
   const int stm       = board->stm;
   const int realLayer = (BitCount(OccBB(BOTH)) - 1) / 4;
-  Accumulator* acc    = board->accumulators;
 
+  int base = NNEvaluate(board);
+  base     = board->stm == WHITE ? base : -base;
+
+  printf("\nNNUE derived piece values:\n");
+
+  for (int r = 0; r < 8; r++) {
+    printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+    printf("|");
+    for (int f = 0; f < 16; f++) {
+      if (f == 8)
+        printf("\n|");
+
+      int sq = r * 8 + (f > 7 ? f - 8 : f);
+      int pc = board->squares[sq];
+
+      if (pc == NO_PIECE) {
+        printf("       |");
+      } else if (f < 8) {
+        printf("   %c   |", PIECE_TO_CHAR[pc]);
+      } else if (PieceType(pc) == KING) {
+        printf("       |");
+      } else {
+        // To calculate the piece value, we pop it
+        // reset the accumulators and take a diff
+        PopBit(OccBB(BOTH), sq);
+        ResetAccumulator(board->accumulators, board, WHITE);
+        ResetAccumulator(board->accumulators, board, BLACK);
+        int new = NNEvaluate(board);
+        new     = board->stm == WHITE ? new : -new;
+        SetBit(OccBB(BOTH), sq);
+
+        int diff       = base - new;
+        int normalized = Normalize(diff);
+        int v          = abs(normalized);
+
+        char buffer[6];
+        buffer[5] = '\0';
+        buffer[0] = diff > 0 ? '+' : diff < 0 ? '-' : ' ';
+        if (v >= 1000) {
+          buffer[1] = '0' + v / 1000;
+          v %= 1000;
+          buffer[2] = '0' + v / 100;
+          v %= 100;
+          buffer[3] = '.';
+          buffer[4] = '0' + v / 10;
+        } else {
+          buffer[1] = '0' + v / 100;
+          v %= 100;
+          buffer[2] = '.';
+          buffer[3] = '0' + v / 10;
+          v %= 10;
+          buffer[4] = '0' + v;
+        }
+        printf(" %s |", buffer);
+      }
+    }
+
+    printf("\n");
+  }
+
+  printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
   printf("+------------+------------+------------+------------+\n");
   printf("|   Bucket   |  Material  | Positional |   Total    |\n");
   printf("|            |   (PSQT)   |  (Layers)  |            |\n");
   printf("+------------+------------+------------+------------+\n");
 
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
+
   for (int layer = 0; layer < N_LAYERS; layer++) {
     printf("|  %8d  |", layer);
 
-    int psqt = (acc->psqt[stm][layer] - acc->psqt[!stm][layer]) / 2;
-    printf("  %8.2f  |", psqt / 6400.0f);
+    int psqt = Psqt(board->accumulators, stm, layer);
+    printf("  %s%7.2f  |", psqt > 0 ? "+" : psqt < 0 ? "-" : " ", Normalize(abs(psqt) / 3200.0f));
 
-    int8_t x0[N_L1] ALIGN;
-    float x1[N_L2] ALIGN;
-    float x2[N_L3] ALIGN;
+    int positional = Positional(board->accumulators, stm, layer);
+    printf("  %s%7.2f  |", positional > 0 ? "+" : positional < 0 ? "-" : " ", Normalize(abs(positional) / 3200.0f));
 
-    InputCReLU(x0, acc, stm);
-    L1AffineReLU(x1, x0, L1_WEIGHTS[layer], L1_BIASES[layer]);
-    L2AffineReLU(x2, x1, L2_WEIGHTS[layer], L2_BIASES[layer]);
-    float positional = L3Transform(x2, OUTPUT_WEIGHTS[layer], OUTPUT_BIAS[layer]);
-
-    printf("  %s%7.2f  |", positional >= 0 ? "+" : "-", positional / 6400.0f);
-
-    float score = (psqt + positional) / 64.0f;
-    printf("  %8.2f  |", score / 100.0f);
+    int score = (psqt + positional);
+    printf("  %s%7.2f  |", score > 0 ? "+" : score < 0 ? "-" : " ", Normalize(abs(score) / 3200.0f));
 
     if (layer == realLayer)
       printf(" <-- this bucket is used");
     printf("\n");
   }
 
-  printf("+------------+------------+------------+------------+\n");
+  printf("+------------+------------+------------+------------+\n\n");
+  printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
 }
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +  // input weights

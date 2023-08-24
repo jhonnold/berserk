@@ -31,10 +31,10 @@
 #define AGE_CYCLE  (255 + AGE_INC)
 
 typedef struct {
-  uint32_t hash;
-  uint8_t depth, agePvBound;
   Move move;
+  uint32_t hash;
   int16_t score, eval;
+  uint8_t depth, agePvBound;
 } TTEntry;
 
 typedef struct {
