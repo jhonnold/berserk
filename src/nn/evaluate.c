@@ -58,13 +58,8 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 6);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 6);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
-
-      out[i]     = _mm256_packus_epi16(s0, s1);
-      out[i + 1] = _mm256_packus_epi16(s2, s3);
+      out[i]     = _mm256_packus_epi16(in[2 * i + 0], in[2 * i + 1]);
+      out[i + 1] = _mm256_packus_epi16(in[2 * i + 2], in[2 * i + 3]);
     }
   }
 }
