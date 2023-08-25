@@ -58,10 +58,10 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 6);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 6);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
+      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 5);
+      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 5);
+      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 5);
+      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 5);
 
       out[i]     = _mm256_packus_epi16(s0, s1);
       out[i + 1] = _mm256_packus_epi16(s2, s3);
@@ -343,7 +343,7 @@ int Propagate(Accumulator* accumulator, const int stm) {
   InputReLU(x0, accumulator, stm);
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
-  return L3Transform(x2) / 32.0;
+  return L3Transform(x2) / 64;
 }
 
 int Predict(Board* board) {
