@@ -169,7 +169,7 @@ void ParseGo(char* in, Board* board) {
   // "movetime" is essentially making a move with 1 to go for TC
   if (moveTime != -1) {
     Limits.timeset = 1;
-    Limits.alloc   = moveTime;
+    Limits.alloc   = INT32_MAX;
     Limits.max     = moveTime;
   } else {
     if (time != -1) {
