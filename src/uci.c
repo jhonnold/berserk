@@ -361,51 +361,7 @@ void UCILoop() {
       PrintBB(threats->pcs);
       PrintBB(threats->sqs);
     } else if (!strncmp(in, "eval", 4)) {
-      ThreadData* thread = Threads.threads[0];
-      board.accumulators = thread->accumulators;
-      ResetAccumulator(board.accumulators, &board, WHITE);
-      ResetAccumulator(board.accumulators, &board, BLACK);
-
-      int score = Evaluate(&board, thread);
-      score     = board.stm == WHITE ? score : -score;
-
-      for (int r = 0; r < 8; r++) {
-        printf(
-          "+-------+-------+-------+-------+-------+-------+-------+-------+"
-          "\n");
-        printf("|");
-        for (int f = 0; f < 16; f++) {
-          if (f == 8)
-            printf("\n|");
-
-          int sq = r * 8 + (f > 7 ? f - 8 : f);
-
-          if (f < 8) {
-            if (board.squares[sq] == NO_PIECE)
-              printf("       |");
-            else
-              printf("   %c   |", PIECE_TO_CHAR[board.squares[sq]]);
-          } else if (board.squares[sq] < WHITE_KING) {
-            PopBit(board.occupancies[BOTH], sq);
-
-            ResetAccumulator(board.accumulators, &board, WHITE);
-            ResetAccumulator(board.accumulators, &board, BLACK);
-
-            int new = Evaluate(&board, thread);
-            new     = board.stm == WHITE ? new : -new;
-
-            int diff = score - new;
-            printf("%+7d|", (int) Normalize(diff));
-            SetBit(board.occupancies[BOTH], sq);
-          } else {
-            printf("       |");
-          }
-        }
-        printf("\n");
-      }
-      printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
-
-      printf("Score: %dcp (white)\n", (int) Normalize(score));
+      EvaluateTrace(&board);
     } else if (!strncmp(in, "see ", 4)) {
       Move m = ParseMove(in + 4, &board);
       if (m)

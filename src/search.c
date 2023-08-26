@@ -334,7 +334,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // hot exit
     longjmp(thread->exit, 1);
 
-  thread->nodes++;
+  IncRlx(thread->nodes);
   if (isPV && thread->seldepth < ss->ply + 1)
     thread->seldepth = ss->ply + 1;
 
@@ -372,7 +372,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
-      thread->tbhits++;
+      IncRlx(thread->tbhits);
 
       int bound;
       switch (tbResult) {
@@ -769,7 +769,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     // hot exit
     longjmp(thread->exit, 1);
 
-  thread->nodes++;
+  IncRlx(thread->nodes);
 
   // draw check
   if (IsDraw(board, ss->ply))
