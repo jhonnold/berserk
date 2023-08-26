@@ -635,7 +635,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int newDepth = depth + extension;
 
     int doFullSearch  = 0;
-    int likelyFailLow = isPV && hashMove && TTDepth(tt) >= depth && TTBound(tt) == BOUND_UPPER && ttScore <= alpha;
+    int likelyFailLow = isPV && hashMove && TTDepth(tt) >= depth && TTBound(tt) == BOUND_UPPER;
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
