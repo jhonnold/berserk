@@ -444,6 +444,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->skip       = NULL_MOVE;
   (ss + 1)->killers[0] = NULL_MOVE;
   (ss + 1)->killers[1] = NULL_MOVE;
+  (ss + 1)->cutoffs    = 0;
   ss->de               = (ss - 1)->de;
 
   // Build threats for use search
@@ -556,7 +557,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         skipQuiets = 1;
 
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
-        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)] - !(improving || isPV));
 
         if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
           skipQuiets = 1;
@@ -634,14 +635,15 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // apply extensions
     int newDepth = depth + extension;
 
-    int doFullSearch = 0;
+    int doFullSearch  = 0;
+    int likelyFailLow = isPV && hashMove && TTDepth(tt) >= depth && TTBound(tt) == BOUND_UPPER;
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
       int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
 
       // increase reduction on non-pv
-      if (!ttPv)
+      if (!ttPv || likelyFailLow)
         R++;
 
       // increase reduction if our eval is declining
@@ -659,6 +661,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // move GAVE check
       if (board->checkers)
         R--;
+
+      // Increase reductions when next ply is producing many cutoffs
+      if ((ss + 1)->cutoffs > 3)
+        R++;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
@@ -726,6 +732,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
+        ss->cutoffs++;
+
         UpdateHistories(ss, thread, move, depth + (bestScore > beta + 86), quiets, numQuiets, captures, numCaptures);
         break;
       }
