@@ -334,7 +334,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // hot exit
     longjmp(thread->exit, 1);
 
-  thread->nodes++;
+  IncRlx(thread->nodes);
   if (isPV && thread->seldepth < ss->ply + 1)
     thread->seldepth = ss->ply + 1;
 
@@ -372,7 +372,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
-      thread->tbhits++;
+      IncRlx(thread->tbhits);
 
       int bound;
       switch (tbResult) {
@@ -538,9 +538,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
       continue;
-    if (isRoot && MoveSearchedByMultiPV(thread, move))
-      continue;
-    if (isRoot && !MoveSearchable(thread, move))
+    if (isRoot && !ValidRootMove(thread, move))
       continue;
     if (!isRoot && !IsLegal(move, board))
       continue;
@@ -771,7 +769,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     // hot exit
     longjmp(thread->exit, 1);
 
-  thread->nodes++;
+  IncRlx(thread->nodes);
 
   // draw check
   if (IsDraw(board, ss->ply))
@@ -962,16 +960,8 @@ void SortRootMoves(ThreadData* thread, int offset) {
   }
 }
 
-int MoveSearchedByMultiPV(ThreadData* thread, Move move) {
-  for (int i = 0; i < thread->multiPV; i++)
-    if (thread->rootMoves[i].move == move)
-      return 1;
-
-  return 0;
-}
-
-int MoveSearchable(ThreadData* thread, Move move) {
-  for (int i = 0; i < thread->numRootMoves; i++)
+int ValidRootMove(ThreadData* thread, Move move) {
+  for (int i = thread->multiPV; i < thread->numRootMoves; i++)
     if (move == thread->rootMoves[i].move)
       return 1;
 

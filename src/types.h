@@ -21,6 +21,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <setjmp.h>
+#include <stdatomic.h>
 
 #define MAX_SEARCH_PLY 201 // effective max depth 250
 #define MAX_MOVES      128
@@ -169,7 +170,7 @@ typedef struct ThreadData ThreadData;
 
 struct ThreadData {
   int idx, multiPV, depth, seldepth;
-  uint64_t nodes, tbhits;
+  atomic_uint_fast64_t nodes, tbhits;
 
   Accumulator* accumulators;
   AccumulatorKingState* refreshTable;
