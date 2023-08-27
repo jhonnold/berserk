@@ -21,8 +21,9 @@
 #include <limits.h>
 #include <pthread.h>
 #include <setjmp.h>
+#include <stdatomic.h>
 
-#define MAX_SEARCH_PLY 251 // effective max depth 250
+#define MAX_SEARCH_PLY 201 // effective max depth 250
 #define MAX_MOVES      128
 
 #define N_KING_BUCKETS 16
@@ -167,7 +168,7 @@ typedef struct ThreadData ThreadData;
 
 struct ThreadData {
   int idx, multiPV, depth, seldepth;
-  uint64_t nodes, tbhits;
+  atomic_uint_fast64_t nodes, tbhits;
 
   Accumulator* accumulators;
   AccumulatorKingState* refreshTable;
@@ -222,6 +223,8 @@ enum {
   // QSearch
   QS_GEN_NOISY_MOVES,
   QS_PLAY_NOISY_MOVES,
+  QS_GEN_QUIET_CHECKS,
+  QS_PLAY_QUIET_CHECKS,
   // QSearch Evasions
   QS_EVASION_HASH_MOVE,
   QS_GEN_EVASIONS,
@@ -240,7 +243,7 @@ typedef struct {
   ThreadData* thread;
   SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
-  int seeCutoff, phase;
+  int seeCutoff, phase, genChecks;
 
   ScoredMove *current, *end, *endBad;
   ScoredMove moves[MAX_MOVES];

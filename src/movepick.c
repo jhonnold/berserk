@@ -51,12 +51,25 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     Move move = current->move;
 
     if (type == ST_QUIET)
-      current->score = GetQuietHistory(picker->ss, picker->thread, move);
+      current->score = 2 * ((int) HH(thread->board.stm, move, ss->oppThreat.sqs) + //
+                            (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
+                            (int) (*(ss - 2)->ch)[Moving(move)][To(move)]) +       //
+                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +             //
+                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
+
     else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
-    else if (type == ST_EVASION)
-      current->score = IsCap(move) ? 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] :
-                                     GetQuietHistory(ss, thread, move);
+
+    else if (type == ST_EVASION) {
+      if (IsCap(move))
+        current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
+      else
+        current->score = 2 * ((int) HH(thread->board.stm, move, ss->oppThreat.sqs) + //
+                              (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
+                              (int) (*(ss - 2)->ch)[Moving(move)][To(move)]) +       //
+                         (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +             //
+                         (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
+    }
 
     current++;
   }
@@ -194,6 +207,25 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
     case QS_PLAY_NOISY_MOVES:
       if (picker->current != picker->end)
         return Best(picker->current++, picker->end);
+
+      if (!picker->genChecks) {
+        picker->phase = -1;
+        return NULL_MOVE;
+      }
+
+      picker->phase = QS_GEN_QUIET_CHECKS;
+
+      // fallthrough
+    case QS_GEN_QUIET_CHECKS:
+      picker->current = picker->moves;
+      picker->end = AddQuietCheckMoves(picker->current, board);
+
+      picker->phase = QS_PLAY_QUIET_CHECKS;
+
+      // fallthrough
+    case QS_PLAY_QUIET_CHECKS:
+      if (picker->current != picker->end)
+        return (picker->current++)->move;
 
       picker->phase = -1;
       return NULL_MOVE;
