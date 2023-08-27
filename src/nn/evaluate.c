@@ -277,7 +277,7 @@ INLINE void L2AffineReLU(float* dest, float* src) {
 }
 #else
 INLINE void L2AffineReLU(float* dest, float* src) {
-    for (int i = 0; i < N_L3; i++) {
+  for (int i = 0; i < N_L3; i++) {
     const int offset = i * N_L2;
 
     dest[i] = L2_BIASES[i];

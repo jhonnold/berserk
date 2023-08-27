@@ -75,3 +75,6 @@ clone-networks:
 ifeq ($(EVALFILE), $(MAIN_NETWORK))
 	git submodule update --init networks
 endif
+
+format:
+	clang-format -i $(SRC)

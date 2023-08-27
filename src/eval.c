@@ -123,8 +123,8 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base = Propagate(board->accumulators, board->stm);
-  base = board->stm == WHITE ? base : -base;
+  int base   = Propagate(board->accumulators, board->stm);
+  base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
   printf("\nNNUE derived piece values:\n");
@@ -152,12 +152,12 @@ void EvaluateTrace(Board* board) {
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
         int new = Propagate(board->accumulators, board->stm);
-        new = board->stm == WHITE ? new : -new;
+        new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 
-        int diff = base - new;
+        int diff       = base - new;
         int normalized = Normalize(diff);
-        int v = abs(normalized);
+        int v          = abs(normalized);
 
         char buffer[6];
         buffer[5] = '\0';

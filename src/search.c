@@ -161,7 +161,6 @@ void Search(ThreadData* thread) {
   SetContempt(thread->contempt, board->stm);
 
   PV nullPv;
-  int scores[MAX_SEARCH_PLY];
   int searchStability   = 0;
   Move previousBestMove = NULL_MOVE;
 
@@ -265,17 +264,11 @@ void Search(ThreadData* thread) {
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.25 - 0.05 * searchStability;
 
-      Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
-      Score prevScoreDiff   = thread->previousScore - bestScore;
-
-      // if we don't know the previous score, work only on the searchscore
-      if (thread->previousScore == UNKNOWN)
-        searchScoreDiff *= 2, prevScoreDiff = 0;
-
-      double scoreChangeFactor = 0.1 +                                              //
-                                 0.0275 * searchScoreDiff * (searchScoreDiff > 0) + //
-                                 0.0275 * prevScoreDiff * (prevScoreDiff > 0);
-      scoreChangeFactor = Max(0.5, Min(1.5, scoreChangeFactor));
+      double scoreChangeFactor = 1.0;
+      if (thread->previousScore == UNKNOWN) {
+        Score prevScoreDiff = thread->previousScore - bestScore;
+        scoreChangeFactor   = Max(0.5, Min(1.5, 0.1 + 0.055 * prevScoreDiff * (prevScoreDiff > 0)));
+      }
 
       uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
@@ -291,8 +284,7 @@ void Search(ThreadData* thread) {
       }
     }
 
-    previousBestMove      = bestMove;
-    scores[thread->depth] = bestScore;
+    previousBestMove = bestMove;
   }
 }
 

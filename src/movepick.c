@@ -218,7 +218,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       // fallthrough
     case QS_GEN_QUIET_CHECKS:
       picker->current = picker->moves;
-      picker->end = AddQuietCheckMoves(picker->current, board);
+      picker->end     = AddQuietCheckMoves(picker->current, board);
 
       picker->phase = QS_PLAY_QUIET_CHECKS;
 
