@@ -29,8 +29,8 @@
 #include "uci.h"
 #include "util.h"
 
-const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
-const int MAX_PHASE       = 64;
+const int PHASE_VALUES[6] = {1, 5, 5, 9, 18, 0};
+const int MAX_PHASE       = 128;
 
 void SetContempt(int* dest, int stm) {
   int contempt = CONTEMPT;
@@ -111,7 +111,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   score += thread->contempt[board->stm];
 
   // scaled based on phase [1, 1.5]
-  score = (128 + board->phase) * score / 128;
+  score = (256 + board->phase) * score / 256;
 
   return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
 }
