@@ -77,12 +77,17 @@ AddPromotions(ScoredMove* moves, int from, int to, int moving, int flags, const 
   return moves;
 }
 
-INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, const int stm, const int type) {
+INLINE ScoredMove* AddPawnMoves(ScoredMove* moves,
+                                BitBoard movers,
+                                BitBoard opts,
+                                Board* board,
+                                const int stm,
+                                const int type) {
   const int xstm = stm ^ 1;
 
   if (type & GT_QUIET) {
     // Quiet non-promotions
-    BitBoard valid     = PieceBB(PAWN, stm) & ~PromoRank(stm);
+    BitBoard valid     = movers & ~PromoRank(stm);
     BitBoard targets   = ShiftPawnDir(valid, stm) & ~OccBB(BOTH);
     BitBoard dpTargets = ShiftPawnDir(targets & DPRank(stm), stm) & ~OccBB(BOTH);
 
@@ -101,7 +106,7 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 
   if (type & GT_CAPTURE) {
     // Captures non-promotions
-    BitBoard valid    = PieceBB(PAWN, stm) & ~PromoRank(stm);
+    BitBoard valid    = movers & ~PromoRank(stm);
     BitBoard eTargets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
     BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
 
@@ -116,17 +121,17 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
     }
 
     if (board->epSquare) {
-      BitBoard movers = GetPawnAttacks(board->epSquare, xstm) & valid;
+      BitBoard epMovers = GetPawnAttacks(board->epSquare, xstm) & valid;
 
-      while (movers) {
-        int from = PopLSB(&movers);
+      while (epMovers) {
+        int from = PopLSB(&epMovers);
         moves    = AddMove(moves, from, board->epSquare, Piece(PAWN, stm), NO_PROMO, EP);
       }
     }
   }
 
   // Promotions (both capture and non-capture)
-  BitBoard valid    = PieceBB(PAWN, stm) & PromoRank(stm);
+  BitBoard valid    = movers & PromoRank(stm);
   BitBoard sTargets = ShiftPawnDir(valid, stm) & ~OccBB(BOTH) & opts;
   BitBoard eTargets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
   BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
@@ -150,6 +155,7 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 }
 
 INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
+                                 BitBoard movers,
                                  BitBoard opts,
                                  Board* board,
                                  const int stm,
@@ -157,7 +163,6 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
                                  const int piece) {
   const int xstm = stm ^ 1;
 
-  BitBoard movers = PieceBB(piece, stm);
   while (movers) {
     int from = PopLSB(&movers);
 
@@ -207,28 +212,48 @@ INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm
   const int oppKingSq       = LSB(PieceBB(KING, xstm));
   const BitBoard bishopMask = GetBishopAttacks(oppKingSq, OccBB(BOTH));
   const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(BOTH));
+  const BitBoard queenMask  = bishopMask | rookMask;
 
-  moves = AddPieceMoves(moves, bishopMask | rookMask, board, stm, GT_QUIET, QUEEN);
-  moves = AddPieceMoves(moves, rookMask, board, stm, GT_QUIET, ROOK);
-  moves = AddPieceMoves(moves, bishopMask, board, stm, GT_QUIET, BISHOP);
-  moves = AddPieceMoves(moves, GetKnightAttacks(oppKingSq), board, stm, GT_QUIET, KNIGHT);
+  moves = AddPieceMoves(moves, PieceBB(QUEEN, stm), queenMask, board, stm, GT_QUIET, QUEEN);
+  moves = AddPieceMoves(moves, PieceBB(ROOK, stm), rookMask, board, stm, GT_QUIET, ROOK);
+  moves = AddPieceMoves(moves, PieceBB(BISHOP, stm), bishopMask, board, stm, GT_QUIET, BISHOP);
+  moves = AddPieceMoves(moves, PieceBB(KNIGHT, stm), GetKnightAttacks(oppKingSq), board, stm, GT_QUIET, KNIGHT);
+  moves = AddPawnMoves(moves, PieceBB(PAWN, stm), GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
 
-  return AddPawnMoves(moves, GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
+  BitBoard discoveryPieces = GetBishopAttacks(oppKingSq, OccBB(BOTH) ^ (queenMask & OccBB(stm))) & PieceBB(BISHOP, stm);
+  discoveryPieces |= GetRookAttacks(oppKingSq, OccBB(BOTH) ^ (queenMask & OccBB(stm))) & PieceBB(ROOK, stm);
+
+  while (discoveryPieces) {
+    const int discoveryFrom = PopLSB(&discoveryPieces);
+    const BitBoard between  = BetweenSquares(discoveryFrom, oppKingSq);
+    const int from          = LSB(between & OccBB(stm));
+    const int pc            = PieceType(board->squares[from]);
+
+    if (pc != PAWN) {
+      const BitBoard opts = ~(between | OccBB(BOTH) | GetPieceAttacks(oppKingSq, OccBB(BOTH), pc));
+      moves               = AddPieceMoves(moves, Bit(from), opts, board, stm, GT_QUIET, pc);
+    } else {
+      const BitBoard opts = ~(between | OccBB(BOTH) | RANK_1 | RANK_8);
+      moves               = AddPawnMoves(moves, Bit(from), opts, board, stm, GT_QUIET);
+    }
+  }
+
+  return moves;
 }
 
 INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
   if (BitCount(board->checkers) > 1)
-    return AddPieceMoves(moves, ALL, board, color, type, KING);
+    return AddPieceMoves(moves, PieceBB(KING, color), ALL, board, color, type, KING);
 
   BitBoard opts =
     !board->checkers ? ALL : BetweenSquares(LSB(PieceBB(KING, color)), LSB(board->checkers)) | board->checkers;
 
-  moves = AddPawnMoves(moves, opts, board, color, type);
-  moves = AddPieceMoves(moves, opts, board, color, type, KNIGHT);
-  moves = AddPieceMoves(moves, opts, board, color, type, BISHOP);
-  moves = AddPieceMoves(moves, opts, board, color, type, ROOK);
-  moves = AddPieceMoves(moves, opts, board, color, type, QUEEN);
-  moves = AddPieceMoves(moves, ALL, board, color, type, KING);
+  moves = AddPawnMoves(moves, PieceBB(PAWN, color), opts, board, color, type);
+  moves = AddPieceMoves(moves, PieceBB(KNIGHT, color), opts, board, color, type, KNIGHT);
+  moves = AddPieceMoves(moves, PieceBB(BISHOP, color), opts, board, color, type, BISHOP);
+  moves = AddPieceMoves(moves, PieceBB(ROOK, color), opts, board, color, type, ROOK);
+  moves = AddPieceMoves(moves, PieceBB(QUEEN, color), opts, board, color, type, QUEEN);
+  moves = AddPieceMoves(moves, PieceBB(KING, color), ALL, board, color, type, KING);
   if ((type & GT_QUIET) && !board->checkers)
     moves = AddCastles(moves, board, color);
 
