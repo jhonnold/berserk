@@ -123,8 +123,11 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base = Propagate(board->accumulators, board->stm);
-  base = board->stm == WHITE ? base : -base;
+  int psqt, positional;
+  int base   = PropagateTrace(board->accumulators, board->stm, &psqt, &positional);
+  psqt       = board->stm == WHITE ? psqt : -psqt;
+  positional = board->stm == WHITE ? positional : -positional;
+  base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
   printf("\nNNUE derived piece values:\n");
@@ -152,12 +155,12 @@ void EvaluateTrace(Board* board) {
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
         int new = Propagate(board->accumulators, board->stm);
-        new = board->stm == WHITE ? new : -new;
+        new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 
-        int diff = base - new;
+        int diff       = base - new;
         int normalized = Normalize(diff);
-        int v = abs(normalized);
+        int v          = abs(normalized);
 
         char buffer[6];
         buffer[5] = '\0';
@@ -186,6 +189,8 @@ void EvaluateTrace(Board* board) {
 
   printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
 
+  printf("  Pos Score: %dcp (white)\n", (int) Normalize(positional));
+  printf(" PSQT Score: %dcp (white)\n", (int) Normalize(psqt));
   printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
 

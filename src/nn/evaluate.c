@@ -50,21 +50,23 @@ float OUTPUT_BIAS;
 int32_t PSQT_WEIGHTS[N_FEATURES] ALIGN;
 
 #if defined(__AVX2__)
-INLINE void InputCReLU(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
-
-  const __m256i zero = _mm256_setzero_si256();
-
-  const int views[2] = {stm, !stm};
+  const int views[2]  = {stm, !stm};
 
   for (int v = 0; v < 2; v++) {
     const __m256i* in = (__m256i*) acc->values[views[v]];
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      out[i]     = _mm256_max_epi8(zero, _mm256_packs_epi16(in[2 * i + 0], in[2 * i + 1]));
-      out[i + 1] = _mm256_max_epi8(zero, _mm256_packs_epi16(in[2 * i + 2], in[2 * i + 3]));
+      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 6);
+      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 6);
+      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
+      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
+
+      out[i]     = _mm256_packus_epi16(s0, s1);
+      out[i + 1] = _mm256_packus_epi16(s2, s3);
     }
   }
 }
@@ -117,14 +119,11 @@ INLINE void m256_hadd_epi32x4(__m256i* regs) {
   regs[0] = _mm256_hadd_epi32(regs[0], regs[2]);
 }
 
-INLINE void L1AffineCReLU(float* dest, int8_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(int8_t);
+INLINE void L1AffineReLU(float* dest, uint8_t* src) {
+  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(uint8_t);
   const size_t IN_CHUNKS  = N_L1 / IN_WIDTH;
   const size_t OUT_CC     = 8;
   const size_t OUT_CHUNKS = N_L2 / OUT_CC;
-
-  const __m256 zero = _mm256_setzero_ps();
-  const __m256 max  = _mm256_set1_ps(127.0 * 64.0);
 
   const __m256i* in      = (__m256i*) src;
   const __m256i* weights = (__m256i*) L1_WEIGHTS;
@@ -147,9 +146,7 @@ INLINE void L1AffineCReLU(float* dest, int8_t* src) {
     const __m128i t0 = _mm_add_epi32(_mm256_castsi256_si128(regs[0]), _mm256_extracti128_si256(regs[0], 1));
     const __m128i t4 = _mm_add_epi32(_mm256_castsi256_si128(regs[4]), _mm256_extracti128_si256(regs[4], 1));
     __m256i sum      = _mm256_inserti128_si256(_mm256_castsi128_si256(t0), t4, 1);
-
-    out[i] = _mm256_cvtepi32_ps(_mm256_add_epi32(sum, biases[i]));
-    out[i] = _mm256_max_ps(zero, _mm256_min_ps(max, out[i]));
+    out[i]           = _mm256_cvtepi32_ps(_mm256_max_epi32(_mm256_add_epi32(sum, biases[i]), _mm256_setzero_si256()));
   }
 }
 
@@ -217,14 +214,11 @@ INLINE void m256_hadd_psx4(__m256* regs) {
   regs[0] = _mm256_hadd_ps(regs[0], regs[2]);
 }
 
-INLINE void L2AffineCReLU(float* dest, float* src) {
+INLINE void L2AffineReLU(float* dest, float* src) {
   const size_t IN_WIDTH   = sizeof(__m256) / sizeof(float);
   const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
   const size_t OUT_CC     = 8;
   const size_t OUT_CHUNKS = N_L3 / OUT_CC;
-
-  const __m256 zero = _mm256_setzero_ps();
-  const __m256 max  = _mm256_set1_ps(127.0 * 64.0);
 
   const __m256* in      = (__m256*) src;
   const __m256* weights = (__m256*) L2_WEIGHTS;
@@ -247,9 +241,7 @@ INLINE void L2AffineCReLU(float* dest, float* src) {
     const __m128 t0 = _mm_add_ps(_mm256_castps256_ps128(regs[0]), _mm256_extractf128_ps(regs[0], 1));
     const __m128 t4 = _mm_add_ps(_mm256_castps256_ps128(regs[4]), _mm256_extractf128_ps(regs[4], 1));
     __m256 sum      = _mm256_insertf128_ps(_mm256_castps128_ps256(t0), t4, 1);
-
-    out[i] = _mm256_add_ps(sum, biases[i]);
-    out[i] = _mm256_max_ps(zero, _mm256_min_ps(max, out[i]));
+    out[i]          = _mm256_max_ps(_mm256_add_ps(sum, biases[i]), _mm256_setzero_ps());
   }
 }
 #elif defined(__SSE3__)
@@ -287,7 +279,7 @@ INLINE void L2AffineReLU(float* dest, float* src) {
 }
 #else
 INLINE void L2AffineReLU(float* dest, float* src) {
-    for (int i = 0; i < N_L3; i++) {
+  for (int i = 0; i < N_L3; i++) {
     const int offset = i * N_L2;
 
     dest[i] = L2_BIASES[i];
@@ -345,19 +337,33 @@ INLINE float L3Transform(float* src) {
 }
 #endif
 
-int Propagate(Accumulator* accumulator, const int stm) {
-  int8_t x0[N_L1] ALIGN;
+INLINE int Positional(Accumulator* acc, const int stm) {
+  uint8_t x0[N_L1] ALIGN;
   float x1[N_L2] ALIGN;
   float x2[N_L3] ALIGN;
 
-  InputCReLU(x0, accumulator, stm);
-  L1AffineCReLU(x1, x0);
-  L2AffineCReLU(x2, x1);
-  float positional = L3Transform(x2);
+  InputReLU(x0, acc, stm);
+  L1AffineReLU(x1, x0);
+  L2AffineReLU(x2, x1);
+  return L3Transform(x2);
+}
 
-  int psqt = (accumulator->psqt[stm] - accumulator->psqt[!stm]) / 2;
+INLINE int Psqt(Accumulator* acc, const int stm) {
+  return (acc->psqt[stm] - acc->psqt[!stm]) / 2;
+}
 
-  return (positional + psqt) / 64;
+int Propagate(Accumulator* accumulator, const int stm) {
+  int positional = Positional(accumulator, stm);
+  int psqt       = Psqt(accumulator, stm);
+
+  return (positional + psqt) / 32;
+}
+
+int PropagateTrace(Accumulator* accumulator, const int stm, int* positional, int* psqt) {
+  *positional = Positional(accumulator, stm) / 32;
+  *psqt       = Psqt(accumulator, stm) / 32;
+
+  return *positional + *psqt;
 }
 
 int Predict(Board* board) {

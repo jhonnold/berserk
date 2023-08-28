@@ -23,6 +23,7 @@ extern int32_t PSQT_WEIGHTS[N_FEATURES];
 
 int Predict(Board* board);
 int Propagate(Accumulator* accumulator, const int stm);
+int PropagateTrace(Accumulator* accumulator, const int stm, int* positional, int* psqt);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);

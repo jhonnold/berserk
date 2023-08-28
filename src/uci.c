@@ -360,6 +360,17 @@ void UCILoop() {
 
       PrintBB(threats->pcs);
       PrintBB(threats->sqs);
+    } else if (!strncmp(in, "static", 6)) {
+      ThreadData* thread = Threads.threads[0];
+      board.accumulators = thread->accumulators;
+
+      ResetAccumulator(board.accumulators, &board, WHITE);
+      ResetAccumulator(board.accumulators, &board, BLACK);
+
+      int score = Evaluate(&board, thread);
+      score     = board.stm == WHITE ? score : -score;
+
+      printf("Final Score: %dcp (white)\n", (int) Normalize(score));
     } else if (!strncmp(in, "eval", 4)) {
       EvaluateTrace(&board);
     } else if (!strncmp(in, "see ", 4)) {
