@@ -41,8 +41,7 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
 
     picker->counter = thread->counters[moving][to];
   } else {
-    // Legacy behavior, and not good.
-    picker->counter = thread->counters[WHITE_PAWN][A8];
+    picker->counter = NULL_MOVE;
   }
 
   picker->thread = thread;
@@ -54,9 +53,10 @@ INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread) {
   picker->thread = thread;
 }
 
-INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread) {
-  picker->phase  = QS_GEN_NOISY_MOVES;
-  picker->thread = thread;
+INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, int genChecks) {
+  picker->phase     = QS_GEN_NOISY_MOVES;
+  picker->thread    = thread;
+  picker->genChecks = genChecks;
 }
 
 INLINE void InitQSEvasionsPicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {

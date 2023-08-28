@@ -17,6 +17,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <stdatomic.h>
 #include <stdlib.h>
 
 #include "types.h"
@@ -27,12 +28,13 @@
 #define INLINE static inline __attribute__((always_inline))
 
 #define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
+#define IncRlx(x) atomic_fetch_add_explicit(&(x), 1, memory_order_relaxed)
 
 long GetTimeMS();
 
-INLINE void* AlignedMalloc(uint64_t size) {
-  void* mem  = malloc(size + ALIGN_ON + sizeof(void*));
-  void** ptr = (void**) ((uintptr_t) (mem + ALIGN_ON + sizeof(void*)) & ~(ALIGN_ON - 1));
+INLINE void* AlignedMalloc(uint64_t size, const size_t on) {
+  void* mem  = malloc(size + on + sizeof(void*));
+  void** ptr = (void**) ((uintptr_t) (mem + on + sizeof(void*)) & ~(on - 1));
   ptr[-1]    = mem;
   return ptr;
 }

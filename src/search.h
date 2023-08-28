@@ -29,13 +29,11 @@
 #define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
 
 // static evaluation pruning
-// capture cutoff is linear 70x
-// quiet cutoff is quadratic 20x^2
-#define SEE_PRUNE_CAPTURE_CUTOFF 90
-#define SEE_PRUNE_CUTOFF         15
+#define SEE_PRUNE_CAPTURE_CUTOFF 104
+#define SEE_PRUNE_CUTOFF         17
 
 // delta pruning in QS
-#define DELTA_CUTOFF 50
+#define DELTA_CUTOFF 55
 
 // base window value
 #define WINDOW 10
@@ -46,14 +44,13 @@ void StartSearch(Board* board, uint8_t ponder);
 void MainSearch();
 void Search(ThreadData* thread);
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
-int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss);
+int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss);
 
 void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board);
 void PrintPV(PV* pv, Board* board);
 
 void SortRootMoves(ThreadData* thread, int offset);
-int MoveSearchedByMultiPV(ThreadData* thread, Move move);
-int MoveSearchable(ThreadData* thread, Move move);
+int ValidRootMove(ThreadData* thread, Move move);
 
 void SearchClearThread(ThreadData* thread);
 void SearchClear();

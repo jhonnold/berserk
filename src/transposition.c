@@ -43,37 +43,36 @@ size_t TTInit(int mb) {
   uint64_t size = (uint64_t) mb * MEGABYTE;
 
 #if defined(__linux__)
-  // On Linux systems we align on 2MB boundaries and request Huge Pages
-  TT.mem     = aligned_alloc(2 * MEGABYTE, size);
-  TT.buckets = (TTBucket*) TT.mem;
-  madvise(TT.buckets, size, MADV_HUGEPAGE);
+  const size_t alignment = 2 * MEGABYTE;
 #else
-  TT.mem     = AlignedMalloc(size);
-  TT.buckets = (TTBucket*) TT.mem;
+  const size_t alignment = 4096;
 #endif
 
-  TT.count = size / sizeof(TTBucket);
+  TT.mem = AlignedMalloc(size, alignment);
+
+#if defined(MADV_HUGEPAGE)
+  madvise(TT.mem, size, MADV_HUGEPAGE);
+#endif
+
+  TT.buckets = (TTBucket*) TT.mem;
+  TT.count   = size / sizeof(TTBucket);
 
   TTClear();
   return size;
 }
 
 void TTFree() {
-#if defined(__linux__)
-  free(TT.mem);
-#else
   AlignedFree(TT.mem);
-#endif
 }
 
 void TTClearPart(int idx) {
   int count = Threads.count;
 
-  uint64_t size   = TT.count * sizeof(TTBucket);
-  uint64_t slice  = (size + count - 1) / count;
-  uint64_t blocks = (slice + 2 * MEGABYTE - 1) / (2 * MEGABYTE);
-  uint64_t begin  = Min(size, idx * blocks * 2 * MEGABYTE);
-  uint64_t end    = Min(size, begin + blocks * 2 * MEGABYTE);
+  const uint64_t size   = TT.count * sizeof(TTBucket);
+  const uint64_t slice  = (size + count - 1) / count;
+  const uint64_t blocks = (slice + 2 * MEGABYTE - 1) / (2 * MEGABYTE);
+  const uint64_t begin  = Min(size, idx * blocks * 2 * MEGABYTE);
+  const uint64_t end    = Min(size, begin + blocks * 2 * MEGABYTE);
 
   memset(TT.buckets + begin / sizeof(TTBucket), 0, end - begin);
 }
@@ -98,12 +97,11 @@ inline void TTPrefetch(uint64_t hash) {
 }
 
 inline TTEntry* TTProbe(uint64_t hash, int* hit) {
-  TTEntry* bucket    = TT.buckets[TTIdx(hash)].entries;
-  uint16_t shortHash = (uint16_t) hash;
+  TTEntry* bucket = TT.buckets[TTIdx(hash)].entries;
 
   for (int i = 0; i < BUCKET_SIZE; i++) {
-    if (bucket[i].hash == shortHash || !bucket[i].depth) {
-      bucket[i].agePvBound = TT.age | (bucket[i].agePvBound & (PV_MASK | BOUND_MASK));
+    if (bucket[i].hash == hash || !bucket[i].depth) {
+      bucket[i].agePvBound = (uint8_t) (TT.age | (bucket[i].agePvBound & (PV_MASK | BOUND_MASK)));
       *hit                 = !!bucket[i].depth;
       return &bucket[i];
     }
@@ -122,36 +120,29 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
 
 inline void
 TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
-  uint16_t shortHash = (uint16_t) hash;
-
   if (score >= TB_WIN_BOUND)
     score += ply;
   else if (score <= -TB_WIN_BOUND)
     score -= ply;
 
-  if (move || shortHash != tt->hash)
+  if (move || hash != tt->hash)
     tt->move = move;
 
-  if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 4 > TTDepth(tt)) {
-    tt->hash       = shortHash;
-    tt->depth      = depth - DEPTH_OFFSET;
-    tt->agePvBound = TT.age | (pv << 2) | bound;
-    tt->score      = score;
+  if ((bound == BOUND_EXACT) || hash != tt->hash || depth + 4 > TTDepth(tt)) {
+    tt->hash       = hash;
     tt->eval       = eval;
+    tt->score      = score;
+    tt->depth      = (uint8_t) (depth - DEPTH_OFFSET);
+    tt->agePvBound = (uint8_t) (TT.age | (pv << 2) | bound);
   }
 }
 
-inline int TTFull() {
-  int c = 1000 / BUCKET_SIZE;
-  int t = 0;
+int TTFull() {
+  int c = 0;
 
-  for (int i = 0; i < c; i++) {
-    TTBucket b = TT.buckets[i];
-    for (int j = 0; j < BUCKET_SIZE; j++) {
-      if (b.entries[j].depth && (b.entries[j].agePvBound & AGE_MASK) == TT.age)
-        t++;
-    }
-  }
+  for (int i = 0; i < 1000; i++)
+    for (int j = 0; j < BUCKET_SIZE; j++)
+      c += TT.buckets[i].entries[j].depth && (TT.buckets[i].entries[j].agePvBound & AGE_MASK) == TT.age;
 
-  return t * 1000 / (c * BUCKET_SIZE);
+  return c / BUCKET_SIZE;
 }

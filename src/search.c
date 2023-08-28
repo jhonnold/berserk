@@ -165,12 +165,13 @@ void Search(ThreadData* thread) {
   int searchStability   = 0;
   Move previousBestMove = NULL_MOVE;
 
-  SearchStack searchStack[MAX_SEARCH_PLY + 4];
-  SearchStack* ss = searchStack + 4;
-  memset(searchStack, 0, 5 * sizeof(SearchStack));
+  const int searchOffset = 6;
+  SearchStack searchStack[MAX_SEARCH_PLY + searchOffset];
+  SearchStack* ss = searchStack + searchOffset;
+  memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
     (ss + i)->ply = i;
-  for (size_t i = 1; i <= 4; i++)
+  for (size_t i = 1; i <= searchOffset; i++)
     (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
 
   while (++thread->depth < MAX_SEARCH_PLY) {
@@ -328,13 +329,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // drop into noisy moves only
   if (depth <= 0)
-    return Quiesce(alpha, beta, thread, ss);
+    return Quiesce(alpha, beta, 0, thread, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
     longjmp(thread->exit, 1);
 
-  thread->nodes++;
+  IncRlx(thread->nodes);
   if (isPV && thread->seldepth < ss->ply + 1)
     thread->seldepth = ss->ply + 1;
 
@@ -363,7 +364,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // if the TT has a value that fits our position and has been searched to an
   // equal or greater depth, then we accept this score and prune
-  if (!isPV && ttScore != UNKNOWN && TTDepth(tt) >= depth &&
+  if (!isPV && ttScore != UNKNOWN && TTDepth(tt) >= depth && (cutnode || ttScore <= alpha) &&
       (TTBound(tt) & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
     return ttScore;
 
@@ -372,7 +373,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
-      thread->tbhits++;
+      IncRlx(thread->tbhits);
 
       int bound;
       switch (tbResult) {
@@ -460,13 +461,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 9 && !ss->skip && eval < WINNING_ENDGAME &&
-        eval - 75 * depth + 100 * (improving && !oppThreatPcs) >= beta && eval >= beta)
+    if (depth <= 8 && !ss->skip && eval < WINNING_ENDGAME && eval >= beta &&
+        eval - 69 * depth + 112 * (improving && !oppThreatPcs) >= beta &&
+        (!hashMove || GetHistory(ss, thread, hashMove) > 12288))
       return eval;
 
     // Razoring
-    if (depth <= 5 && eval + 200 * depth <= alpha) {
-      score = Quiesce(alpha, beta, thread, ss);
+    if (depth <= 6 && eval + 250 * depth <= alpha) {
+      score = Quiesce(alpha, beta, 0, thread, ss);
       if (score <= alpha)
         return score;
     }
@@ -478,7 +480,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + depth / 6 + Min((eval - beta) / 256, 3) + !oppThreatPcs;
+      int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !oppThreatPcs;
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
@@ -498,8 +500,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     Threats(&ss->ownThreat, board, board->stm);
-    int probBeta = beta + 110 - 30 * improving;
-    if (depth > 4 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
+    int probBeta = beta + 111 - 26 * improving;
+    if (depth > 6 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
         !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
@@ -514,7 +516,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         MakeMove(move, board);
 
         // qsearch to quickly check
-        score = -Quiesce(-probBeta, -probBeta + 1, thread, ss + 1);
+        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
 
         // if it's still above our cutoff, revalidate
         if (score >= probBeta)
@@ -537,9 +539,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
       continue;
-    if (isRoot && MoveSearchedByMultiPV(thread, move))
-      continue;
-    if (isRoot && !MoveSearchable(thread, move))
+    if (isRoot && !ValidRootMove(thread, move))
       continue;
     if (!isRoot && !IsLegal(move, board))
       continue;
@@ -559,12 +559,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && !(IsPromo(move) && PromoPT(move) == QUEEN)) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
-        if (!killerOrCounter && lmrDepth < 6 && history < -4096 * (depth - 1)) {
+        if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
 
-        if (lmrDepth < 9 && eval + 100 + 50 * lmrDepth + history / 128 <= alpha)
+        if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
           skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
@@ -598,7 +598,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // ttHit is implied for move == hashMove to ever be true
       if (depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
-        int sBeta  = Max(ttScore - depth, -CHECKMATE);
+        int sBeta  = Max(ttScore - 5 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
 
         ss->skip = move;
@@ -607,7 +607,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          if (!isPV && score < sBeta - 20 && ss->de <= 6) {
+          if (!isPV && score < sBeta - 18 && ss->de <= 6) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
           } else {
@@ -616,7 +616,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         } else if (sBeta >= beta)
           return sBeta;
         else if (ttScore >= beta)
-          extension = -1;
+          extension = -2 + isPV;
         else if (ttScore <= alpha)
           extension = -1;
       }
@@ -638,7 +638,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int doFullSearch = 0;
 
     // Late move reductions
-    if (depth > 2 && legalMoves > 1 && !(ttPv && IsCap(move))) {
+    if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
       int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
 
       // increase reduction on non-pv
@@ -654,7 +654,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R -= 2;
 
       // less likely a non-capture is best
-      if (IsCap(hashMove))
+      if (IsCap(hashMove) || IsPromo(hashMove))
         R++;
 
       // move GAVE check
@@ -669,7 +669,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       // adjust reduction based on historical score
-      R -= history / 8192;
+      R -= 9 * history / 65536;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
@@ -727,7 +727,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 100), quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 86), quiets, numQuiets, captures, numCaptures);
         break;
       }
     }
@@ -749,10 +749,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   return bestScore;
 }
 
-int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
+int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
   Board* board = &thread->board;
 
   int score     = -CHECKMATE;
+  int futility  = -CHECKMATE;
   int bestScore = -CHECKMATE + ss->ply;
   int isPV      = beta - alpha != 1;
   int ttHit     = 0;
@@ -769,7 +770,7 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
     // hot exit
     longjmp(thread->exit, 1);
 
-  thread->nodes++;
+  IncRlx(thread->nodes);
 
   // draw check
   if (IsDraw(board, ss->ply))
@@ -817,10 +818,12 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
       alpha = eval;
 
     bestScore = eval;
+
+    futility = bestScore + DELTA_CUTOFF;
   }
 
   if (!inCheck)
-    InitQSMovePicker(&mp, thread);
+    InitQSMovePicker(&mp, thread, depth >= -1);
   else {
     Threats(&ss->oppThreat, board, board->xstm);
 
@@ -835,16 +838,25 @@ int Quiesce(int alpha, int beta, ThreadData* thread, SearchStack* ss) {
 
     legalMoves++;
 
-    // if we're in check, final condition in SEE always 0
-    if (bestScore > -TB_WIN_BOUND && !SEE(board, move, eval <= alpha - DELTA_CUTOFF))
-      continue;
+    if (bestScore > -TB_WIN_BOUND) {
+      if (inCheck && !(IsCap(move) || IsPromo(move)))
+        break;
+
+      if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
+        bestScore = Max(bestScore, futility);
+        continue;
+      }
+
+      if (!SEE(board, move, 0))
+        continue;
+    }
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][board->squares[From(move)]][To(move)];
     MakeMove(move, board);
 
-    score = -Quiesce(-beta, -alpha, thread, ss + 1);
+    score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
 
     UndoMove(move, board);
 
@@ -949,16 +961,8 @@ void SortRootMoves(ThreadData* thread, int offset) {
   }
 }
 
-int MoveSearchedByMultiPV(ThreadData* thread, Move move) {
-  for (int i = 0; i < thread->multiPV; i++)
-    if (thread->rootMoves[i].move == move)
-      return 1;
-
-  return 0;
-}
-
-int MoveSearchable(ThreadData* thread, Move move) {
-  for (int i = 0; i < thread->numRootMoves; i++)
+int ValidRootMove(ThreadData* thread, Move move) {
+  for (int i = thread->multiPV; i < thread->numRootMoves; i++)
     if (move == thread->rootMoves[i].move)
       return 1;
 
