@@ -214,23 +214,33 @@ INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm
   const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(BOTH));
   const BitBoard queenMask  = bishopMask | rookMask;
 
+  const BitBoard checks[6] = {
+    GetPawnAttacks(oppKingSq, xstm),
+    GetKnightAttacks(oppKingSq),
+    bishopMask,
+    rookMask,
+    queenMask,
+    0,
+  };
+
   moves = AddPieceMoves(moves, PieceBB(QUEEN, stm), queenMask, board, stm, GT_QUIET, QUEEN);
   moves = AddPieceMoves(moves, PieceBB(ROOK, stm), rookMask, board, stm, GT_QUIET, ROOK);
   moves = AddPieceMoves(moves, PieceBB(BISHOP, stm), bishopMask, board, stm, GT_QUIET, BISHOP);
-  moves = AddPieceMoves(moves, PieceBB(KNIGHT, stm), GetKnightAttacks(oppKingSq), board, stm, GT_QUIET, KNIGHT);
-  moves = AddPawnMoves(moves, PieceBB(PAWN, stm), GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
+  moves = AddPieceMoves(moves, PieceBB(KNIGHT, stm), checks[KNIGHT], board, stm, GT_QUIET, KNIGHT);
+  moves = AddPawnMoves(moves, PieceBB(PAWN, stm), checks[PAWN], board, stm, GT_QUIET);
 
-  BitBoard discoveryPieces = GetBishopAttacks(oppKingSq, OccBB(BOTH) ^ (queenMask & OccBB(stm))) & PieceBB(BISHOP, stm);
-  discoveryPieces |= GetRookAttacks(oppKingSq, OccBB(BOTH) ^ (queenMask & OccBB(stm))) & PieceBB(ROOK, stm);
+  const BitBoard discoveryBlockers = queenMask & OccBB(stm);
+  BitBoard discoveryPieces = (GetBishopAttacks(oppKingSq, OccBB(BOTH) ^ discoveryBlockers) & PieceBB(BISHOP, stm)) |
+                             (GetRookAttacks(oppKingSq, OccBB(BOTH) ^ discoveryBlockers) & PieceBB(ROOK, stm));
 
   while (discoveryPieces) {
     const int discoveryFrom = PopLSB(&discoveryPieces);
     const BitBoard between  = BetweenSquares(discoveryFrom, oppKingSq);
-    const int from          = LSB(between & OccBB(stm));
+    const int from          = LSB(between & discoveryBlockers);
     const int pc            = PieceType(board->squares[from]);
 
     if (pc != PAWN) {
-      const BitBoard opts = ~(between | OccBB(BOTH) | GetPieceAttacks(oppKingSq, OccBB(BOTH), pc));
+      const BitBoard opts = ~(between | OccBB(BOTH) | checks[pc]);
       moves               = AddPieceMoves(moves, Bit(from), opts, board, stm, GT_QUIET, pc);
     } else {
       const BitBoard opts = ~(between | OccBB(BOTH) | RANK_1 | RANK_8);
