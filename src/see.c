@@ -30,7 +30,7 @@ const int SEE_VALUE[7] = {100, 422, 422, 642, 1015, 30000, 0};
 // https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
 inline int SEE(Board* board, Move move, int threshold) {
   if (IsCas(move) || IsEP(move) || Promo(move))
-    return 1;
+    return threshold <= 0;
 
   int from = From(move);
   int to   = To(move);
