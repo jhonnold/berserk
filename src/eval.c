@@ -29,7 +29,7 @@
 #include "uci.h"
 #include "util.h"
 
-const int PHASE_VALUES[6] = {1, 5, 5, 9, 18, 0};
+const int PHASE_VALUES[6] = {3, 4, 4, 6, 12, 0};
 const int MAX_PHASE       = 128;
 
 void SetContempt(int* dest, int stm) {
