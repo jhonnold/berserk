@@ -48,9 +48,10 @@ float OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
 float OUTPUT_BIAS;
 
 #if defined(__AVX2__)
-INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputCReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const __m256i zero  = _mm256_setzero_si256();
   const int views[2]  = {stm, !stm};
 
   for (int v = 0; v < 2; v++) {
@@ -58,13 +59,8 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 6);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 6);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
-
-      out[i]     = _mm256_packus_epi16(s0, s1);
-      out[i + 1] = _mm256_packus_epi16(s2, s3);
+      out[i]     = _mm256_max_epi8(zero, _mm256_packs_epi16(in[2 * i + 0], in[2 * i + 1]));
+      out[i + 1] = _mm256_max_epi8(zero, _mm256_packs_epi16(in[2 * i + 2], in[2 * i + 3]));
     }
   }
 }
@@ -117,8 +113,8 @@ INLINE void m256_hadd_epi32x4(__m256i* regs) {
   regs[0] = _mm256_hadd_epi32(regs[0], regs[2]);
 }
 
-INLINE void L1AffineReLU(float* dest, uint8_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(uint8_t);
+INLINE void L1AffineReLU(float* dest, int8_t* src) {
+  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(int8_t);
   const size_t IN_CHUNKS  = N_L1 / IN_WIDTH;
   const size_t OUT_CC     = 8;
   const size_t OUT_CHUNKS = N_L2 / OUT_CC;
@@ -277,7 +273,7 @@ INLINE void L2AffineReLU(float* dest, float* src) {
 }
 #else
 INLINE void L2AffineReLU(float* dest, float* src) {
-    for (int i = 0; i < N_L3; i++) {
+  for (int i = 0; i < N_L3; i++) {
     const int offset = i * N_L2;
 
     dest[i] = L2_BIASES[i];
@@ -336,14 +332,14 @@ INLINE float L3Transform(float* src) {
 #endif
 
 int Propagate(Accumulator* accumulator, const int stm) {
-  uint8_t x0[N_L1] ALIGN;
+  int8_t x0[N_L1] ALIGN;
   float x1[N_L2] ALIGN;
   float x2[N_L3] ALIGN;
 
-  InputReLU(x0, accumulator, stm);
+  InputCReLU(x0, accumulator, stm);
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
-  return L3Transform(x2) / 32.0;
+  return L3Transform(x2) / 64;
 }
 
 int Predict(Board* board) {
