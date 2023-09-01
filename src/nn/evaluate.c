@@ -352,12 +352,12 @@ int Propagate(Accumulator* accumulator, const int stm) {
   int positional = Positional(accumulator, stm);
   int psqt       = Psqt(accumulator, stm);
 
-  return (positional + psqt) / 64;
+  return (positional + psqt) / 32;
 }
 
 int PropagateTrace(Accumulator* accumulator, const int stm, int* positional, int* psqt) {
-  *positional = Positional(accumulator, stm) / 64;
-  *psqt       = Psqt(accumulator, stm) / 64;
+  *positional = Positional(accumulator, stm) / 32;
+  *psqt       = Psqt(accumulator, stm) / 32;
 
   return *positional + *psqt;
 }
