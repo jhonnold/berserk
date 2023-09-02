@@ -669,7 +669,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       // adjust reduction based on historical score
-      R -= 9 * history / 65536;
+      R -= history / 6144;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
