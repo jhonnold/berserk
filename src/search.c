@@ -355,6 +355,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       return alpha;
   }
 
+  // Reset values for later plies in the search stack
+  (ss + 1)->skip       = NULL_MOVE;
+  (ss + 2)->killers[0] = NULL_MOVE;
+  (ss + 2)->killers[1] = NULL_MOVE;
+  ss->de               = (ss - 1)->de;
+
   // check the transposition table for previous info
   // we ignore the tt on singular extension searches
   TTEntry* tt = ss->skip ? NULL : TTProbe(board->zobrist, &ttHit);
@@ -440,12 +446,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       }
     }
   }
-
-  // reset moves to moves related to 1 additional ply
-  (ss + 1)->skip       = NULL_MOVE;
-  (ss + 1)->killers[0] = NULL_MOVE;
-  (ss + 1)->killers[1] = NULL_MOVE;
-  ss->de               = (ss - 1)->de;
 
   // Build threats for use search
   Threats(&ss->oppThreat, board, board->xstm);
