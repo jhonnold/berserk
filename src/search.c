@@ -643,7 +643,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // increase reduction on non-pv
       if (!ttPv)
-        R++;
+        R += 2;
 
       // increase reduction if our eval is declining
       if (!improving)
