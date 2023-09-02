@@ -524,8 +524,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         UndoMove(move, board);
 
-        if (score >= probBeta)
+        if (score >= probBeta) {
+          if (!ss->skip)
+            TTPut(tt, board->zobrist, depth - 3, score, BOUND_LOWER, move, ss->ply, ss->staticEval, ttPv);
           return score;
+        }
       }
     }
   }
