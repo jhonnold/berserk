@@ -61,8 +61,12 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
 
       if (pt == PAWN) {
         const BitBoard newAttacks = GetPawnAttacks(To(move), board->stm);
-        if (newAttacks & (OccBB(board->xstm) ^ PieceBB(PAWN, board->xstm)))
-          current->score += 16384;
+        if (newAttacks & (PieceBB(KING, board->xstm) | PieceBB(QUEEN, board->xstm)))
+          current->score += 8192;
+        else if (newAttacks & (PieceBB(ROOK, board->xstm)))
+          current->score += 6144;
+        else if (newAttacks & (PieceBB(BISHOP, board->xstm) | PieceBB(KNIGHT, board->xstm)))
+          current->score += 4096;
       }
     } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
