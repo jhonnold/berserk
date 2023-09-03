@@ -50,14 +50,21 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   while (current < picker->end) {
     Move move = current->move;
 
-    if (type == ST_QUIET)
+    if (type == ST_QUIET) {
       current->score = 2 * ((int) HH(thread->board.stm, move, ss->oppThreat.sqs) + //
                             (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
                             (int) (*(ss - 2)->ch)[Moving(move)][To(move)]) +       //
                        (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +             //
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
-    else if (type == ST_CAPTURE)
+      const int pt = PieceType(Moving(move));
+
+      if (pt == PAWN) {
+        const BitBoard newAttacks = GetPawnAttacks(To(move), board->stm);
+        if (newAttacks & (OccBB(board->xstm) ^ PieceBB(PAWN, board->xstm)))
+          current->score += 16384;
+      }
+    } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION) {
@@ -218,7 +225,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       // fallthrough
     case QS_GEN_QUIET_CHECKS:
       picker->current = picker->moves;
-      picker->end = AddQuietCheckMoves(picker->current, board);
+      picker->end     = AddQuietCheckMoves(picker->current, board);
 
       picker->phase = QS_PLAY_QUIET_CHECKS;
 
