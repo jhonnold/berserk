@@ -105,7 +105,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  const int layer = (BitCount(OccBB(BOTH)) - 1) / 4;
+  int score       = board->stm == WHITE ? Propagate(acc, WHITE, layer) : Propagate(acc, BLACK, layer);
 
   // static contempt
   score += thread->contempt[board->stm];
@@ -123,9 +124,10 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base = Propagate(board->accumulators, board->stm);
-  base = board->stm == WHITE ? base : -base;
-  int scaled = (128 + board->phase) * base / 128;
+  const int realLayer = (BitCount(OccBB(BOTH)) - 1) / 4;
+  int base            = Propagate(board->accumulators, board->stm, realLayer);
+  base                = board->stm == WHITE ? base : -base;
+  int scaled          = (128 + board->phase) * base / 128;
 
   printf("\nNNUE derived piece values:\n");
 
@@ -151,13 +153,13 @@ void EvaluateTrace(Board* board) {
         PopBit(OccBB(BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
-        int new = Propagate(board->accumulators, board->stm);
-        new = board->stm == WHITE ? new : -new;
+        int new = Propagate(board->accumulators, board->stm, realLayer);
+        new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 
-        int diff = base - new;
+        int diff       = base - new;
         int normalized = Normalize(diff);
-        int v = abs(normalized);
+        int v          = abs(normalized);
 
         char buffer[6];
         buffer[5] = '\0';
@@ -186,7 +188,49 @@ void EvaluateTrace(Board* board) {
 
   printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
 
-  printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
+
+  printf("+------------+------------+\n");
+  printf("|   Bucket   | Positional |\n");
+  printf("|            |  (Layers)  |\n");
+  printf("+------------+------------+\n");
+
+  for (int l = 0; l < N_LAYERS; l++) {
+    printf("| %10d |", l);
+
+    int v = Propagate(board->accumulators, board->stm, l);
+    v     = Normalize(board->stm == WHITE ? v : -v);
+
+    char buffer[11];
+    for (int i = 0; i < 10; i++)
+      buffer[i] = ' ';
+    buffer[10] = '\0';
+    buffer[0]  = v > 0 ? '+' : v < 0 ? '-' : ' ';
+    if (v >= 1000) {
+      buffer[6] = '0' + v / 1000;
+      v %= 1000;
+      buffer[7] = '0' + v / 100;
+      v %= 100;
+      buffer[8] = '.';
+      buffer[9] = '0' + v / 10;
+    } else {
+      buffer[6] = '0' + v / 100;
+      v %= 100;
+      buffer[7] = '.';
+      buffer[8] = '0' + v / 10;
+      v %= 10;
+      buffer[9] = '0' + v;
+    }
+    printf(" %s |", buffer);
+
+    if (l == realLayer)
+      printf(" <-- this bucket is used");
+    printf("\n");
+  }
+  printf("+------------+------------+\n");
+
+  printf("\n NNUE Score: %dcp (white)\n", (int) Normalize(base));
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
 
   AlignedFree(board->accumulators);
