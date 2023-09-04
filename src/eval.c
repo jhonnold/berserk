@@ -105,7 +105,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  const int layer = (BitCount(OccBB(BOTH)) - 1) / 4;
+  const int layer = (Min(board->phase, 128) - 1) / 16;
   int score       = board->stm == WHITE ? Propagate(acc, WHITE, layer) : Propagate(acc, BLACK, layer);
 
   // static contempt
@@ -124,10 +124,10 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  const int realLayer = (BitCount(OccBB(BOTH)) - 1) / 4;
+  const int realLayer = (Min(board->phase, 128) - 1) / 16;
   int base            = Propagate(board->accumulators, board->stm, realLayer);
   base                = board->stm == WHITE ? base : -base;
-  int scaled          = (128 + board->phase) * base / 128;
+  int scaled          = (256 + board->phase) * base / 256;
 
   printf("\nNNUE derived piece values:\n");
 

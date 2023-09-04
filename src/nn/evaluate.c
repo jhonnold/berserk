@@ -350,7 +350,7 @@ int Predict(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  const int layer = (BitCount(OccBB(BOTH)) - 1) / 4;
+  const int layer = (Min(board->phase, 128) - 1) / 16;
   return Propagate(board->accumulators, board->stm, layer);
 }
 
