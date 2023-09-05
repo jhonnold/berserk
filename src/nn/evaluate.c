@@ -468,16 +468,13 @@ void SortAndWrite(uint64_t* activity) {
 
         // Swap the L1 weights
         for (size_t w = 0; w < N_L2; w++) {
-          int8_t temp8             = L1_WEIGHTS[i * N_L2 + w];
-          L1_WEIGHTS[i * N_L2 + w] = L1_WEIGHTS[j * N_L2 + w];
-          L1_WEIGHTS[j * N_L2 + w] = temp8;
-        }
+          int8_t temp8             = L1_WEIGHTS[w * N_L1 + i];
+          L1_WEIGHTS[w * N_L1 + i] = L1_WEIGHTS[w * N_L1 + j];
+          L1_WEIGHTS[w * N_L1 + j] = temp8;
 
-        // Swap other half of L1 weights
-        for (size_t w = 0; w < N_L2; w++) {
-          int8_t temp8                          = L1_WEIGHTS[(i + N_HIDDEN) * N_L2 + w];
-          L1_WEIGHTS[(i + N_HIDDEN) * N_L2 + w] = L1_WEIGHTS[(j + N_HIDDEN) * N_L2 + w];
-          L1_WEIGHTS[(j + N_HIDDEN) * N_L2 + w] = temp8;
+          temp8                                 = L1_WEIGHTS[w * N_L1 + (i + N_HIDDEN)];
+          L1_WEIGHTS[w * N_L1 + (i + N_HIDDEN)] = L1_WEIGHTS[w * N_L1 + (j + N_HIDDEN)];
+          L1_WEIGHTS[w * N_L1 + (j + N_HIDDEN)] = temp8;
         }
       }
     }
