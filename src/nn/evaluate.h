@@ -25,4 +25,6 @@ int Propagate(Accumulator* accumulator, const int stm);
 void LoadDefaultNN();
 int LoadNetwork(char* path);
 
+void SortAndWrite(uint64_t* activity);
+
 #endif

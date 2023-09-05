@@ -63,8 +63,8 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
       __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
       __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
 
-      out[i]     = _mm256_packus_epi16(s0, s1);
-      out[i + 1] = _mm256_packus_epi16(s2, s3);
+      out[i]     = _mm256_permute4x64_epi64(_mm256_packus_epi16(s0, s1), 0b11011000);
+      out[i + 1] = _mm256_permute4x64_epi64(_mm256_packus_epi16(s2, s3), 0b11011000);
     }
   }
 }
@@ -277,7 +277,7 @@ INLINE void L2AffineReLU(float* dest, float* src) {
 }
 #else
 INLINE void L2AffineReLU(float* dest, float* src) {
-    for (int i = 0; i < N_L3; i++) {
+  for (int i = 0; i < N_L3; i++) {
     const int offset = i * N_L2;
 
     dest[i] = L2_BIASES[i];
@@ -335,12 +335,18 @@ INLINE float L3Transform(float* src) {
 }
 #endif
 
+extern uint64_t activations[N_HIDDEN];
+
 int Propagate(Accumulator* accumulator, const int stm) {
   uint8_t x0[N_L1] ALIGN;
   float x1[N_L2] ALIGN;
   float x2[N_L3] ALIGN;
 
   InputReLU(x0, accumulator, stm);
+
+  for (size_t i = 0; i < N_L1; i++)
+    activations[i % N_HIDDEN] += (x0[i] > 0);
+
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
   return L3Transform(x2) / 32.0;
@@ -384,30 +390,30 @@ INLINE void CopyData(const unsigned char* in) {
   offset += N_L3 * N_OUTPUT * sizeof(float);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
 
-#if defined(__AVX2__)
-  const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
-  const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
-  const size_t BIAS_CHUNKS   = N_HIDDEN / WIDTH;
+  // #if defined(__AVX2__)
+  //   const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
+  //   const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
+  //   const size_t BIAS_CHUNKS   = N_HIDDEN / WIDTH;
 
-  __m256i* weights = (__m256i*) INPUT_WEIGHTS;
-  __m256i* biases  = (__m256i*) INPUT_BIASES;
+  //   __m256i* weights = (__m256i*) INPUT_WEIGHTS;
+  //   __m256i* biases  = (__m256i*) INPUT_BIASES;
 
-  for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
-    __m128i a = _mm256_extracti128_si256(weights[i], 1);     // 64->128
-    __m128i b = _mm256_extracti128_si256(weights[i + 1], 0); // 128->192
+  //   for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
+  //     __m128i a = _mm256_extracti128_si256(weights[i], 1);     // 64->128
+  //     __m128i b = _mm256_extracti128_si256(weights[i + 1], 0); // 128->192
 
-    weights[i]     = _mm256_inserti128_si256(weights[i], b, 1);     // insert 128->192 into 64->128
-    weights[i + 1] = _mm256_inserti128_si256(weights[i + 1], a, 0); // insert 64->128 into 128->192
-  }
+  //     weights[i]     = _mm256_inserti128_si256(weights[i], b, 1);     // insert 128->192 into 64->128
+  //     weights[i + 1] = _mm256_inserti128_si256(weights[i + 1], a, 0); // insert 64->128 into 128->192
+  //   }
 
-  for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
-    __m128i a = _mm256_extracti128_si256(biases[i], 1);     // 64->128
-    __m128i b = _mm256_extracti128_si256(biases[i + 1], 0); // 128->192
+  //   for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
+  //     __m128i a = _mm256_extracti128_si256(biases[i], 1);     // 64->128
+  //     __m128i b = _mm256_extracti128_si256(biases[i + 1], 0); // 128->192
 
-    biases[i]     = _mm256_inserti128_si256(biases[i], b, 1);     // insert 128->192 into 64->128
-    biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a, 0); // insert 64->128 into 128->192
-  }
-#endif
+  //     biases[i]     = _mm256_inserti128_si256(biases[i], b, 1);     // insert 128->192 into 64->128
+  //     biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a, 0); // insert 64->128 into 128->192
+  //   }
+  // #endif
 }
 
 void LoadDefaultNN() {
@@ -436,4 +442,55 @@ int LoadNetwork(char* path) {
   free(data);
 
   return 1;
+}
+
+void SortAndWrite(uint64_t* activity) {
+  for (size_t i = 0; i < N_HIDDEN; i++) {
+    for (size_t j = i + 1; j < N_HIDDEN; j++) {
+      if (activity[i] < activity[j]) {
+        printf("Swapping %lu for %lu\n", i, j);
+
+        uint64_t temp = activity[i];
+        activity[i]   = activity[j];
+        activity[j]   = temp;
+
+        // Swap the biases
+        int16_t temp16  = INPUT_BIASES[i];
+        INPUT_BIASES[i] = INPUT_BIASES[j];
+        INPUT_BIASES[j] = temp16;
+
+        // Swap the input weights
+        for (size_t f = 0; f < N_FEATURES; f++) {
+          temp16                          = INPUT_WEIGHTS[f * N_HIDDEN + i];
+          INPUT_WEIGHTS[f * N_HIDDEN + i] = INPUT_WEIGHTS[f * N_HIDDEN + j];
+          INPUT_WEIGHTS[f * N_HIDDEN + j] = temp16;
+        }
+
+        // Swap the L1 weights
+        for (size_t w = 0; w < N_L2; w++) {
+          int8_t temp8             = L1_WEIGHTS[i * N_L2 + w];
+          L1_WEIGHTS[i * N_L2 + w] = L1_WEIGHTS[j * N_L2 + w];
+          L1_WEIGHTS[j * N_L2 + w] = temp8;
+        }
+
+        // Swap other half of L1 weights
+        for (size_t w = 0; w < N_L2; w++) {
+          int8_t temp8                          = L1_WEIGHTS[(i + N_HIDDEN) * N_L2 + w];
+          L1_WEIGHTS[(i + N_HIDDEN) * N_L2 + w] = L1_WEIGHTS[(j + N_HIDDEN) * N_L2 + w];
+          L1_WEIGHTS[(j + N_HIDDEN) * N_L2 + w] = temp8;
+        }
+      }
+    }
+  }
+
+  FILE* fout = fopen("newnet.net", "wb");
+  fwrite(INPUT_WEIGHTS, sizeof(int16_t), N_FEATURES * N_HIDDEN, fout);
+  fwrite(INPUT_BIASES, sizeof(int16_t), N_HIDDEN, fout);
+  fwrite(L1_WEIGHTS, sizeof(int8_t), N_L1 * N_L2, fout);
+  fwrite(L1_BIASES, sizeof(int32_t), N_L2, fout);
+  fwrite(L2_WEIGHTS, sizeof(float), N_L2 * N_L3, fout);
+  fwrite(L2_BIASES, sizeof(float), N_L3, fout);
+  fwrite(OUTPUT_WEIGHTS, sizeof(float), N_L3 * N_OUTPUT, fout);
+  fwrite(&OUTPUT_BIAS, sizeof(float), N_OUTPUT, fout);
+  fclose(fout);
 }

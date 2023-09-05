@@ -23,6 +23,7 @@
 
 #include "board.h"
 #include "move.h"
+#include "nn/evaluate.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
@@ -35,6 +36,8 @@ const int NUM_BENCH_POSITIONS = 50;
 char* benchmarks[]            = {
 #include "files/bench.csv"
 };
+
+uint64_t activations[N_HIDDEN] = {0};
 
 void Bench(int depth) {
   Board board;
@@ -84,4 +87,14 @@ void Bench(int depth) {
     totalNodes += nodes[i];
 
   printf("\nResults: %43" PRIu64 " nodes %8d nps\n\n", totalNodes, (int) (1000.0 * totalNodes / (totalTime + 1)));
+
+  for (size_t i = 0; i < N_HIDDEN; i++)
+    printf(" %lu", activations[i]);
+  printf("\n");
+
+  SortAndWrite(activations);
+
+  for (size_t i = 0; i < N_HIDDEN; i++)
+    printf(" %lu", activations[i]);
+  printf("\n");
 }
