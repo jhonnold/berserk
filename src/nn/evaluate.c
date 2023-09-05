@@ -335,7 +335,7 @@ INLINE float L3Transform(float* src) {
 }
 #endif
 
-extern uint64_t activations[N_HIDDEN];
+extern uint64_t activations[N_HIDDEN][N_HIDDEN];
 
 int Propagate(Accumulator* accumulator, const int stm) {
   uint8_t x0[N_L1] ALIGN;
@@ -344,8 +344,13 @@ int Propagate(Accumulator* accumulator, const int stm) {
 
   InputReLU(x0, accumulator, stm);
 
-  for (size_t i = 0; i < N_L1; i++)
-    activations[i % N_HIDDEN] += (x0[i] > 0);
+  for (size_t i = 0; i < N_HIDDEN; i++) {
+    if (!(activations[i] || activations[i + N_HIDDEN]))
+      continue;
+
+    for (size_t j = 0; j < N_HIDDEN; j++)
+      activations[i][j] += (x0[j] > 0 || x0[j + N_HIDDEN] > 0);
+  }
 
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
@@ -444,15 +449,61 @@ int LoadNetwork(char* path) {
   return 1;
 }
 
-void SortAndWrite(uint64_t* activity) {
+INLINE int Contains(int* arr, int n, int a) {
+  for (int i = 0; i < n; i++)
+    if (arr[i] == a)
+      return 1;
+
+  return 0;
+}
+
+void SortAndWrite(uint64_t activity[N_HIDDEN][N_HIDDEN]) {
+  int n                = 0;
+  int used[N_HIDDEN]   = {0};
+  int scores[N_HIDDEN] = {0};
+
+  for (int chunk = 0; chunk < N_HIDDEN / 4; chunk++) {
+    int a = -1, b = -1, c = -1, d = -1;
+
+    for (int i = 0; i < N_HIDDEN; i++)
+      if (!Contains(used, n, i) && (a == -1 || activity[i][i] > activity[a][a]))
+        a = i;
+    used[n++] = a;
+
+    for (int i = 0; i < N_HIDDEN; i++)
+      if (!Contains(used, n, i) && (b == -1 || activity[a][i] > activity[a][b]))
+        b = i;
+    used[n++] = b;
+
+    for (int i = 0; i < N_HIDDEN; i++)
+      if (!Contains(used, n, i) && (c == -1 || (activity[a][i] + activity[b][i]) > (activity[a][c] + activity[b][c])))
+        c = i;
+    used[n++] = c;
+
+    for (int i = 0; i < N_HIDDEN; i++)
+      if (!Contains(used, n, i) && (d == -1 || (activity[a][i] + activity[b][i] + activity[c][i]) >
+                                                 (activity[a][d] + activity[b][d] + activity[c][d])))
+        d = i;
+    used[n++] = d;
+  }
+
+  for (int i = 0; i < N_HIDDEN; i += 4)
+    printf(" %3d %3d %3d %3d\n", used[i], used[i + 1], used[i + 2], used[i + 3]);
+
+  for (int i = 0; i < N_HIDDEN; i++) {
+    int u = used[i];
+
+    scores[u] = N_HIDDEN - i;
+  }
+
   for (size_t i = 0; i < N_HIDDEN; i++) {
     for (size_t j = i + 1; j < N_HIDDEN; j++) {
-      if (activity[i] < activity[j]) {
+      if (scores[i] < scores[j]) {
         printf("Swapping %lu for %lu\n", i, j);
 
-        uint64_t temp = activity[i];
-        activity[i]   = activity[j];
-        activity[j]   = temp;
+        int temp  = scores[i];
+        scores[i] = scores[j];
+        scores[j] = temp;
 
         // Swap the biases
         int16_t temp16  = INPUT_BIASES[i];

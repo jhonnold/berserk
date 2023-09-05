@@ -31,7 +31,7 @@
 #include "uci.h"
 #include "util.h"
 
-uint64_t activations[N_HIDDEN] = {0};
+uint64_t activations[N_HIDDEN][N_HIDDEN] = {0};
 
 void Bench(int depth) {
   Limits.depth   = depth;
@@ -46,13 +46,13 @@ void Bench(int depth) {
   ssize_t read;
 
   int total = 0;
-  while ((read = getline(&line, &len, fin)) != -1) {
+  while (total < 1000000 && (read = getline(&line, &len, fin)) != -1) {
     total++;
 
     ParseFen(line, &Threads.threads[0]->board);
     Predict(&Threads.threads[0]->board);    
 
-    if (total % 100000 == 0) printf("%d\n", total);
+    if (total % 1000 == 0) printf("%d\n", total);
 
     // TTClear();
     // SearchClear();
@@ -62,13 +62,13 @@ void Bench(int depth) {
     // ThreadWaitUntilSleep(Threads.threads[0]);
   }
 
-  for (size_t i = 0; i < N_HIDDEN; i++)
-    printf(" %lu", activations[i]);
-  printf("\n");
+  // for (size_t i = 0; i < N_HIDDEN; i++)
+  //   printf(" %lu", activations[i]);
+  // printf("\n");
 
   SortAndWrite(activations);
 
-  for (size_t i = 0; i < N_HIDDEN; i++)
-    printf(" %lu", activations[i]);
-  printf("\n");
+  // for (size_t i = 0; i < N_HIDDEN; i++)
+  //   printf(" %lu", activations[i]);
+  // printf("\n");
 }
