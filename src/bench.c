@@ -31,62 +31,36 @@
 #include "uci.h"
 #include "util.h"
 
-// Ethereal's bench set
-const int NUM_BENCH_POSITIONS = 50;
-char* benchmarks[]            = {
-#include "files/bench.csv"
-};
-
 uint64_t activations[N_HIDDEN] = {0};
 
 void Bench(int depth) {
-  Board board;
-
   Limits.depth   = depth;
   Limits.multiPV = 1;
   Limits.hitrate = INT_MAX;
   Limits.max     = INT_MAX;
   Limits.timeset = 0;
 
-  Move bestMoves[NUM_BENCH_POSITIONS];
-  int scores[NUM_BENCH_POSITIONS];
-  uint64_t nodes[NUM_BENCH_POSITIONS];
-  long times[NUM_BENCH_POSITIONS];
+  FILE* fin = fopen("/home/jhonnold/fens", "r");
+  char * line = NULL;
+  size_t len = 0;
+  ssize_t read;
 
-  long startTime = GetTimeMS();
-  for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
-    ParseFen(benchmarks[i], &board);
+  int total = 0;
+  while ((read = getline(&line, &len, fin)) != -1) {
+    total++;
 
-    TTClear();
-    SearchClear();
+    ParseFen(line, &Threads.threads[0]->board);
+    Predict(&Threads.threads[0]->board);    
 
-    Limits.start = GetTimeMS();
-    StartSearch(&board, 0);
-    ThreadWaitUntilSleep(Threads.threads[0]);
-    times[i] = GetTimeMS() - Limits.start;
+    if (total % 100000 == 0) printf("%d\n", total);
 
-    bestMoves[i] = Threads.threads[0]->rootMoves[0].move;
-    scores[i]    = Threads.threads[0]->rootMoves[0].score;
-    nodes[i]     = Threads.threads[0]->nodes;
+    // TTClear();
+    // SearchClear();
+
+    // Limits.start = GetTimeMS();
+    // StartSearch(&board, 0);
+    // ThreadWaitUntilSleep(Threads.threads[0]);
   }
-  long totalTime = GetTimeMS() - startTime;
-
-  printf("\n\n");
-  for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
-    printf("Bench [#%2d]: bestmove %5s score %5d %12" PRIu64 " nodes %8d nps | %71s\n",
-           i + 1,
-           MoveToStr(bestMoves[i], &board),
-           (int) Normalize(scores[i]),
-           nodes[i],
-           (int) (1000.0 * nodes[i] / (times[i] + 1)),
-           benchmarks[i]);
-  }
-
-  uint64_t totalNodes = 0;
-  for (int i = 0; i < NUM_BENCH_POSITIONS; i++)
-    totalNodes += nodes[i];
-
-  printf("\nResults: %43" PRIu64 " nodes %8d nps\n\n", totalNodes, (int) (1000.0 * totalNodes / (totalTime + 1)));
 
   for (size_t i = 0; i < N_HIDDEN; i++)
     printf(" %lu", activations[i]);
