@@ -46,7 +46,6 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
 - [Reverse Futility Pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
 - [Razoring](https://www.chessprogramming.org/Razoring)
 - [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
-- [ProbCut](https://www.chessprogramming.org/ProbCut)
 - [FutilityPruning](https://www.chessprogramming.org/Futility_Pruning)
   - [LMP](https://www.chessprogramming.org/Futility_Pruning#MoveCountBasedPruning)
 - History Pruning
