@@ -505,11 +505,11 @@ inline int IsRepetition(Board* board, int ply) {
   // Check as far back as the last non-reversible move
   for (int i = board->histPly - 4; i >= 0 && i >= board->histPly - distance; i -= 2) {
     if (board->history[i].zobrist == board->zobrist) {
-      if (i > board->histPly - ply) // within our search tree
+      if (i >= board->histPly - ply) // within our search tree + root
         return 1;
 
       reps++;
-      if (reps == 2) // 3-fold before+including root
+      if (reps == 2) // 3-fold before
         return 1;
     }
   }
