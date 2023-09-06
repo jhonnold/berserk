@@ -123,7 +123,7 @@ typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
   Move move, skip;
-  Threat oppThreat;
+  Threat oppThreat, ownThreat;
   Move killers[2];
 } SearchStack;
 
@@ -213,6 +213,10 @@ enum {
   GEN_QUIET_MOVES,
   PLAY_QUIETS,
   PLAY_BAD_NOISY,
+  // ProbCut
+  PC_GEN_NOISY_MOVES,
+  PC_PLAY_GOOD_NOISY,
+  PC_PLAY_BAD_NOISY,
   // QSearch
   QS_GEN_NOISY_MOVES,
   QS_PLAY_NOISY_MOVES,
