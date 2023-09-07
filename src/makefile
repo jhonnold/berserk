@@ -65,7 +65,7 @@ pgo: clone-networks
 	$(CLEAN)
 
 release: clone-networks
-	$(RELEASE)-$(VERSION)-x64$(EXT)             -march=core2
+	$(RELEASE)-$(VERSION)-x64-sse41$(EXT)       -march=nehalem
 	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        -march=core-avx2
 	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   -march=core-avx2                                 -DUSE_PEXT
 	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)      -march=core-avx2 -mavx512f -mavx512bw -mavx512dq
