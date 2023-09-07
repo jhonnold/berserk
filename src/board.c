@@ -509,7 +509,7 @@ inline int IsRepetition(Board* board, int ply) {
         return 1;
 
       reps++;
-      if (reps == 2) // 3-fold before
+      if (reps == 2) // 3-fold including before root
         return 1;
     }
   }
@@ -774,7 +774,7 @@ int HasCycle(Board* board, int ply) {
       if (between & OccBB(BOTH))
         continue;
 
-      if (ply > i)
+      if (ply >= i)
         return 1;
 
       int pc = board->squares[From(move)] != NO_PIECE ? board->squares[From(move)] : board->squares[To(move)];
