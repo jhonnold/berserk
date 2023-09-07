@@ -457,6 +457,24 @@ INLINE int Contains(int* arr, int n, int a) {
   return 0;
 }
 
+INLINE void SwapInt(int* a, int* b) {
+  int temp = *a;
+  *a = *b;
+  *b = temp;
+}
+
+INLINE void SwapInt16(int16_t* a, int16_t* b) {
+  int16_t temp = *a;
+  *a = *b;
+  *b = temp;
+}
+
+INLINE void SwapInt8(int8_t* a, int8_t* b) {
+  int8_t temp = *a;
+  *a = *b;
+  *b = temp;
+}
+
 void SortAndWrite(uint64_t activity[N_HIDDEN][N_HIDDEN]) {
   int n                = 0;
   int used[N_HIDDEN]   = {0};
@@ -496,36 +514,40 @@ void SortAndWrite(uint64_t activity[N_HIDDEN][N_HIDDEN]) {
     scores[u] = N_HIDDEN - i;
   }
 
-  for (size_t i = 0; i < N_HIDDEN; i++) {
-    for (size_t j = i + 1; j < N_HIDDEN; j++) {
-      if (scores[i] < scores[j]) {
-        int temp  = scores[i];
-        scores[i] = scores[j];
-        scores[j] = temp;
+  for (size_t i = 0; i < N_HIDDEN - 1; i++) {
+    size_t max = i;
 
-        // Swap the biases
-        int16_t temp16  = INPUT_BIASES[i];
-        INPUT_BIASES[i] = INPUT_BIASES[j];
-        INPUT_BIASES[j] = temp16;
+    for (size_t j = max + 1; j < N_HIDDEN; j++) {
+      if (scores[j] > scores[max])
+        max = j;
+    }
 
-        // Swap the input weights
-        for (size_t f = 0; f < N_FEATURES; f++) {
-          temp16                          = INPUT_WEIGHTS[f * N_HIDDEN + i];
-          INPUT_WEIGHTS[f * N_HIDDEN + i] = INPUT_WEIGHTS[f * N_HIDDEN + j];
-          INPUT_WEIGHTS[f * N_HIDDEN + j] = temp16;
-        }
+    printf("Max #%lu is %lu\n", i, max);
 
-        // Swap the L1 weights
-        for (size_t w = 0; w < N_L2; w++) {
-          int8_t temp8             = L1_WEIGHTS[w * N_L1 + i];
-          L1_WEIGHTS[w * N_L1 + i] = L1_WEIGHTS[w * N_L1 + j];
-          L1_WEIGHTS[w * N_L1 + j] = temp8;
+    if (max == i) continue;
 
-          temp8                                 = L1_WEIGHTS[w * N_L1 + (i + N_HIDDEN)];
-          L1_WEIGHTS[w * N_L1 + (i + N_HIDDEN)] = L1_WEIGHTS[w * N_L1 + (j + N_HIDDEN)];
-          L1_WEIGHTS[w * N_L1 + (j + N_HIDDEN)] = temp8;
-        }
-      }
+    SwapInt(scores + i, scores + max);
+    
+    // Swap the features to the input
+    SwapInt16(INPUT_BIASES + i, INPUT_BIASES + max);
+    for (size_t f = 0; f < N_FEATURES; f++) {
+      size_t i0 = f * N_HIDDEN + i;
+      size_t max0 = f * N_HIDDEN + max;
+
+      SwapInt16(INPUT_WEIGHTS + i0, INPUT_WEIGHTS + max0);
+    }
+
+    // Swap the L1 weights
+    for (size_t w = 0; w < N_L2; w++) {
+      size_t i0 = w * N_L1 + i;
+      size_t max0 = w * N_L1 + max;
+
+      SwapInt8(L1_WEIGHTS + i0, L1_WEIGHTS + max0);
+
+      size_t i1 = w * N_L1 + i + N_HIDDEN;
+      size_t max1 = w * N_L1 + max + N_HIDDEN;
+
+      SwapInt8(L1_WEIGHTS + i1, L1_WEIGHTS + max1);
     }
   }
 
