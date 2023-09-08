@@ -29,9 +29,9 @@
 #define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-#define N_HIDDEN   768
+#define N_HIDDEN   1024
 #define N_L1       (2 * N_HIDDEN)
-#define N_L2       8
+#define N_L2       16
 #define N_L3       32
 #define N_OUTPUT   1
 
@@ -123,7 +123,7 @@ typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
   Move move, skip;
-  Threat oppThreat, ownThreat;
+  Threat oppThreat;
   Move killers[2];
 } SearchStack;
 
@@ -216,10 +216,6 @@ enum {
   GEN_QUIET_MOVES,
   PLAY_QUIETS,
   PLAY_BAD_NOISY,
-  // ProbCut
-  PC_GEN_NOISY_MOVES,
-  PC_PLAY_GOOD_NOISY,
-  PC_PLAY_BAD_NOISY,
   // QSearch
   QS_GEN_NOISY_MOVES,
   QS_PLAY_NOISY_MOVES,
