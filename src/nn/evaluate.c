@@ -65,13 +65,13 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
       __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
       __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
 
-      out[i]     = _mm256_packus_epi16(s0, s1);
-      out[i + 1] = _mm256_packus_epi16(s2, s3);
+      out[i]     = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256());
+      out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256());
     }
   }
 }
-#elif defined(__SSE2__)
-INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
+#elif defined(__SSE4_1__)
+INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
@@ -84,20 +84,21 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
       __m128i s0 = _mm_srai_epi16(in[2 * i + 0], 6);
       __m128i s1 = _mm_srai_epi16(in[2 * i + 1], 6);
 
-      out[i] = _mm_packus_epi16(s0, s1);
+      out[i] = _mm_max_epi8(_mm_packs_epi16(s0, s1), _mm_setzero_si128());
     }
   }
 }
 #else
-INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
+  const int max = 127 << 6;
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
-    uint8_t* out    = &outputs[N_HIDDEN * v];
+    int8_t* out    = &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < N_HIDDEN; i++)
-      out[i] = Max(0, in[i]) >> 6;
+      out[i] = Min(max, Max(0, in[i])) >> 6;
   }
 }
 #endif
