@@ -65,8 +65,8 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
       __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], 6);
       __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], 6);
 
-      out[i]     = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512());
-      out[i + 1] = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512());
+      out[i]     = _mm512_max_epi8(_mm512_permutexvar_epi64(_mm512_setr_epi64(0, 2, 4, 6, 1, 3, 5, 7), _mm512_packs_epi16(s0, s1)), _mm512_setzero_si512());
+      out[i + 1] = _mm512_max_epi8(_mm512_permutexvar_epi64(_mm512_setr_epi64(0, 2, 4, 6, 1, 3, 5, 7), _mm512_packs_epi16(s2, s3)), _mm512_setzero_si512());
     }
   }
 }
@@ -86,8 +86,8 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
       __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 6);
       __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 6);
 
-      out[i]     = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256());
-      out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256());
+      out[i]     = _mm256_max_epi8(_mm256_permute4x64_epi64(_mm256_packs_epi16(s0, s1), 0xD8), _mm256_setzero_si256());
+      out[i + 1] = _mm256_max_epi8(_mm256_permute4x64_epi64(_mm256_packs_epi16(s2, s3), 0xD8), _mm256_setzero_si256());
     }
   }
 }
@@ -379,7 +379,7 @@ INLINE __m128 m512_hadd_psx4(__m512* regs) {
   __m512 sum = _mm512_add_ps(regs0123l, regs0123h);
 
   __m256 sum256lo = _mm512_castps512_ps256(sum);
-  __m256 sum256hi = (__m256) _mm512_extractf64x4_pd(sum, 1);
+  __m256 sum256hi = (__m256) _mm512_extractf64x4_pd((__m512d) sum, 1);
 
   sum256lo = _mm256_add_ps(sum256lo, sum256hi);
 
@@ -512,7 +512,7 @@ INLINE int L3Transform(float* src) {
   for (size_t i = 0; i < CHUNKS; i++)
     a0 = _mm512_fmadd_ps(in[i], weights[i], a0);
 
-  const __m256 a8 = _mm256_add_ps(_mm512_castps512_ps256(a0), (__m256) _mm512_extractf64x4_pd(a0, 1));
+  const __m256 a8 = _mm256_add_ps(_mm512_castps512_ps256(a0), (__m256) _mm512_extractf64x4_pd((__m512d) a0, 1));
   const __m128 a4 = _mm_add_ps(_mm256_castps256_ps128(a8), _mm256_extractf128_ps(a8, 1));
   const __m128 a2 = _mm_add_ps(a4, _mm_movehl_ps(a4, a4));
   const __m128 a1 = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
@@ -623,7 +623,7 @@ INLINE void CopyData(const unsigned char* in) {
   offset += N_L3 * N_OUTPUT * sizeof(float);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
 
-#if defined(__AVX2__) || defined(__SSSE3__)
+#if defined(__SSSE3__)
   // Shuffle the L1 weights for sparse matmul
   for (int i = 0; i < N_L1 * N_L2; i++)
     L1_WEIGHTS[WeightIdxScrambled(i)] = l1[i];
@@ -633,31 +633,6 @@ INLINE void CopyData(const unsigned char* in) {
 #endif
 
   free(l1);
-
-#if defined(__AVX2__)
-  const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
-  const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
-  const size_t BIAS_CHUNKS   = N_HIDDEN / WIDTH;
-
-  __m256i* weights = (__m256i*) INPUT_WEIGHTS;
-  __m256i* biases  = (__m256i*) INPUT_BIASES;
-
-  for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
-    __m128i a = _mm256_extracti128_si256(weights[i], 1);     // 64->128
-    __m128i b = _mm256_extracti128_si256(weights[i + 1], 0); // 128->192
-
-    weights[i]     = _mm256_inserti128_si256(weights[i], b, 1);     // insert 128->192 into 64->128
-    weights[i + 1] = _mm256_inserti128_si256(weights[i + 1], a, 0); // insert 64->128 into 128->192
-  }
-
-  for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
-    __m128i a = _mm256_extracti128_si256(biases[i], 1);     // 64->128
-    __m128i b = _mm256_extracti128_si256(biases[i + 1], 0); // 128->192
-
-    biases[i]     = _mm256_inserti128_si256(biases[i], b, 1);     // insert 128->192 into 64->128
-    biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a, 0); // insert 64->128 into 128->192
-  }
-#endif
 }
 
 INLINE void InitLookupIndices() {
