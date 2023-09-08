@@ -25,7 +25,8 @@
 enum {
   ST_QUIET,
   ST_CAPTURE,
-  ST_EVASION
+  ST_EVASION,
+  ST_MVV
 };
 
 INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {
