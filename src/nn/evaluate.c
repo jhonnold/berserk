@@ -49,7 +49,28 @@ float OUTPUT_BIAS;
 
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
+  const size_t WIDTH  = sizeof(__m512i) / sizeof(acc_t);
+  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const int views[2]  = {stm, !stm};
+
+  for (int v = 0; v < 2; v++) {
+    const __m512i* in = (__m512i*) acc->values[views[v]];
+    __m512i* out      = (__m512i*) &outputs[N_HIDDEN * v];
+
+    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
+      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], 6);
+      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], 6);
+      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], 6);
+      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], 6);
+
+      out[i]     = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512());
+      out[i + 1] = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512());
+    }
+  }
+}
+#elif defined(__AVX2__)
 INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
@@ -91,11 +112,11 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
 #else
 INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
-  const int max = 127 << 6;
+  const int max      = 127 << 6;
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
-    int8_t* out    = &outputs[N_HIDDEN * v];
+    int8_t* out     = &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < N_HIDDEN; i++)
       out[i] = Min(max, Max(0, in[i])) >> 6;
@@ -103,7 +124,80 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
 }
 #endif
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+INLINE void m512_add_dpbusd_epi32(__m512i* acc, __m512i a, __m512i b) {
+  __m512i p0 = _mm512_maddubs_epi16(a, b);
+  p0         = _mm512_madd_epi16(p0, _mm512_set1_epi16(1));
+  *acc       = _mm512_add_epi32(*acc, p0);
+}
+
+INLINE uint32_t NNZ(__m512i chunk) {
+  return _mm512_cmpgt_epi32_mask(chunk, _mm512_setzero_si512());
+}
+
+INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks) {
+  const size_t IN_WIDTH      = sizeof(__m512i) / sizeof(int32_t);
+  const size_t CHUNK_SIZE    = 16;
+  const size_t NUM_CHUNKS    = chunks / CHUNK_SIZE;
+  const size_t IN_PER_CHUNK  = CHUNK_SIZE / IN_WIDTH;
+  const size_t OUT_PER_CHUNK = CHUNK_SIZE / 8;
+
+  const __m512i* in = (__m512i*) inputs;
+
+  size_t count = 0;
+
+  const __m128i increment = _mm_set1_epi16(8);
+  __m128i base            = _mm_setzero_si128();
+
+  for (size_t i = 0; i < NUM_CHUNKS; i++) {
+    uint32_t nnz = 0;
+
+    for (size_t j = 0; j < IN_PER_CHUNK; j++) {
+      const __m512i inputChunk = in[i * IN_PER_CHUNK + j];
+      nnz |= NNZ(inputChunk) << (j * IN_WIDTH);
+    }
+
+    for (size_t j = 0; j < OUT_PER_CHUNK; j++) {
+      const uint16_t lookup = (nnz >> (j * 8)) & 0xFF;
+      const __m128i offsets = _mm_loadu_si128((__m128i*) (&LOOKUP_INDICES[lookup]));
+      _mm_storeu_si128((__m128i*) (dest + count), _mm_add_epi16(base, offsets));
+      count += BitCount(lookup);
+      base = _mm_add_epi16(base, increment);
+    }
+  }
+
+  return count;
+}
+
+INLINE void L1AffineReLU(float* dest, int8_t* src) {
+  const size_t OUT_WIDTH  = sizeof(__m512i) / sizeof(int32_t);
+  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
+  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+
+  const int32_t* in32   = (int32_t*) src;
+  const __m512i* biases = (__m512i*) L1_BIASES;
+  __m512* out           = (__m512*) dest;
+
+  uint16_t nnz[NUM_CHUNKS];
+  size_t count = FindNNZ(nnz, in32, NUM_CHUNKS);
+
+  __m512i regs[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++)
+    regs[i] = biases[i];
+
+  for (size_t i = 0; i < count; i++) {
+    const uint16_t inputId = nnz[i];
+    const __m512i factor   = _mm512_set1_epi32(in32[inputId]);
+    const __m512i* col     = (__m512i*) &L1_WEIGHTS[inputId * N_L2 * SPARSE_CHUNK_SIZE];
+
+    for (size_t j = 0; j < OUT_CC; j++)
+      m512_add_dpbusd_epi32(regs + j, factor, col[j]);
+  }
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    out[i] = _mm512_cvtepi32_ps(_mm512_max_epi32(regs[i], _mm512_setzero_si512()));
+}
+#elif defined(__AVX2__)
 INLINE void m256_add_dpbusd_epi32(__m256i* acc, __m256i a, __m256i b) {
   __m256i p0 = _mm256_maddubs_epi16(a, b);
   p0         = _mm256_madd_epi16(p0, _mm256_set1_epi16(1));
@@ -268,23 +362,82 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
 }
 #endif
 
-#if defined(__AVX2__)
-INLINE void m256_hadd_psx4(__m256* regs) {
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+INLINE __m128 m512_hadd_psx4(__m512* regs) {
+  __m512 regs01l = _mm512_unpacklo_ps(regs[0], regs[1]);
+  __m512 regs01h = _mm512_unpackhi_ps(regs[0], regs[1]);
+
+  __m512 regs23l = _mm512_unpacklo_ps(regs[2], regs[3]);
+  __m512 regs23h = _mm512_unpackhi_ps(regs[2], regs[3]);
+
+  __m512 regs01 = _mm512_add_ps(regs01l, regs01h);
+  __m512 regs23 = _mm512_add_ps(regs23l, regs23h);
+
+  __m512 regs0123l = (__m512) _mm512_unpacklo_pd((__m512d) regs01, (__m512d) regs23);
+  __m512 regs0123h = (__m512) _mm512_unpackhi_pd((__m512d) regs01, (__m512d) regs23);
+
+  __m512 sum = _mm512_add_ps(regs0123l, regs0123h);
+
+  __m256 sum256lo = _mm512_castps512_ps256(sum);
+  __m256 sum256hi = (__m256) _mm512_extractf64x4_pd(sum, 1);
+
+  sum256lo = _mm256_add_ps(sum256lo, sum256hi);
+
+  __m128 sum128lo = _mm256_castps256_ps128(sum256lo);
+  __m128 sum128hi = _mm256_extractf128_ps(sum256lo, 1);
+
+  return _mm_add_ps(sum128lo, sum128hi);
+}
+
+INLINE void L2AffineReLU(float* dest, float* src) {
+  const size_t IN_WIDTH   = sizeof(__m512) / sizeof(float);
+  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
+  const size_t OUT_CC     = 4;
+  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+
+  const __m512* in      = (__m512*) src;
+  const __m512* weights = (__m512*) L2_WEIGHTS;
+  const __m128* biases  = (__m128*) L2_BIASES;
+  __m128* out           = (__m128*) dest;
+
+  __m512 regs[OUT_CC];
+
+  for (size_t i = 0; i < OUT_CHUNKS; i++) {
+    for (size_t k = 0; k < OUT_CC; k++)
+      regs[k] = _mm512_setzero_ps();
+
+    for (size_t j = 0; j < IN_CHUNKS; j++)
+      for (size_t k = 0; k < OUT_CC; k++)
+        regs[k] = _mm512_fmadd_ps(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)], regs[k]);
+
+    const __m128 sum = m512_hadd_psx4(regs);
+    out[i]           = _mm_max_ps(_mm_add_ps(sum, biases[i]), _mm_setzero_ps());
+  }
+}
+
+#elif defined(__AVX2__)
+INLINE __m128 m256_hadd_psx4(__m256* regs) {
   regs[0] = _mm256_hadd_ps(regs[0], regs[1]);
   regs[2] = _mm256_hadd_ps(regs[2], regs[3]);
+
   regs[0] = _mm256_hadd_ps(regs[0], regs[2]);
+
+  __m128 sum128lo = _mm256_castps256_ps128(regs[0]);
+  __m128 sum128hi = _mm256_extractf128_ps(regs[0], 1);
+
+  return _mm_add_ps(sum128lo, sum128hi);
 }
 
 INLINE void L2AffineReLU(float* dest, float* src) {
   const size_t IN_WIDTH   = sizeof(__m256) / sizeof(float);
   const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
-  const size_t OUT_CC     = 8;
+  const size_t OUT_CC     = 4;
   const size_t OUT_CHUNKS = N_L3 / OUT_CC;
 
   const __m256* in      = (__m256*) src;
   const __m256* weights = (__m256*) L2_WEIGHTS;
-  const __m256* biases  = (__m256*) L2_BIASES;
-  __m256* out           = (__m256*) dest;
+  const __m128* biases  = (__m128*) L2_BIASES;
+  __m128* out           = (__m128*) dest;
 
   __m256 regs[OUT_CC];
 
@@ -296,20 +449,16 @@ INLINE void L2AffineReLU(float* dest, float* src) {
       for (size_t k = 0; k < OUT_CC; k++)
         regs[k] = _mm256_fmadd_ps(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)], regs[k]);
 
-    m256_hadd_psx4(regs);
-    m256_hadd_psx4(&regs[4]);
-
-    const __m128 t0 = _mm_add_ps(_mm256_castps256_ps128(regs[0]), _mm256_extractf128_ps(regs[0], 1));
-    const __m128 t4 = _mm_add_ps(_mm256_castps256_ps128(regs[4]), _mm256_extractf128_ps(regs[4], 1));
-    __m256 sum      = _mm256_insertf128_ps(_mm256_castps128_ps256(t0), t4, 1);
-    out[i]          = _mm256_max_ps(_mm256_add_ps(sum, biases[i]), _mm256_setzero_ps());
+    const __m128 sum = m256_hadd_psx4(regs);
+    out[i]           = _mm_max_ps(_mm_add_ps(sum, biases[i]), _mm_setzero_ps());
   }
 }
 #elif defined(__SSE3__)
-INLINE void m128_hadd_psx4(__m128* regs) {
+INLINE __m128 m128_hadd_psx4(__m128* regs) {
   regs[0] = _mm_hadd_ps(regs[0], regs[1]);
   regs[2] = _mm_hadd_ps(regs[2], regs[3]);
-  regs[0] = _mm_hadd_ps(regs[0], regs[2]);
+
+  return _mm_hadd_ps(regs[0], regs[2]);
 }
 
 INLINE void L2AffineReLU(float* dest, float* src) {
@@ -333,9 +482,8 @@ INLINE void L2AffineReLU(float* dest, float* src) {
       for (size_t k = 0; k < OUT_CC; k++)
         regs[k] = _mm_add_ps(regs[k], _mm_mul_ps(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
 
-    m128_hadd_psx4(regs);
-
-    out[i] = _mm_max_ps(_mm_add_ps(regs[0], biases[i]), _mm_setzero_ps());
+    const __m128 sum = m128_hadd_psx4(regs);
+    out[i]           = _mm_max_ps(_mm_add_ps(sum, biases[i]), _mm_setzero_ps());
   }
 }
 #else
@@ -352,7 +500,26 @@ INLINE void L2AffineReLU(float* dest, float* src) {
 }
 #endif
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+INLINE int L3Transform(float* src) {
+  const size_t WIDTH  = sizeof(__m512) / sizeof(float);
+  const size_t CHUNKS = N_L3 / WIDTH;
+
+  const __m512* in      = (__m512*) src;
+  const __m512* weights = (__m512*) OUTPUT_WEIGHTS;
+
+  __m512 a0 = _mm512_setzero_ps();
+  for (size_t i = 0; i < CHUNKS; i++)
+    a0 = _mm512_fmadd_ps(in[i], weights[i], a0);
+
+  const __m256 a8 = _mm256_add_ps(_mm512_castps512_ps256(a0), (__m256) _mm512_extractf64x4_pd(a0, 1));
+  const __m128 a4 = _mm_add_ps(_mm256_castps256_ps128(a8), _mm256_extractf128_ps(a8, 1));
+  const __m128 a2 = _mm_add_ps(a4, _mm_movehl_ps(a4, a4));
+  const __m128 a1 = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
+
+  return _mm_cvtss_f32(a1) + OUTPUT_BIAS;
+}
+#elif defined(__AVX2__)
 INLINE int L3Transform(float* src) {
   const size_t WIDTH  = sizeof(__m256) / sizeof(float);
   const size_t CHUNKS = N_L3 / WIDTH;
