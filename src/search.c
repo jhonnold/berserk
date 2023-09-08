@@ -499,12 +499,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Prob cut
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
-    int probBeta = beta + 110;
-    if (depth > 4 && abs(beta) < TB_WIN_BOUND && !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
+    int probBeta = beta + 200;
+    if (depth > 4 && !ss->skip && abs(beta) < TB_WIN_BOUND && !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
-        if (ss->skip == move)
-          continue;
         if (!IsLegal(move, board))
           continue;
 
