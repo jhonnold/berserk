@@ -458,10 +458,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       depth--;
   }
 
-  if (!isPV && !inCheck) {
+  if (!isPV && !inCheck && !ss->skip) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 8 && !ss->skip && eval < WINNING_ENDGAME && eval >= beta &&
+    if (depth <= 8 && eval < WINNING_ENDGAME && eval >= beta &&
         eval - 69 * depth + 112 * (improving && !oppThreatPcs) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12288))
       return eval;
@@ -477,7 +477,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
+    if (depth >= 3 && (ss - 1)->move != NULL_MOVE && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
       int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !oppThreatPcs;
@@ -500,8 +500,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 200;
-    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND &&
-        !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
+    if (depth >= 5 && abs(beta) < TB_WIN_BOUND && !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread, probBeta > eval);
       while ((move = NextMove(&mp, board, 1))) {
         if (!IsLegal(move, board))
