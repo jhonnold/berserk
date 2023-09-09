@@ -564,6 +564,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
           skipQuiets = 1;
 
+        lmrDepth = Max(1, lmrDepth + history / 7282);
+
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
       } else {
