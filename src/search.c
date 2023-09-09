@@ -495,6 +495,36 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (score >= beta)
         return score < TB_WIN_BOUND ? score : beta;
     }
+
+    // Prob cut
+    // If a relatively deep search from our TT doesn't say this node is
+    // less than beta + margin, then we run a shallow search to look
+    int probBeta = beta + 200;
+    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND &&
+        !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
+      InitPCMovePicker(&mp, thread, probBeta > eval);
+      while ((move = NextMove(&mp, board, 1))) {
+        if (!IsLegal(move, board))
+          continue;
+
+        TTPrefetch(KeyAfter(board, move));
+        ss->move = move;
+        ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        MakeMove(move, board);
+
+        // qsearch to quickly check
+        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
+
+        // if it's still above our cutoff, revalidate
+        if (score >= probBeta)
+          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv, ss + 1);
+
+        UndoMove(move, board);
+
+        if (score >= probBeta)
+          return score;
+      }
+    }
   }
 
   int numQuiets = 0, numCaptures = 0;
