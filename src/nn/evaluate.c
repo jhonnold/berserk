@@ -648,35 +648,35 @@ INLINE void CopyData(const unsigned char* in) {
   __m512i* biases  = (__m512i*) INPUT_BIASES;
 
   for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
-    __m128i a1 = _mm512_extracti64x2_epi64(weights[i], 1);
-    __m128i a2 = _mm512_extracti64x2_epi64(weights[i], 2);
-    __m128i a3 = _mm512_extracti64x2_epi64(weights[i], 3);
-    __m128i b0 = _mm512_extracti64x2_epi64(weights[i + 1], 0);
-    __m128i b1 = _mm512_extracti64x2_epi64(weights[i + 1], 1);
-    __m128i b2 = _mm512_extracti64x2_epi64(weights[i + 1], 2);
+    __m128i a1 = _mm512_extracti32x4_epi32(weights[i], 1);
+    __m128i a2 = _mm512_extracti32x4_epi32(weights[i], 2);
+    __m128i a3 = _mm512_extracti32x4_epi32(weights[i], 3);
+    __m128i b0 = _mm512_extracti32x4_epi32(weights[i + 1], 0);
+    __m128i b1 = _mm512_extracti32x4_epi32(weights[i + 1], 1);
+    __m128i b2 = _mm512_extracti32x4_epi32(weights[i + 1], 2);
 
-    weights[i]     = _mm512_inserti64x2(weights[i], a2, 1);
-    weights[i]     = _mm512_inserti64x2(weights[i], b0, 2);
-    weights[i]     = _mm512_inserti64x2(weights[i], b2, 3);
-    weights[i + 1] = _mm512_inserti64x2(weights[i + 1], a1, 0);
-    weights[i + 1] = _mm512_inserti64x2(weights[i + 1], a3, 1);
-    weights[i + 1] = _mm512_inserti64x2(weights[i + 1], b1, 2);
+    weights[i]     = _mm512_inserti32x4(weights[i], a2, 1);
+    weights[i]     = _mm512_inserti32x4(weights[i], b0, 2);
+    weights[i]     = _mm512_inserti32x4(weights[i], b2, 3);
+    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], a1, 0);
+    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], a3, 1);
+    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], b1, 2);
   }
 
   for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
-    __m128i a1 = _mm512_extracti64x2_epi64(biases[i], 1);
-    __m128i a2 = _mm512_extracti64x2_epi64(biases[i], 2);
-    __m128i a3 = _mm512_extracti64x2_epi64(biases[i], 3);
-    __m128i b0 = _mm512_extracti64x2_epi64(biases[i + 1], 0);
-    __m128i b1 = _mm512_extracti64x2_epi64(biases[i + 1], 1);
-    __m128i b2 = _mm512_extracti64x2_epi64(biases[i + 1], 2);
+    __m128i a1 = _mm512_extracti32x4_epi32(biases[i], 1);
+    __m128i a2 = _mm512_extracti32x4_epi32(biases[i], 2);
+    __m128i a3 = _mm512_extracti32x4_epi32(biases[i], 3);
+    __m128i b0 = _mm512_extracti32x4_epi32(biases[i + 1], 0);
+    __m128i b1 = _mm512_extracti32x4_epi32(biases[i + 1], 1);
+    __m128i b2 = _mm512_extracti32x4_epi32(biases[i + 1], 2);
 
-    biases[i]     = _mm512_inserti64x2(biases[i], a2, 1);
-    biases[i]     = _mm512_inserti64x2(biases[i], b0, 2);
-    biases[i]     = _mm512_inserti64x2(biases[i], b2, 3);
-    biases[i + 1] = _mm512_inserti64x2(biases[i + 1], a1, 0);
-    biases[i + 1] = _mm512_inserti64x2(biases[i + 1], a3, 1);
-    biases[i + 1] = _mm512_inserti64x2(biases[i + 1], b1, 2);
+    biases[i]     = _mm512_inserti32x4(biases[i], a2, 1);
+    biases[i]     = _mm512_inserti32x4(biases[i], b0, 2);
+    biases[i]     = _mm512_inserti32x4(biases[i], b2, 3);
+    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], a1, 0);
+    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], a3, 1);
+    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], b1, 2);
   }
 #elif defined(__AVX2__)
   const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
