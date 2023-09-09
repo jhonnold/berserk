@@ -71,6 +71,9 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                          (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
     }
 
+    else if (type == ST_MVV)
+      current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * !!Promo(move);
+
     current++;
   }
 }
@@ -162,6 +165,28 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = -1;
       return NULL_MOVE;
 
+    // Probcut MP Steps
+    case PC_GEN_NOISY_MOVES:
+      picker->current = picker->endBad = picker->moves;
+      picker->end                      = AddNoisyMoves(picker->current, board);
+
+      ScoreMoves(picker, board, ST_MVV);
+
+      picker->phase = PC_PLAY_GOOD_NOISY;
+      // fallthrough
+    case PC_PLAY_GOOD_NOISY:
+      if (picker->current != picker->end) {
+        Move move = Best(picker->current++, picker->end);
+
+        if (!SEE(board, move, picker->seeCutoff))
+          return NextMove(picker, board, skipQuiets);
+
+        return move;
+      }
+
+      picker->phase = -1;
+      return NULL_MOVE;
+
     // QSearch MP Steps
     case QS_GEN_NOISY_MOVES:
       picker->current = picker->endBad = picker->moves;
@@ -185,7 +210,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       // fallthrough
     case QS_GEN_QUIET_CHECKS:
       picker->current = picker->moves;
-      picker->end = AddQuietCheckMoves(picker->current, board);
+      picker->end     = AddQuietCheckMoves(picker->current, board);
 
       picker->phase = QS_PLAY_QUIET_CHECKS;
 
