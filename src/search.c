@@ -165,12 +165,13 @@ void Search(ThreadData* thread) {
   int searchStability   = 0;
   Move previousBestMove = NULL_MOVE;
 
-  SearchStack searchStack[MAX_SEARCH_PLY + 6];
-  SearchStack* ss = searchStack + 6;
-  memset(searchStack, 0, 5 * sizeof(SearchStack));
+  const int searchOffset = 6;
+  SearchStack searchStack[MAX_SEARCH_PLY + searchOffset];
+  SearchStack* ss = searchStack + searchOffset;
+  memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
     (ss + i)->ply = i;
-  for (size_t i = 1; i <= 6; i++)
+  for (size_t i = 1; i <= searchOffset; i++)
     (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
 
   while (++thread->depth < MAX_SEARCH_PLY) {
@@ -334,7 +335,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // hot exit
     longjmp(thread->exit, 1);
 
-  thread->nodes++;
+  IncRlx(thread->nodes);
   if (isPV && thread->seldepth < ss->ply + 1)
     thread->seldepth = ss->ply + 1;
 
@@ -372,7 +373,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     unsigned tbResult = TBProbe(board);
 
     if (tbResult != TB_RESULT_FAILED) {
-      thread->tbhits++;
+      IncRlx(thread->tbhits);
 
       int bound;
       switch (tbResult) {
@@ -498,14 +499,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Prob cut
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
-    Threats(&ss->ownThreat, board, board->stm);
-    int probBeta = beta + 111 - 26 * improving;
-    if (depth > 6 && abs(beta) < TB_WIN_BOUND && ss->ownThreat.pcs &&
-        !(tt && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
-      InitPCMovePicker(&mp, thread);
+    int probBeta = beta + 200;
+    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND &&
+        !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
+      InitPCMovePicker(&mp, thread, probBeta > eval);
       while ((move = NextMove(&mp, board, 1))) {
-        if (ss->skip == move)
-          continue;
         if (!IsLegal(move, board))
           continue;
 
@@ -538,9 +536,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
       continue;
-    if (isRoot && MoveSearchedByMultiPV(thread, move))
-      continue;
-    if (isRoot && !MoveSearchable(thread, move))
+    if (isRoot && !ValidRootMove(thread, move))
       continue;
     if (!isRoot && !IsLegal(move, board))
       continue;
@@ -644,7 +640,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // increase reduction on non-pv
       if (!ttPv)
-        R++;
+        R += 2;
 
       // increase reduction if our eval is declining
       if (!improving)
@@ -771,7 +767,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     // hot exit
     longjmp(thread->exit, 1);
 
-  thread->nodes++;
+  IncRlx(thread->nodes);
 
   // draw check
   if (IsDraw(board, ss->ply))
@@ -962,16 +958,8 @@ void SortRootMoves(ThreadData* thread, int offset) {
   }
 }
 
-int MoveSearchedByMultiPV(ThreadData* thread, Move move) {
-  for (int i = 0; i < thread->multiPV; i++)
-    if (thread->rootMoves[i].move == move)
-      return 1;
-
-  return 0;
-}
-
-int MoveSearchable(ThreadData* thread, Move move) {
-  for (int i = 0; i < thread->numRootMoves; i++)
+int ValidRootMove(ThreadData* thread, Move move) {
+  for (int i = thread->multiPV; i < thread->numRootMoves; i++)
     if (move == thread->rootMoves[i].move)
       return 1;
 

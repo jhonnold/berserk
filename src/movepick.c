@@ -74,6 +74,9 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                          (int) (*(ss - 6)->ch)[moving][to];
     }
 
+    else if (type == ST_MVV)
+      current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * IsPromo(move);
+
     current++;
   }
 }
@@ -170,7 +173,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->current = picker->endBad = picker->moves;
       picker->end                      = AddNoisyMoves(picker->current, board);
 
-      ScoreMoves(picker, board, ST_CAPTURE);
+      ScoreMoves(picker, board, ST_MVV);
 
       picker->phase = PC_PLAY_GOOD_NOISY;
       // fallthrough
@@ -178,22 +181,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       if (picker->current != picker->end) {
         Move move = Best(picker->current++, picker->end);
 
-        if (!SEE(board, move, 0)) {
-          *picker->endBad++ = *(picker->current - 1);
+        if (!SEE(board, move, picker->seeCutoff))
           return NextMove(picker, board, skipQuiets);
-        } else {
-          return move;
-        }
+
+        return move;
       }
-
-      picker->current = picker->moves;
-      picker->end     = picker->endBad;
-
-      picker->phase = PC_PLAY_BAD_NOISY;
-      // fallthrough
-    case PC_PLAY_BAD_NOISY:
-      if (picker->current != picker->end)
-        return (picker->current++)->move;
 
       picker->phase = -1;
       return NULL_MOVE;

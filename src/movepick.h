@@ -25,7 +25,8 @@
 enum {
   ST_QUIET,
   ST_CAPTURE,
-  ST_EVASION
+  ST_EVASION,
+  ST_MVV
 };
 
 INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {
@@ -48,9 +49,10 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
   picker->ss     = ss;
 }
 
-INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread) {
+INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread, int threshold) {
   picker->phase  = PC_GEN_NOISY_MOVES;
   picker->thread = thread;
+  picker->seeCutoff = threshold;
 }
 
 INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, int genChecks) {

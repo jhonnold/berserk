@@ -4,8 +4,8 @@
 EXE      = berserk
 SRC      = *.c nn/*.c pyrrhic/tbprobe.c
 CC       = gcc
-VERSION  = 20230819
-MAIN_NETWORK = networks/berserk-7dc28215434e.nn
+VERSION  = 20230910
+MAIN_NETWORK = networks/berserk-71bdca2676c4.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
@@ -65,7 +65,7 @@ pgo: clone-networks
 	$(CLEAN)
 
 release: clone-networks
-	$(RELEASE)-$(VERSION)-x64$(EXT)             -march=core2
+	$(RELEASE)-$(VERSION)-x64-sse41$(EXT)       -march=nehalem
 	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        -march=core-avx2
 	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   -march=core-avx2                                 -DUSE_PEXT
 	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)      -march=core-avx2 -mavx512f -mavx512bw -mavx512dq
