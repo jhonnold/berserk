@@ -131,6 +131,14 @@ INLINE void m512_add_dpbusd_epi32(__m512i* acc, __m512i a, __m512i b) {
   *acc       = _mm512_add_epi32(*acc, p0);
 }
 
+INLINE void m512_add_dpbusd_epi32x2(__m512i* acc, __m512i a0, __m512i b0, __m512i a1, __m512i b1) {
+  __m512i p0 = _mm512_maddubs_epi16(a0, b0);
+  __m512i p1 = _mm512_maddubs_epi16(a1, b1);
+
+  p0   = _mm512_madd_epi16(_mm512_add_epi16(p0, p1), _mm512_set1_epi16(1));
+  *acc = _mm512_add_epi32(*acc, p0);
+}
+
 INLINE uint32_t NNZ(__m512i chunk) {
   return _mm512_cmpgt_epi32_mask(chunk, _mm512_setzero_si512());
 }
@@ -185,16 +193,31 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
   for (size_t i = 0; i < OUT_CC; i++)
     regs[i] = biases[i];
 
-  for (size_t i = 0; i < count; i++) {
-    const uint16_t inputId = nnz[i];
-    const __m512i factor   = _mm512_set1_epi32(in32[inputId]);
-    const __m512i* col     = (__m512i*) &L1_WEIGHTS[inputId * N_L2 * SPARSE_CHUNK_SIZE];
+  size_t i = 0;
+  for (; i + 1 < count; i += 2) {
+    const uint16_t i0 = nnz[i + 0];
+    const uint16_t i1 = nnz[i + 1];
+
+    const __m512i f0 = _mm512_set1_epi32(in32[i0]);
+    const __m512i f1 = _mm512_set1_epi32(in32[i1]);
+
+    const __m512i* c0 = (__m512i*) &L1_WEIGHTS[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const __m512i* c1 = (__m512i*) &L1_WEIGHTS[i1 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++)
-      m512_add_dpbusd_epi32(regs + j, factor, col[j]);
+      m512_add_dpbusd_epi32x2(regs + j, f0, c0[j], f1, c1[j]);
   }
 
-  for (size_t i = 0; i < OUT_CC; i++)
+  if (i < count) {
+    const uint16_t i0 = nnz[i];
+    const __m512i f0  = _mm512_set1_epi32(in32[i0]);
+    const __m512i* c0 = (__m512i*) &L1_WEIGHTS[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+
+    for (size_t j = 0; j < OUT_CC; j++)
+      m512_add_dpbusd_epi32(regs + j, f0, c0[j]);
+  }
+
+  for (i = 0; i < OUT_CC; i++)
     out[i] = _mm512_cvtepi32_ps(_mm512_max_epi32(regs[i], _mm512_setzero_si512()));
 }
 #elif defined(__AVX2__)
