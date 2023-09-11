@@ -51,7 +51,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     Move move = current->move;
 
     if (type == ST_QUIET)
-      current->score = 2 * ((int) HH(thread->board.stm, move, ss->oppThreat.sqs) + //
+      current->score = 2 * ((int) HH(thread->board.stm, move, thread->board.threatened) + //
                             (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
                             (int) (*(ss - 2)->ch)[Moving(move)][To(move)]) +       //
                        (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +             //
@@ -64,7 +64,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       if (IsCap(move))
         current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
       else
-        current->score = 2 * ((int) HH(thread->board.stm, move, ss->oppThreat.sqs) + //
+        current->score = 2 * ((int) HH(thread->board.stm, move, thread->board.threatened) + //
                               (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
                               (int) (*(ss - 2)->ch)[Moving(move)][To(move)]) +       //
                          (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +             //

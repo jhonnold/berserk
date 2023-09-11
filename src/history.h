@@ -27,7 +27,7 @@
 #define TH(p, e, c)         (thread->caph[p][e][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return (int) HH(thread->board.stm, move, ss->oppThreat.sqs) + //
+  return (int) HH(thread->board.stm, move, thread->board.threatened) + //
          (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
          (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +        //
          (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
