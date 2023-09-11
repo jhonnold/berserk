@@ -704,7 +704,7 @@ int IsPseudoLegal(Move move, Board* board) {
 }
 
 // this is NOT a legality checker for ALL moves
-// it is only used by move generation for king moves, castles, and ep captures
+// it is only used for final verification of EP and pinned moves.
 int IsLegal(Move move, Board* board) {
   int from   = From(move);
   int to     = To(move);
