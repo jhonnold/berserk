@@ -63,10 +63,6 @@ typedef struct {
 } AccumulatorKingState;
 
 typedef struct {
-  BitBoard pcs, sqs;
-} Threat;
-
-typedef struct {
   int capture;
   int castling;
   int ep;
@@ -75,6 +71,8 @@ typedef struct {
   uint64_t zobrist;
   BitBoard checkers;
   BitBoard pinned;
+  BitBoard threatened;
+  BitBoard easyCapture;
 } BoardHistory;
 
 typedef struct {
@@ -91,6 +89,10 @@ typedef struct {
 
   BitBoard checkers;     // checking piece squares
   BitBoard pinned;       // pinned pieces
+
+  BitBoard threatened;   // opponent "threatening" these squares
+  BitBoard easyCapture;  // opponent capturing these is a guarantee SEE > 0
+
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
 
@@ -124,7 +126,6 @@ typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
   Move move, skip;
-  Threat oppThreat;
   Move killers[2];
 } SearchStack;
 

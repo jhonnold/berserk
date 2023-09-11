@@ -29,7 +29,7 @@
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
   Board* board = &thread->board;
 
-  return (int) HH(thread->board.stm, move, ss->oppThreat.sqs) +        //
+  return (int) HH(thread->board.stm, move, thread->board.threatened) +        //
          (int) (*(ss - 1)->ch)[board->squares[From(move)]][To(move)] + //
          (int) (*(ss - 2)->ch)[board->squares[From(move)]][To(move)] + //
          (int) (*(ss - 4)->ch)[board->squares[From(move)]][To(move)];

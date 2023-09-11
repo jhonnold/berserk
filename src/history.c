@@ -59,12 +59,11 @@ void UpdateHistories(SearchStack* ss,
                      int nC) {
   Board* board     = &thread->board;
   int stm          = board->stm;
-  BitBoard threats = ss->oppThreat.sqs;
 
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
-    AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
+    AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
 
     int to     = To(bestMove);
     int moving = board->squares[From(bestMove)];
@@ -96,7 +95,7 @@ void UpdateHistories(SearchStack* ss,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, threats), -inc);
+      AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
 
       int to     = To(m);
       int moving = board->squares[From(m)];
