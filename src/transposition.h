@@ -72,7 +72,8 @@ void TTPut(TTEntry* tt,
            Move move,
            int ply,
            int16_t eval,
-           int pv);
+           int pv,
+           int pvNode);
 int TTFull();
 
 #define HASH_MAX ((int) (pow(2, 32) * sizeof(TTBucket) / MEGABYTE))
