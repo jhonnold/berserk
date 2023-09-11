@@ -98,10 +98,9 @@ inline void TTPrefetch(uint64_t hash) {
 
 inline TTEntry* TTProbe(uint64_t hash, int* hit) {
   TTEntry* const bucket = TT.buckets[TTIdx(hash)].entries;
-  uint16_t shortHash    = (uint16_t) hash;
 
   for (int i = 0; i < BUCKET_SIZE; i++) {
-    if (bucket[i].hash == shortHash || !bucket[i].depth) {
+    if (hash == bucket[i].hash || !bucket[i].depth) {
       bucket[i].agePvBound = (uint8_t) (TT.age | (bucket[i].agePvBound & (PV_MASK | BOUND_MASK)));
       *hit                 = !!bucket[i].depth;
       return &bucket[i];
@@ -121,18 +120,16 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
 
 inline void
 TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
-  uint16_t shortHash = (uint16_t) hash;
-
   if (score >= TB_WIN_BOUND)
     score += ply;
   else if (score <= -TB_WIN_BOUND)
     score -= ply;
 
-  if (move || shortHash != tt->hash)
+  if (move || hash != tt->hash)
     tt->move = move;
 
-  if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 4 > TTDepth(tt)) {
-    tt->hash       = shortHash;
+  if ((bound == BOUND_EXACT) || hash != tt->hash || depth + 4 > TTDepth(tt)) {
+    tt->hash       = hash;
     tt->eval       = eval;
     tt->score      = score;
     tt->depth      = (uint8_t) (depth - DEPTH_OFFSET);

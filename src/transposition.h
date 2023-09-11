@@ -22,7 +22,7 @@
 
 #define NO_ENTRY    0ULL
 #define MEGABYTE    (1024ull * 1024ull)
-#define BUCKET_SIZE 3
+#define BUCKET_SIZE 2
 
 #define BOUND_MASK (0x3)
 #define PV_MASK    (0x4)
@@ -31,7 +31,7 @@
 #define AGE_CYCLE  (255 + AGE_INC)
 
 typedef struct {
-  uint16_t hash;
+  uint64_t hash;
   uint8_t depth, agePvBound;
   uint16_t move;
   int16_t score, eval;
@@ -39,7 +39,6 @@ typedef struct {
 
 typedef struct {
   TTEntry entries[BUCKET_SIZE];
-  uint16_t padding;
 } TTBucket;
 
 typedef struct {
