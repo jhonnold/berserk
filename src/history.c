@@ -23,15 +23,15 @@
 #include "move.h"
 #include "util.h"
 
-INLINE void AddKillerMove(SearchStack* ss, Move move) {
-  if (ss->killers[0] != move) {
+INLINE void AddKillerMove(SearchStack* ss, Board* board, Move move) {
+  if (ss->killers[0].move != move) {
     ss->killers[1] = ss->killers[0];
-    ss->killers[0] = move;
+    ss->killers[0] = (PieceWithMove) {.moving = board->squares[From(move)], .move = move};
   }
 }
 
 INLINE void AddCounterMove(ThreadData* thread, Move move, int moving, int to) {
-  thread->counters[moving][to] = move;
+  thread->counters[moving][to] = (PieceWithMove) {.moving = thread->board.squares[From(move)], .move = move};
 }
 
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
@@ -57,8 +57,8 @@ void UpdateHistories(SearchStack* ss,
                      int nQ,
                      Move captures[],
                      int nC) {
-  Board* board     = &thread->board;
-  int stm          = board->stm;
+  Board* board = &thread->board;
+  int stm      = board->stm;
 
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
@@ -70,7 +70,7 @@ void UpdateHistories(SearchStack* ss,
     UpdateCH(ss, moving, to, inc);
 
     if (!(IsPromo(bestMove) && PromoPT(bestMove) == QUEEN)) {
-      AddKillerMove(ss, bestMove);
+      AddKillerMove(ss, board, bestMove);
 
       if ((ss - 1)->move) {
         int counterTo     = To((ss - 1)->move);

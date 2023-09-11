@@ -30,17 +30,23 @@ enum {
 };
 
 INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {
+  Board* board = &thread->board;
+
   picker->phase = HASH_MOVE;
 
   picker->hashMove = hashMove;
-  picker->killer1  = ss->killers[0];
-  picker->killer2  = ss->killers[1];
+
+  PieceWithMove* k1 = &ss->killers[0];
+  PieceWithMove* k2 = &ss->killers[1];
+  picker->killer1   = (k1->moving == board->squares[From(k1->move)]) ? k1->move : NULL_MOVE;
+  picker->killer2   = (k2->moving == board->squares[From(k2->move)]) ? k2->move : NULL_MOVE;
 
   if ((ss - 1)->move) {
     int to     = To((ss - 1)->move);
     int moving = IsPromo((ss - 1)->move) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[to];
 
-    picker->counter = thread->counters[moving][to];
+    PieceWithMove* c = &thread->counters[moving][to];
+    picker->counter  = (c->moving == board->squares[From(c->move)]) ? c->move : NULL_MOVE;
   } else {
     picker->counter = NULL_MOVE;
   }
@@ -50,8 +56,8 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
 }
 
 INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread, int threshold) {
-  picker->phase  = PC_GEN_NOISY_MOVES;
-  picker->thread = thread;
+  picker->phase     = PC_GEN_NOISY_MOVES;
+  picker->thread    = thread;
   picker->seeCutoff = threshold;
 }
 
