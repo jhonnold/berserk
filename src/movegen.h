@@ -194,9 +194,13 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
 
     int to = CASTLE_MAP[rk][1], rookTo = CASTLE_MAP[rk][2];
 
-    BitBoard between = BetweenSquares(from, to) | BetweenSquares(rookFrom, rookTo) | Bit(to) | Bit(rookTo);
+    BitBoard kingCrossing = BetweenSquares(from, to) | Bit(to);
+    BitBoard rookCrossing = BetweenSquares(rookFrom, rookTo) | Bit(rookTo);
+    BitBoard between      = kingCrossing | rookCrossing;
+
     if (!((OccBB(BOTH) ^ Bit(from) ^ Bit(rookFrom)) & between))
-      moves = AddMove(moves, from, to, Piece(KING, stm), NO_PROMO, CASTLE);
+      if (!(kingCrossing & board->threatened))
+        moves = AddMove(moves, from, to, Piece(KING, stm), NO_PROMO, CASTLE);
   }
 
   return moves;
@@ -218,7 +222,7 @@ INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm
 
 INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
   if (BitCount(board->checkers) > 1)
-    return AddPieceMoves(moves, ALL, board, color, type, KING);
+    return AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
 
   BitBoard opts =
     !board->checkers ? ALL : BetweenSquares(LSB(PieceBB(KING, color)), LSB(board->checkers)) | board->checkers;
@@ -228,7 +232,7 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
   moves = AddPieceMoves(moves, opts, board, color, type, BISHOP);
   moves = AddPieceMoves(moves, opts, board, color, type, ROOK);
   moves = AddPieceMoves(moves, opts, board, color, type, QUEEN);
-  moves = AddPieceMoves(moves, ALL, board, color, type, KING);
+  moves = AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
   if ((type & GT_QUIET) && !board->checkers)
     moves = AddCastles(moves, board, color);
 
@@ -238,13 +242,11 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
 INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int color) {
   ScoredMove* curr = moves;
   BitBoard pinned  = board->pinned;
-  int king         = LSB(PieceBB(KING, board->stm));
 
   moves = AddPseudoLegalMoves(moves, board, GT_LEGAL, color);
 
   while (curr != moves) {
-    if (((pinned && GetBit(pinned, From(curr->move))) || From(curr->move) == king || IsEP(curr->move)) &&
-        !IsLegal(curr->move, board))
+    if (((pinned && GetBit(pinned, From(curr->move))) || IsEP(curr->move)) && !IsLegal(curr->move, board))
       curr->move = (--moves)->move;
     else
       curr++;
