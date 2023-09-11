@@ -24,19 +24,22 @@
 #include "util.h"
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
-#define TH(p, e, c)         (thread->caph[p][e][c])
+#define TH(p, e, d, c)      (thread->caph[p][e][d][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
   return (int) HH(thread->board.stm, move, thread->board.threatened) + //
-         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
-         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +        //
+         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +               //
+         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +               //
          (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
   Board* board = &thread->board;
 
-  return TH(Moving(move), To(move), IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
+  return TH(Moving(move),
+            To(move),
+            !GetBit(board->threatened, To(move)),
+            IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
 }
 
 INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
