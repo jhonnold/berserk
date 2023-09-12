@@ -112,8 +112,8 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
 
   TTEntry* replace = bucket;
   for (int i = 1; i < BUCKET_SIZE; i++)
-    if (replace->depth - ((AGE_CYCLE + TT.age - replace->agePvBound) & AGE_MASK) >
-        bucket[i].depth - ((AGE_CYCLE + TT.age - bucket[i].agePvBound) & AGE_MASK))
+    if (replace->depth - ((AGE_CYCLE + TT.age - replace->agePvBound) & AGE_MASK) / 2 >
+        bucket[i].depth - ((AGE_CYCLE + TT.age - bucket[i].agePvBound) & AGE_MASK) / 2)
       replace = &bucket[i];
 
   return replace;
