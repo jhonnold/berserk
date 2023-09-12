@@ -474,6 +474,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
     if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
+        !(board->easyCapture & PieceBB(QUEEN, board->stm)) &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
       int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !board->easyCapture;
