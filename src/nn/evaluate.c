@@ -60,10 +60,10 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
     __m512i* out      = (__m512i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], 6);
-      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], 6);
-      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], 6);
-      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], 6);
+      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], 5);
+      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], 5);
+      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], 5);
+      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], 5);
 
       out[i]     = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512());
       out[i + 1] = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512());

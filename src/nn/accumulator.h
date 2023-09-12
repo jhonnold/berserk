@@ -24,8 +24,8 @@
 #include "../util.h"
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
-#define UNROLL     512
-#define NUM_REGS   16
+#define UNROLL     1024
+#define NUM_REGS   32
 #define regi_t     __m512i
 #define regi_load  _mm512_load_si512
 #define regi_sub   _mm512_sub_epi16
@@ -75,25 +75,25 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
     const regi_t* inputs = (regi_t*) &src[unrollOffset];
     regi_t* outputs      = (regi_t*) &dest[unrollOffset];
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_load(&inputs[i]), regs[i + 1] = regi_load(&inputs[i + 1]);
 
     for (size_t r = 0; r < delta->r; r++) {
       const size_t offset   = delta->rem[r] * N_HIDDEN + unrollOffset;
       const regi_t* weights = (regi_t*) &INPUT_WEIGHTS[offset];
-      for (size_t i = 0; i < NUM_REGS; i++)
-        regs[i] = regi_sub(regs[i], weights[i]);
+      for (size_t i = 0; i < NUM_REGS; i += 2)
+        regs[i] = regi_sub(regs[i], weights[i]), regs[i + 1] = regi_sub(regs[i + 1], weights[i + 1]);
     }
 
     for (size_t a = 0; a < delta->a; a++) {
       const size_t offset   = delta->add[a] * N_HIDDEN + unrollOffset;
       const regi_t* weights = (regi_t*) &INPUT_WEIGHTS[offset];
-      for (size_t i = 0; i < NUM_REGS; i++)
-        regs[i] = regi_add(regs[i], weights[i]);
+      for (size_t i = 0; i < NUM_REGS; i += 2)
+        regs[i] = regi_add(regs[i], weights[i]), regs[i + 1] = regi_add(regs[i + 1], weights[i + 1]);
     }
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regi_store(&outputs[i], regs[i]), regi_store(&outputs[i + 1], regs[i + 1]);
   }
 }
 
@@ -106,21 +106,21 @@ INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
     const regi_t* inputs = (regi_t*) &src[unrollOffset];
     regi_t* outputs      = (regi_t*) &dest[unrollOffset];
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_load(&inputs[i]), regs[i + 1] = regi_load(&inputs[i + 1]);
 
     const size_t o1  = f1 * N_HIDDEN + unrollOffset;
     const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_sub(regs[i], w1[i]), regs[i + 1] = regi_sub(regs[i + 1], w1[i + 1]);
 
     const size_t o2  = f2 * N_HIDDEN + unrollOffset;
     const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w2[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_add(regs[i], w2[i]), regs[i + 1] = regi_add(regs[i + 1], w2[i + 1]);
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regi_store(&outputs[i], regs[i]), regi_store(&outputs[i + 1], regs[i + 1]);
   }
 }
 
@@ -133,26 +133,26 @@ INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
     const regi_t* inputs = (regi_t*) &src[unrollOffset];
     regi_t* outputs      = (regi_t*) &dest[unrollOffset];
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_load(&inputs[i]), regs[i + 1] = regi_load(&inputs[i + 1]);
 
     const size_t o1  = f1 * N_HIDDEN + unrollOffset;
     const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_sub(regs[i], w1[i]), regs[i + 1] = regi_sub(regs[i + 1], w1[i + 1]);
 
     const size_t o2  = f2 * N_HIDDEN + unrollOffset;
     const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w2[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_sub(regs[i], w2[i]), regs[i + 1] = regi_sub(regs[i + 1], w2[i + 1]);
 
     const size_t o3  = f3 * N_HIDDEN + unrollOffset;
     const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w3[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_add(regs[i], w3[i]), regs[i + 1] = regi_add(regs[i + 1], w3[i + 1]);
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regi_store(&outputs[i], regs[i]), regi_store(&outputs[i + 1], regs[i + 1]);
   }
 }
 
@@ -165,31 +165,31 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
     const regi_t* inputs = (regi_t*) &src[unrollOffset];
     regi_t* outputs      = (regi_t*) &dest[unrollOffset];
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_load(&inputs[i]), regs[i + 1] = regi_load(&inputs[i + 1]);
 
     const size_t o1  = f1 * N_HIDDEN + unrollOffset;
     const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_sub(regs[i], w1[i]), regs[i + 1] = regi_sub(regs[i + 1], w1[i + 1]);
 
     const size_t o2  = f2 * N_HIDDEN + unrollOffset;
     const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w2[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_sub(regs[i], w2[i]), regs[i + 1] = regi_sub(regs[i + 1], w2[i + 1]);
 
     const size_t o3  = f3 * N_HIDDEN + unrollOffset;
     const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w3[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_add(regs[i], w3[i]), regs[i + 1] = regi_add(regs[i + 1], w3[i + 1]);
 
     const size_t o4  = f4 * N_HIDDEN + unrollOffset;
     const regi_t* w4 = (regi_t*) &INPUT_WEIGHTS[o4];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w4[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regs[i] = regi_add(regs[i], w4[i]), regs[i + 1] = regi_add(regs[i + 1], w4[i + 1]);
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
+    for (size_t i = 0; i < NUM_REGS; i += 2)
+      regi_store(&outputs[i], regs[i]), regi_store(&outputs[i + 1], regs[i + 1]);
   }
 }
 
