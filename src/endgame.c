@@ -190,44 +190,44 @@ int EvaluateKnownPositions(Board* board) {
     case 0x100100: // KNkb
     case 0x110000: // KBkb
       return 0;
-    case 0x1: // KPk
-      return EvaluateKPK(board, WHITE);
-    case 0x10: // Kkp
-      return EvaluateKPK(board, BLACK);
-    case 0x10100: // KBNk
-      return EvaluateKBNK(board, WHITE);
-    case 0x101000: // Kkbn
-      return EvaluateKBNK(board, BLACK);
+    // case 0x1: // KPk
+    //   return EvaluateKPK(board, WHITE);
+    // case 0x10: // Kkp
+    //   return EvaluateKPK(board, BLACK);
+    // case 0x10100: // KBNk
+    //   return EvaluateKBNK(board, WHITE);
+    // case 0x101000: // Kkbn
+    //   return EvaluateKBNK(board, BLACK);
     default: break;
   }
 
-  if (BitCount(OccBB(BLACK)) == 1) {
-    // KBPK
-    if ((board->piecesCounts ^ 0x10000) <= 0xF)
-      return EvaluateKBPK(board, WHITE);
+  // if (BitCount(OccBB(BLACK)) == 1) {
+  //   // KBPK
+  //   if ((board->piecesCounts ^ 0x10000) <= 0xF)
+  //     return EvaluateKBPK(board, WHITE);
 
-    // stacked rook pawns
-    if (board->piecesCounts <= 0xF) {
-      uint8_t files = PawnFiles(PieceBB(PAWN, WHITE));
-      if (files == 0x1 || files == 0x80)
-        return EvaluateKPK(board, WHITE);
-    }
+  //   // stacked rook pawns
+  //   if (board->piecesCounts <= 0xF) {
+  //     uint8_t files = PawnFiles(PieceBB(PAWN, WHITE));
+  //     if (files == 0x1 || files == 0x80)
+  //       return EvaluateKPK(board, WHITE);
+  //   }
 
-    return EvaluateKXK(board, WHITE);
-  } else if (BitCount(OccBB(WHITE)) == 1) {
-    // Kkbp
-    if ((board->piecesCounts ^ 0x100000) <= 0xF0)
-      return EvaluateKBPK(board, BLACK);
+  //   return EvaluateKXK(board, WHITE);
+  // } else if (BitCount(OccBB(WHITE)) == 1) {
+  //   // Kkbp
+  //   if ((board->piecesCounts ^ 0x100000) <= 0xF0)
+  //     return EvaluateKBPK(board, BLACK);
 
-    // stacked rook pawns
-    if (board->piecesCounts <= 0xF0) {
-      uint8_t files = PawnFiles(PieceBB(PAWN, BLACK));
-      if (files == 0x1 || files == 0x80)
-        return EvaluateKPK(board, BLACK);
-    }
+  //   // stacked rook pawns
+  //   if (board->piecesCounts <= 0xF0) {
+  //     uint8_t files = PawnFiles(PieceBB(PAWN, BLACK));
+  //     if (files == 0x1 || files == 0x80)
+  //       return EvaluateKPK(board, BLACK);
+  //   }
 
-    return EvaluateKXK(board, BLACK);
-  }
+  //   return EvaluateKXK(board, BLACK);
+  // }
 
   return UNKNOWN;
 }

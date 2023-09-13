@@ -460,7 +460,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 8 && !ss->skip && eval < WINNING_ENDGAME && eval >= beta &&
+    if (depth <= 8 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
         eval - 69 * depth + 112 * (improving && !board->easyCapture) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12288))
       return eval;
@@ -499,8 +499,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 200;
-    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND &&
-        !(ttHit && ttDepth >= depth - 3 && ttScore < probBeta)) {
+    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND && !(ttHit && ttDepth >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread, probBeta > eval);
       while ((move = NextMove(&mp, board, 1))) {
         if (!IsLegal(move, board))
@@ -593,7 +592,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
       if (depth >= 7 && move == hashMove && ttDepth >= depth - 3 && (ttBound & BOUND_LOWER) &&
-          abs(ttScore) < WINNING_ENDGAME) {
+          abs(ttScore) < TB_WIN_BOUND) {
         int sBeta  = Max(ttScore - 5 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
 
@@ -896,7 +895,7 @@ void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board) {
     int bounded   = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
     int printable = bounded > MATE_BOUND           ? (CHECKMATE - bounded + 1) / 2 :
                     bounded < -MATE_BOUND          ? -(CHECKMATE + bounded) / 2 :
-                    abs(bounded) > WINNING_ENDGAME ? bounded : // don't normalize our fake tb scores or real tb scores
+                    abs(bounded) > TB_WIN_BOUND ? bounded : // don't normalize our fake tb scores or real tb scores
                                                      Normalize(bounded); // convert to 50% WR at 100cp
     char* type  = abs(bounded) > MATE_BOUND ? "mate" : "cp";
     char* bound = " ";
