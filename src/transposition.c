@@ -96,7 +96,15 @@ inline void TTPrefetch(uint64_t hash) {
   __builtin_prefetch(&TT.buckets[TTIdx(hash)]);
 }
 
-inline TTEntry* TTProbe(uint64_t hash, int* hit) {
+inline TTEntry* TTProbe(uint64_t hash,
+                        int ply,
+                        int* hit,
+                        Move* hashMove,
+                        int* ttScore,
+                        int* ttEval,
+                        int* ttDepth,
+                        int* ttBound,
+                        int* pv) {
   TTEntry* const bucket    = TT.buckets[TTIdx(hash)].entries;
   const uint32_t shortHash = (uint32_t) hash;
 
@@ -104,6 +112,16 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
     if (bucket[i].hash == shortHash || !bucket[i].depth) {
       bucket[i].agePvBound = (uint8_t) (TT.age | (bucket[i].agePvBound & (PV_MASK | BOUND_MASK)));
       *hit                 = !!bucket[i].depth;
+
+      if (*hit) {
+        *hashMove = bucket[i].move;
+        *ttEval   = bucket[i].eval;
+        *ttScore  = TTScore(&bucket[i], ply);
+        *ttDepth  = TTDepth(&bucket[i]);
+        *ttBound  = TTBound(&bucket[i]);
+        *pv       = *pv || TTPV(&bucket[i]);
+      }
+
       return &bucket[i];
     }
   }

@@ -63,7 +63,15 @@ void TTClearPart(int idx);
 void TTClear();
 void TTUpdate();
 void TTPrefetch(uint64_t hash);
-TTEntry* TTProbe(uint64_t hash, int* hit);
+TTEntry* TTProbe(uint64_t hash,
+                 int ply,
+                 int* hit,
+                 Move* hashMove,
+                 int* ttScore,
+                 int* ttEval,
+                 int* ttDepth,
+                 int* ttBound,
+                 int* pv);
 void TTPut(TTEntry* tt,
            uint64_t hash,
            int depth,
