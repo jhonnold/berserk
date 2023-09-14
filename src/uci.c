@@ -355,11 +355,8 @@ void UCILoop() {
       int depth = atoi(d);
       Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
-      Threat threats[1];
-      Threats(threats, &board, board.stm);
-
-      PrintBB(threats->pcs);
-      PrintBB(threats->sqs);
+      PrintBB(board.easyCapture);
+      PrintBB(board.threatened);
     } else if (!strncmp(in, "eval", 4)) {
       EvaluateTrace(&board);
     } else if (!strncmp(in, "see ", 4)) {

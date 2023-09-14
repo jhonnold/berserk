@@ -62,10 +62,6 @@ typedef struct {
 } AccumulatorKingState;
 
 typedef struct {
-  BitBoard pcs, sqs;
-} Threat;
-
-typedef struct {
   int capture;
   int castling;
   int ep;
@@ -74,6 +70,8 @@ typedef struct {
   uint64_t zobrist;
   BitBoard checkers;
   BitBoard pinned;
+  BitBoard threatened;
+  BitBoard easyCapture;
 } BoardHistory;
 
 typedef struct {
@@ -90,6 +88,10 @@ typedef struct {
 
   BitBoard checkers;     // checking piece squares
   BitBoard pinned;       // pinned pieces
+
+  BitBoard threatened;   // opponent "threatening" these squares
+  BitBoard easyCapture;  // opponent capturing these is a guarantee SEE > 0
+
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
 
@@ -123,7 +125,6 @@ typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
   Move move, skip;
-  Threat oppThreat;
   Move killers[2];
 } SearchStack;
 
@@ -183,7 +184,7 @@ struct ThreadData {
   Move counters[12][64];         // counter move butterfly table
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64]; // continuation move history table
-  int16_t caph[12][64][7];       // capture history
+  int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
   int action, calls;
   pthread_t nativeThread;
@@ -216,6 +217,9 @@ enum {
   GEN_QUIET_MOVES,
   PLAY_QUIETS,
   PLAY_BAD_NOISY,
+  // ProbCut
+  PC_GEN_NOISY_MOVES,
+  PC_PLAY_GOOD_NOISY,
   // QSearch
   QS_GEN_NOISY_MOVES,
   QS_PLAY_NOISY_MOVES,

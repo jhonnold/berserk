@@ -446,10 +446,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->killers[1] = NULL_MOVE;
   ss->de               = (ss - 1)->de;
 
-  // Build threats for use search
-  Threats(&ss->oppThreat, board, board->xstm);
-  BitBoard oppThreatPcs = ss->oppThreat.pcs;
-
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
   if (!(ss->skip || inCheck)) {
@@ -461,7 +457,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 8 && !ss->skip && eval < WINNING_ENDGAME && eval >= beta &&
-        eval - 69 * depth + 112 * (improving && !oppThreatPcs) >= beta &&
+        eval - 69 * depth + 112 * (improving && !board->easyCapture) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12288))
       return eval;
 
@@ -479,7 +475,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !oppThreatPcs;
+      int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !board->easyCapture;
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
@@ -493,6 +489,36 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       if (score >= beta)
         return score < TB_WIN_BOUND ? score : beta;
+    }
+
+    // Prob cut
+    // If a relatively deep search from our TT doesn't say this node is
+    // less than beta + margin, then we run a shallow search to look
+    int probBeta = beta + 200;
+    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND &&
+        !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
+      InitPCMovePicker(&mp, thread, probBeta > eval);
+      while ((move = NextMove(&mp, board, 1))) {
+        if (!IsLegal(move, board))
+          continue;
+
+        TTPrefetch(KeyAfter(board, move));
+        ss->move = move;
+        ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        MakeMove(move, board);
+
+        // qsearch to quickly check
+        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
+
+        // if it's still above our cutoff, revalidate
+        if (score >= probBeta)
+          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv, ss + 1);
+
+        UndoMove(move, board);
+
+        if (score >= probBeta)
+          return score;
+      }
     }
   }
 
@@ -790,11 +816,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
   if (!inCheck)
     InitQSMovePicker(&mp, thread, depth >= -1);
-  else {
-    Threats(&ss->oppThreat, board, board->xstm);
-
+  else
     InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss);
-  }
 
   int legalMoves = 0;
 
