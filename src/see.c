@@ -24,6 +24,7 @@
 #include "types.h"
 #include "util.h"
 
+const int BERK_VALUE[7] = {100, 318, 348, 554, 1068, 30000, 0};
 const int SEE_VALUE[7] = {100, 422, 422, 642, 1015, 30000, 0};
 
 // Static exchange evaluation using The Swap Algorithm -

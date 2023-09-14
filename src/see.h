@@ -20,6 +20,7 @@
 #include "types.h"
 
 extern const int SEE_VALUE[7];
+extern const int BERK_VALUE[7];
 
 int SEE(Board* board, Move move, int threshold);
 

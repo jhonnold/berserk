@@ -832,9 +832,20 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       if (inCheck && !(IsCap(move) || Promo(move)))
         break;
 
-      if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
-        bestScore = Max(bestScore, futility);
-        continue;
+      if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS) {
+        if (!Promo(move)) {
+          const int futilityCap = futility + BERK_VALUE[PieceType(board->squares[To(move)])];
+
+          if (futilityCap <= alpha) {
+            bestScore = Max(bestScore, futilityCap);
+            continue;
+          }
+        }
+
+        if (futility <= alpha && !SEE(board, move, 1)) {
+          bestScore = Max(bestScore, futility);
+          continue;
+        }
       }
 
       if (!SEE(board, move, 0))
