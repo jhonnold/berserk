@@ -63,7 +63,7 @@ void UpdateHistories(SearchStack* ss,
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
-    AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+    AddHistoryHeuristic(&HH(stm, bestMove, board->threatened[board->xstm]), inc);
     UpdateCH(ss, bestMove, inc);
 
     if (Promo(bestMove) < WHITE_QUEEN) {
@@ -76,7 +76,7 @@ void UpdateHistories(SearchStack* ss,
   } else {
     int piece    = Moving(bestMove);
     int to       = To(bestMove);
-    int defended = !GetBit(board->threatened, to);
+    int defended = !GetBit(board->threatened[board->xstm], to);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
     AddHistoryHeuristic(&TH(piece, to, defended, captured), inc);
@@ -89,7 +89,7 @@ void UpdateHistories(SearchStack* ss,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
+      AddHistoryHeuristic(&HH(stm, m, board->threatened[board->xstm]), -inc);
       UpdateCH(ss, m, -inc);
     }
   }
@@ -102,7 +102,7 @@ void UpdateHistories(SearchStack* ss,
 
     int piece    = Moving(m);
     int to       = To(m);
-    int defended = !GetBit(board->threatened, to);
+    int defended = !GetBit(board->threatened[board->xstm], to);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
     AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);

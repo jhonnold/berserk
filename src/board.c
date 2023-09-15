@@ -159,7 +159,8 @@ void ParseFen(char* fen, Board* board) {
   OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
 
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreatsAndEasyCaptures(board, WHITE);
+  SetThreatsAndEasyCaptures(board, BLACK);
 
   board->zobrist = Zobrist(board);
 }
@@ -275,12 +276,12 @@ inline void SetSpecialPieces(Board* board) {
   }
 }
 
-inline void SetThreatsAndEasyCaptures(Board* board) {
+inline void SetThreatsAndEasyCaptures(Board* board, const int view) {
   // Invert these to be confusing.
-  const int stm  = board->xstm;
-  const int xstm = board->stm;
+  const int stm  = view;
+  const int xstm = !view;
 
-  board->threatened = board->easyCapture = 0;
+  board->threatened[view] = board->easyCapture[view] = 0;
 
   // Take the enemy king off for through threats.
   BitBoard occ = OccBB(BOTH) ^ PieceBB(KING, xstm);
@@ -289,8 +290,8 @@ inline void SetThreatsAndEasyCaptures(Board* board) {
 
   BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
                                         ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
-  board->threatened |= pawnAttacks;
-  board->easyCapture |= pawnAttacks & opponentPieces;
+  board->threatened[view] |= pawnAttacks;
+  board->easyCapture[view] |= pawnAttacks & opponentPieces;
 
   // remove minors
   opponentPieces ^= PieceBB(KNIGHT, xstm) | PieceBB(BISHOP, xstm);
@@ -299,16 +300,16 @@ inline void SetThreatsAndEasyCaptures(Board* board) {
   while (knights) {
     BitBoard atx = GetKnightAttacks(PopLSB(&knights));
 
-    board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
+    board->threatened[view] |= atx;
+    board->easyCapture[view] |= opponentPieces & atx;
   }
 
   BitBoard bishops = PieceBB(BISHOP, stm);
   while (bishops) {
     BitBoard atx = GetBishopAttacks(PopLSB(&bishops), occ);
 
-    board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
+    board->threatened[view] |= atx;
+    board->easyCapture[view] |= opponentPieces & atx;
   }
 
   // remove rooks
@@ -318,15 +319,15 @@ inline void SetThreatsAndEasyCaptures(Board* board) {
   while (rooks) {
     BitBoard atx = GetRookAttacks(PopLSB(&rooks), occ);
 
-    board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
+    board->threatened[view] |= atx;
+    board->easyCapture[view] |= opponentPieces & atx;
   }
 
   BitBoard queens = PieceBB(QUEEN, stm);
   while (queens)
-    board->threatened |= GetQueenAttacks(PopLSB(&queens), occ);
+    board->threatened[view] |= GetQueenAttacks(PopLSB(&queens), occ);
 
-  board->threatened |= GetKingAttacks(LSB(PieceBB(KING, stm)));
+  board->threatened[view] |= GetKingAttacks(LSB(PieceBB(KING, stm)));
 }
 
 void MakeMove(Move move, Board* board) {
@@ -340,16 +341,18 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int captured = IsEP(move) ? Piece(PAWN, board->xstm) : board->squares[to];
 
   // store hard to recalculate values
-  board->history[board->histPly].capture     = captured;
-  board->history[board->histPly].castling    = board->castling;
-  board->history[board->histPly].ep          = board->epSquare;
-  board->history[board->histPly].fmr         = board->fmr;
-  board->history[board->histPly].nullply     = board->nullply;
-  board->history[board->histPly].zobrist     = board->zobrist;
-  board->history[board->histPly].checkers    = board->checkers;
-  board->history[board->histPly].pinned      = board->pinned;
-  board->history[board->histPly].threatened  = board->threatened;
-  board->history[board->histPly].easyCapture = board->easyCapture;
+  board->history[board->histPly].capture            = captured;
+  board->history[board->histPly].castling           = board->castling;
+  board->history[board->histPly].ep                 = board->epSquare;
+  board->history[board->histPly].fmr                = board->fmr;
+  board->history[board->histPly].nullply            = board->nullply;
+  board->history[board->histPly].zobrist            = board->zobrist;
+  board->history[board->histPly].checkers           = board->checkers;
+  board->history[board->histPly].pinned             = board->pinned;
+  board->history[board->histPly].threatened[WHITE]  = board->threatened[WHITE];
+  board->history[board->histPly].threatened[BLACK]  = board->threatened[BLACK];
+  board->history[board->histPly].easyCapture[WHITE] = board->easyCapture[WHITE];
+  board->history[board->histPly].easyCapture[BLACK] = board->easyCapture[BLACK];
 
   board->fmr++;
   board->nullply++;
@@ -438,7 +441,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreatsAndEasyCaptures(board, WHITE);
+  SetThreatsAndEasyCaptures(board, BLACK);
 
   if (update) {
     board->accumulators->move     = move;
@@ -461,15 +465,17 @@ void UndoMove(Move move, Board* board) {
   board->accumulators--;
 
   // reload historical values
-  board->castling    = board->history[board->histPly].castling;
-  board->epSquare    = board->history[board->histPly].ep;
-  board->fmr         = board->history[board->histPly].fmr;
-  board->nullply     = board->history[board->histPly].nullply;
-  board->zobrist     = board->history[board->histPly].zobrist;
-  board->checkers    = board->history[board->histPly].checkers;
-  board->pinned      = board->history[board->histPly].pinned;
-  board->threatened  = board->history[board->histPly].threatened;
-  board->easyCapture = board->history[board->histPly].easyCapture;
+  board->castling           = board->history[board->histPly].castling;
+  board->epSquare           = board->history[board->histPly].ep;
+  board->fmr                = board->history[board->histPly].fmr;
+  board->nullply            = board->history[board->histPly].nullply;
+  board->zobrist            = board->history[board->histPly].zobrist;
+  board->checkers           = board->history[board->histPly].checkers;
+  board->pinned             = board->history[board->histPly].pinned;
+  board->threatened[WHITE]  = board->history[board->histPly].threatened[WHITE];
+  board->threatened[BLACK]  = board->history[board->histPly].threatened[BLACK];
+  board->easyCapture[WHITE] = board->history[board->histPly].easyCapture[WHITE];
+  board->easyCapture[BLACK] = board->history[board->histPly].easyCapture[BLACK];
 
   if (Promo(move)) {
     int promoted = Promo(move);
@@ -515,16 +521,18 @@ void UndoMove(Move move, Board* board) {
 }
 
 void MakeNullMove(Board* board) {
-  board->history[board->histPly].capture     = NO_PIECE;
-  board->history[board->histPly].castling    = board->castling;
-  board->history[board->histPly].ep          = board->epSquare;
-  board->history[board->histPly].fmr         = board->fmr;
-  board->history[board->histPly].nullply     = board->nullply;
-  board->history[board->histPly].zobrist     = board->zobrist;
-  board->history[board->histPly].checkers    = board->checkers;
-  board->history[board->histPly].pinned      = board->pinned;
-  board->history[board->histPly].threatened  = board->threatened;
-  board->history[board->histPly].easyCapture = board->easyCapture;
+  board->history[board->histPly].capture            = NO_PIECE;
+  board->history[board->histPly].castling           = board->castling;
+  board->history[board->histPly].ep                 = board->epSquare;
+  board->history[board->histPly].fmr                = board->fmr;
+  board->history[board->histPly].nullply            = board->nullply;
+  board->history[board->histPly].zobrist            = board->zobrist;
+  board->history[board->histPly].checkers           = board->checkers;
+  board->history[board->histPly].pinned             = board->pinned;
+  board->history[board->histPly].threatened[WHITE]  = board->threatened[WHITE];
+  board->history[board->histPly].threatened[BLACK]  = board->threatened[BLACK];
+  board->history[board->histPly].easyCapture[WHITE] = board->easyCapture[WHITE];
+  board->history[board->histPly].easyCapture[BLACK] = board->easyCapture[BLACK];
 
   board->fmr++;
   board->nullply = 0;
@@ -540,7 +548,8 @@ void MakeNullMove(Board* board) {
   board->xstm ^= 1;
 
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreatsAndEasyCaptures(board, WHITE);
+  SetThreatsAndEasyCaptures(board, BLACK);
 }
 
 void UndoNullMove(Board* board) {
@@ -549,15 +558,17 @@ void UndoNullMove(Board* board) {
   board->histPly--;
 
   // reload historical values
-  board->castling    = board->history[board->histPly].castling;
-  board->epSquare    = board->history[board->histPly].ep;
-  board->fmr         = board->history[board->histPly].fmr;
-  board->nullply     = board->history[board->histPly].nullply;
-  board->zobrist     = board->history[board->histPly].zobrist;
-  board->checkers    = board->history[board->histPly].checkers;
-  board->pinned      = board->history[board->histPly].pinned;
-  board->threatened  = board->history[board->histPly].threatened;
-  board->easyCapture = board->history[board->histPly].easyCapture;
+  board->castling           = board->history[board->histPly].castling;
+  board->epSquare           = board->history[board->histPly].ep;
+  board->fmr                = board->history[board->histPly].fmr;
+  board->nullply            = board->history[board->histPly].nullply;
+  board->zobrist            = board->history[board->histPly].zobrist;
+  board->checkers           = board->history[board->histPly].checkers;
+  board->pinned             = board->history[board->histPly].pinned;
+  board->threatened[WHITE]  = board->history[board->histPly].threatened[WHITE];
+  board->threatened[BLACK]  = board->history[board->histPly].threatened[BLACK];
+  board->easyCapture[WHITE] = board->history[board->histPly].easyCapture[WHITE];
+  board->easyCapture[BLACK] = board->history[board->histPly].easyCapture[BLACK];
 }
 
 inline int IsDraw(Board* board, int ply) {
@@ -641,7 +652,7 @@ int IsPseudoLegal(Move move, Board* board) {
 
     if ((OccBB(BOTH) ^ Bit(from) ^ Bit(board->cr[idx])) & between)
       return 0;
-    if (kingCrossing & board->threatened)
+    if (kingCrossing & board->threatened[board->xstm])
       return 0;
 
     return 1;
@@ -668,7 +679,7 @@ int IsPseudoLegal(Move move, Board* board) {
     return 0;
   if (GetBit(OccBB(board->stm), to))
     return 0;
-  if (pcType == KING && GetBit(board->threatened, to))
+  if (pcType == KING && GetBit(board->threatened[board->xstm], to))
     return 0;
 
   if (pcType == PAWN) {

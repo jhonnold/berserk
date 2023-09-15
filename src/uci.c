@@ -355,8 +355,12 @@ void UCILoop() {
       int depth = atoi(d);
       Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
-      PrintBB(board.easyCapture);
-      PrintBB(board.threatened);
+      printf("STM Threats\n");
+      PrintBB(board.easyCapture[board.stm]);
+      PrintBB(board.threatened[board.stm]);
+      printf("X-STM Threats\n");
+      PrintBB(board.easyCapture[board.xstm]);
+      PrintBB(board.threatened[board.xstm]);
     } else if (!strncmp(in, "eval", 4)) {
       EvaluateTrace(&board);
     } else if (!strncmp(in, "see ", 4)) {

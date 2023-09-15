@@ -27,9 +27,11 @@
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return (int) HH(thread->board.stm, move, thread->board.threatened) + //
-         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +               //
-         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +               //
+  Board* board = &thread->board;
+
+  return (int) HH(board->stm, move, board->threatened[board->xstm]) + //
+         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +              //
+         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +              //
          (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
 }
 
@@ -38,7 +40,7 @@ INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
 
   return TH(Moving(move),
             To(move),
-            !GetBit(board->threatened, To(move)),
+            !GetBit(board->threatened[board->xstm], To(move)),
             IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
 }
 

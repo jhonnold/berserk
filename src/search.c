@@ -458,7 +458,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 8 && !ss->skip && eval < WINNING_ENDGAME && eval >= beta &&
-        eval - 69 * depth + 112 * (improving && !board->easyCapture) >= beta &&
+        eval - 69 * depth + 112 * (improving && !board->easyCapture[board->xstm]) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12288))
       return eval;
 
@@ -476,7 +476,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
         // weiss conditional
         HasNonPawn(board) > (depth > 12)) {
-      int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !board->easyCapture;
+      int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !board->easyCapture[board->xstm];
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
@@ -620,6 +620,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         extension = 1;
     }
 
+    BitBoard easyCaptures = board->easyCapture[board->stm];
+
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
@@ -660,6 +662,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
         R += 1 + !IsCap(move);
+
+      // Introduce a winning threat
+      if (board->easyCapture[board->xstm] & ~easyCaptures)
+        R--;
 
       // adjust reduction based on historical score
       R -= 9 * history / 65536;

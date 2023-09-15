@@ -45,7 +45,7 @@ void BoardToFen(char* fen, Board* board);
 void PrintBoard(Board* board);
 
 void SetSpecialPieces(Board* board);
-void SetThreatsAndEasyCaptures(Board* board);
+void SetThreatsAndEasyCaptures(Board* board, const int view);
 
 int DoesMoveCheck(Move move, Board* board);
 

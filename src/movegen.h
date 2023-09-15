@@ -199,7 +199,7 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
     BitBoard between      = kingCrossing | rookCrossing;
 
     if (!((OccBB(BOTH) ^ Bit(from) ^ Bit(rookFrom)) & between))
-      if (!(kingCrossing & board->threatened))
+      if (!(kingCrossing & board->threatened[board->xstm]))
         moves = AddMove(moves, from, to, Piece(KING, stm), NO_PROMO, CASTLE);
   }
 
@@ -222,7 +222,7 @@ INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm
 
 INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
   if (BitCount(board->checkers) > 1)
-    return AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
+    return AddPieceMoves(moves, ~board->threatened[board->xstm], board, color, type, KING);
 
   BitBoard opts =
     !board->checkers ? ALL : BetweenSquares(LSB(PieceBB(KING, color)), LSB(board->checkers)) | board->checkers;
@@ -232,7 +232,7 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
   moves = AddPieceMoves(moves, opts, board, color, type, BISHOP);
   moves = AddPieceMoves(moves, opts, board, color, type, ROOK);
   moves = AddPieceMoves(moves, opts, board, color, type, QUEEN);
-  moves = AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
+  moves = AddPieceMoves(moves, ~board->threatened[board->xstm], board, color, type, KING);
   if ((type & GT_QUIET) && !board->checkers)
     moves = AddCastles(moves, board, color);
 
