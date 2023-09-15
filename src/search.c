@@ -496,7 +496,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 200;
-    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND &&
+    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND && board->easyCapture[board->stm] &&
         !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread, probBeta > eval);
       while ((move = NextMove(&mp, board, 1))) {
@@ -620,8 +620,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         extension = 1;
     }
 
-    BitBoard easyCaptures = board->easyCapture[board->stm];
-
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
@@ -662,10 +660,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
         R += 1 + !IsCap(move);
-
-      // Introduce a winning threat
-      if (board->easyCapture[board->xstm] & ~easyCaptures)
-        R--;
 
       // adjust reduction based on historical score
       R -= 9 * history / 65536;
