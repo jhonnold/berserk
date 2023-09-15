@@ -665,7 +665,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // Introduce a winning threat
       if (board->easyCapture[board->xstm] & ~easyCaptures)
-        R--;
+        R -= 2;
 
       // adjust reduction based on historical score
       R -= 9 * history / 65536;
