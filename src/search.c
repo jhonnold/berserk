@@ -589,7 +589,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // (allows for reductions when doing singular search)
     if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (depth >= 7 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
+      if (depth >= 6 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
           abs(ttScore) < WINNING_ENDGAME) {
         int sBeta  = Max(ttScore - 5 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
@@ -613,11 +613,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         else if (ttScore <= alpha)
           extension = -1;
       }
-
-      // re-capture extension - looks for a follow up capture on the same square
-      // as the previous capture
-      else if (isPV && IsRecapture(ss, move))
-        extension = 1;
     }
 
     TTPrefetch(KeyAfter(board, move));
