@@ -43,16 +43,13 @@
 #include "zobrist.h"
 
 // arrays to store these pruning cutoffs at specific depths
-int LMR[MAX_SEARCH_PLY][64];
+int LMR[MAX_MOVES];
 int LMP[2][MAX_SEARCH_PLY];
 int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 
 void InitPruningAndReductionTables() {
-  for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
-    for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 0.25;
-
-  LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
+  for (int i = 0; i < MAX_MOVES; i++)
+    LMR[i] = 32.0 * log(i) / sqrt(2.25);
 
   for (int depth = 0; depth < MAX_SEARCH_PLY; depth++) {
     // LMP has both a improving (more strict) and non-improving evalution
@@ -64,6 +61,20 @@ void InitPruningAndReductionTables() {
     STATIC_PRUNE[0][depth] = -SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
     STATIC_PRUNE[1][depth] = -SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
   }
+
+  // for (int d = 1; d <= 32; d++) {
+  //   for (int m = 1; m <= 32; m++) {
+  //     int r1 = (LMR[d] * LMR[m] + 384) / 1024;
+  //     int r2 = log(d) * log(m) / 2.25 + 0.25;
+
+  //     if (r1 != r2)
+  //       printf("Difference @ (depth: %2d, move: %2d) - (q: %2d, dp: %2d)\n", d, m, r1, r2);
+  //   }
+  // }
+}
+
+INLINE int Reduction(int depth, int move) {
+  return (LMR[depth] * LMR[move] + 384) / 1024;
 }
 
 INLINE int CheckLimits(ThreadData* thread) {
@@ -550,7 +561,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         skipQuiets = 1;
 
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
-        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+        int lmrDepth = Max(1, depth - Reduction(depth, legalMoves));
 
         if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
           skipQuiets = 1;
@@ -634,7 +645,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
-      int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
+      int R = Reduction(depth, legalMoves);
 
       // increase reduction on non-pv
       if (!ttPv)
