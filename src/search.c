@@ -61,10 +61,20 @@ void InitPruningAndReductionTables() {
     STATIC_PRUNE[0][depth] = -SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
     STATIC_PRUNE[1][depth] = -SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
   }
+
+  // for (int d = 1; d <= 32; d++) {
+  //   for (int m = 1; m <= 32; m++) {
+  //     int r1 = (LMR[d] * LMR[m] + 384) / 1024;
+  //     int r2 = log(d) * log(m) / 2.25 + 0.25;
+
+  //     if (r1 != r2)
+  //       printf("Difference @ (depth: %2d, move: %2d) - (q: %2d, dp: %2d)\n", d, m, r1, r2);
+  //   }
+  // }
 }
 
 INLINE int Reduction(int depth, int move) {
-  return (LMR[depth] * LMR[move] + 256) / 1024;
+  return (LMR[depth] * LMR[move] + 384) / 1024;
 }
 
 INLINE int CheckLimits(ThreadData* thread) {
