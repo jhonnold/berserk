@@ -442,10 +442,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   // reset moves to moves related to 1 additional ply
-  (ss + 1)->skip       = NULL_MOVE;
-  (ss + 1)->killers[0] = NULL_MOVE;
-  (ss + 1)->killers[1] = NULL_MOVE;
-  ss->de               = (ss - 1)->de;
+  (ss + 1)->skip   = NULL_MOVE;
+  (ss + 1)->killer = NULL_MOVE;
+  ss->de           = (ss - 1)->de;
 
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120

@@ -125,7 +125,7 @@ typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
   Move move, skip;
-  Move killers[2];
+  Move killer;
 } SearchStack;
 
 typedef struct {
