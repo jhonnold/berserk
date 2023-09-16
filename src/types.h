@@ -86,11 +86,11 @@ typedef struct {
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no
                 // active ep)
 
-  BitBoard checkers;     // checking piece squares
-  BitBoard pinned;       // pinned pieces
+  BitBoard checkers; // checking piece squares
+  BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;   // opponent "threatening" these squares
-  BitBoard easyCapture;  // opponent capturing these is a guarantee SEE > 0
+  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0
 
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
@@ -181,8 +181,8 @@ struct ThreadData {
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
 
-  Move counters[12][64];         // counter move butterfly table
-  int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
+  Move counters[12][64];         // counter move table
+  int16_t hh[2][2][12][64];      // history heuristic table (tfrom - tto - piece - to)
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 

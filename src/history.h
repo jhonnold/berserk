@@ -23,11 +23,11 @@
 #include "types.h"
 #include "util.h"
 
-#define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
-#define TH(p, e, d, c)      (thread->caph[p][e][d][c])
+#define HH(m, threats) (thread->hh[!GetBit(threats, From(m))][!GetBit(threats, To(m))][Moving(m)][To(m)])
+#define TH(p, e, d, c) (thread->caph[p][e][d][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return (int) HH(thread->board.stm, move, thread->board.threatened) + //
+  return (int) HH(move, thread->board.threatened) + //
          (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +               //
          (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +               //
          (int) (*(ss - 4)->ch)[Moving(move)][To(move)];

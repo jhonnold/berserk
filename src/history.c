@@ -58,12 +58,11 @@ void UpdateHistories(SearchStack* ss,
                      Move captures[],
                      int nC) {
   Board* board = &thread->board;
-  int stm      = board->stm;
 
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
-    AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+    AddHistoryHeuristic(&HH(bestMove, board->threatened), inc);
     UpdateCH(ss, bestMove, inc);
 
     if (Promo(bestMove) < WHITE_QUEEN) {
@@ -89,7 +88,7 @@ void UpdateHistories(SearchStack* ss,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
+      AddHistoryHeuristic(&HH(m, board->threatened), -inc);
       UpdateCH(ss, m, -inc);
     }
   }
