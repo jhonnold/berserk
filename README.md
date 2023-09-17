@@ -58,8 +58,6 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
 - [Extensions](https://www.chessprogramming.org/Extensions)
   - [Singular](https://www.chessprogramming.org/Singular_Extensions)
   - [Check](https://www.chessprogramming.org/Check_Extensions)
-  - [Recapture](https://www.chessprogramming.org/Recapture_Extensions)
-  - History
 
 ### Evaluation
 
