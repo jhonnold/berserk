@@ -55,13 +55,15 @@ void ClearBoard(Board* board) {
   board->stm  = WHITE;
   board->xstm = BLACK;
 
-  board->epSquare = 0;
-  board->castling = 0;
-  board->histPly  = 0;
-  board->moveNo   = 1;
-  board->fmr      = 0;
-  board->nullply  = 0;
-  board->phase    = 0;
+  board->epSquare             = 0;
+  board->castling             = 0;
+  board->histPly              = 0;
+  board->moveNo               = 1;
+  board->fmr                  = 0;
+  board->nullply              = 0;
+  board->phase                = 0;
+  board->materialScore[WHITE] = 0;
+  board->materialScore[BLACK] = 0;
 }
 
 void ParseFen(char* fen, Board* board) {
@@ -74,6 +76,7 @@ void ParseFen(char* fen, Board* board) {
       board->squares[i] = piece;
 
       board->phase += PHASE_VALUES[PieceType(piece)];
+      board->materialScore[PieceColor(piece)] += PC_VALUES[PieceType(piece)];
 
       if (*fen != 'K' && *fen != 'k')
         board->piecesCounts += PieceCount(piece);
@@ -392,6 +395,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->piecesCounts -= PieceCount(captured);
     board->phase -= PHASE_VALUES[PieceType(captured)];
+    board->materialScore[PieceColor(captured)] -= PC_VALUES[PieceType(captured)];
     board->fmr = 0;
   }
 
@@ -423,7 +427,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
-      board->phase += PHASE_VALUES[PieceType(promoted)];
+      board->phase += PHASE_VALUES[PieceType(promoted)] - PHASE_VALUES[PAWN];
+      board->materialScore[PieceColor(promoted)] += PC_VALUES[PieceType(promoted)] - PC_VALUES[PAWN];
     }
 
     board->fmr = 0;
@@ -477,7 +482,8 @@ void UndoMove(Move move, Board* board) {
     FlipBit(board->pieces[promoted], to);
     board->squares[to] = piece;
     board->piecesCounts -= PieceCount(promoted) - PieceCount(piece);
-    board->phase -= PHASE_VALUES[PieceType(promoted)];
+    board->phase -= PHASE_VALUES[PieceType(promoted)] - PHASE_VALUES[PAWN];
+    board->materialScore[PieceColor(promoted)] -= PC_VALUES[PieceType(promoted)] - PC_VALUES[PAWN];
   }
 
   FlipBits(board->pieces[piece], to, from);
@@ -511,6 +517,7 @@ void UndoMove(Move move, Board* board) {
 
     board->piecesCounts += PieceCount(captured);
     board->phase += PHASE_VALUES[PieceType(captured)];
+    board->materialScore[PieceColor(captured)] += PC_VALUES[PieceType(captured)];
   }
 }
 

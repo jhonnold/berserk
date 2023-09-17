@@ -29,6 +29,7 @@
 #include "uci.h"
 #include "util.h"
 
+const int PC_VALUES[6]    = {100, 318, 348, 554, 1068, 0};
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE       = 64;
 
@@ -44,6 +45,10 @@ Score Evaluate(Board* board, ThreadData* thread) {
   Score knownEval = EvaluateKnownPositions(board);
   if (knownEval != UNKNOWN)
     return knownEval;
+
+  const int simpleEval = board->materialScore[board->stm] - board->materialScore[board->xstm];
+  if (abs(simpleEval) >= 1024 + abs(thread->rootSimpleEval))
+    return simpleEval;
 
   Accumulator* acc = board->accumulators;
   for (int c = WHITE; c <= BLACK; c++) {
@@ -73,8 +78,8 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base = Propagate(board->accumulators, board->stm);
-  base = board->stm == WHITE ? base : -base;
+  int base   = Propagate(board->accumulators, board->stm);
+  base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
   printf("\nNNUE derived piece values:\n");
@@ -102,12 +107,12 @@ void EvaluateTrace(Board* board) {
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
         int new = Propagate(board->accumulators, board->stm);
-        new = board->stm == WHITE ? new : -new;
+        new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 
-        int diff = base - new;
+        int diff       = base - new;
         int normalized = Normalize(diff);
-        int v = abs(normalized);
+        int v          = abs(normalized);
 
         char buffer[6];
         buffer[5] = '\0';

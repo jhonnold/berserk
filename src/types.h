@@ -85,12 +85,13 @@ typedef struct {
   int phase;    // efficiently updated phase for scaling
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no
                 // active ep)
+  int materialScore[2];
 
-  BitBoard checkers;     // checking piece squares
-  BitBoard pinned;       // pinned pieces
+  BitBoard checkers; // checking piece squares
+  BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;   // opponent "threatening" these squares
-  BitBoard easyCapture;  // opponent capturing these is a guarantee SEE > 0
+  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0
 
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
@@ -179,6 +180,7 @@ struct ThreadData {
   int contempt[2];
   int previousScore;
   int numRootMoves;
+  int rootSimpleEval;
   RootMove rootMoves[MAX_MOVES];
 
   Move counters[12][64];         // counter move butterfly table

@@ -26,6 +26,7 @@
 
 #define Piece(pc, c)   (((pc) << 1) + c)
 #define PieceType(pc)  ((pc) >> 1)
+#define PieceColor(pc) ((pc) &1)
 #define PPieceBB(pc)   (board->pieces[pc])
 #define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
 #define OccBB(c)       (board->occupancies[c])

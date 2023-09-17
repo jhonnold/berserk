@@ -21,6 +21,7 @@
 
 #include "types.h"
 
+extern const int PC_VALUES[6];
 extern const int PHASE_VALUES[6];
 extern const int MAX_PHASE;
 
