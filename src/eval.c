@@ -46,8 +46,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (knownEval != UNKNOWN)
     return knownEval;
 
-  const int simpleEval = board->materialScore[board->stm] - board->materialScore[board->xstm];
-  if (abs(simpleEval) >= 1024 + abs(thread->rootSimpleEval))
+  const int simpleEval = board->materialScore[board->stm] - board->materialScore[board->xstm] + (thread->nodes & 0x7) - 3;
+  if (abs(simpleEval) >= 768 + abs(thread->rootSimpleEval))
     return simpleEval;
 
   Accumulator* acc = board->accumulators;
