@@ -650,7 +650,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R--;
 
       if (board->easyCapture & board->pinned)
-        R--;
+        R -= 2;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
