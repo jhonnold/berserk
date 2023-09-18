@@ -155,6 +155,7 @@ void Search(ThreadData* thread) {
   int mainThread = !thread->idx;
 
   thread->depth       = 0;
+  thread->rootScore   = -CHECKMATE;
   board->accumulators = thread->accumulators; // exit jumps can cause this pointer to not be reset
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
@@ -195,28 +196,28 @@ void Search(ThreadData* thread) {
       int beta        = CHECKMATE;
       int delta       = CHECKMATE;
       int searchDepth = thread->depth;
-      int score       = thread->rootMoves[thread->multiPV].previousScore;
+      int previous    = thread->rootMoves[thread->multiPV].previousScore;
 
       thread->seldepth = 0;
 
       // One at depth 5 or later, start search at a reduced window
       if (thread->depth >= 5) {
-        alpha = Max(score - WINDOW, -CHECKMATE);
-        beta  = Min(score + WINDOW, CHECKMATE);
+        alpha = Max(previous - WINDOW, -CHECKMATE);
+        beta  = Min(previous + WINDOW, CHECKMATE);
         delta = WINDOW;
       }
 
       while (1) {
         // search!
-        score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
+        thread->rootScore = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
 
         SortRootMoves(thread, thread->multiPV);
 
-        if (mainThread && (score <= alpha || score >= beta) && Limits.multiPV == 1 &&
+        if (mainThread && (thread->rootScore <= alpha || thread->rootScore >= beta) && Limits.multiPV == 1 &&
             GetTimeMS() - Limits.start >= 2500)
           PrintUCI(thread, alpha, beta, board);
 
-        if (score <= alpha) {
+        if (thread->rootScore <= alpha) {
           // adjust beta downward when failing low
           beta  = (alpha + beta) / 2;
           alpha = Max(alpha - delta, -CHECKMATE);
@@ -224,10 +225,10 @@ void Search(ThreadData* thread) {
           searchDepth = thread->depth;
           if (mainThread)
             Threads.stopOnPonderHit = 0;
-        } else if (score >= beta) {
+        } else if (thread->rootScore >= beta) {
           beta = Min(beta + delta, CHECKMATE);
 
-          if (abs(score) < TB_WIN_BOUND)
+          if (abs(thread->rootScore) < TB_WIN_BOUND)
             searchDepth--;
         } else
           break;

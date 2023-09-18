@@ -180,7 +180,7 @@ struct ThreadData {
   int contempt[2];
   int previousScore;
   int numRootMoves;
-  int rootSimpleEval;
+  int rootSimpleEval, rootScore;
   RootMove rootMoves[MAX_MOVES];
 
   Move counters[12][64];         // counter move butterfly table
