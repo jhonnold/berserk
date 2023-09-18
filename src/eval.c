@@ -50,7 +50,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (abs(simpleEval) >= abs(thread->rootSimpleEval)     //
                            + abs(thread->rootScore)      //
                            + 8 * board->fmr * board->fmr //
-                           + PC_VALUES[ROOK] + PC_VALUES[KNIGHT])
+                           + PC_VALUES[ROOK] + 1)
     return simpleEval + (thread->nodes & 0x7) - 3;
 
   Accumulator* acc = board->accumulators;
