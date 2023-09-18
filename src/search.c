@@ -649,6 +649,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (board->checkers)
         R--;
 
+      if (board->easyCapture & board->pinned)
+        R--;
+
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
