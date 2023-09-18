@@ -24,7 +24,7 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
 
 - [TCEC](https://tcec-chess.com/)
 - [CCC](https://www.chess.com/computer-chess-championship)
-- [Graham's Broadcasts](https://tlcv.net)
+- [Graham's Broadcasts](https://ccrl.live/)
 
 ## Funcational Details 
 
