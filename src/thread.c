@@ -212,7 +212,6 @@ void SetupMainThread(Board* board) {
   mainThread->calls          = 0;
   mainThread->nodes          = 0;
   mainThread->tbhits         = 0;
-  mainThread->rootSimpleEval = board->materialScore[board->stm] - board->materialScore[board->xstm];
 
   memcpy(&mainThread->board, board, offsetof(Board, accumulators));
 
@@ -243,7 +242,6 @@ void SetupOtherThreads(Board* board) {
     thread->calls          = 0;
     thread->nodes          = 0;
     thread->tbhits         = 0;
-    thread->rootSimpleEval = board->materialScore[board->stm] - board->materialScore[board->xstm];
 
     for (int j = 0; j < mainThread->numRootMoves; j++)
       InitRootMove(&thread->rootMoves[j], mainThread->rootMoves[j].move);
