@@ -155,6 +155,7 @@ void Search(ThreadData* thread) {
   int mainThread = !thread->idx;
 
   thread->depth       = 0;
+  thread->bmChanges   = 0;
   board->accumulators = thread->accumulators; // exit jumps can cause this pointer to not be reset
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
@@ -163,7 +164,6 @@ void Search(ThreadData* thread) {
   PV nullPv;
   int scores[MAX_SEARCH_PLY];
   int searchStability   = 0;
-  Move previousBestMove = NULL_MOVE;
 
   const int searchOffset = 6;
   SearchStack searchStack[MAX_SEARCH_PLY + searchOffset];
@@ -189,6 +189,8 @@ void Search(ThreadData* thread) {
 
     for (int i = 0; i < thread->numRootMoves; i++)
       thread->rootMoves[i].previousScore = thread->rootMoves[i].score;
+
+    searchStability /= 2;
 
     for (thread->multiPV = 0; thread->multiPV < Limits.multiPV; thread->multiPV++) {
       int alpha       = -CHECKMATE;
@@ -246,7 +248,6 @@ void Search(ThreadData* thread) {
     if (!mainThread)
       continue;
 
-    Move bestMove = thread->rootMoves[0].move;
     int bestScore = thread->rootMoves[0].score;
 
     // Found mate?
@@ -262,9 +263,9 @@ void Search(ThreadData* thread) {
     }
     // Soft TM checks
     else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
-      int sameBestMove       = bestMove == previousBestMove;                    // same move?
-      searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
-      double stabilityFactor = 1.25 - 0.05 * searchStability;
+      searchStability += thread->bmChanges;
+      thread->bmChanges = 0;
+      double stabilityFactor = 0.75 + 0.5 * searchStability;
 
       Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
       Score prevScoreDiff   = thread->previousScore - bestScore;
@@ -292,7 +293,6 @@ void Search(ThreadData* thread) {
       }
     }
 
-    previousBestMove      = bestMove;
     scores[thread->depth] = bestScore;
   }
 }
@@ -694,6 +694,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         rm->pv.count    = childPv.count + 1;
         rm->pv.moves[0] = move;
         memcpy(rm->pv.moves + 1, childPv.moves, childPv.count * sizeof(Move));
+
+        if (playedMoves > 1 && !thread->multiPV) thread->bmChanges++;
       } else {
         rm->score = -CHECKMATE;
       }

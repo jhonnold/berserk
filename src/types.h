@@ -168,7 +168,7 @@ enum {
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int idx, multiPV, depth, seldepth;
+  int idx, multiPV, depth, seldepth, bmChanges;
   atomic_uint_fast64_t nodes, tbhits;
 
   Accumulator* accumulators;
