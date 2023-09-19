@@ -63,8 +63,8 @@ INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
       __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 5);
       __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 5);
 
-      out[i]     = _mm256_permute4x64_epi64(_mm256_packus_epi16(s0, s1), 0b11011000);
-      out[i + 1] = _mm256_permute4x64_epi64(_mm256_packus_epi16(s2, s3), 0b11011000);
+      out[i]     = _mm256_max_epi8(_mm256_permute4x64_epi64(_mm256_packs_epi16(s0, s1), 0b11011000), _mm256_setzero_si256());
+      out[i + 1] = _mm256_max_epi8(_mm256_permute4x64_epi64(_mm256_packs_epi16(s2, s3), 0b11011000), _mm256_setzero_si256());
     }
   }
 }

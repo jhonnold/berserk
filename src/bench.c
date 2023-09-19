@@ -46,7 +46,7 @@ void Bench(int depth) {
   ssize_t read;
 
   int total = 0;
-  while (total < 1e6 && (read = getline(&line, &len, fin)) != -1) {
+  while (total < 1e7 && (read = getline(&line, &len, fin)) != -1) {
     total++;
 
     ParseFen(line, &Threads.threads[0]->board);
