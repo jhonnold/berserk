@@ -29,8 +29,8 @@
 #include "uci.h"
 #include "util.h"
 
-const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
-const int MAX_PHASE       = 64;
+const int PHASE_VALUES[6] = {3, 4, 4, 6, 12, 0};
+const int MAX_PHASE       = 128;
 
 void SetContempt(int* dest, int stm) {
   int contempt = CONTEMPT;
@@ -60,8 +60,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // static contempt
   score += thread->contempt[board->stm];
 
-  // scaled based on phase [1, 1.5]
-  score = (128 + board->phase) * score / 128;
+  // scaled based on phase [1, 1.33]
+  score = (384 + board->phase) * score / 384;
 
   return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
 }
@@ -75,7 +75,7 @@ void EvaluateTrace(Board* board) {
 
   int base = Propagate(board->accumulators, board->stm);
   base = board->stm == WHITE ? base : -base;
-  int scaled = (128 + board->phase) * base / 128;
+  int scaled = (384 + board->phase) * base / 384;
 
   printf("\nNNUE derived piece values:\n");
 

@@ -423,7 +423,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
-      board->phase += PHASE_VALUES[PieceType(promoted)];
+      board->phase += PHASE_VALUES[PieceType(promoted)] - PHASE_VALUES[PAWN];
     }
 
     board->fmr = 0;
@@ -477,7 +477,7 @@ void UndoMove(Move move, Board* board) {
     FlipBit(board->pieces[promoted], to);
     board->squares[to] = piece;
     board->piecesCounts -= PieceCount(promoted) - PieceCount(piece);
-    board->phase -= PHASE_VALUES[PieceType(promoted)];
+    board->phase -= PHASE_VALUES[PieceType(promoted)] - PHASE_VALUES[PAWN];
   }
 
   FlipBits(board->pieces[piece], to, from);
