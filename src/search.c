@@ -248,6 +248,9 @@ void Search(ThreadData* thread) {
     if (!mainThread)
       continue;
 
+    searchStability += thread->bmChanges;
+    thread->bmChanges = 0;
+
     int bestScore = thread->rootMoves[0].score;
 
     // Found mate?
@@ -263,9 +266,7 @@ void Search(ThreadData* thread) {
     }
     // Soft TM checks
     else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
-      searchStability += thread->bmChanges;
-      thread->bmChanges = 0;
-      double stabilityFactor = 0.75 + 0.5 * searchStability;
+      double stabilityFactor = 0.5 + 1.0 * searchStability;
 
       Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
       Score prevScoreDiff   = thread->previousScore - bestScore;
