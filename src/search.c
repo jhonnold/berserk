@@ -629,6 +629,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
       int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
 
+      // decrease reduction on low depth pv nodes
+      if (isPV && depth <= 4)
+        R--;
+
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
