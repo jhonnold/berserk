@@ -50,7 +50,7 @@ int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 0.25;
+      LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 0.75;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
