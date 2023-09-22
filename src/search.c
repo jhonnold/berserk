@@ -162,8 +162,9 @@ void Search(ThreadData* thread) {
 
   PV nullPv;
   int scores[MAX_SEARCH_PLY];
-  int searchStability   = 0;
-  Move previousBestMove = NULL_MOVE;
+
+  thread->searchStability = 0;
+  Move previousBestMove   = NULL_MOVE;
 
   const int searchOffset = 6;
   SearchStack searchStack[MAX_SEARCH_PLY + searchOffset];
@@ -243,11 +244,19 @@ void Search(ThreadData* thread) {
         PrintUCI(thread, -CHECKMATE, CHECKMATE, board);
     }
 
-    if (!mainThread)
-      continue;
-
     Move bestMove = thread->rootMoves[0].move;
     int bestScore = thread->rootMoves[0].score;
+
+    if (thread->depth >= 5) {
+      int sameBestMove        = (bestMove == previousBestMove);
+      thread->searchStability = sameBestMove ? Min(10, thread->searchStability + 1) : 0;
+    }
+
+    previousBestMove      = bestMove;
+    scores[thread->depth] = bestScore;
+
+    if (!mainThread)
+      continue;
 
     // Found mate?
     if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate))
@@ -262,9 +271,11 @@ void Search(ThreadData* thread) {
     }
     // Soft TM checks
     else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
-      int sameBestMove       = bestMove == previousBestMove;                    // same move?
-      searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
-      double stabilityFactor = 1.25 - 0.05 * searchStability;
+      int overallStability = 0;
+      for (int i = 0; i < Threads.count; i++)
+        overallStability += Threads.threads[i]->searchStability;
+      overallStability /= Threads.count;
+      double stabilityFactor = 1.25 - 0.05 * overallStability;
 
       Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
       Score prevScoreDiff   = thread->previousScore - bestScore;
@@ -291,9 +302,6 @@ void Search(ThreadData* thread) {
           break;
       }
     }
-
-    previousBestMove      = bestMove;
-    scores[thread->depth] = bestScore;
   }
 }
 
