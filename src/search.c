@@ -713,7 +713,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         alpha    = score;
 
         if (alpha < beta && score > -TB_WIN_BOUND)
-          depth -= (depth >= 2 && depth <= 10);
+          depth -= (depth >= 2 && depth <= 6);
       }
 
       // we're failing high
