@@ -142,7 +142,8 @@ void MainSearch() {
   if (bestThread->rootMoves[0].pv.count > 1)
     ponderMove = bestThread->rootMoves[0].pv.moves[1];
 
-  mainThread->previousScore = bestThread->rootMoves[0].score;
+  for (int i = 0; i < Threads.count; i++)
+    Threads.threads[i]->previousScore = bestThread->rootMoves[0].score;
 
   printf("bestmove %s", MoveToStr(bestMove, board));
   if (ponderMove)
@@ -163,7 +164,6 @@ void Search(ThreadData* thread) {
   PV nullPv;
   int scores[MAX_SEARCH_PLY];
 
-  thread->searchStability = 0;
   Move previousBestMove   = NULL_MOVE;
 
   const int searchOffset = 6;
@@ -250,6 +250,15 @@ void Search(ThreadData* thread) {
     if (thread->depth >= 5) {
       int sameBestMove        = (bestMove == previousBestMove);
       thread->searchStability = sameBestMove ? Min(10, thread->searchStability + 1) : 0;
+
+      Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
+      Score prevScoreDiff   = thread->previousScore - bestScore;
+      if (thread->previousScore == UNKNOWN)
+        searchScoreDiff *= 2, prevScoreDiff = 0;
+      thread->scoreDiff = (searchScoreDiff > 0) * searchScoreDiff + (prevScoreDiff > 0) * prevScoreDiff;
+
+      uint64_t bestMoveNodes  = thread->rootMoves[0].nodes;
+      thread->pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
     }
 
     previousBestMove      = bestMove;
@@ -271,29 +280,25 @@ void Search(ThreadData* thread) {
     }
     // Soft TM checks
     else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
-      int overallStability = 0;
-      for (int i = 0; i < Threads.count; i++)
-        overallStability += Threads.threads[i]->searchStability;
-      overallStability /= Threads.count;
-      double stabilityFactor = 1.25 - 0.05 * overallStability;
+      int averageStability           = 0;
+      int averageScoreDiff           = 0;
+      double averageNonBestMoveNodes = 0.0;
 
-      Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
-      Score prevScoreDiff   = thread->previousScore - bestScore;
+      for (int i = 0; i < Threads.count; i++) {
+        ThreadData* th = Threads.threads[i];
 
-      // if we don't know the previous score, work only on the searchscore
-      if (thread->previousScore == UNKNOWN)
-        searchScoreDiff *= 2, prevScoreDiff = 0;
+        averageStability += th->searchStability;
+        averageScoreDiff += th->scoreDiff;
+        averageNonBestMoveNodes += th->pctNodesNotBest;
+      }
 
-      double scoreChangeFactor = 0.1 +                                              //
-                                 0.0275 * searchScoreDiff * (searchScoreDiff > 0) + //
-                                 0.0275 * prevScoreDiff * (prevScoreDiff > 0);
-      scoreChangeFactor = Max(0.5, Min(1.5, scoreChangeFactor));
+      averageStability /= Threads.count;
+      averageScoreDiff /= Threads.count;
+      averageNonBestMoveNodes /= Threads.count;
 
-      uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
-      double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
-      double nodeCountFactor = Max(0.5, pctNodesNotBest * 2 + 0.4);
-      if (bestScore >= TB_WIN_BOUND)
-        nodeCountFactor = 0.5;
+      double stabilityFactor   = 1.25 - 0.05 * averageStability;
+      double scoreChangeFactor = Max(0.5, Min(1.5, 0.1 + 0.055 * averageScoreDiff));
+      double nodeCountFactor   = Max(0.5, averageNonBestMoveNodes * 2 + 0.4);
 
       if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
         if (Threads.ponder)

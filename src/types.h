@@ -178,9 +178,12 @@ struct ThreadData {
 
   int contempt[2];
   int previousScore;
-  int searchStability;
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
+
+  int searchStability;
+  int scoreDiff;
+  double pctNodesNotBest;
 
   Move counters[12][64];         // counter move butterfly table
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
