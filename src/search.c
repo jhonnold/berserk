@@ -523,6 +523,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
+  int singular  = 0;
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
@@ -600,6 +601,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
+          singular = 1;
+
           if (!isPV && score < sBeta - 18 && ss->de <= 6) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
@@ -622,8 +625,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // apply extensions
     int newDepth = depth + extension;
-
-    int doFullSearch = 0;
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
@@ -664,13 +665,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
 
-      doFullSearch = score > alpha && R > 1;
-    } else {
-      doFullSearch = !isPV || playedMoves > 1;
-    }
+      if (score > alpha && R > 1) {
+        newDepth += (singular && score > bestScore + 25);
 
-    if (doFullSearch)
+        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, 1, thread, &childPv, ss + 1);
+      }
+    } else if (!isPV || playedMoves > 1) {
       score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+    }
 
     if (isPV && (playedMoves == 1 || (score > alpha && (isRoot || score < beta))))
       score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv, ss + 1);
