@@ -85,6 +85,7 @@ INLINE int TTScore(TTEntry* e, int ply) {
 }
 
 extern const int DEPTH_OFFSET;
+extern const int DEPTH_NONE;
 
 INLINE int TTDepth(TTEntry* e) {
   return e->depth + DEPTH_OFFSET;
