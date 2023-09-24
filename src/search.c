@@ -123,14 +123,45 @@ void MainSearch() {
   for (int i = 1; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
 
+  int64_t voteMap[64 * 64];
+  Score minScore = UNKNOWN;
+
+  for (int i = 0; i < Threads.count; i++) {
+    ThreadData* thread = Threads.threads[i];
+    RootMove* rm       = &thread->rootMoves[0];
+
+    minScore                  = Min(minScore, rm->score);
+    voteMap[FromTo(rm->move)] = 0;
+  }
+
+  for (int i = 0; i < Threads.count; i++) {
+    ThreadData* thread = Threads.threads[i];
+    RootMove* rm       = &thread->rootMoves[0];
+
+    voteMap[FromTo(rm->move)] += (rm->score - minScore) * thread->depth;
+  }
+
   ThreadData* bestThread = mainThread;
   for (int i = 1; i < Threads.count; i++) {
     ThreadData* curr = Threads.threads[i];
 
-    int s = curr->rootMoves[0].score - bestThread->rootMoves[0].score;
-    int d = curr->depth - bestThread->depth;
+    RootMove* bm = &bestThread->rootMoves[0];
+    RootMove* rm = &curr->rootMoves[0];
 
-    if (s > 0 && (d >= 0 || curr->rootMoves[0].score >= MATE_BOUND))
+    // If we're mating or getting mated, don't vote. Just pick the
+    // fastest (or longest in case of losing) hold.
+    if (abs(bm->score) >= TB_WIN_BOUND) {
+      if (rm->score > bm->score)
+        bestThread = curr;
+    }
+
+    // Guaranteed best per above
+    else if (rm->score >= TB_WIN_BOUND) {
+      bestThread = curr;
+    }
+
+    // Pick the best move avoiding loss accoridng to our votes.
+    else if (rm->score > -TB_WIN_BOUND && voteMap[FromTo(rm->move)] > voteMap[FromTo(bm->move)])
       bestThread = curr;
   }
 
@@ -141,6 +172,16 @@ void MainSearch() {
   Move ponderMove = NULL_MOVE;
   if (bestThread->rootMoves[0].pv.count > 1)
     ponderMove = bestThread->rootMoves[0].pv.moves[1];
+  else {
+    MakeMove(bestMove, &bestThread->board);
+    int ttHit   = 0;
+    TTEntry* tt = TTProbe(bestThread->board.zobrist, &ttHit);
+
+    if (ttHit && IsPseudoLegal(tt->move, &bestThread->board) && IsLegal(tt->move, &bestThread->board))
+      ponderMove = tt->move;
+
+    UndoMove(bestMove, &bestThread->board);
+  }
 
   mainThread->previousScore = bestThread->rootMoves[0].score;
 
