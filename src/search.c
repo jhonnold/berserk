@@ -163,6 +163,15 @@ void MainSearch() {
     // Pick the best move avoiding loss accoridng to our votes.
     else if (rm->score > -TB_WIN_BOUND && voteMap[FromTo(rm->move)] > voteMap[FromTo(bm->move)])
       bestThread = curr;
+
+    // Pick the best thread amongst equals
+    else if (rm->score > -TB_WIN_BOUND && voteMap[FromTo(rm->move)] == voteMap[FromTo(bm->move)]) {
+      int scoreDiff = rm->score - bm->score;
+      int depthDiff = curr->depth - bestThread->depth;
+
+      if (scoreDiff > 0 && depthDiff >= 0)
+        bestThread = curr;
+    }
   }
 
   if (bestThread != mainThread)
