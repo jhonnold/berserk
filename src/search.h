@@ -36,7 +36,7 @@
 #define DELTA_CUTOFF 55
 
 // base window value
-#define WINDOW 10
+#define WINDOW 8
 
 void InitPruningAndReductionTables();
 

@@ -232,8 +232,7 @@ void Search(ThreadData* thread) {
         } else
           break;
 
-        // delta x 1.25
-        delta += delta / 4;
+        delta += delta;
       }
 
       SortRootMoves(thread, 0);
