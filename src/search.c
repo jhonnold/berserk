@@ -750,7 +750,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   int ttScore   = UNKNOWN;
   int eval      = ss->staticEval;
   int doChecks  = depth >= -1;
-  int ttDepth   = (inCheck || doChecks) ? 0 : -1;
+  int ttDepth   = inCheck ? 0 : doChecks ? -1 : -2;
 
   Move bestMove = NULL_MOVE;
   Move move     = NULL_MOVE;
