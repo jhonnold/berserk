@@ -43,8 +43,8 @@ void InitPruningAndReductionTables();
 void StartSearch(Board* board, uint8_t ponder);
 void MainSearch();
 void Search(ThreadData* thread);
-int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
-int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss);
+int Negamax(int alpha, int beta, int depth, int isPV, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
+int Quiesce(int alpha, int beta, int depth, int isPV, ThreadData* thread, SearchStack* ss);
 
 void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board);
 void PrintPV(PV* pv, Board* board);

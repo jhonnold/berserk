@@ -208,7 +208,7 @@ void Search(ThreadData* thread) {
 
       while (1) {
         // search!
-        score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
+        score = Negamax(alpha, beta, Max(1, searchDepth), 1, 0, thread, &nullPv, ss);
 
         SortRootMoves(thread, thread->multiPV);
 
@@ -297,13 +297,12 @@ void Search(ThreadData* thread) {
   }
 }
 
-int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
+int Negamax(int alpha, int beta, int depth, int isPV, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
   Board* board = &thread->board;
 
   PV childPv;
   pv->count = 0;
 
-  int isPV      = beta - alpha != 1; // pv node when doing a full window
   int isRoot    = !ss->ply;          //
   int score     = -CHECKMATE;        // initially assume the worst case
   int bestScore = -CHECKMATE;        //
@@ -329,7 +328,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // drop into noisy moves only
   if (depth <= 0)
-    return Quiesce(alpha, beta, 0, thread, ss);
+    return Quiesce(alpha, beta, 0, isPV, thread, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
@@ -464,7 +463,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Razoring
     if (depth <= 6 && eval + 250 * depth <= alpha) {
-      score = Quiesce(alpha, beta, 0, thread, ss);
+      score = Quiesce(alpha, beta, 0, 0, thread, ss);
       if (score <= alpha)
         return score;
     }
@@ -484,7 +483,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
       MakeNullMove(board);
 
-      score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
+      score = -Negamax(-beta, -beta + 1, depth - R, 0, !cutnode, thread, &childPv, ss + 1);
 
       UndoNullMove(board);
 
@@ -509,11 +508,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         MakeMove(move, board);
 
         // qsearch to quickly check
-        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
+        score = -Quiesce(-probBeta, -probBeta + 1, 0, 0, thread, ss + 1);
 
         // if it's still above our cutoff, revalidate
         if (score >= probBeta)
-          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv, ss + 1);
+          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, 0, !cutnode, thread, pv, ss + 1);
 
         UndoMove(move, board);
 
@@ -595,7 +594,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         int sDepth = (depth - 1) / 2;
 
         ss->skip = move;
-        score    = Negamax(sBeta - 1, sBeta, sDepth, cutnode, thread, pv, ss);
+        score    = Negamax(sBeta - 1, sBeta, sDepth, 0, cutnode, thread, pv, ss);
         ss->skip = NULL_MOVE;
 
         // no score failed above sBeta, so this is singular
@@ -662,7 +661,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
 
-      score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - R, 0, 1, thread, &childPv, ss + 1);
 
       doFullSearch = score > alpha && R > 1;
     } else {
@@ -670,10 +669,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
 
     if (doFullSearch)
-      score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - 1, 0, !cutnode, thread, &childPv, ss + 1);
 
     if (isPV && (playedMoves == 1 || (score > alpha && (isRoot || score < beta))))
-      score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv, ss + 1);
+      score = -Negamax(-beta, -alpha, newDepth - 1, 1, 0, thread, &childPv, ss + 1);
 
     UndoMove(move, board);
 
@@ -737,13 +736,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   return bestScore;
 }
 
-int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
+int Quiesce(int alpha, int beta, int depth, int isPV, ThreadData* thread, SearchStack* ss) {
   Board* board = &thread->board;
 
   int score     = -CHECKMATE;
   int futility  = -CHECKMATE;
   int bestScore = -CHECKMATE + ss->ply;
-  int isPV      = beta - alpha != 1;
   int ttHit     = 0;
   int ttPv      = 0;
   int inCheck   = !!board->checkers;
@@ -841,7 +839,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
-    score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
+    score = -Quiesce(-beta, -alpha, depth - 1, isPV, thread, ss + 1);
 
     UndoMove(move, board);
 
