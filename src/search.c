@@ -550,7 +550,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         skipQuiets = 1;
 
       if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
-        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)] - !ttPv);
 
         if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
           skipQuiets = 1;
