@@ -523,7 +523,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
-  int singular  = 0;
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
@@ -601,8 +600,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          singular = 1;
-
           if (!isPV && score < sBeta - 18 && ss->de <= 6) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
@@ -666,7 +663,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
 
       if (score > alpha && R > 1) {
-        newDepth += (!singular && score > bestScore + 50);
+        newDepth += (score > bestScore + 40 + 10 * R);
 
         score = -Negamax(-alpha - 1, -alpha, newDepth - 1, 1, thread, &childPv, ss + 1);
       }
