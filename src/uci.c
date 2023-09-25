@@ -397,19 +397,19 @@ void UCILoop() {
       MULTI_PV = Max(1, Min(256, n));
       printf("info string set MultiPV to value %d\n", MULTI_PV);
     } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
-      char opt[5];
+      char opt[6];
       sscanf(in, "%*s %*s %*s %*s %5s", opt);
 
       PONDER_ENABLED = !strncmp(opt, "true", 4);
       printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_ShowWDL value ", 33)) {
-      char opt[5];
+      char opt[6];
       sscanf(in, "%*s %*s %*s %*s %5s", opt);
 
       SHOW_WDL = !strncmp(opt, "true", 4);
       printf("info string set SHOW_WDL to value %s\n", SHOW_WDL ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_Chess960 value ", 34)) {
-      char opt[5];
+      char opt[6];
       sscanf(in, "%*s %*s %*s %*s %5s", opt);
 
       CHESS_960 = !strncmp(opt, "true", 4);
