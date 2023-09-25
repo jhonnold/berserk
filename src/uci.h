@@ -39,5 +39,6 @@ int ReadLine(char* in);
 void UCILoop();
 
 int GetOptionIntValue(char* in);
+double GetOptionDoubleValue(char* in);
 
 #endif

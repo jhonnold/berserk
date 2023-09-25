@@ -48,6 +48,22 @@ int CHESS_960      = 0;
 int CONTEMPT       = 0;
 int SHOW_WDL       = 1;
 
+int STAB_FACTOR_MAX          = 10;
+double STAB_FACTOR_BASE      = 1.25;
+double STAB_FACTOR_SCALE     = 0.05;
+double SCORE_CHANGE_BASE     = 0.1;
+double SCORE_CHANGE_SS_SCALE = 0.0275;
+double SCORE_CHANGE_PS_SCALE = 0.0275;
+double SCORE_CHANGE_MIN      = 0.5;
+double SCORE_CHANGE_MAX      = 1.5;
+double NC_MIN                = 0.5;
+double NC_SCALE              = 2.0;
+double NC_BASE               = 0.4;
+double ALLOC_TM_SCALE        = 0.33;
+double ALLOC_TM_TOTAL        = 0.05;
+double MAX_TM_TIME           = 0.8;
+double MAX_TM_ALLOC          = 5.5;
+
 SearchParams Limits;
 
 // All WDL work below is thanks to the work of vondele@ and
@@ -178,8 +194,8 @@ void ParseGo(char* in, Board* board) {
       if (movesToGo == -1) {
         int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
 
-        Limits.alloc = Min(time * 0.33, total / 20.0);
-        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
+        Limits.alloc = Min(time * ALLOC_TM_SCALE, total * ALLOC_TM_TOTAL);
+        Limits.max   = Min((time - MOVE_OVERHEAD) * MAX_TM_TIME, Limits.alloc * MAX_TM_ALLOC);
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
@@ -263,6 +279,21 @@ void PrintUCIOptions() {
   printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
+  printf("option name STAB_FACTOR_MAX type string default 10\n");
+  printf("option name STAB_FACTOR_BASE type string default 1.25\n");
+  printf("option name STAB_FACTOR_SCALE type string default 0.05\n");
+  printf("option name SCORE_CHANGE_BASE type string default 0.1\n");
+  printf("option name SCORE_CHANGE_SS_SCALE type string default 0.0275\n");
+  printf("option name SCORE_CHANGE_PS_SCALE type string default 0.0275\n");
+  printf("option name SCORE_CHANGE_MIN type string default 0.5\n");
+  printf("option name SCORE_CHANGE_MAX type string default 1.5\n");
+  printf("option name NC_MIN type string default 0.5\n");
+  printf("option name NC_SCALE type string default 2.0\n");
+  printf("option name NC_BASE type string default 0.4\n");
+  printf("option name ALLOC_TM_SCALE type string default 0.33\n");
+  printf("option name ALLOC_TM_TOTAL type string default 0.05\n");
+  printf("option name MAX_TM_TIME type string default 0.8\n");
+  printf("option name MAX_TM_ALLOC type string default 5.5\n");
   printf("uciok\n");
 }
 
@@ -436,6 +467,36 @@ void UCILoop() {
 
       if (success)
         printf("info string set EvalFile to value %s\n", path);
+    } else if (!strncmp(in, "setoption name STAB_FACTOR_MAX value ", 37)) {
+      STAB_FACTOR_MAX = GetOptionIntValue(in);
+    } else if (!strncmp(in, "setoption name STAB_FACTOR_BASE value ", 38)) {
+      STAB_FACTOR_BASE = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name STAB_FACTOR_SCALE value ", 39)) {
+      STAB_FACTOR_SCALE = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name SCORE_CHANGE_BASE value ", 39)) {
+      SCORE_CHANGE_BASE = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name SCORE_CHANGE_SS_SCALE value ", 43)) {
+      SCORE_CHANGE_SS_SCALE = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name SCORE_CHANGE_PS_SCALE value ", 43)) {
+      SCORE_CHANGE_PS_SCALE = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name SCORE_CHANGE_MIN value ", 38)) {
+      SCORE_CHANGE_MIN = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name SCORE_CHANGE_MAX value ", 38)) {
+      SCORE_CHANGE_MAX = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name NC_MIN value ", 28)) {
+      NC_MIN = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name NC_SCALE value ", 30)) {
+      NC_SCALE = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name NC_BASE value ", 29)) {
+      NC_BASE = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name ALLOC_TM_SCALE value ", 36)) {
+      ALLOC_TM_SCALE = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name ALLOC_TM_TOTAL value ", 36)) {
+      ALLOC_TM_TOTAL = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name MAX_TM_TIME value ", 33)) {
+      MAX_TM_TIME = GetOptionDoubleValue(in);
+    } else if (!strncmp(in, "setoption name MAX_TM_ALLOC value ", 34)) {
+      MAX_TM_ALLOC = GetOptionDoubleValue(in);
     } else
       printf("Unknown command: %s \n", in);
   }
@@ -450,6 +511,13 @@ void UCILoop() {
 int GetOptionIntValue(char* in) {
   int n;
   sscanf(in, "%*s %*s %*s %*s %d", &n);
+
+  return n;
+}
+
+double GetOptionDoubleValue(char* in) {
+  float n;
+  sscanf(in, "%*s %*s %*s %*s %f", &n);
 
   return n;
 }

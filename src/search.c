@@ -150,6 +150,18 @@ void MainSearch() {
   printf("\n");
 }
 
+extern int STAB_FACTOR_MAX;
+extern double STAB_FACTOR_BASE;
+extern double STAB_FACTOR_SCALE;
+extern double SCORE_CHANGE_BASE;
+extern double SCORE_CHANGE_SS_SCALE;
+extern double SCORE_CHANGE_PS_SCALE;
+extern double SCORE_CHANGE_MIN;
+extern double SCORE_CHANGE_MAX;
+extern double NC_MIN;
+extern double NC_SCALE;
+extern double NC_BASE;
+
 void Search(ThreadData* thread) {
   Board* board   = &thread->board;
   int mainThread = !thread->idx;
@@ -262,9 +274,10 @@ void Search(ThreadData* thread) {
     }
     // Soft TM checks
     else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
-      int sameBestMove       = bestMove == previousBestMove;                    // same move?
-      searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
-      double stabilityFactor = 1.25 - 0.05 * searchStability;
+      int sameBestMove = bestMove == previousBestMove; // same move?
+      searchStability =
+        sameBestMove ? Min(STAB_FACTOR_MAX, searchStability + 1) : 0; // increase how stable our best move is
+      double stabilityFactor = STAB_FACTOR_BASE - STAB_FACTOR_SCALE * searchStability;
 
       Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
       Score prevScoreDiff   = thread->previousScore - bestScore;
@@ -273,14 +286,14 @@ void Search(ThreadData* thread) {
       if (thread->previousScore == UNKNOWN)
         searchScoreDiff *= 2, prevScoreDiff = 0;
 
-      double scoreChangeFactor = 0.1 +                                              //
-                                 0.0275 * searchScoreDiff * (searchScoreDiff > 0) + //
-                                 0.0275 * prevScoreDiff * (prevScoreDiff > 0);
-      scoreChangeFactor = Max(0.5, Min(1.5, scoreChangeFactor));
+      double scoreChangeFactor = SCORE_CHANGE_BASE +                                               //
+                                 SCORE_CHANGE_SS_SCALE * searchScoreDiff * (searchScoreDiff > 0) + //
+                                 SCORE_CHANGE_PS_SCALE * prevScoreDiff * (prevScoreDiff > 0);
+      scoreChangeFactor = Max(SCORE_CHANGE_MIN, Min(SCORE_CHANGE_MAX, scoreChangeFactor));
 
       uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
-      double nodeCountFactor = Max(0.5, pctNodesNotBest * 2 + 0.4);
+      double nodeCountFactor = Max(NC_MIN, pctNodesNotBest * NC_SCALE + NC_BASE);
       if (bestScore >= TB_WIN_BOUND)
         nodeCountFactor = 0.5;
 
