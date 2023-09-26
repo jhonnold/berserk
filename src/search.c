@@ -264,7 +264,7 @@ void Search(ThreadData* thread) {
     else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
       int sameBestMove       = bestMove == previousBestMove;                    // same move?
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
-      double stabilityFactor = 1.0752 - 0.0463 * searchStability;
+      double stabilityFactor = 1.2173 - 0.0490 * searchStability;
 
       Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
       Score prevScoreDiff   = thread->previousScore - bestScore;
@@ -273,14 +273,14 @@ void Search(ThreadData* thread) {
       if (thread->previousScore == UNKNOWN)
         searchScoreDiff *= 2, prevScoreDiff = 0;
 
-      double scoreChangeFactor = 0.1045 +                                              //
-                                 0.0251 * searchScoreDiff * (searchScoreDiff > 0) + //
-                                 0.0273 * prevScoreDiff * (prevScoreDiff > 0);
-      scoreChangeFactor = Max(0.4496, Min(1.6813, scoreChangeFactor));
+      double scoreChangeFactor = 0.0987 +                                              //
+                                 0.0264 * searchScoreDiff * (searchScoreDiff > 0) + //
+                                 0.0267 * prevScoreDiff * (prevScoreDiff > 0);
+      scoreChangeFactor = Max(0.5053, Min(1.5520, scoreChangeFactor));
 
       uint64_t bestMoveNodes = thread->rootMoves[0].nodes;
       double pctNodesNotBest = 1.0 - (double) bestMoveNodes / thread->nodes;
-      double nodeCountFactor = Max(0.5284, pctNodesNotBest * 2.1183 + 0.4300);
+      double nodeCountFactor = Max(0.5161, pctNodesNotBest * 1.9843 + 0.4014);
       if (bestScore >= TB_WIN_BOUND)
         nodeCountFactor = 0.5;
 
