@@ -277,7 +277,7 @@ void Search(ThreadData* thread) {
       int sameBestMove = bestMove == previousBestMove; // same move?
       searchStability =
         sameBestMove ? Min(STAB_FACTOR_MAX, searchStability + 1) : 0; // increase how stable our best move is
-      double stabilityFactor = STAB_FACTOR_BASE - STAB_FACTOR_SCALE * searchStability;
+      double stabilityFactor = Max(0, STAB_FACTOR_BASE - STAB_FACTOR_SCALE * searchStability);
 
       Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
       Score prevScoreDiff   = thread->previousScore - bestScore;
