@@ -22,7 +22,7 @@
 
 #define NO_ENTRY    0ULL
 #define MEGABYTE    (1024ull * 1024ull)
-#define BUCKET_SIZE 2
+#define BUCKET_SIZE 4
 
 #define BOUND_MASK (0x3)
 #define PV_MASK    (0x4)
