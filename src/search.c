@@ -817,7 +817,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   else
     InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss);
 
-  int legalMoves = 0;
+  int legalMoves = 0, qevs = 0;
 
   while ((move = NextMove(&mp, board, 1))) {
     if (!IsLegal(move, board))
@@ -826,8 +826,12 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     legalMoves++;
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (inCheck && !(IsCap(move) || Promo(move)))
-        break;
+      if (inCheck && !(IsCap(move) || Promo(move))) {
+        qevs++;
+
+        if (qevs > 1)
+          break;
+      }
 
       if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
         bestScore = Max(bestScore, futility);
