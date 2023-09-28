@@ -18,7 +18,7 @@ PEXT   = -DUSE_PEXT -mbmi2
 # Flags
 STD    = -std=gnu11
 LIBS   = -pthread -lm
-WARN   = -Wall -Wextra -Wshadow -Werror
+WARN   = -Wall -Wextra -Wshadow
 
 FLAGS  = $(STD) $(WARN) -O3 -flto -g $(DEFS)
 CFLAGS = $(FLAGS) -march=native

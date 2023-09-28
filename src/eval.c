@@ -30,13 +30,6 @@
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
 
-void SetContempt(int* dest, int stm) {
-  int contempt = CONTEMPT;
-
-  dest[stm] = contempt;
-  dest[stm ^ 1] = -contempt;
-}
-
 // "Threats" logic to be utilized in search
 // idea originating in Koivisto
 void Threats(Threat* threats, Board* board, int stm) {
@@ -114,7 +107,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
   Score knownEval = EvaluateKnownPositions(board);
   if (knownEval != UNKNOWN) return knownEval;
 
-  SearchData* data = &thread->data;
   int16_t* stm = board->accumulators[board->stm][board->acc];
   int16_t* xstm = board->accumulators[board->xstm][board->acc];
 
@@ -122,9 +114,6 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   // sf cornered bishop in FRC
   if (CHESS_960) score += FRCCorneredBishop(board);
-
-  // static contempt
-  score += data->contempt[board->stm];
 
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;

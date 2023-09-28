@@ -143,9 +143,6 @@ void* Search(void* arg) {
   RefreshAccumulator(board->accumulators[WHITE][board->acc], board, WHITE);
   RefreshAccumulator(board->accumulators[BLACK][board->acc], board, BLACK);
 
-  data->contempt[WHITE] = data->contempt[BLACK] = 0;
-  SetContempt(data->contempt, board->stm);
-
   // set a hot exit point for this thread
   if (!setjmp(thread->exit)) {
     int searchStability = 0;
