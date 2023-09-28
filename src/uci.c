@@ -42,7 +42,6 @@ int MOVE_OVERHEAD      = 300;
 int MULTI_PV           = 1;
 int PONDER_ENABLED     = 0;
 int CHESS_960          = 0;
-int CONTEMPT           = 12;
 volatile int PONDERING = 0;
 
 void RootMoves(SimpleMoveList* moves, Board* board) {
@@ -228,7 +227,6 @@ void PrintUCIOptions() {
   printf("option name Ponder type check default false\n");
   printf("option name UCI_Chess960 type check default false\n");
   printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
-  printf("option name Contempt type spin default 12 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
   printf("uciok\n");
 }
@@ -387,8 +385,6 @@ void UCILoop() {
       ResetThreadPool(threads);
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
       MOVE_OVERHEAD = min(10000, max(100, GetOptionIntValue(in)));
-    } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
-      CONTEMPT = min(100, max(-100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
       char* path  = in + 30;
       int success = 0;
