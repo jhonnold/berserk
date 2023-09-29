@@ -28,13 +28,6 @@
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE = 64;
 
-void SetContempt(int* dest, int stm, int score) {
-  int contempt = 40 * score / (abs(score) + 120);
-
-  dest[stm] = contempt;
-  dest[stm ^ 1] = -contempt;
-}
-
 // "Threats" logic to be utilized in search
 // idea originating in Koivisto
 BitBoard Threats(Board* board, int stm) {
@@ -67,12 +60,9 @@ BitBoard Threats(Board* board, int stm) {
 
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
-  SearchData* data = &thread->data;
-
   if (IsMaterialDraw(board)) return 0;
 
   int score = OutputLayer(board->accumulators[board->stm][board->ply], board->accumulators[board->xstm][board->ply]);
-  score += data->contempt[board->stm];
 
   int scalar = 128 + board->phase;
   int scaled = scalar * score / 128;

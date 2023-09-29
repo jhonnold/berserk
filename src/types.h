@@ -100,8 +100,6 @@ typedef struct {
   uint64_t tbhits;
   int seldepth;  // seldepth count
 
-  int contempt[2];
-
   Move skipMove[MAX_SEARCH_PLY];  // moves to skip during singular search
   int evals[MAX_SEARCH_PLY];      // static evals at ply stack
   Move moves[MAX_SEARCH_PLY];     // moves for ply stack
