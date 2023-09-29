@@ -622,8 +622,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // apply extensions
     int newDepth = depth + extension;
 
-    int doFullSearch = 0;
-
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
       int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
@@ -663,13 +661,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
 
-      doFullSearch = score > alpha && R > 1;
-    } else {
-      doFullSearch = !isPV || playedMoves > 1;
-    }
+      if (score > alpha && R > 1) {
+        newDepth += (score > bestScore + 75);
 
-    if (doFullSearch)
+        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+      }
+    } else if (!isPV || playedMoves > 1) {
       score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+    }
 
     if (isPV && (playedMoves == 1 || (score > alpha && (isRoot || score < beta))))
       score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv, ss + 1);
@@ -710,6 +709,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (score > alpha) {
         bestMove = move;
         alpha    = score;
+
+        if (alpha < beta && score > -TB_WIN_BOUND)
+          depth -= (depth >= 2 && depth <= 10);
       }
 
       // we're failing high
