@@ -43,7 +43,7 @@ INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
 }
 
 INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return IsCap(move) ? GetCaptureHistory(thread, move) : GetQuietHistory(ss, thread, move);
+  return IsCap(move) ? 2 * GetCaptureHistory(thread, move) : GetQuietHistory(ss, thread, move);
 }
 
 void UpdateHistories(SearchStack* ss,

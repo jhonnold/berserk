@@ -58,7 +58,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
     else if (type == ST_CAPTURE)
-      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
+      current->score = GetCaptureHistory(picker->thread, move) / 8 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION) {
       if (IsCap(move))
