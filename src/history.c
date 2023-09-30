@@ -79,7 +79,7 @@ void UpdateHistories(SearchStack* ss,
     int defended = !GetBit(board->threatened, to);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, defended, captured), inc);
+    AddHistoryHeuristic(&TH(piece, to, defended, captured), (inc + 500));
   }
 
   // Update quiets
@@ -105,6 +105,6 @@ void UpdateHistories(SearchStack* ss,
     int defended = !GetBit(board->threatened, to);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);
+    AddHistoryHeuristic(&TH(piece, to, defended, captured), -(inc + 500));
   }
 }
