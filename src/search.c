@@ -473,9 +473,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
-        // weiss conditional
-        HasNonPawn(board) > (depth > 12)) {
+    if (depth >= 3 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta && HasNonPawn(board) &&
+        (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
       int R = 4 + 188 * depth / 1024 + Min(5 * (eval - beta) / 1024, 3) + !board->easyCapture;
       R     = Min(depth, R); // don't go too low
 
@@ -488,8 +487,23 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       UndoNullMove(board);
 
-      if (score >= beta)
-        return score < TB_WIN_BOUND ? score : beta;
+      if (score >= beta) {
+        if (score >= TB_WIN_BOUND)
+          score = beta;
+
+        if (thread->nmpMinPly || (abs(beta) < TB_WIN_BOUND && depth < 14))
+          return score;
+
+        thread->nmpMinPly = ss->ply + 3 * (depth - R) / 4;
+        thread->npmColor  = board->stm;
+
+        Score verify = Negamax(beta - 1, beta, depth - R, 0, thread, pv, ss);
+
+        thread->nmpMinPly = 0;
+
+        if (verify >= beta)
+          return score;
+      }
     }
 
     // Prob cut
