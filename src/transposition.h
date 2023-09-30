@@ -31,10 +31,10 @@
 #define AGE_CYCLE  (255 + AGE_INC)
 
 typedef struct {
-  Move move;
   uint32_t hash;
-  int16_t eval, score;
   uint8_t depth, agePvBound;
+  Move move;
+  int16_t eval, score;
 } TTEntry;
 
 typedef struct {
@@ -64,16 +64,9 @@ void TTClear();
 void TTUpdate();
 void TTPrefetch(uint64_t hash);
 TTEntry* TTProbe(uint64_t hash, int* hit);
-void TTPut(TTEntry* tt,
-           uint64_t hash,
-           int depth,
-           int16_t score,
-           uint8_t bound,
-           Move move,
-           int ply,
-           int16_t eval,
-           int pv);
 int TTFull();
+
+extern const int DEPTH_OFFSET;
 
 #define HASH_MAX ((int) (pow(2, 32) * sizeof(TTBucket) / MEGABYTE))
 
@@ -83,8 +76,6 @@ INLINE int TTScore(TTEntry* e, int ply) {
 
   return e->score >= TB_WIN_BOUND ? e->score - ply : e->score <= -TB_WIN_BOUND ? e->score + ply : e->score;
 }
-
-extern const int DEPTH_OFFSET;
 
 INLINE int TTDepth(TTEntry* e) {
   return e->depth + DEPTH_OFFSET;
@@ -96,6 +87,28 @@ INLINE int TTBound(TTEntry* e) {
 
 INLINE int TTPV(TTEntry* e) {
   return e->agePvBound & PV_MASK; // 3rd to bottom bit
+}
+
+INLINE void
+TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
+  uint32_t shortHash = (uint32_t) hash;
+
+  if (score >= TB_WIN_BOUND)
+    score += ply;
+  else if (score <= -TB_WIN_BOUND)
+    score -= ply;
+
+  if (move || shortHash != tt->hash)
+    tt->move = move;
+
+  // 6 is really 4 (but accounting for 2 in DEPTH OFFSET)
+  if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 6 > tt->depth) {
+    tt->hash       = shortHash;
+    tt->eval       = eval;
+    tt->score      = score;
+    tt->depth      = (uint8_t) (depth - DEPTH_OFFSET);
+    tt->agePvBound = (uint8_t) (TT.age | (pv << 2) | bound);
+  }
 }
 
 #endif
