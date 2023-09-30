@@ -176,6 +176,8 @@ void ThreadsSetNumber(int n) {
 
   if (n == 0)
     Threads.searching = 0;
+
+  InitPruningAndReductionTables();
 }
 
 // End
@@ -191,8 +193,8 @@ void ThreadsInit() {
   pthread_mutex_init(&Threads.mutex, NULL);
   pthread_cond_init(&Threads.sleep, NULL);
 
-  Threads.count = 1;
-  ThreadCreate(0);
+  Threads.count = 0;
+  ThreadsSetNumber(1);
 }
 
 INLINE void InitRootMove(RootMove* rm, Move move) {
