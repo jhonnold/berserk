@@ -119,27 +119,6 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
   return replace;
 }
 
-inline void
-TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
-  uint32_t shortHash = (uint32_t) hash;
-
-  if (score >= TB_WIN_BOUND)
-    score += ply;
-  else if (score <= -TB_WIN_BOUND)
-    score -= ply;
-
-  if (move || shortHash != tt->hash)
-    tt->move = move;
-
-  if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 4 > TTDepth(tt)) {
-    tt->hash       = shortHash;
-    tt->eval       = eval;
-    tt->score      = score;
-    tt->depth      = (uint8_t) (depth - DEPTH_OFFSET);
-    tt->agePvBound = (uint8_t) (TT.age | (pv << 2) | bound);
-  }
-}
-
 int TTFull() {
   int c = 0;
 
