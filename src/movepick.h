@@ -36,17 +36,14 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
 
   picker->hashMove = hashMove;
 
-  PieceWithMove* k1 = &ss->killers[0];
-  PieceWithMove* k2 = &ss->killers[1];
-  picker->killer1   = (k1->moving == board->squares[From(k1->move)]) ? k1->move : NULL_MOVE;
-  picker->killer2   = (k2->moving == board->squares[From(k2->move)]) ? k2->move : NULL_MOVE;
+  picker->killer1 = ExtractRefutation(ss->killers[0]);
+  picker->killer1 = ExtractRefutation(ss->killers[1]);
 
   if ((ss - 1)->move) {
     int to     = To((ss - 1)->move);
     int moving = IsPromo((ss - 1)->move) ? Piece(PAWN, thread->board.xstm) : thread->board.squares[to];
 
-    PieceWithMove* c = &thread->counters[moving][to];
-    picker->counter  = (c->moving == board->squares[From(c->move)]) ? c->move : NULL_MOVE;
+    picker->counter = ExtractRefutation(thread->counters[moving][to]);
   } else {
     picker->counter = NULL_MOVE;
   }

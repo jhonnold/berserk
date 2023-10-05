@@ -127,6 +127,10 @@ typedef struct {
   Move move;
 } PieceWithMove;
 
+#define EmptyRefutation        ((PieceWithMove) {.moving = NO_PIECE, .move = NULL_MOVE})
+#define Refutation(move)       ((PieceWithMove) {.moving = board->squares[From((move))], .move = (move)})
+#define ExtractRefutation(pwm) (((pwm).moving == board->squares[From((pwm).move)]) ? (pwm).move : NULL_MOVE);
+
 typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
@@ -190,7 +194,7 @@ struct ThreadData {
   PieceWithMove counters[12][64]; // counter move table
   int16_t hh[2][2][2][64 * 64];   // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64];  // continuation move history table
-  int16_t caph[12][64][7];        // capture history
+  int16_t caph[12][64][2][7];     // capture history
 
   int action, calls;
   pthread_t nativeThread;

@@ -26,12 +26,14 @@
 INLINE void AddKillerMove(SearchStack* ss, Board* board, Move move) {
   if (ss->killers[0].move != move) {
     ss->killers[1] = ss->killers[0];
-    ss->killers[0] = (PieceWithMove) {.moving = board->squares[From(move)], .move = move};
+    ss->killers[0] = Refutation(move);
   }
 }
 
 INLINE void AddCounterMove(ThreadData* thread, Move move, int moving, int to) {
-  thread->counters[moving][to] = (PieceWithMove) {.moving = thread->board.squares[From(move)], .move = move};
+  Board* board = &thread->board;
+
+  thread->counters[moving][to] = Refutation(move);
 }
 
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
@@ -83,9 +85,10 @@ void UpdateHistories(SearchStack* ss,
   } else {
     int piece    = board->squares[From(bestMove)];
     int to       = To(bestMove);
+    int defended = !GetBit(board->threatened, to);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, captured), inc);
+    AddHistoryHeuristic(&TH(piece, to, defended, captured), inc);
   }
 
   // Update quiets
@@ -111,8 +114,9 @@ void UpdateHistories(SearchStack* ss,
 
     int piece    = board->squares[From(m)];
     int to       = To(m);
+    int defended = !GetBit(board->threatened, to);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, captured), -inc);
+    AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);
   }
 }

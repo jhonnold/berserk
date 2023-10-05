@@ -24,21 +24,29 @@
 #include "util.h"
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
-#define TH(p, e, c)         (thread->caph[p][e][c])
+#define TH(p, e, d, c)      (thread->caph[p][e][d][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
   Board* board = &thread->board;
 
-  return (int) HH(thread->board.stm, move, thread->board.threatened) +        //
-         (int) (*(ss - 1)->ch)[board->squares[From(move)]][To(move)] + //
-         (int) (*(ss - 2)->ch)[board->squares[From(move)]][To(move)] + //
-         (int) (*(ss - 4)->ch)[board->squares[From(move)]][To(move)];
+  const int moving = board->squares[From(move)];
+  const int to     = To(move);
+
+  return (int) HH(thread->board.stm, move, thread->board.threatened) + //
+         (int) (*(ss - 1)->ch)[moving][to] +                           //
+         (int) (*(ss - 2)->ch)[moving][to] +                           //
+         (int) (*(ss - 4)->ch)[moving][to];
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
   Board* board = &thread->board;
 
-  return TH(board->squares[From(move)], To(move), IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
+  const int moving = board->squares[From(move)];
+  const int to = To(move);
+  const int defended = !GetBit(board->threatened, to);
+  const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
+
+  return TH(moving, to, defended, captured);
 }
 
 INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
