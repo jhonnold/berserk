@@ -57,8 +57,8 @@ void UpdateHistories(SearchStack* ss,
                      int nQ,
                      Move captures[],
                      int nC) {
-  Board* board     = &thread->board;
-  int stm          = board->stm;
+  Board* board = &thread->board;
+  int stm      = board->stm;
 
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
@@ -76,9 +76,10 @@ void UpdateHistories(SearchStack* ss,
   } else {
     int piece    = Moving(bestMove);
     int to       = To(bestMove);
+    int defended = !GetBit(board->threatened, to);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, captured), inc);
+    AddHistoryHeuristic(&TH(piece, to, defended, captured), inc);
   }
 
   // Update quiets
@@ -101,8 +102,9 @@ void UpdateHistories(SearchStack* ss,
 
     int piece    = Moving(m);
     int to       = To(m);
+    int defended = !GetBit(board->threatened, to);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, captured), -inc);
+    AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);
   }
 }

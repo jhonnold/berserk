@@ -207,6 +207,13 @@ void Search(ThreadData* thread) {
       }
 
       while (1) {
+        // Go checkmate hunting once our eval is at the edge of it's bounds (-2048, 2047)
+        if (alpha < -2000)
+          alpha = -CHECKMATE;
+
+        if (beta > 2000)
+          beta = CHECKMATE;
+
         // search!
         score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
 
@@ -591,7 +598,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // (allows for reductions when doing singular search)
     if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (depth >= 7 && move == hashMove && ttDepth >= depth - 3 && (ttBound & BOUND_LOWER) &&
+      if (depth >= 6 && move == hashMove && ttDepth >= depth - 3 && (ttBound & BOUND_LOWER) &&
           abs(ttScore) < TB_WIN_BOUND) {
         int sBeta  = Max(ttScore - 5 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
@@ -615,11 +622,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         else if (ttScore <= alpha)
           extension = -1;
       }
-
-      // re-capture extension - looks for a follow up capture on the same square
-      // as the previous capture
-      else if (isPV && IsRecapture(ss, move))
-        extension = 1;
     }
 
     TTPrefetch(KeyAfter(board, move));
@@ -629,8 +631,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // apply extensions
     int newDepth = depth + extension;
-
-    int doFullSearch = 0;
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
@@ -671,13 +671,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
 
-      doFullSearch = score > alpha && R > 1;
-    } else {
-      doFullSearch = !isPV || playedMoves > 1;
-    }
+      if (score > alpha && R > 1) {
+        newDepth += (score > bestScore + 75);
 
-    if (doFullSearch)
+        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+      }
+    } else if (!isPV || playedMoves > 1) {
       score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+    }
 
     if (isPV && (playedMoves == 1 || (score > alpha && (isRoot || score < beta))))
       score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv, ss + 1);
@@ -718,6 +719,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (score > alpha) {
         bestMove = move;
         alpha    = score;
+
+        if (alpha < beta && score > -TB_WIN_BOUND)
+          depth -= (depth >= 2 && depth <= 10);
       }
 
       // we're failing high
