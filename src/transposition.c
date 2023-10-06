@@ -31,7 +31,8 @@
 #include "transposition.h"
 #include "types.h"
 
-const int DEPTH_OFFSET = -2;
+const int DEPTH_OFFSET = -3;
+const int DEPTH_NONE   = -2;
 
 // Global TT
 TTTable TT = {0};

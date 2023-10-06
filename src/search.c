@@ -404,7 +404,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // if the tablebase gives us what we want, then we accept it's score and
       // return
       if ((bound == BOUND_EXACT) || (bound == BOUND_LOWER ? score >= beta : score <= alpha)) {
-        TTPut(tt, board->zobrist, depth, score, bound, 0, ss->ply, 0, ttPv);
+        TTPut(tt, board->zobrist, depth, score, bound, NULL_MOVE, ss->ply, UNKNOWN, ttPv);
         return score;
       }
 
@@ -438,7 +438,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
 
-      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+      TTPut(tt, board->zobrist, DEPTH_NONE, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
 
     // Improving
@@ -526,8 +526,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         UndoMove(move, board);
 
-        if (score >= probBeta)
+        if (score >= probBeta) {
+          TTPut(tt, board->zobrist, depth - 3, score, BOUND_LOWER, move, ss->ply, ss->staticEval, ttPv);
           return score;
+        }
       }
     }
   }
@@ -751,12 +753,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
   Board* board = &thread->board;
 
-  int score     = -CHECKMATE;
-  int futility  = -CHECKMATE;
-  int bestScore = -CHECKMATE + ss->ply;
-  int isPV      = beta - alpha != 1;
-  int inCheck   = !!board->checkers;
-  int eval      = ss->staticEval;
+  int score       = -CHECKMATE;
+  int futility    = -CHECKMATE;
+  int bestScore   = -CHECKMATE + ss->ply;
+  int isPV        = beta - alpha != 1;
+  int inCheck     = !!board->checkers;
+  int eval        = ss->staticEval;
+  int doChecks    = depth >= -1;
+  int ttSaveDepth = (inCheck || doChecks) ? 0 : -1;
 
   Move hashMove = NULL_MOVE;
   Move bestMove = NULL_MOVE;
@@ -809,12 +813,16 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
 
-      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+      TTPut(tt, board->zobrist, DEPTH_NONE, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
 
     // stand pat
-    if (eval >= beta)
+    if (eval >= beta) {
+      if (!ttHit)
+        TTPut(tt, board->zobrist, DEPTH_NONE, eval, BOUND_LOWER, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+
       return eval;
+    }
 
     if (eval > alpha)
       alpha = eval;
@@ -825,7 +833,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   }
 
   if (!inCheck)
-    InitQSMovePicker(&mp, thread, depth >= -1);
+    InitQSMovePicker(&mp, thread, doChecks);
   else
     InitQSEvasionsPicker(&mp, hashMove, thread, ss);
 
@@ -877,7 +885,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return -CHECKMATE + ss->ply;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
-  TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
+  TTPut(tt, board->zobrist, ttSaveDepth, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
 
   return bestScore;
 }
