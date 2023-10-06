@@ -16,7 +16,7 @@
 
 #include "endgame.h"
 
-#include "search.h"
+#include "eval.h"
 #include "types.h"
 #include "util.h"
 
@@ -37,5 +37,5 @@ int EvaluateKnownPositions(Board* board) {
       return 0;
   }
 
-  return UNKNOWN;
+  return EVAL_UNKNOWN;
 }

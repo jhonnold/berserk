@@ -42,7 +42,7 @@ void SetContempt(int* dest, int stm) {
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
   Score knownEval = EvaluateKnownPositions(board);
-  if (knownEval != UNKNOWN)
+  if (knownEval != EVAL_UNKNOWN)
     return knownEval;
 
   Accumulator* acc = board->accumulators;
@@ -63,7 +63,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
 
-  return Min(2047, Max(-2048, score));
+  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, score));
 }
 
 void EvaluateTrace(Board* board) {

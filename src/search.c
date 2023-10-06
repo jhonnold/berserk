@@ -363,7 +363,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // we ignore the tt on singular extension searches
   int ttHit   = 0;
   int ttScore = UNKNOWN;
-  int ttEval  = UNKNOWN;
+  int ttEval  = EVAL_UNKNOWN;
   int ttDepth = DEPTH_OFFSET;
   int ttBound = BOUND_UNKNOWN;
   int ttPv    = isPV;
@@ -404,7 +404,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // if the tablebase gives us what we want, then we accept it's score and
       // return
       if ((bound == BOUND_EXACT) || (bound == BOUND_LOWER ? score >= beta : score <= alpha)) {
-        TTPut(tt, board->zobrist, depth, score, bound, NULL_MOVE, ss->ply, UNKNOWN, ttPv);
+        TTPut(tt, board->zobrist, depth, score, bound, NULL_MOVE, ss->ply, EVAL_UNKNOWN, ttPv);
         return score;
       }
 
@@ -420,11 +420,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   if (inCheck) {
-    eval = ss->staticEval = UNKNOWN;
+    eval = ss->staticEval = EVAL_UNKNOWN;
   } else {
     if (ttHit) {
       eval = ss->staticEval = ttEval;
-      if (ss->staticEval == UNKNOWN)
+      if (ss->staticEval == EVAL_UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
       // correct eval on fmr
@@ -443,10 +443,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Improving
     if (ss->ply >= 2) {
-      if (ss->ply >= 4 && (ss - 2)->staticEval == UNKNOWN) {
-        improving = ss->staticEval > (ss - 4)->staticEval || (ss - 4)->staticEval == UNKNOWN;
+      if (ss->ply >= 4 && (ss - 2)->staticEval == EVAL_UNKNOWN) {
+        improving = ss->staticEval > (ss - 4)->staticEval || (ss - 4)->staticEval == EVAL_UNKNOWN;
       } else {
-        improving = ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == UNKNOWN;
+        improving = ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == EVAL_UNKNOWN;
       }
     }
   }
@@ -568,7 +568,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           continue;
         }
 
-        if (lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
+        if (!inCheck && lmrDepth < 10 && eval + 88 + 47 * lmrDepth + 13 * history / 2048 <= alpha)
           skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
@@ -784,7 +784,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   // check the transposition table for previous info
   int ttHit   = 0;
   int ttScore = UNKNOWN;
-  int ttEval  = UNKNOWN;
+  int ttEval  = EVAL_UNKNOWN;
   int ttDepth = DEPTH_OFFSET;
   int ttBound = BOUND_UNKNOWN;
   int ttPv    = isPV;
@@ -796,11 +796,11 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return ttScore;
 
   if (inCheck) {
-    eval = ss->staticEval = UNKNOWN;
+    eval = ss->staticEval = EVAL_UNKNOWN;
   } else {
     if (ttHit) {
       eval = ss->staticEval = ttEval;
-      if (ss->staticEval == UNKNOWN)
+      if (ss->staticEval == EVAL_UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
       // correct eval on fmr
