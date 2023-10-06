@@ -207,6 +207,13 @@ void Search(ThreadData* thread) {
       }
 
       while (1) {
+        // Go checkmate hunting once our eval is at the edge of it's bounds (-2048, 2047)
+        if (alpha < -2000)
+          alpha = -CHECKMATE;
+
+        if (beta > 2000)
+          beta = CHECKMATE;
+
         // search!
         score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
 
@@ -309,9 +316,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int bestScore = -CHECKMATE;        //
   int maxScore  = CHECKMATE;         // best possible
   int origAlpha = alpha;             // remember first alpha for tt storage
-  int ttHit     = 0;
-  int ttScore   = UNKNOWN;
-  int ttPv      = 0;
   int inCheck   = !!board->checkers;
   int improving = 0;
   int eval      = ss->staticEval;
@@ -356,15 +360,21 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // check the transposition table for previous info
   // we ignore the tt on singular extension searches
-  TTEntry* tt = ss->skip ? NULL : TTProbe(board->zobrist, &ttHit);
-  ttScore     = ttHit ? TTScore(tt, ss->ply) : UNKNOWN;
-  ttPv        = isPV || (ttHit && TTPV(tt));
-  hashMove    = isRoot ? thread->rootMoves[thread->multiPV].move : ttHit ? tt->move : NULL_MOVE;
+  int ttHit   = 0;
+  int ttScore = UNKNOWN;
+  int ttEval  = UNKNOWN;
+  int ttDepth = DEPTH_OFFSET;
+  int ttBound = BOUND_UNKNOWN;
+  int ttPv    = isPV;
+
+  TTEntry* tt =
+    ss->skip ? NULL : TTProbe(board->zobrist, ss->ply, &ttHit, &hashMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
+  hashMove = isRoot ? thread->rootMoves[thread->multiPV].move : hashMove;
 
   // if the TT has a value that fits our position and has been searched to an
   // equal or greater depth, then we accept this score and prune
-  if (!isPV && ttScore != UNKNOWN && TTDepth(tt) >= depth && (cutnode || ttScore <= alpha) &&
-      (TTBound(tt) & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
+  if (!isPV && ttScore != UNKNOWN && ttDepth >= depth && (cutnode || ttScore <= alpha) &&
+      (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
     return ttScore;
 
   // tablebase - we do not do this at root
@@ -412,14 +422,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     eval = ss->staticEval = UNKNOWN;
   } else {
     if (ttHit) {
-      eval = ss->staticEval = tt->eval;
+      eval = ss->staticEval = ttEval;
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
 
-      if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
+      if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
       eval = ss->staticEval = Evaluate(board, thread);
@@ -456,7 +466,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
-    if (depth <= 8 && !ss->skip && eval < WINNING_ENDGAME && eval >= beta &&
+    if (depth <= 8 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
         eval - 69 * depth + 112 * (improving && !board->easyCapture) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12288))
       return eval;
@@ -495,8 +505,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 200;
-    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND &&
-        !(ttHit && TTDepth(tt) >= depth - 3 && ttScore < probBeta)) {
+    if (depth >= 5 && !ss->skip && abs(beta) < TB_WIN_BOUND && !(ttHit && ttDepth >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread, probBeta > eval);
       while ((move = NextMove(&mp, board, 1))) {
         if (!IsLegal(move, board))
@@ -548,7 +557,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
-      if (!IsCap(move) && PieceType(Promo(move)) != QUEEN) {
+      if (!IsCap(move) && PromoPT(move) != QUEEN) {
         int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
 
         if (!killerOrCounter && lmrDepth < 6 && history < -2500 * (depth - 1)) {
@@ -588,8 +597,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // (allows for reductions when doing singular search)
     if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (depth >= 6 && move == hashMove && TTDepth(tt) >= depth - 3 && (TTBound(tt) & BOUND_LOWER) &&
-          abs(ttScore) < WINNING_ENDGAME) {
+      if (depth >= 6 && move == hashMove && ttDepth >= depth - 3 && (ttBound & BOUND_LOWER) &&
+          abs(ttScore) < TB_WIN_BOUND) {
         int sBeta  = Max(ttScore - 5 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
 
@@ -639,7 +648,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R -= 2;
 
       // less likely a non-capture is best
-      if (IsCap(hashMove) || Promo(hashMove))
+      if (IsCap(hashMove) || IsPromo(hashMove))
         R++;
 
       // move GAVE check
@@ -745,12 +754,10 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   int futility  = -CHECKMATE;
   int bestScore = -CHECKMATE + ss->ply;
   int isPV      = beta - alpha != 1;
-  int ttHit     = 0;
-  int ttPv      = 0;
   int inCheck   = !!board->checkers;
-  int ttScore   = UNKNOWN;
   int eval      = ss->staticEval;
 
+  Move hashMove = NULL_MOVE;
   Move bestMove = NULL_MOVE;
   Move move     = NULL_MOVE;
   MovePicker mp;
@@ -770,26 +777,31 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return inCheck ? 0 : Evaluate(board, thread);
 
   // check the transposition table for previous info
-  TTEntry* tt = TTProbe(board->zobrist, &ttHit);
-  ttScore     = ttHit ? TTScore(tt, ss->ply) : UNKNOWN;
-  ttPv        = isPV || (ttHit && TTPV(tt));
+  int ttHit   = 0;
+  int ttScore = UNKNOWN;
+  int ttEval  = UNKNOWN;
+  int ttDepth = DEPTH_OFFSET;
+  int ttBound = BOUND_UNKNOWN;
+  int ttPv    = isPV;
+
+  TTEntry* tt = TTProbe(board->zobrist, ss->ply, &ttHit, &hashMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
 
   // TT score pruning, ttHit implied with adjusted score
-  if (!isPV && ttScore != UNKNOWN && (TTBound(tt) & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
+  if (!isPV && ttScore != UNKNOWN && (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
     return ttScore;
 
   if (inCheck) {
     eval = ss->staticEval = UNKNOWN;
   } else {
     if (ttHit) {
-      eval = ss->staticEval = tt->eval;
+      eval = ss->staticEval = ttEval;
       if (ss->staticEval == UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
 
-      if (ttScore != UNKNOWN && (TTBound(tt) & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
+      if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       eval = ss->staticEval = Evaluate(board, thread);
@@ -814,7 +826,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   if (!inCheck)
     InitQSMovePicker(&mp, thread, depth >= -1);
   else
-    InitQSEvasionsPicker(&mp, ttHit ? tt->move : NULL_MOVE, thread, ss);
+    InitQSEvasionsPicker(&mp, hashMove, thread, ss);
 
   int legalMoves = 0;
 
@@ -825,7 +837,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     legalMoves++;
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (inCheck && !(IsCap(move) || Promo(move)))
+      if (inCheck && !(IsCap(move) || IsPromo(move)))
         break;
 
       if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
@@ -886,7 +898,7 @@ void PrintUCI(ThreadData* thread, int alpha, int beta, Board* board) {
     int bounded   = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
     int printable = bounded > MATE_BOUND           ? (CHECKMATE - bounded + 1) / 2 :
                     bounded < -MATE_BOUND          ? -(CHECKMATE + bounded) / 2 :
-                    abs(bounded) > WINNING_ENDGAME ? bounded : // don't normalize our fake tb scores or real tb scores
+                    abs(bounded) > TB_WIN_BOUND ? bounded : // don't normalize our fake tb scores or real tb scores
                                                      Normalize(bounded); // convert to 50% WR at 100cp
     char* type  = abs(bounded) > MATE_BOUND ? "mate" : "cp";
     char* bound = " ";

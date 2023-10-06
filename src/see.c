@@ -29,7 +29,7 @@ const int SEE_VALUE[7] = {100, 422, 422, 642, 1015, 30000, 0};
 // Static exchange evaluation using The Swap Algorithm -
 // https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
 inline int SEE(Board* board, Move move, int threshold) {
-  if (IsCas(move) || IsEP(move) || Promo(move))
+  if (IsCas(move) || IsEP(move) || IsPromo(move))
     return 1;
 
   int from = From(move);

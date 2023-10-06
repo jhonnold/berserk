@@ -20,8 +20,6 @@
 #include "types.h"
 #include "util.h"
 
-#define WINNING_ENDGAME 25000
-
 int EvaluateKnownPositions(Board* board);
 
 #endif
