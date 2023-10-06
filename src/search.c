@@ -553,7 +553,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
     int history         = GetHistory(ss, thread, move);
 
-    if (bestScore > -WINNING_ENDGAME && !isPV) {
+    if (bestScore > -TB_WIN_BOUND && !isPV) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
