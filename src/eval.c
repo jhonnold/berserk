@@ -63,7 +63,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
 
-  return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
+  return Min(2047, Max(-2048, score));
 }
 
 void EvaluateTrace(Board* board) {

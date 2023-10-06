@@ -72,7 +72,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     }
 
     else if (type == ST_MVV)
-      current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * !!Promo(move);
+      current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * IsPromo(move);
 
     current++;
   }

@@ -26,7 +26,7 @@
 
 const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
 
-const char* PROMOTION_TO_CHAR = "--nnbbrrqq--";
+const char* PROMOTION_TO_CHAR = "-nbrq-";
 
 const int CHAR_TO_PIECE[] = {
   ['P'] = WHITE_PAWN,   //
@@ -95,17 +95,11 @@ char* MoveToStr(Move move, Board* board) {
   if (CHESS_960 && IsCas(move))
     to = board->cr[CASTLING_ROOK[to]];
 
-  if (Promo(move)) {
-    sprintf(buffer, "%s%s%c", SQ_TO_COORD[from], SQ_TO_COORD[to], PROMOTION_TO_CHAR[Promo(move)]);
+  if (IsPromo(move)) {
+    sprintf(buffer, "%s%s%c", SQ_TO_COORD[from], SQ_TO_COORD[to], PROMOTION_TO_CHAR[PromoPT(move)]);
   } else {
     sprintf(buffer, "%s%s", SQ_TO_COORD[from], SQ_TO_COORD[to]);
   }
 
   return buffer;
-}
-
-inline int IsRecapture(SearchStack* ss, Move move) {
-  return IsCap(move) &&                                                //
-         ((IsCap((ss - 1)->move) && To((ss - 1)->move) == To(move)) || //
-          (IsCap((ss - 3)->move) && To((ss - 3)->move) == To(move)));
 }

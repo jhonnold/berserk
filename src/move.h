@@ -21,6 +21,16 @@
 
 #define NULL_MOVE 0
 
+#define QUIET_FLAG        0b0000
+#define CASTLE_FLAG       0b0001
+#define CAPTURE_FLAG      0b0100
+#define EP_FLAG           0b0110
+#define PROMO_FLAG        0b1000
+#define KNIGHT_PROMO_FLAG 0b1000
+#define BISHOP_PROMO_FLAG 0b1001
+#define ROOK_PROMO_FLAG   0b1010
+#define QUEEN_PROMO_FLAG  0b1011
+
 extern const int CHAR_TO_PIECE[];
 extern const char* PIECE_TO_CHAR;
 extern const char* PROMOTION_TO_CHAR;
@@ -28,21 +38,22 @@ extern const char* SQ_TO_COORD[64];
 extern const int CASTLE_ROOK_DEST[64];
 extern const int CASTLING_ROOK[64];
 
-#define BuildMove(from, to, piece, promo, flags) \
-  (from) | ((to) << 6) | ((piece) << 12) | ((promo) << 16) | ((flags) << 20)
-#define From(move)   ((int) (move) &0x3f)
-#define To(move)     (((int) (move) &0xfc0) >> 6)
-#define Moving(move) (((int) (move) &0xf000) >> 12)
-#define Promo(move)  (((int) (move) &0xf0000) >> 16)
-#define IsCap(move)  (((int) (move) &0x100000) >> 20)
-#define IsDP(move)   (((int) (move) &0x200000) >> 21)
-#define IsEP(move)   (((int) (move) &0x400000) >> 22)
-#define IsCas(move)  (((int) (move) &0x800000) >> 23)
-// just mask the from/to bits into a single int for indexing butterfly tables
-#define FromTo(move) ((int) (move) &0xfff)
+#define BuildMove(from, to, piece, flags) (from) | ((to) << 6) | ((piece) << 12) | ((flags) << 16)
+#define FromTo(move)                      (((int) (move) &0x00fff) >> 0)
+#define From(move)                        (((int) (move) &0x0003f) >> 0)
+#define To(move)                          (((int) (move) &0x00fc0) >> 6)
+#define Moving(move)                      (((int) (move) &0x0f000) >> 12)
+#define Flags(move)                       (((int) (move) &0xf0000) >> 16)
+
+#define IsCap(move)           (!!(Flags(move) & CAPTURE_FLAG))
+#define IsEP(move)            (Flags(move) == EP_FLAG)
+#define IsCas(move)           (Flags(move) == CASTLE_FLAG)
+
+#define IsPromo(move)         (!!(Flags(move) & PROMO_FLAG))
+#define PromoPT(move)         ((Flags(move) & 0x3) + KNIGHT)
+#define PromoPiece(move, stm) (Piece(PromoPT(move), stm))
 
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move, Board* board);
-int IsRecapture(SearchStack* ss, Move move);
 
 #endif

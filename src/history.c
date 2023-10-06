@@ -66,7 +66,7 @@ void UpdateHistories(SearchStack* ss,
     AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
     UpdateCH(ss, bestMove, inc);
 
-    if (Promo(bestMove) < WHITE_QUEEN) {
+    if (PromoPT(bestMove) != QUEEN) {
       AddKillerMove(ss, bestMove);
 
       if ((ss - 1)->move)

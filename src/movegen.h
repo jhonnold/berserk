@@ -36,13 +36,6 @@ extern const int CASTLE_MAP[4][3];
 
 #define ALL -1ULL
 
-#define NO_PROMO 0
-#define QUIET    0b0000
-#define CAPTURE  0b0001
-#define EP       0b0101
-#define DP       0b0010
-#define CASTLE   0b1000
-
 #define WHITE_KS 0x8
 #define WHITE_QS 0x4
 #define BLACK_KS 0x2
@@ -58,20 +51,19 @@ enum {
   GT_LEGAL   = 0b11,
 };
 
-INLINE ScoredMove* AddMove(ScoredMove* moves, int from, int to, int moving, int promo, int flags) {
-  *moves++ = (ScoredMove) {.move = BuildMove(from, to, moving, promo, flags), .score = 0};
+INLINE ScoredMove* AddMove(ScoredMove* moves, int from, int to, int moving, int flags) {
+  *moves++ = (ScoredMove) {.move = BuildMove(from, to, moving, flags), .score = 0};
   return moves;
 }
 
-INLINE ScoredMove*
-AddPromotions(ScoredMove* moves, int from, int to, int moving, int flags, const int stm, const int type) {
+INLINE ScoredMove* AddPromotions(ScoredMove* moves, int from, int to, int moving, const int baseFlag, const int type) {
   if (type & GT_CAPTURE)
-    moves = AddMove(moves, from, to, moving, Piece(QUEEN, stm), flags);
+    moves = AddMove(moves, from, to, moving, baseFlag | QUEEN_PROMO_FLAG);
 
   if (type & GT_QUIET) {
-    moves = AddMove(moves, from, to, moving, Piece(ROOK, stm), flags);
-    moves = AddMove(moves, from, to, moving, Piece(BISHOP, stm), flags);
-    moves = AddMove(moves, from, to, moving, Piece(KNIGHT, stm), flags);
+    moves = AddMove(moves, from, to, moving, baseFlag | ROOK_PROMO_FLAG);
+    moves = AddMove(moves, from, to, moving, baseFlag | BISHOP_PROMO_FLAG);
+    moves = AddMove(moves, from, to, moving, baseFlag | KNIGHT_PROMO_FLAG);
   }
 
   return moves;
@@ -90,12 +82,12 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 
     while (targets) {
       int to = PopLSB(&targets);
-      moves  = AddMove(moves, to - PawnDir(stm), to, Piece(PAWN, stm), NO_PROMO, QUIET);
+      moves  = AddMove(moves, to - PawnDir(stm), to, Piece(PAWN, stm), QUIET_FLAG);
     }
 
     while (dpTargets) {
       int to = PopLSB(&dpTargets);
-      moves  = AddMove(moves, to - PawnDir(stm) - PawnDir(stm), to, Piece(PAWN, stm), NO_PROMO, DP);
+      moves  = AddMove(moves, to - PawnDir(stm) - PawnDir(stm), to, Piece(PAWN, stm), QUIET_FLAG);
     }
   }
 
@@ -107,12 +99,12 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 
     while (eTargets) {
       int to = PopLSB(&eTargets);
-      moves  = AddMove(moves, to - (PawnDir(stm) + E), to, Piece(PAWN, stm), NO_PROMO, CAPTURE);
+      moves  = AddMove(moves, to - (PawnDir(stm) + E), to, Piece(PAWN, stm), CAPTURE_FLAG);
     }
 
     while (wTargets) {
       int to = PopLSB(&wTargets);
-      moves  = AddMove(moves, to - (PawnDir(stm) + W), to, Piece(PAWN, stm), NO_PROMO, CAPTURE);
+      moves  = AddMove(moves, to - (PawnDir(stm) + W), to, Piece(PAWN, stm), CAPTURE_FLAG);
     }
 
     if (board->epSquare) {
@@ -120,7 +112,7 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 
       while (movers) {
         int from = PopLSB(&movers);
-        moves    = AddMove(moves, from, board->epSquare, Piece(PAWN, stm), NO_PROMO, EP);
+        moves    = AddMove(moves, from, board->epSquare, Piece(PAWN, stm), EP_FLAG);
       }
     }
   }
@@ -133,17 +125,17 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 
   while (sTargets) {
     int to = PopLSB(&sTargets);
-    moves  = AddPromotions(moves, to - PawnDir(stm), to, Piece(PAWN, stm), QUIET, stm, type);
+    moves  = AddPromotions(moves, to - PawnDir(stm), to, Piece(PAWN, stm), QUIET_FLAG, type);
   }
 
   while (eTargets) {
     int to = PopLSB(&eTargets);
-    moves  = AddPromotions(moves, to - (PawnDir(stm) + E), to, Piece(PAWN, stm), CAPTURE, stm, type);
+    moves  = AddPromotions(moves, to - (PawnDir(stm) + E), to, Piece(PAWN, stm), CAPTURE_FLAG, type);
   }
 
   while (wTargets) {
     int to = PopLSB(&wTargets);
-    moves  = AddPromotions(moves, to - (PawnDir(stm) + W), to, Piece(PAWN, stm), CAPTURE, stm, type);
+    moves  = AddPromotions(moves, to - (PawnDir(stm) + W), to, Piece(PAWN, stm), CAPTURE_FLAG, type);
   }
 
   return moves;
@@ -168,11 +160,11 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
 
     while (targets) {
       int to = PopLSB(&targets);
-      int flags = type == GT_QUIET ? QUIET : //
-                  type == GT_CAPTURE ? CAPTURE : //
-                  GetBit(OccBB(xstm), to) ? CAPTURE : QUIET;
+      int flags = type == GT_QUIET ? QUIET_FLAG : //
+                  type == GT_CAPTURE ? CAPTURE_FLAG : //
+                  GetBit(OccBB(xstm), to) ? CAPTURE_FLAG : QUIET_FLAG;
 
-      moves = AddMove(moves, from, to, Piece(piece, stm), NO_PROMO, flags);
+      moves = AddMove(moves, from, to, Piece(piece, stm), flags);
     }
   }
 
@@ -200,7 +192,7 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
 
     if (!((OccBB(BOTH) ^ Bit(from) ^ Bit(rookFrom)) & between))
       if (!(kingCrossing & board->threatened))
-        moves = AddMove(moves, from, to, Piece(KING, stm), NO_PROMO, CASTLE);
+        moves = AddMove(moves, from, to, Piece(KING, stm), CASTLE_FLAG);
   }
 
   return moves;
