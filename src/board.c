@@ -407,15 +407,15 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   }
 
   if (PieceType(piece) == PAWN) {
-    if (IsDP(move)) {
+    if ((from ^ to) == 16) {
       int epSquare = to - PawnDir(board->stm);
 
       if (GetPawnAttacks(epSquare, board->stm) & PieceBB(PAWN, board->xstm)) {
         board->epSquare = epSquare;
         board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];
       }
-    } else if (Promo(move)) {
-      int promoted = Promo(move);
+    } else if (IsPromo(move)) {
+      int promoted = PromoPiece(move, board->stm);
       FlipBit(board->pieces[piece], to);
       FlipBit(board->pieces[promoted], to);
 
@@ -471,8 +471,8 @@ void UndoMove(Move move, Board* board) {
   board->threatened  = board->history[board->histPly].threatened;
   board->easyCapture = board->history[board->histPly].easyCapture;
 
-  if (Promo(move)) {
-    int promoted = Promo(move);
+  if (IsPromo(move)) {
+    int promoted = PromoPiece(move, board->stm);
     FlipBit(board->pieces[piece], to);
     FlipBit(board->pieces[promoted], to);
     board->squares[to] = piece;
@@ -647,7 +647,7 @@ int IsPseudoLegal(Move move, Board* board) {
     return 1;
   }
 
-  if (Promo(move)) {
+  if (IsPromo(move)) {
     if (BitCount(board->checkers) > 1)
       return 0;
 
@@ -746,7 +746,7 @@ void InitCuckoo() {
         if (!GetBit(GetPieceAttacks(s1, 0, pcType), s2))
           continue;
 
-        Move move     = BuildMove(s1, s2, pc, NO_PROMO, QUIET);
+        Move move     = BuildMove(s1, s2, pc, QUIET_FLAG);
         uint64_t hash = ZOBRIST_PIECES[pc][s1] ^ ZOBRIST_PIECES[pc][s2] ^ ZOBRIST_SIDE_KEY;
 
         uint32_t i = Hash1(hash);
