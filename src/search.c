@@ -667,7 +667,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       R -= 9 * history / 65536;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(depth - 1, Max(R, legalMoves >= 3));
+      R = Min(depth - 1, Max(R, legalMoves >= 3 || R > -1));
 
       score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
 
