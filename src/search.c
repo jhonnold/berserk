@@ -370,6 +370,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   TTEntry* tt =
     ss->skip ? NULL : TTProbe(board->zobrist, ss->ply, &ttHit, &hashMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
   hashMove = isRoot ? thread->rootMoves[thread->multiPV].move : hashMove;
+  ss->ttPv = ttPv;
 
   // if the TT has a value that fits our position and has been searched to an
   // equal or greater depth, then we accept this score and prune
@@ -725,6 +726,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // don't let our score inflate too high (tb)
   bestScore = Min(bestScore, maxScore);
 
+  if (!ttPv && bestScore <= origAlpha)
+    ttPv = (ss - 1)->ttPv && depth > 3;
+
   // prevent saving when in singular search
   if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
     int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
@@ -772,6 +776,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   int ttPv    = isPV;
 
   TTEntry* tt = TTProbe(board->zobrist, ss->ply, &ttHit, &hashMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
+  ss->ttPv    = ttPv;
 
   // TT score pruning, ttHit implied with adjusted score
   if (!isPV && ttScore != UNKNOWN && (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
