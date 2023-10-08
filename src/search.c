@@ -620,7 +620,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int newDepth = depth + extension;
 
     // Late move reductions
-    if (origDepth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
+    if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
       int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
 
       // increase reduction on non-pv
@@ -713,7 +713,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 86), quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss, thread, move, origDepth + (bestScore > beta + 86), quiets, numQuiets, captures, numCaptures);
         break;
       }
     }
