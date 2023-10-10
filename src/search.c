@@ -726,8 +726,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // don't let our score inflate too high (tb)
   bestScore = Min(bestScore, maxScore);
 
-  if (!ttPv && bestScore <= origAlpha)
-    ttPv = (ss - 1)->ttPv && depth > 3;
+  if (bestScore <= origAlpha)
+    ttPv = ttPv || (ss - 1)->ttPv;
 
   // prevent saving when in singular search
   if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
