@@ -454,7 +454,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 8 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
-        eval - 69 * depth + 112 * (improving && !board->easyCapture) >= beta &&
+        eval - 69 * depth + 112 * (improving && !board->easyCapture) - (ss - 1)->history / 512 >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12288))
       return eval;
 
@@ -476,8 +476,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
-      ss->move = NULL_MOVE;
-      ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
+      ss->move    = NULL_MOVE;
+      ss->history = 0;
+      ss->ch      = &thread->ch[0][WHITE_PAWN][A1];
       MakeNullMove(board);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
@@ -499,8 +500,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           continue;
 
         TTPrefetch(KeyAfter(board, move));
-        ss->move = move;
-        ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        ss->move    = move;
+        ss->history = 0;
+        ss->ch      = &thread->ch[IsCap(move)][Moving(move)][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -611,8 +613,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
 
     TTPrefetch(KeyAfter(board, move));
-    ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->move    = move;
+    ss->history = history;
+    ss->ch      = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
     // apply extensions
@@ -837,8 +840,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     }
 
     TTPrefetch(KeyAfter(board, move));
-    ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->move    = move;
+    ss->history = 0;
+    ss->ch      = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
