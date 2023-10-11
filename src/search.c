@@ -618,12 +618,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // apply extensions
     int newDepth = depth + extension;
 
+    int likelyFailLow = isPV && hashMove && TTDepth(tt) >= depth && (TTBound(tt) & BOUND_UPPER);
+
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
       int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
 
-      // increase reduction on non-pv
-      if (!ttPv)
+      if (!ttPv || likelyFailLow)
         R += 2;
 
       // increase reduction if our eval is declining
