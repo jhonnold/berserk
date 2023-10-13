@@ -631,7 +631,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R++;
 
       // reduce these special quiets less
-      if (killerOrCounter)
+      if (killerOrCounter && history > 0)
         R -= 2;
 
       // less likely a non-capture is best
