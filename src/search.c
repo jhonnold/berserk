@@ -769,7 +769,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   int ttEval  = EVAL_UNKNOWN;
   int ttDepth = DEPTH_OFFSET;
   int ttBound = BOUND_UNKNOWN;
-  int ttPv    = isPV;
+  int ttPv    = 0;
 
   TTEntry* tt = TTProbe(board->zobrist, ss->ply, &ttHit, &hashMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
 
