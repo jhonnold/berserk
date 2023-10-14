@@ -41,6 +41,81 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
+extern float a0;
+extern float a1;
+
+extern float b0;
+extern float b1;
+
+extern float c0;
+extern float c1;
+
+extern float d0;
+
+extern float e0;
+
+extern float f0;
+extern float f1;
+
+extern float g0;
+extern float g1;
+extern float g2;
+extern float g3;
+extern float g4;
+
+extern float h0;
+extern float h1;
+extern float h2;
+
+extern int i0;
+extern int i1;
+extern int i2;
+extern int i3;
+
+extern int v0;
+extern int v1;
+
+extern int k0;
+extern int k1;
+extern int k2;
+extern int k3;
+extern int k4;
+
+extern int l0;
+extern int l1;
+
+extern int m0;
+extern int m1;
+
+extern int n0;
+extern int n1;
+extern int n2;
+extern int n3;
+
+extern int o0;
+extern int o1;
+extern int o2;
+extern int o3;
+
+extern int p0;
+
+extern int q0;
+
+extern int r0;
+
+extern int s0;
+
+extern int t0;
+
+extern int u0;
+extern int u1;
+
+float w0 = 0.33;
+float w1 = 0.05;
+
+float x0 = 0.8;
+float x1 = 5.5;
+
 int MOVE_OVERHEAD  = 300;
 int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
@@ -178,8 +253,8 @@ void ParseGo(char* in, Board* board) {
       if (movesToGo == -1) {
         int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
 
-        Limits.alloc = Min(time * 0.33, total / 20.0);
-        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
+        Limits.alloc = Min(time * w0, total * w1);
+        Limits.max   = Min((time - MOVE_OVERHEAD) * x0, Limits.alloc * x1);
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
@@ -263,6 +338,60 @@ void PrintUCIOptions() {
   printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
+
+  printf("option name a0 type string\n");
+  printf("option name a1 type string\n");
+  printf("option name b0 type string\n");
+  printf("option name b1 type string\n");
+  printf("option name c0 type string\n");
+  printf("option name c1 type string\n");
+  printf("option name d0 type string\n");
+  printf("option name e0 type string\n");
+  printf("option name f0 type string\n");
+  printf("option name f1 type string\n");
+  printf("option name g0 type string\n");
+  printf("option name g1 type string\n");
+  printf("option name g2 type string\n");
+  printf("option name g3 type string\n");
+  printf("option name g4 type string\n");
+  printf("option name h0 type string\n");
+  printf("option name h1 type string\n");
+  printf("option name h2 type string\n");
+  printf("option name i0 type string\n");
+  printf("option name i1 type string\n");
+  printf("option name i2 type string\n");
+  printf("option name i3 type string\n");
+  printf("option name v0 type string\n");
+  printf("option name v1 type string\n");
+  printf("option name k0 type string\n");
+  printf("option name k1 type string\n");
+  printf("option name k2 type string\n");
+  printf("option name k3 type string\n");
+  printf("option name k4 type string\n");
+  printf("option name l0 type string\n");
+  printf("option name l1 type string\n");
+  printf("option name m0 type string\n");
+  printf("option name m1 type string\n");
+  printf("option name n0 type string\n");
+  printf("option name n1 type string\n");
+  printf("option name n2 type string\n");
+  printf("option name n3 type string\n");
+  printf("option name o0 type string\n");
+  printf("option name o1 type string\n");
+  printf("option name o2 type string\n");
+  printf("option name o3 type string\n");
+  printf("option name p0 type string\n");
+  printf("option name q0 type string\n");
+  printf("option name r0 type string\n");
+  printf("option name s0 type string\n");
+  printf("option name t0 type string\n");
+  printf("option name u0 type string\n");
+  printf("option name u1 type string\n");
+  printf("option name w0 type string\n");
+  printf("option name w1 type string\n");
+  printf("option name x0 type string\n");
+  printf("option name x1 type string\n");
+
   printf("uciok\n");
 }
 
@@ -436,8 +565,67 @@ void UCILoop() {
 
       if (success)
         printf("info string set EvalFile to value %s\n", path);
-    } else
+    } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
+      CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
+    }
+
+    FO(a0)
+    FO(a1)
+    FO(b0)
+    FO(b1)
+    FO(c0)
+    FO(c1)
+    FO(d0)
+    FO(e0)
+    FO(f0)
+    FO(f1)
+    FO(g0)
+    FO(g1)
+    FO(g2)
+    FO(g3)
+    FO(g4)
+    FO(h0)
+    FO(h1)
+    FO(h2)
+    IO(i0)
+    IO(i1)
+    IO(i2)
+    IO(i3)
+    IO(v0)
+    IO(v1)
+    IO(k0)
+    IO(k1)
+    IO(k2)
+    IO(k3)
+    IO(k4)
+    IO(l0)
+    IO(l1)
+    IO(m0)
+    IO(m1)
+    IO(n0)
+    IO(n1)
+    IO(n2)
+    IO(n3)
+    IO(o0)
+    IO(o1)
+    IO(o2)
+    IO(o3)
+    IO(p0)
+    IO(q0)
+    IO(r0)
+    IO(s0)
+    IO(t0)
+    IO(u0)
+    IO(u1)
+    FO(w0)
+    FO(w1)
+    FO(x0)
+    FO(x1)
+
+    else
       printf("Unknown command: %s \n", in);
+
+    InitPruningAndReductionTables();
   }
 
   if (Threads.searching)
@@ -450,6 +638,13 @@ void UCILoop() {
 int GetOptionIntValue(char* in) {
   int n;
   sscanf(in, "%*s %*s %*s %*s %d", &n);
+
+  return n;
+}
+
+float GetOptionFValue(char* in) {
+  float n;
+  sscanf(in, "%*s %*s %*s %*s %f", &n);
 
   return n;
 }
