@@ -29,7 +29,6 @@
 #endif
 
 #include "../board.h"
-#include "../endgame.h"
 #include "../move.h"
 #include "../nn/accumulator.h"
 #include "../nn/evaluate.h"
