@@ -149,7 +149,7 @@ TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move 
   if (move || shortHash != tt->hash)
     TTStoreMove(tt, move);
 
-  if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 4 > TTDepth(tt)) {
+  if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 3 > TTDepth(tt)) {
     tt->hash       = shortHash;
     tt->score      = score;
     tt->depth      = (uint8_t) (depth - DEPTH_OFFSET);
