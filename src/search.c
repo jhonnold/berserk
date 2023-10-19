@@ -666,7 +666,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
     }
 
-    if (isPV && (playedMoves == 1 || (score > alpha && (isRoot || score < beta))))
+    if (isPV && (playedMoves == 1 || score > alpha))
       score = -Negamax(-beta, -alpha, newDepth - 1, 0, thread, &childPv, ss + 1);
 
     UndoMove(move, board);
