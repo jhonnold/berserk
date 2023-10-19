@@ -24,8 +24,8 @@
 #include "../util.h"
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
-#define UNROLL     1024
-#define NUM_REGS   32
+#define UNROLL     512
+#define NUM_REGS   16
 #define regi_t     __m512i
 #define regi_load  _mm512_load_si512
 #define regi_sub   _mm512_sub_epi16
