@@ -17,7 +17,12 @@
 #ifndef ATTACKS_H
 #define ATTACKS_H
 
+#ifdef USE_PEXT
+#include <immintrin.h>
+#endif
+
 #include "types.h"
+#include "util.h"
 
 extern BitBoard BETWEEN_SQS[64][64];
 extern BitBoard PINNED_MOVES[64][64];
@@ -33,41 +38,78 @@ extern BitBoard BISHOP_MASKS[64];
 extern uint64_t ROOK_MAGICS[64];
 extern uint64_t BISHOP_MAGICS[64];
 
-void InitBetweenSquares();
-void InitPinnedMovementSquares();
-void initPawnSpans();
-void InitPawnAttacks();
-void InitKnightAttacks();
-void InitBishopMasks();
-void InitBishopMagics();
-void InitBishopAttacks();
-void InitRookMasks();
-void InitRookMagics();
-void InitRookAttacks();
-void InitKingAttacks();
 void InitAttacks();
 
-BitBoard GetGeneratedPawnAttacks(int sq, int color);
-BitBoard GetGeneratedKnightAttacks(int sq);
-BitBoard GetBishopMask(int sq);
-BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers);
-BitBoard GetRookMask(int sq);
-BitBoard GetRookAttacksOTF(int sq, BitBoard blockers);
-BitBoard GetGeneratedKingAttacks(int sq);
-BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks);
+INLINE BitBoard BetweenSquares(int from, int to) {
+  return BETWEEN_SQS[from][to];
+}
 
-uint64_t FindMagicNumber(int sq, int n, int bishop);
+INLINE BitBoard PinnedMoves(int p, int k) {
+  return PINNED_MOVES[p][k];
+}
 
-BitBoard BetweenSquares(int from, int to);
-BitBoard PinnedMoves(int p, int k);
+INLINE BitBoard GetPawnAttacks(int sq, int color) {
+  return PAWN_ATTACKS[color][sq];
+}
 
-BitBoard GetPawnAttacks(int sq, int color);
-BitBoard GetKnightAttacks(int sq);
-BitBoard GetBishopAttacks(int sq, BitBoard occupancy);
-BitBoard GetRookAttacks(int sq, BitBoard occupancy);
-BitBoard GetQueenAttacks(int sq, BitBoard occupancy);
-BitBoard GetKingAttacks(int sq);
-BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type);
-BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ);
+INLINE BitBoard GetKnightAttacks(int sq) {
+  return KNIGHT_ATTACKS[sq];
+}
+
+INLINE BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
+#ifndef USE_PEXT
+  occupancy &= BISHOP_MASKS[sq];
+  occupancy *= BISHOP_MAGICS[sq];
+  occupancy >>= 64 - BISHOP_RELEVANT_BITS[sq];
+
+  return BISHOP_ATTACKS[sq][occupancy];
+#else
+  return BISHOP_ATTACKS[sq][_pext_u64(occupancy, BISHOP_MASKS[sq])];
+#endif
+}
+
+INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
+#ifndef USE_PEXT
+  occupancy &= ROOK_MASKS[sq];
+  occupancy *= ROOK_MAGICS[sq];
+  occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];
+
+  return ROOK_ATTACKS[sq][occupancy];
+#else
+  return ROOK_ATTACKS[sq][_pext_u64(occupancy, ROOK_MASKS[sq])];
+#endif
+}
+
+INLINE BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
+  return GetBishopAttacks(sq, occupancy) | GetRookAttacks(sq, occupancy);
+}
+
+INLINE BitBoard GetKingAttacks(int sq) {
+  return KING_ATTACKS[sq];
+}
+
+INLINE BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
+  switch (type) {
+    case KNIGHT: return GetKnightAttacks(sq);
+    case BISHOP: return GetBishopAttacks(sq, occupancy);
+    case ROOK: return GetRookAttacks(sq, occupancy);
+    case QUEEN: return GetQueenAttacks(sq, occupancy);
+    case KING: return GetKingAttacks(sq);
+  }
+
+  return 0;
+}
+
+// get a bitboard of ALL pieces attacking a given square
+INLINE BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
+  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) |                            // White and Black Pawn atx
+         (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |                            //
+         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |    // Knights
+         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |          // Kings
+         (GetBishopAttacks(sq, occ) & (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | // Bishop + Queen
+                                       PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) | //
+         (GetRookAttacks(sq, occ) & (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) |       // Rook + Queen
+                                     PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
+}
 
 #endif

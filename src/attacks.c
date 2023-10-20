@@ -14,42 +14,37 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
 #ifdef USE_PEXT
 #include <immintrin.h>
 #endif
 
+#include <stdio.h>
+
 #include "attacks.h"
 #include "bits.h"
-#include "board.h"
-#include "movegen.h"
 #include "random.h"
 
-// This file was built using all the logic found in the BBC video guide on
-// youtube I highly recommend it to understand how magic bitboards
-// work/generated
-// https://www.youtube.com/channel/UCB9-prLkPwgvlKKqDgXhsMQ/videos
-// OTF is abbr for On The Fly
+static const int BISHOP_RELEVANT_BITS[64] = {
+  6, 5, 5, 5, 5, 5, 5, 6, //
+  5, 5, 5, 5, 5, 5, 5, 5, //
+  5, 5, 7, 7, 7, 7, 5, 5, //
+  5, 5, 7, 9, 9, 7, 5, 5, //
+  5, 5, 7, 9, 9, 7, 5, 5, //
+  5, 5, 7, 7, 7, 7, 5, 5, //
+  5, 5, 5, 5, 5, 5, 5, 5, //
+  6, 5, 5, 5, 5, 5, 5, 6  //
+};
 
-const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, //
-                                      5, 5, 5, 5, 5, 5, 5, 5, //
-                                      5, 5, 7, 7, 7, 7, 5, 5, //
-                                      5, 5, 7, 9, 9, 7, 5, 5, //
-                                      5, 5, 7, 9, 9, 7, 5, 5, //
-                                      5, 5, 7, 7, 7, 7, 5, 5, //
-                                      5, 5, 5, 5, 5, 5, 5, 5, //
-                                      6, 5, 5, 5, 5, 5, 5, 6};
-
-const int ROOK_RELEVANT_BITS[64] = {12, 11, 11, 11, 11, 11, 11, 12, //
-                                    11, 10, 10, 10, 10, 10, 10, 11, //
-                                    11, 10, 10, 10, 10, 10, 10, 11, //
-                                    11, 10, 10, 10, 10, 10, 10, 11, //
-                                    11, 10, 10, 10, 10, 10, 10, 11, //
-                                    11, 10, 10, 10, 10, 10, 10, 11, //
-                                    11, 10, 10, 10, 10, 10, 10, 11, //
-                                    12, 11, 11, 11, 11, 11, 11, 12};
+static const int ROOK_RELEVANT_BITS[64] = {
+  12, 11, 11, 11, 11, 11, 11, 12, //
+  11, 10, 10, 10, 10, 10, 10, 11, //
+  11, 10, 10, 10, 10, 10, 10, 11, //
+  11, 10, 10, 10, 10, 10, 10, 11, //
+  11, 10, 10, 10, 10, 10, 10, 11, //
+  11, 10, 10, 10, 10, 10, 10, 11, //
+  11, 10, 10, 10, 10, 10, 10, 11, //
+  12, 11, 11, 11, 11, 11, 11, 12  //
+};
 
 BitBoard BETWEEN_SQS[64][64];
 BitBoard PINNED_MOVES[64][64];
@@ -65,32 +60,32 @@ BitBoard BISHOP_MASKS[64];
 uint64_t ROOK_MAGICS[64];
 uint64_t BISHOP_MAGICS[64];
 
-void InitBetweenSquares() {
+static void InitBetweenSquares() {
   int i;
   for (int f = 0; f < 64; f++) {
     for (int t = f + 1; t < 64; t++) {
       if (Rank(f) == Rank(t)) {
         i = t + W;
         while (i > f) {
-          BETWEEN_SQS[f][t] |= (1ULL << i);
+          SetBit(BETWEEN_SQS[f][t], i);
           i += W;
         }
       } else if (File(f) == File(t)) {
         i = t + N;
         while (i > f) {
-          BETWEEN_SQS[f][t] |= (1ULL << i);
+          SetBit(BETWEEN_SQS[f][t], i);
           i += N;
         }
       } else if ((t - f) % 9 == 0 && (File(t) > File(f))) {
         i = t + NW;
         while (i > f) {
-          BETWEEN_SQS[f][t] |= (1ULL << i);
+          SetBit(BETWEEN_SQS[f][t], i);
           i += NW;
         }
       } else if ((t - f) % 7 == 0 && (File(t) < File(f))) {
         i = t + NE;
         while (i > f) {
-          BETWEEN_SQS[f][t] |= (1ULL << i);
+          SetBit(BETWEEN_SQS[f][t], i);
           i += NE;
         }
       }
@@ -102,7 +97,7 @@ void InitBetweenSquares() {
       BETWEEN_SQS[f][t] = BETWEEN_SQS[t][f];
 }
 
-void InitPinnedMovementSquares() {
+static void InitPinnedMovementSquares() {
   int dirs[] = {W, NE, N, NW, E, SW, S, SE};
 
   for (int pSq = 0; pSq < 64; pSq++) {
@@ -130,7 +125,7 @@ void InitPinnedMovementSquares() {
 
       if (dir) {
         for (int xray = kSq + dir; xray >= 0 && xray < 64; xray += dir) {
-          PINNED_MOVES[pSq][kSq] |= (1ULL << xray);
+          SetBit(PINNED_MOVES[pSq][kSq], xray);
 
           if (dir == E || dir == SE || dir == NE)
             if (File(xray) == 7)
@@ -145,15 +140,7 @@ void InitPinnedMovementSquares() {
   }
 }
 
-inline BitBoard BetweenSquares(int from, int to) {
-  return BETWEEN_SQS[from][to];
-}
-
-inline BitBoard PinnedMoves(int p, int k) {
-  return PINNED_MOVES[p][k];
-}
-
-BitBoard GetGeneratedPawnAttacks(int sq, int color) {
+static BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -169,14 +156,14 @@ BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   return attacks;
 }
 
-void InitPawnAttacks() {
+static void InitPawnAttacks() {
   for (int i = 0; i < 64; i++) {
     PAWN_ATTACKS[WHITE][i] = GetGeneratedPawnAttacks(i, WHITE);
     PAWN_ATTACKS[BLACK][i] = GetGeneratedPawnAttacks(i, BLACK);
   }
 }
 
-BitBoard GetGeneratedKnightAttacks(int sq) {
+static BitBoard GetGeneratedKnightAttacks(int sq) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -202,12 +189,12 @@ BitBoard GetGeneratedKnightAttacks(int sq) {
   return attacks;
 }
 
-void InitKnightAttacks() {
+static void InitKnightAttacks() {
   for (int i = 0; i < 64; i++)
     KNIGHT_ATTACKS[i] = GetGeneratedKnightAttacks(i);
 }
 
-BitBoard GetGeneratedKingAttacks(int sq) {
+static BitBoard GetGeneratedKingAttacks(int sq) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -224,116 +211,124 @@ BitBoard GetGeneratedKingAttacks(int sq) {
   return attacks;
 }
 
-void InitKingAttacks() {
+static void InitKingAttacks() {
   for (int i = 0; i < 64; i++)
     KING_ATTACKS[i] = GetGeneratedKingAttacks(i);
 }
 
-BitBoard GetBishopMask(int sq) {
+static BitBoard GetBishopMask(int sq) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
   int sf = File(sq);
 
   for (int r = sr + 1, f = sf + 1; r <= 6 && f <= 6; r++, f++)
-    attacks |= (1ULL << (r * 8 + f));
+    SetBit(attacks, Sq(r, f));
   for (int r = sr - 1, f = sf + 1; r >= 1 && f <= 6; r--, f++)
-    attacks |= (1ULL << (r * 8 + f));
+    SetBit(attacks, Sq(r, f));
   for (int r = sr + 1, f = sf - 1; r <= 6 && f >= 1; r++, f--)
-    attacks |= (1ULL << (r * 8 + f));
+    SetBit(attacks, Sq(r, f));
   for (int r = sr - 1, f = sf - 1; r >= 1 && f >= 1; r--, f--)
-    attacks |= (1ULL << (r * 8 + f));
+    SetBit(attacks, Sq(r, f));
 
   return attacks;
 }
 
-void InitBishopMasks() {
+static void InitBishopMasks() {
   for (int i = 0; i < 64; i++)
     BISHOP_MASKS[i] = GetBishopMask(i);
 }
 
-BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
+static BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
   int sf = File(sq);
 
   for (int r = sr + 1, f = sf + 1; r <= 7 && f <= 7; r++, f++) {
-    attacks |= (1ULL << (r * 8 + f));
-    if (GetBit(blockers, r * 8 + f))
+    int s = Sq(r, f);
+    SetBit(attacks, s);
+    if (GetBit(blockers, s))
       break;
   }
 
   for (int r = sr - 1, f = sf + 1; r >= 0 && f <= 7; r--, f++) {
-    attacks |= (1ULL << (r * 8 + f));
-    if (GetBit(blockers, r * 8 + f))
+    int s = Sq(r, f);
+    SetBit(attacks, s);
+    if (GetBit(blockers, s))
       break;
   }
 
   for (int r = sr + 1, f = sf - 1; r <= 7 && f >= 0; r++, f--) {
-    attacks |= (1ULL << (r * 8 + f));
-    if (GetBit(blockers, r * 8 + f))
+    int s = Sq(r, f);
+    SetBit(attacks, s);
+    if (GetBit(blockers, s))
       break;
   }
 
   for (int r = sr - 1, f = sf - 1; r >= 0 && f >= 0; r--, f--) {
-    attacks |= (1ULL << (r * 8 + f));
-    if (GetBit(blockers, r * 8 + f))
+    int s = Sq(r, f);
+    SetBit(attacks, s);
+    if (GetBit(blockers, s))
       break;
   }
 
   return attacks;
 }
 
-BitBoard GetRookMask(int sq) {
+static BitBoard GetRookMask(int sq) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
   int sf = File(sq);
 
   for (int r = sr + 1; r <= 6; r++)
-    attacks |= (1ULL << (r * 8 + sf));
+    SetBit(attacks, Sq(r, sf));
   for (int r = sr - 1; r >= 1; r--)
-    attacks |= (1ULL << (r * 8 + sf));
+    SetBit(attacks, Sq(r, sf));
   for (int f = sf + 1; f <= 6; f++)
-    attacks |= (1ULL << (sr * 8 + f));
+    SetBit(attacks, Sq(sr, f));
   for (int f = sf - 1; f >= 1; f--)
-    attacks |= (1ULL << (sr * 8 + f));
+    SetBit(attacks, Sq(sr, f));
 
   return attacks;
 }
 
-void InitRookMasks() {
+static void InitRookMasks() {
   for (int i = 0; i < 64; i++)
     ROOK_MASKS[i] = GetRookMask(i);
 }
 
-BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
+static BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
   int sf = File(sq);
 
   for (int r = sr + 1; r <= 7; r++) {
-    attacks |= (1ULL << (r * 8 + sf));
+    int s = Sq(r, sf);
+    SetBit(attacks, s);
     if (GetBit(blockers, r * 8 + sf))
       break;
   }
 
   for (int r = sr - 1; r >= 0; r--) {
-    attacks |= (1ULL << (r * 8 + sf));
+    int s = Sq(r, sf);
+    SetBit(attacks, s);
     if (GetBit(blockers, r * 8 + sf))
       break;
   }
 
   for (int f = sf + 1; f <= 7; f++) {
-    attacks |= (1ULL << (sr * 8 + f));
+    int s = Sq(sr, f);
+    SetBit(attacks, s);
     if (GetBit(blockers, sr * 8 + f))
       break;
   }
 
   for (int f = sf - 1; f >= 0; f--) {
-    attacks |= (1ULL << (sr * 8 + f));
+    int s = Sq(sr, f);
+    SetBit(attacks, s);
     if (GetBit(blockers, sr * 8 + f))
       break;
   }
@@ -341,20 +336,21 @@ BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
   return attacks;
 }
 
-BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
+static BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
   BitBoard occupany = 0;
 
   for (int i = 0; i < bits; i++) {
     int sq = PopLSB(&attacks);
 
     if (idx & (1 << i))
-      occupany |= (1ULL << sq);
+      SetBit(occupany, sq);
   }
 
   return occupany;
 }
 
-uint64_t FindMagicNumber(int sq, int n, int isBishop) {
+#ifndef USE_PEXT
+static uint64_t FindMagicNumber(int sq, int n, int isBishop) {
   int numOccupancies = 1 << n;
 
   BitBoard occupancies[4096];
@@ -374,7 +370,8 @@ uint64_t FindMagicNumber(int sq, int n, int isBishop) {
     if (BitCount((mask * magic) & 0xFF00000000000000) < 6)
       continue;
 
-    memset(usedAttacks, 0UL, sizeof(usedAttacks));
+    for (size_t i = 0; i < 4096; i++)
+      usedAttacks[i] = 0;
 
     int failed = 0;
     for (int i = 0; !failed && i < numOccupancies; i++) {
@@ -394,17 +391,18 @@ uint64_t FindMagicNumber(int sq, int n, int isBishop) {
   return 0;
 }
 
-void InitBishopMagics() {
+static void InitBishopMagics() {
   for (int i = 0; i < 64; i++)
     BISHOP_MAGICS[i] = FindMagicNumber(i, BISHOP_RELEVANT_BITS[i], 1);
 }
 
-void InitRookMagics() {
+static void InitRookMagics() {
   for (int i = 0; i < 64; i++)
     ROOK_MAGICS[i] = FindMagicNumber(i, ROOK_RELEVANT_BITS[i], 0);
 }
+#endif
 
-void InitBishopAttacks() {
+static void InitBishopAttacks() {
   for (int sq = 0; sq < 64; sq++) {
     BitBoard mask = BISHOP_MASKS[sq];
     int bits      = BISHOP_RELEVANT_BITS[sq];
@@ -423,7 +421,7 @@ void InitBishopAttacks() {
   }
 }
 
-void InitRookAttacks() {
+static void InitRookAttacks() {
   for (int sq = 0; sq < 64; sq++) {
     BitBoard mask = ROOK_MASKS[sq];
     int bits      = ROOK_RELEVANT_BITS[sq];
@@ -460,68 +458,4 @@ void InitAttacks() {
 
   InitBishopAttacks();
   InitRookAttacks();
-}
-
-inline BitBoard GetPawnAttacks(int sq, int color) {
-  return PAWN_ATTACKS[color][sq];
-}
-
-inline BitBoard GetKnightAttacks(int sq) {
-  return KNIGHT_ATTACKS[sq];
-}
-
-inline BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
-#ifndef USE_PEXT
-  occupancy &= BISHOP_MASKS[sq];
-  occupancy *= BISHOP_MAGICS[sq];
-  occupancy >>= 64 - BISHOP_RELEVANT_BITS[sq];
-
-  return BISHOP_ATTACKS[sq][occupancy];
-#else
-  return BISHOP_ATTACKS[sq][_pext_u64(occupancy, BISHOP_MASKS[sq])];
-#endif
-}
-
-inline BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
-#ifndef USE_PEXT
-  occupancy &= ROOK_MASKS[sq];
-  occupancy *= ROOK_MAGICS[sq];
-  occupancy >>= 64 - ROOK_RELEVANT_BITS[sq];
-
-  return ROOK_ATTACKS[sq][occupancy];
-#else
-  return ROOK_ATTACKS[sq][_pext_u64(occupancy, ROOK_MASKS[sq])];
-#endif
-}
-
-inline BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
-  return GetBishopAttacks(sq, occupancy) | GetRookAttacks(sq, occupancy);
-}
-
-inline BitBoard GetKingAttacks(int sq) {
-  return KING_ATTACKS[sq];
-}
-
-inline BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
-  switch (type) {
-    case KNIGHT: return GetKnightAttacks(sq);
-    case BISHOP: return GetBishopAttacks(sq, occupancy);
-    case ROOK: return GetRookAttacks(sq, occupancy);
-    case QUEEN: return GetQueenAttacks(sq, occupancy);
-    case KING: return GetKingAttacks(sq);
-  }
-
-  return 0;
-}
-
-// get a bitboard of ALL pieces attacking a given square
-inline BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
-  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) |                            // White and Black Pawn atx
-         (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |                            //
-         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |    // Knights
-         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |          // Kings
-         (GetBishopAttacks(sq, occ) & (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | // Bishop + Queen
-                                       PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) | //
-         (GetRookAttacks(sq, occ) & (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) |       // Rook + Queen
-                                     PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
 }

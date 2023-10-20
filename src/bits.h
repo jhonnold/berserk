@@ -77,12 +77,6 @@ INLINE BitBoard ShiftPawnCapE(BitBoard bb, const int c) {
   return c == WHITE ? ShiftNE(bb) : ShiftSE(bb);
 }
 
-INLINE uint8_t PawnFiles(BitBoard pawns) {
-  pawns |= (pawns >> 8);
-  pawns |= (pawns >> 16);
-  return (uint8_t) ((pawns | (pawns >> 32)) & 0xFF);
-}
-
 INLINE int PopLSB(BitBoard* bb) {
   int sq = LSB(*bb);
   *bb &= *bb - 1;

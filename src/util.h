@@ -25,6 +25,17 @@
 #define Min(a, b) (((a) < (b)) ? (a) : (b))
 #define Max(a, b) (((a) > (b)) ? (a) : (b))
 
+#define PPieceBB(pc)   (board->pieces[pc])
+#define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
+#define OccBB(c)       (board->occupancies[c])
+
+#define Piece(pc, c)   (((pc) << 1) + c)
+#define PieceType(pc)  ((pc) >> 1)
+#define File(sq)       ((sq) &7)
+#define Rank(sq)       ((sq) >> 3)
+#define Sq(r, f)       ((r) *8 + (f))
+#define PieceCount(pc) (1ull << (pc * 4))
+
 #define INLINE static inline __attribute__((always_inline))
 
 #define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)

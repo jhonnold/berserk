@@ -22,10 +22,6 @@
 #include <setjmp.h>
 #include <stdatomic.h>
 
-typedef uint64_t BitBoard;
-typedef uint32_t Move;
-typedef int32_t Score;
-
 #define MAX_SEARCH_PLY 201 // effective max depth 200
 #define MAX_MOVES      128
 
@@ -51,6 +47,9 @@ typedef int32_t Score;
 
 #define ALIGN __attribute__((aligned(64)))
 
+typedef uint64_t BitBoard;
+typedef uint32_t Move;
+typedef int32_t Score;
 typedef int16_t acc_t;
 
 typedef struct {
