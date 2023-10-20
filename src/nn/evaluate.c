@@ -91,11 +91,13 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
     }
   }
 }
-#elif defined(__SSE4_1__)
+#elif defined(__SSE2__)
 INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
+
+  const __m128i k0x80s = _mm_set1_epi8(-128);
 
   for (int v = 0; v < 2; v++) {
     const __m128i* in = (__m128i*) acc->values[views[v]];
@@ -105,7 +107,7 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
       __m128i s0 = _mm_srai_epi16(in[2 * i + 0], 5);
       __m128i s1 = _mm_srai_epi16(in[2 * i + 1], 5);
 
-      out[i] = _mm_max_epi8(_mm_packs_epi16(s0, s1), _mm_setzero_si128());
+      out[i] = _mm_subs_epi8(_mm_adds_epi8(_mm_packs_epi16(s0, s1), k0x80s), k0x80s);
     }
   }
 }
@@ -411,7 +413,7 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm_cvtepi32_ps(_mm_max_epi32(regs[i], _mm_setzero_si128()));
+    out[i] = _mm_max_ps(_mm_cvtepi32_ps(regs[i]), _mm_setzero_ps());
 }
 #else
 INLINE void L1AffineReLU(float* dest, int8_t* src) {
