@@ -22,6 +22,8 @@
 #include "types.h"
 #include "util.h"
 
+#define ALL -1
+
 #define A_FILE 0x0101010101010101ULL
 #define B_FILE 0x0202020202020202ULL
 #define C_FILE 0x0404040404040404ULL

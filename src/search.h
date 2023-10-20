@@ -19,25 +19,6 @@
 
 #include "types.h"
 
-// search specific score evals
-#define UNKNOWN \
-  32257 // this must be higher than CHECKMATE (some conditional logic relies on
-        // this)
-#define CHECKMATE    32200
-#define MATE_BOUND   (32200 - MAX_SEARCH_PLY)
-#define TB_WIN_SCORE MATE_BOUND
-#define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
-
-// static evaluation pruning
-#define SEE_PRUNE_CAPTURE_CUTOFF 104
-#define SEE_PRUNE_CUTOFF         17
-
-// delta pruning in QS
-#define DELTA_CUTOFF 55
-
-// base window value
-#define WINDOW 10
-
 void InitPruningAndReductionTables();
 
 void StartSearch(Board* board, uint8_t ponder);

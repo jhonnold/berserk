@@ -60,8 +60,8 @@ void InitPruningAndReductionTables() {
     LMP[0][depth] = (3 + depth * depth) / 2;
     LMP[1][depth] = 3 + depth * depth;
 
-    STATIC_PRUNE[0][depth] = -SEE_PRUNE_CUTOFF * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -SEE_PRUNE_CAPTURE_CUTOFF * depth; // capture cutoff
+    STATIC_PRUNE[0][depth] = -17 * depth * depth; // quiet move cutoff
+    STATIC_PRUNE[1][depth] = -104 * depth;        // capture cutoff
   }
 }
 
@@ -200,9 +200,9 @@ void Search(ThreadData* thread) {
 
       // One at depth 5 or later, start search at a reduced window
       if (thread->depth >= 5) {
-        alpha = Max(score - WINDOW, -CHECKMATE);
-        beta  = Min(score + WINDOW, CHECKMATE);
-        delta = WINDOW;
+        delta = 10;
+        alpha = Max(score - delta, -CHECKMATE);
+        beta  = Min(score + delta, CHECKMATE);
       }
 
       while (1) {
@@ -807,7 +807,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
     bestScore = eval;
 
-    futility = bestScore + DELTA_CUTOFF;
+    futility = bestScore + 55;
   }
 
   if (!inCheck)

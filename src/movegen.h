@@ -30,26 +30,10 @@
 
 extern const int CASTLE_MAP[4][3];
 
-#define PawnDir(c)   ((c) == WHITE ? N : S)
-#define PromoRank(c) ((c) == WHITE ? RANK_7 : RANK_2)
-#define DPRank(c)    ((c) == WHITE ? RANK_3 : RANK_6)
-
-#define ALL -1ULL
-
-#define WHITE_KS 0x8
-#define WHITE_QS 0x4
-#define BLACK_KS 0x2
-#define BLACK_QS 0x1
-
+#define PawnDir(c)     ((c) == WHITE ? N : S)
+#define PromoRank(c)   ((c) == WHITE ? RANK_7 : RANK_2)
+#define DPRank(c)      ((c) == WHITE ? RANK_3 : RANK_6)
 #define CanCastle(dir) (board->castling & (dir))
-
-// Note: Any usage of & that matches 1 or 2 will match 3
-//       thus making GT_LEGAL generate all.
-enum {
-  GT_QUIET   = 0b01,
-  GT_CAPTURE = 0b10,
-  GT_LEGAL   = 0b11,
-};
 
 INLINE ScoredMove* AddMove(ScoredMove* moves, int from, int to, int moving, int flags) {
   *moves++ = (ScoredMove) {.move = BuildMove(from, to, moving, flags), .score = 0};

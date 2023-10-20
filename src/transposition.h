@@ -20,43 +20,6 @@
 #include "types.h"
 #include "util.h"
 
-#define NO_ENTRY    0ULL
-#define MEGABYTE    (1024ull * 1024ull)
-#define BUCKET_SIZE 3
-
-#define BOUND_MASK (0x3)
-#define PV_MASK    (0x4)
-#define AGE_MASK   (0xF8)
-#define AGE_INC    (0x8)
-#define AGE_CYCLE  (255 + AGE_INC)
-
-typedef struct __attribute__((packed)) {
-  uint16_t hash;
-  uint8_t depth;
-  uint8_t agePvBound;
-  uint32_t evalAndMove;
-  int16_t score;
-} TTEntry;
-
-typedef struct {
-  TTEntry entries[BUCKET_SIZE];
-  uint16_t padding;
-} TTBucket;
-
-typedef struct {
-  void* mem;
-  TTBucket* buckets;
-  uint64_t count;
-  uint8_t age;
-} TTTable;
-
-enum {
-  BOUND_UNKNOWN = 0,
-  BOUND_LOWER   = 1,
-  BOUND_UPPER   = 2,
-  BOUND_EXACT   = 3
-};
-
 extern TTTable TT;
 
 size_t TTInit(int mb);

@@ -22,8 +22,6 @@
 #include "types.h"
 #include "util.h"
 
-#define NO_PIECE 12
-
 #define Piece(pc, c)   (((pc) << 1) + c)
 #define PieceType(pc)  ((pc) >> 1)
 #define PPieceBB(pc)   (board->pieces[pc])

@@ -19,18 +19,6 @@
 
 #include "types.h"
 
-#define NULL_MOVE 0
-
-#define QUIET_FLAG        0b0000
-#define CASTLE_FLAG       0b0001
-#define CAPTURE_FLAG      0b0100
-#define EP_FLAG           0b0110
-#define PROMO_FLAG        0b1000
-#define KNIGHT_PROMO_FLAG 0b1000
-#define BISHOP_PROMO_FLAG 0b1001
-#define ROOK_PROMO_FLAG   0b1010
-#define QUEEN_PROMO_FLAG  0b1011
-
 extern const int CHAR_TO_PIECE[];
 extern const char* PIECE_TO_CHAR;
 extern const char* PROMOTION_TO_CHAR;
@@ -45,9 +33,9 @@ extern const int CASTLING_ROOK[64];
 #define Moving(move)                      (((int) (move) &0x0f000) >> 12)
 #define Flags(move)                       (((int) (move) &0xf0000) >> 16)
 
-#define IsCap(move)           (!!(Flags(move) & CAPTURE_FLAG))
-#define IsEP(move)            (Flags(move) == EP_FLAG)
-#define IsCas(move)           (Flags(move) == CASTLE_FLAG)
+#define IsCap(move) (!!(Flags(move) & CAPTURE_FLAG))
+#define IsEP(move)  (Flags(move) == EP_FLAG)
+#define IsCas(move) (Flags(move) == CASTLE_FLAG)
 
 #define IsPromo(move)         (!!(Flags(move) & PROMO_FLAG))
 #define PromoPT(move)         ((Flags(move) & 0x3) + KNIGHT)

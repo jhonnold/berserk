@@ -21,8 +21,6 @@
 
 #include "types.h"
 
-#define EVAL_UNKNOWN 2046
-
 extern const int PHASE_VALUES[6];
 extern const int MAX_PHASE;
 

@@ -19,8 +19,6 @@
 
 #include "../types.h"
 
-#define SPARSE_CHUNK_SIZE 4
-
 int Predict(Board* board);
 int Propagate(Accumulator* accumulator, const int stm);
 

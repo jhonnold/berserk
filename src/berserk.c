@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
-    int depth = DEFAULT_BENCH_DEPTH;
+    int depth = 13;
     if (argc > 2)
       depth = Max(1, atoi(argv[2]));
 

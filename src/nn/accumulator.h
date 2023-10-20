@@ -17,13 +17,11 @@
 #ifndef ACCUMULATOR_H
 #define ACCUMULATOR_H
 
-#include <immintrin.h>
-
-#include "../board.h"
 #include "../types.h"
 #include "../util.h"
 
 #if defined(__AVX512F__)
+#include <immintrin.h>
 #define UNROLL     512
 #define NUM_REGS   16
 #define regi_t     __m512i
@@ -32,6 +30,7 @@
 #define regi_add   _mm512_add_epi16
 #define regi_store _mm512_store_si512
 #elif defined(__AVX2__)
+#include <immintrin.h>
 #define UNROLL     256
 #define NUM_REGS   16
 #define regi_t     __m256i
@@ -40,6 +39,7 @@
 #define regi_add   _mm256_add_epi16
 #define regi_store _mm256_store_si256
 #elif defined(__SSE2__)
+#include <immintrin.h>
 #define UNROLL     128
 #define NUM_REGS   16
 #define regi_t     __m128i
