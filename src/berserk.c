@@ -14,18 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "attacks.h"
 #include "bench.h"
-#include "bits.h"
-#include "eval.h"
+#include "board.h"
 #include "nn/evaluate.h"
 #include "random.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
-#include "types.h"
 #include "uci.h"
 #include "util.h"
 #include "zobrist.h"

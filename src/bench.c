@@ -16,10 +16,9 @@
 
 #include "bench.h"
 
+#include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "board.h"
 #include "move.h"
@@ -28,11 +27,10 @@
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
-#include "util.h"
 
 // Ethereal's bench set
-const int NUM_BENCH_POSITIONS = 50;
-char* benchmarks[]            = {
+static const int NUM_BENCH_POSITIONS = 50;
+static char* benchmarks[]            = {
 #include "files/bench.csv"
 };
 

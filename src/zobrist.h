@@ -17,7 +17,6 @@
 #ifndef ZOBRIST_H
 #define ZOBRIST_H
 
-#include "board.h"
 #include "move.h"
 #include "types.h"
 #include "util.h"
