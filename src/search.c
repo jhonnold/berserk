@@ -61,7 +61,7 @@ void InitPruningAndReductionTables() {
     LMP[1][depth] = 2.7002 + 0.9448 * depth * depth;
 
     STATIC_PRUNE[0][depth] = -14.9419 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -103.9379 * depth; // capture cutoff
+    STATIC_PRUNE[1][depth] = -103.9379 * depth;        // capture cutoff
   }
 }
 
@@ -279,7 +279,7 @@ void Search(ThreadData* thread) {
       if (thread->previousScore == UNKNOWN)
         searchScoreDiff *= 2, prevScoreDiff = 0;
 
-      double scoreChangeFactor = 0.0995 +                                              //
+      double scoreChangeFactor = 0.0995 +                                           //
                                  0.0286 * searchScoreDiff * (searchScoreDiff > 0) + //
                                  0.0261 * prevScoreDiff * (prevScoreDiff > 0);
       scoreChangeFactor = Max(0.4843, Min(1.4498, scoreChangeFactor));
@@ -584,8 +584,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // (allows for reductions when doing singular search)
     if (!isRoot && ss->ply < thread->depth * 2) {
       // ttHit is implied for move == hashMove to ever be true
-      if (depth >= 6 && move == hashMove && ttDepth >= depth - 3 && (ttBound & BOUND_LOWER) &&
-          abs(ttScore) < TB_WIN_BOUND) {
+      if (depth >= 5 + (int) (thread->nodes & 0x1) && move == hashMove && ttDepth >= depth - 3 &&
+          (ttBound & BOUND_LOWER) && abs(ttScore) < TB_WIN_BOUND) {
         int sBeta  = Max(ttScore - 5 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
 
