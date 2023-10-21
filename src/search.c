@@ -1019,9 +1019,9 @@ void FixedSeach(ThreadData* thread, Board* uciBoard, uint64_t nodes, int maxDept
 
       // One at depth 5 or later, start search at a reduced window
       if (thread->depth >= 5) {
-        alpha = Max(score - WINDOW, -CHECKMATE);
-        beta  = Min(score + WINDOW, CHECKMATE);
-        delta = WINDOW;
+        delta = 9;
+        alpha = Max(score - 9, -CHECKMATE);
+        beta  = Min(score + 9, CHECKMATE);
       }
 
       while (1) {
@@ -1039,8 +1039,7 @@ void FixedSeach(ThreadData* thread, Board* uciBoard, uint64_t nodes, int maxDept
           break;
         }
 
-        // delta x 1.25
-        delta += delta / 4 + 3;
+        delta += delta / 4;
       }
 
       SortRootMoves(thread, 0);

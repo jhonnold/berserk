@@ -183,6 +183,7 @@ void* PlayGames(void* arg) {
       if ( !(ply < fenGenParams.writeMin
           || IsCap(bestMove)
           || board->checkers
+          || (CHESS_960 && IsCas(bestMove))
           || (fenGenParams.filterDuplicates && SeenBefore(board->zobrist)))) {
 
         PositionData* p = &game->positions[game->n++];
