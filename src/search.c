@@ -660,7 +660,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       if (score > alpha && R > 1) {
         newDepth += (score > bestScore + 76);
-        newDepth -= (score <= bestScore + 1);
+        newDepth -= (score < bestScore + newDepth);
 
         if (newDepth - 1 > lmrDepth)
           score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
