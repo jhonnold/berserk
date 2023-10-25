@@ -70,7 +70,6 @@ release: clone-networks
 	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)    -march=core-avx2 -DUSE_PEXT
 	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)       -march=core-avx2 -mavx512f -mavx512bw
 	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT)  -march=core-avx2 -mavx512f -mavx512bw -DUSE_PEXT
-	$(RELEASE)-$(VERSION)-x64-vnni512-pext$(EXT) -march=core-avx2 -mavx512f -mavx512bw -mavx512vnni -DUSE_PEXT
 
 clone-networks:
 ifeq ($(EVALFILE), $(MAIN_NETWORK))
