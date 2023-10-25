@@ -54,8 +54,8 @@ SearchParams Limits;
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
-const double as[4] = {-3.07928903, 18.97319804, -8.46890784, 158.46134040};
-const double bs[4] = {-4.96597173, 35.69301252, -74.12937947, 83.89730450};
+const double as[4] = {-5.83465749, 46.43599644, -58.49798392, 172.62328616};
+const double bs[4] = {-7.95320845, 48.50833438, -66.34647240, 56.29169197};
 
 // win% as permilli given score and ply
 int WRModel(Score s, int ply) {
@@ -178,8 +178,8 @@ void ParseGo(char* in, Board* board) {
       if (movesToGo == -1) {
         int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
 
-        Limits.alloc = Min(time * 0.33, total / 20.0);
-        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
+        Limits.alloc = Min(time * 0.3784, total * 0.0570);
+        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.7776, Limits.alloc * 5.8320);
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
