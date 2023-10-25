@@ -128,17 +128,26 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 INLINE void m512_add_dpbusd_epi32(__m512i* acc, __m512i a, __m512i b) {
+#if defined(__AVX512VNNI__)
+  *acc = _mm512_dpbusd_epi32(*acc, a, b);
+#else
   __m512i p0 = _mm512_maddubs_epi16(a, b);
   p0         = _mm512_madd_epi16(p0, _mm512_set1_epi16(1));
   *acc       = _mm512_add_epi32(*acc, p0);
+#endif
 }
 
 INLINE void m512_add_dpbusd_epi32x2(__m512i* acc, __m512i a0, __m512i b0, __m512i a1, __m512i b1) {
+#if defined(__AVX512VNNI__)
+  *acc = _mm512_dpbusd_epi32(*acc, a0, b0);
+  *acc = _mm512_dpbusd_epi32(*acc, a1, b1);
+#else
   __m512i p0 = _mm512_maddubs_epi16(a0, b0);
   __m512i p1 = _mm512_maddubs_epi16(a1, b1);
 
   p0   = _mm512_madd_epi16(_mm512_add_epi16(p0, p1), _mm512_set1_epi16(1));
   *acc = _mm512_add_epi32(*acc, p0);
+#endif
 }
 
 INLINE uint32_t NNZ(__m512i chunk) {
