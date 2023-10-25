@@ -102,6 +102,9 @@ void MainSearch() {
   ThreadData* mainThread = Threads.threads[0];
   Board* board           = &mainThread->board;
 
+  char startFen[128];
+  BoardToFen(startFen, board);
+
   TTUpdate();
 
   for (int i = 1; i < Threads.count; i++)
@@ -140,6 +143,21 @@ void MainSearch() {
   Move ponderMove = NULL_MOVE;
   if (bestThread->rootMoves[0].pv.count > 1)
     ponderMove = bestThread->rootMoves[0].pv.moves[1];
+  else {
+    // Pull ponder move from the TT if PV doesn't have one.
+    // We reload the startfen because jmp aborts don't guarantee a rolled back board
+    ParseFen(startFen, board);
+
+    MakeMove(bestMove, board);
+    int ttHit = 0, ttScore, ttEval, ttDepth, ttBound, ttPv = 0;
+    TTProbe(board->zobrist, 0, &ttHit, &ponderMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
+
+    // Set to NULL if not legal
+    if (!(ttHit && IsPseudoLegal(ponderMove, board) && IsLegal(ponderMove, board)))
+      ponderMove = NULL_MOVE;
+
+    UndoMove(bestMove, board);
+  }
 
   mainThread->previousScore = bestThread->rootMoves[0].score;
 
