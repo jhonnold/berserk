@@ -670,8 +670,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // adjust reduction based on historical score
       R -= 8 * history / 65536;
 
-      // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(depth - 1, Max(R, 1));
+      R = Min(newDepth, Max(R, 1));
 
       int lmrDepth = newDepth - R;
       score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
