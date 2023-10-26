@@ -62,7 +62,7 @@ void ThreadWait(ThreadData* thread, atomic_uchar* cond) {
 void ThreadWake(ThreadData* thread, int action) {
   pthread_mutex_lock(&thread->mutex);
 
-  if (action != THREAD_RESUME)
+  if (action != THREAD_RESOOM)
     thread->action = action;
 
   pthread_cond_signal(&thread->sleep);

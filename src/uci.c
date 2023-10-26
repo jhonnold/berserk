@@ -307,7 +307,7 @@ void UCILoop() {
         Threads.stop = 1;
         pthread_mutex_lock(&Threads.lock);
         if (Threads.sleeping)
-          ThreadWake(Threads.threads[0], THREAD_RESUME);
+          ThreadWake(Threads.threads[0], THREAD_RESOOM);
         Threads.sleeping = 0;
         pthread_mutex_unlock(&Threads.lock);
       }
@@ -316,7 +316,7 @@ void UCILoop() {
         Threads.stop = 1;
         pthread_mutex_lock(&Threads.lock);
         if (Threads.sleeping)
-          ThreadWake(Threads.threads[0], THREAD_RESUME);
+          ThreadWake(Threads.threads[0], THREAD_RESOOM);
         Threads.sleeping = 0;
         pthread_mutex_unlock(&Threads.lock);
       }
@@ -330,7 +330,7 @@ void UCILoop() {
       pthread_mutex_lock(&Threads.lock);
       if (Threads.sleeping) {
         Threads.stop = 1;
-        ThreadWake(Threads.threads[0], THREAD_RESUME);
+        ThreadWake(Threads.threads[0], THREAD_RESOOM);
         Threads.sleeping = 0;
       }
       pthread_mutex_unlock(&Threads.lock);

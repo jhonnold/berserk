@@ -162,7 +162,7 @@ enum {
   THREAD_TT_CLEAR,
   THREAD_SEARCH_CLEAR,
   THREAD_EXIT,
-  THREAD_RESUME
+  THREAD_RESOOM // Apparently THREAD_RESUME is in <windows.h>
 };
 
 typedef struct ThreadData ThreadData;
