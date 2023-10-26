@@ -64,6 +64,7 @@ void UpdateHistories(SearchStack* ss,
 
   if (!IsCap(bestMove)) {
     AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+    AddHistoryHeuristic(&PH(board->pawnZobrist, bestMove), inc);
     UpdateCH(ss, bestMove, inc);
 
     if (PromoPT(bestMove) != QUEEN) {
@@ -90,6 +91,7 @@ void UpdateHistories(SearchStack* ss,
         continue;
 
       AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
+      AddHistoryHeuristic(&PH(board->pawnZobrist, m), -inc);
       UpdateCH(ss, m, -inc);
     }
   }

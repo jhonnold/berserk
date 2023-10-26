@@ -24,6 +24,7 @@
 #include "util.h"
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
+#define PH(z, m)            (thread->ph[z & 511][Moving(m)][To(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {

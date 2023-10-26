@@ -51,6 +51,7 @@ void ClearBoard(Board* board) {
 
   board->piecesCounts = 0ULL;
   board->zobrist      = 0ULL;
+  board->pawnZobrist  = 0ULL;
 
   board->stm  = WHITE;
   board->xstm = BLACK;
@@ -161,7 +162,8 @@ void ParseFen(char* fen, Board* board) {
   SetSpecialPieces(board);
   SetThreatsAndEasyCaptures(board);
 
-  board->zobrist = Zobrist(board);
+  board->zobrist     = Zobrist(board);
+  board->pawnZobrist = PawnZobrist(board);
 }
 
 void BoardToFen(char* fen, Board* board) {
@@ -346,6 +348,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->history[board->histPly].fmr         = board->fmr;
   board->history[board->histPly].nullply     = board->nullply;
   board->history[board->histPly].zobrist     = board->zobrist;
+  board->history[board->histPly].pawnZobrist = board->pawnZobrist;
   board->history[board->histPly].checkers    = board->checkers;
   board->history[board->histPly].pinned      = board->pinned;
   board->history[board->histPly].threatened  = board->threatened;
@@ -362,6 +365,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->squares[to]   = piece;
 
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
+  if (PieceType(piece) == PAWN)
+    board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
   if (IsCas(move)) {
     int rookFrom = board->cr[CASTLING_ROOK[to]];
@@ -389,6 +394,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     FlipBit(OccBB(BOTH), capSq);
 
     board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
+    if (PieceType(captured) == PAWN)
+      board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
 
     board->piecesCounts -= PieceCount(captured);
     board->phase -= PHASE_VALUES[PieceType(captured)];
@@ -422,6 +429,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->squares[to] = promoted;
 
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
+      board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
       board->phase += PHASE_VALUES[PieceType(promoted)];
     }
@@ -434,6 +442,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->xstm = board->stm;
   board->stm ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
+  board->pawnZobrist ^= ZOBRIST_SIDE_KEY;
 
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
@@ -466,6 +475,7 @@ void UndoMove(Move move, Board* board) {
   board->fmr         = board->history[board->histPly].fmr;
   board->nullply     = board->history[board->histPly].nullply;
   board->zobrist     = board->history[board->histPly].zobrist;
+  board->pawnZobrist = board->history[board->histPly].pawnZobrist;
   board->checkers    = board->history[board->histPly].checkers;
   board->pinned      = board->history[board->histPly].pinned;
   board->threatened  = board->history[board->histPly].threatened;
@@ -521,6 +531,7 @@ void MakeNullMove(Board* board) {
   board->history[board->histPly].fmr         = board->fmr;
   board->history[board->histPly].nullply     = board->nullply;
   board->history[board->histPly].zobrist     = board->zobrist;
+  board->history[board->histPly].pawnZobrist = board->pawnZobrist;
   board->history[board->histPly].checkers    = board->checkers;
   board->history[board->histPly].pinned      = board->pinned;
   board->history[board->histPly].threatened  = board->threatened;
@@ -534,6 +545,7 @@ void MakeNullMove(Board* board) {
   board->epSquare = 0;
 
   board->zobrist ^= ZOBRIST_SIDE_KEY;
+  board->pawnZobrist ^= ZOBRIST_SIDE_KEY;
 
   board->histPly++;
   board->stm = board->xstm;
@@ -554,6 +566,7 @@ void UndoNullMove(Board* board) {
   board->fmr         = board->history[board->histPly].fmr;
   board->nullply     = board->history[board->histPly].nullply;
   board->zobrist     = board->history[board->histPly].zobrist;
+  board->pawnZobrist     = board->history[board->histPly].pawnZobrist;
   board->checkers    = board->history[board->histPly].checkers;
   board->pinned      = board->history[board->histPly].pinned;
   board->threatened  = board->history[board->histPly].threatened;

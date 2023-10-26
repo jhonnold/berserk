@@ -980,6 +980,7 @@ int ValidRootMove(ThreadData* thread, Move move) {
 void SearchClearThread(ThreadData* thread) {
   memset(&thread->counters, 0, sizeof(thread->counters));
   memset(&thread->hh, 0, sizeof(thread->hh));
+  memset(&thread->ph, 0, sizeof(thread->ph));
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
 
