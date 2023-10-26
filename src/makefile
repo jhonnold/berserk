@@ -4,8 +4,8 @@
 EXE      = berserk
 SRC      = *.c nn/*.c pyrrhic/tbprobe.c fengen/*.c
 CC       = gcc
-VERSION  = 20231021
-MAIN_NETWORK = networks/berserk-01c3a52e404a.nn
+VERSION  = 12
+MAIN_NETWORK = networks/berserk-fb675dad41b4.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
@@ -65,11 +65,11 @@ pgo: clone-networks
 	$(CLEAN)
 
 release: clone-networks
-	$(RELEASE)-$(VERSION)-x64-ssse3$(EXT)       -march=core2
-	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        -march=core-avx2
-	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   -march=core-avx2                                 -DUSE_PEXT
-	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)      -march=core-avx2 -mavx512f -mavx512bw -mavx512dq
-	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT) -march=core-avx2 -mavx512f -mavx512bw -mavx512dq -DUSE_PEXT
+	$(RELEASE)-$(VERSION)-x64-ssse3$(EXT)        -march=core2
+	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)         -march=core-avx2
+	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)    -march=core-avx2 -DUSE_PEXT
+	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)       -march=core-avx2 -mavx512f -mavx512bw
+	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT)  -march=core-avx2 -mavx512f -mavx512bw -DUSE_PEXT
 
 clone-networks:
 ifeq ($(EVALFILE), $(MAIN_NETWORK))

@@ -61,7 +61,7 @@ void InitPruningAndReductionTables() {
     LMP[1][depth] = 2.7002 + 0.9448 * depth * depth;
 
     STATIC_PRUNE[0][depth] = -14.9419 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -103.9379 * depth; // capture cutoff
+    STATIC_PRUNE[1][depth] = -103.9379 * depth;        // capture cutoff
   }
 }
 
@@ -102,6 +102,9 @@ void MainSearch() {
   ThreadData* mainThread = Threads.threads[0];
   Board* board           = &mainThread->board;
 
+  char startFen[128];
+  BoardToFen(startFen, board);
+
   TTUpdate();
 
   for (int i = 1; i < Threads.count; i++)
@@ -140,6 +143,21 @@ void MainSearch() {
   Move ponderMove = NULL_MOVE;
   if (bestThread->rootMoves[0].pv.count > 1)
     ponderMove = bestThread->rootMoves[0].pv.moves[1];
+  else {
+    // Pull ponder move from the TT if PV doesn't have one.
+    // We reload the startfen because jmp aborts don't guarantee a rolled back board
+    ParseFen(startFen, board);
+
+    MakeMove(bestMove, board);
+    int ttHit = 0, ttScore, ttEval, ttDepth, ttBound, ttPv = 0;
+    TTProbe(board->zobrist, 0, &ttHit, &ponderMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
+
+    // Set to NULL if not legal
+    if (!(ttHit && IsPseudoLegal(ponderMove, board) && IsLegal(ponderMove, board)))
+      ponderMove = NULL_MOVE;
+
+    UndoMove(bestMove, board);
+  }
 
   mainThread->previousScore = bestThread->rootMoves[0].score;
 
@@ -279,7 +297,7 @@ void Search(ThreadData* thread) {
       if (thread->previousScore == UNKNOWN)
         searchScoreDiff *= 2, prevScoreDiff = 0;
 
-      double scoreChangeFactor = 0.0995 +                                              //
+      double scoreChangeFactor = 0.0995 +                                           //
                                  0.0286 * searchScoreDiff * (searchScoreDiff > 0) + //
                                  0.0261 * prevScoreDiff * (prevScoreDiff > 0);
       scoreChangeFactor = Max(0.4843, Min(1.4498, scoreChangeFactor));
@@ -654,12 +672,17 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
 
-      score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
+      int lmrDepth = newDepth - R;
+      score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
 
       if (score > alpha && R > 1) {
+        // Credit to Viz (and lonfom) for the following modification of the zws
+        // re-search depth. They can be found in SF as doDeeperSearch + doShallowerSearch
         newDepth += (score > bestScore + 76);
+        newDepth -= (score < bestScore + newDepth);
 
-        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+        if (newDepth - 1 > lmrDepth)
+          score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
       }
     } else if (!isPV || playedMoves > 1) {
       score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
