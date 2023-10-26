@@ -69,8 +69,5 @@ uint64_t PawnZobrist(Board* board) {
       hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
   }
 
-  if (board->stm)
-    hash ^= ZOBRIST_SIDE_KEY;
-
   return hash;
 }

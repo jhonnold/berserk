@@ -185,7 +185,7 @@ struct ThreadData {
 
   Move counters[12][64];         // counter move butterfly table
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
-  int16_t ph[512][12][64];       // history heuristic with pawn structure
+  int16_t ph[128][64 * 64];      // history heuristic with pawn structure
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
