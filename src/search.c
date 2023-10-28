@@ -558,19 +558,22 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
     int history         = GetHistory(ss, thread, move);
 
+    int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
+    R -= history / 8192; // adjust reduction based on historical score
+
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
-        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+        int lmrDepth = Max(1, depth - R);
 
         if (!killerOrCounter && lmrDepth < 7 && history < -2658 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
 
-        if (!inCheck && lmrDepth < 10 && eval + 87 + 46 * lmrDepth + 15 * history / 2048 <= alpha)
+        if (!inCheck && lmrDepth < 10 && eval + 87 + 46 * lmrDepth <= alpha)
           skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
@@ -638,8 +641,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
-      int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
@@ -666,9 +667,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
         R += 1 + !IsCap(move);
-
-      // adjust reduction based on historical score
-      R -= 8 * history / 65536;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
