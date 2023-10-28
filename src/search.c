@@ -558,19 +558,56 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
     int history         = GetHistory(ss, thread, move);
 
+    // ------------------------------------------------------------------
+    // Calculate overall reduction for this move.
+
+    int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
+
+    // increase reduction on non-pv
+    if (!ttPv)
+      R += 2;
+
+    // increase reduction if our eval is declining
+    if (!improving)
+      R++;
+
+    // reduce these special quiets less
+    if (killerOrCounter)
+      R -= 2;
+
+    // less likely a non-capture is best
+    if (IsCap(hashMove) || IsPromo(hashMove))
+      R++;
+
+    // move GAVE check
+    if (board->checkers)
+      R--;
+
+    // Reduce more on expected cut nodes
+    // idea from komodo/sf, explained by Don Daily here
+    // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
+    // and https://www.chessprogramming.org/Node_Types
+    if (cutnode)
+      R += 1 + !IsCap(move);
+
+    // adjust reduction based on historical score
+    R -= 8 * history / 65536;
+
+    // -----------------------------------------------------------------------
+
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
-        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+        int lmrDepth = Max(1, depth - R);
 
         if (!killerOrCounter && lmrDepth < 7 && history < -2658 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
 
-        if (!inCheck && lmrDepth < 10 && eval + 87 + 46 * lmrDepth + 15 * history / 2048 <= alpha)
+        if (!inCheck && lmrDepth < 10 && eval + 87 + 46 * lmrDepth <= alpha)
           skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
@@ -638,38 +675,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
-      int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-
-      // increase reduction on non-pv
-      if (!ttPv)
-        R += 2;
-
-      // increase reduction if our eval is declining
-      if (!improving)
-        R++;
-
-      // reduce these special quiets less
-      if (killerOrCounter)
-        R -= 2;
-
-      // less likely a non-capture is best
-      if (IsCap(hashMove) || IsPromo(hashMove))
-        R++;
-
-      // move GAVE check
-      if (board->checkers)
-        R--;
-
-      // Reduce more on expected cut nodes
-      // idea from komodo/sf, explained by Don Daily here
-      // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
-      // and https://www.chessprogramming.org/Node_Types
-      if (cutnode)
-        R += 1 + !IsCap(move);
-
-      // adjust reduction based on historical score
-      R -= 8 * history / 65536;
-
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
 
