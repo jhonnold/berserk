@@ -56,7 +56,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                        (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)] +                   //
-                       (int) PH(thread->board.pawnZobrist, move);
+                       (int) PH(thread->board.pawnZobrist, move) * 2;
 
     else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
@@ -70,7 +70,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                          (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
                          (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
                          (int) (*(ss - 6)->ch)[Moving(move)][To(move)] +                   //
-                         (int) PH(thread->board.pawnZobrist, move);
+                         (int) PH(thread->board.pawnZobrist, move) * 2;
     }
 
     else if (type == ST_MVV)
