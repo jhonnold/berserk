@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
-        version: [9, 10, 11]
+        version: [11]
     
     steps:
     - name: Set up GCC ${{matrix.version}}
@@ -37,6 +37,9 @@ jobs:
 
     - name: Perft Test
       run: ./tests/perft.sh
+    
+    - name: Mate Test
+      run: ./tests/mate-in-1.sh
   
   clang-format-checking:
     runs-on: ubuntu-latest
