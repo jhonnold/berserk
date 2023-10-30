@@ -5,7 +5,7 @@ EXE      = berserk
 SRC      = *.c nn/*.c pyrrhic/tbprobe.c
 CC       = gcc
 VERSION  = 12
-MAIN_NETWORK = networks/berserk-fb675dad41b4.nn
+MAIN_NETWORK = berserk-fb675dad41b4.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
@@ -54,24 +54,54 @@ BASIC   = $(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
 RELEASE = $(CC) $(RFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
 # Targets
-basic: clone-networks
+basic: download-network
 	$(BASIC)
 
-pgo: clone-networks
+pgo: download-network
 	$(BASIC) $(PGOGEN)
 	$(BENCH)
 	$(PGOMERGE)
 	$(BASIC) $(PGOUSE)
 	$(CLEAN)
 
-release: clone-networks
+release: download-network
 	$(RELEASE)-$(VERSION)-x64-ssse3$(EXT)        -march=core2
 	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)         -march=core-avx2
 	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)    -march=core-avx2 -DUSE_PEXT
 	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)       -march=core-avx2 -mavx512f -mavx512bw
 	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT)  -march=core-avx2 -mavx512f -mavx512bw -DUSE_PEXT
 
-clone-networks:
-ifeq ($(EVALFILE), $(MAIN_NETWORK))
-	git submodule update --init networks
-endif
+download-network:
+	@if [ "$(EVALFILE)" = "$(MAIN_NETWORK)" ]; then \
+		echo "Using the current best network: $(EVALFILE)"; \
+		if test -f "$(EVALFILE)"; then \
+			echo "File already downloaded"; \
+		elif hash wget 2>/dev/null; then \
+			echo "Downloading $(EVALFILE) with wget"; wget -qO- https://berserk-networks.s3.amazonaws.com/$(EVALFILE) > $(EVALFILE); \
+		elif hash curl 2>/dev/null; then \
+			echo "Downloading $(EVALFILE) with curl"; curl -skL https://berserk-networks.s3.amazonaws.com/$(EVALFILE) > $(EVALFILE); \
+		fi; \
+		if test -f "$(EVALFILE)"; then \
+			if hash shasum 2>/dev/null; then \
+				if [ "$(EVALFILE)" = "berserk-"`shasum -a 256 $(EVALFILE) | cut -c1-12`".nn" ]; then \
+					echo "Downloaded network $(EVALFILE) and verified"; \
+				else \
+					echo "Downloaded network $(EVALFILE) failed validation"; \
+				fi; \
+			elif hash sha256sum 2>/dev/null; then \
+				if [ "$(EVALFILE)" = "berserk-"`sha256sum $(EVALFILE) | cut -c1-12`".nn" ]; then \
+					echo "Downloaded network $(EVALFILE) and verified"; \
+				else \
+					echo "Downloaded network $(EVALFILE) failed validation"; \
+				fi; \
+			else \
+				echo "Downloaded network $(EVALFILE), but unable to verify"; \
+			fi; \
+		else \
+			echo "Unable to downlaod network: $(EVALFILE)"; \
+		fi; \
+	elif test -f "$(EVALFILE)"; then \
+		echo "Using network: $(EVALFILE)"; \
+	else \
+		echo "Unknown network: $(EVALFILE)"; \
+	fi;
