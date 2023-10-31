@@ -1,5 +1,3 @@
-# Credit to Weiss for this simple and elegant makefile
-
 # General
 EXE      = berserk
 SRC      = *.c nn/*.c pyrrhic/tbprobe.c
@@ -14,62 +12,71 @@ STD    = -std=gnu11
 LIBS   = -pthread -lm
 WARN   = -Wall -Wextra -Wshadow -Werror
 
-FLAGS  = $(STD) $(WARN) -O3 -flto -g $(DEFS)
-CFLAGS = $(FLAGS) -march=native
-RFLAGS = $(FLAGS) -static
+FLAGS  = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS) 
+CFLAGS = $(FLAGS) -m64 -mpopcnt -msse -msse2
 
-# PGO
-ifneq ($(findstring gcc, $(CC)),)
-	PGODIR = "pgo"
-	PGOGEN = -fprofile-generate=$(PGODIR)
-	PGOUSE = -fprofile-use=$(PGODIR)
-else ifneq ($(findstring clang, $(CC)),)
-	PGOMERGE = llvm-profdata merge -output=berserk.profdata *.profraw
-	PGOGEN = -fprofile-instr-generate
-	PGOUSE = -fprofile-instr-use=berserk.profdata
+# Detecting windows
+ifeq ($(shell echo "test"), "test")
+	CFLAGS += -static
 endif
 
-# Use pext if supported and not a ryzen 1/2 cpu
-PROPS = $(shell echo | $(CC) -march=native -E -dM -)
-ifneq ($(findstring __BMI2__, $(PROPS)),)
-	ifeq ($(findstring __znver1, $(PROPS)),)
-		ifeq ($(findstring __znver2, $(PROPS)),)
-			CFLAGS += -DUSE_PEXT
+# Setup arch
+ifeq ($(ARCH), )
+   ARCH = native
+endif
+
+ifeq ($(ARCH), native)
+	CFLAGS  = $(FLAGS) -march=native
+else ifeq ($(findstring ssse3, $(ARCH)), ssse3)
+	CFLAGS += -mssse3
+else ifeq ($(findstring avx2, $(ARCH)), avx2)
+	CFLAGS += -mssse3 -msse4.1 -mbmi -mfma -mavx2
+else ifeq ($(findstring avx512, $(ARCH)), avx512)
+	CFLAGS += -mssse3 -msse4.1 -mbmi -mfma -mavx2 -mavx512f -mavx512bw
+endif
+
+ifeq ($(ARCH), native)
+	PROPS = $(shell echo | $(CC) -march=native -E -dM -)
+	ifneq ($(findstring __BMI2__, $(PROPS)),)
+		ifeq ($(findstring __znver1, $(PROPS)),)
+			ifeq ($(findstring __znver2, $(PROPS)),)
+				CFLAGS += -DUSE_PEXT
+			endif
 		endif
 	endif
+else ifeq ($(findstring -pext, $(ARCH)), -pext)
+	CFLAGS += -DUSE_PEXT -mbmi2
 endif
 
-# Try to detect windows environment by seeing
-# whether the shell filters out " or not.
-ifeq ($(shell echo "test"), "test")
-	BENCH = $(EXE) bench 12 > nul 2>&1
-	CLEAN = rmdir /s /q $(PGODIR)
-else
-	BENCH = ./$(EXE) bench 12 > /dev/null 2>&1
-	CLEAN = $(RM) -rf $(PGODIR)
-endif
-
-# Compilations
-BASIC   = $(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
-RELEASE = $(CC) $(RFLAGS) $(SRC) $(LIBS) -o $(EXE)
-
-# Targets
-basic: download-network
-	$(BASIC)
+build: download-network
+	$(MAKE) ARCH=$(ARCH) all
 
 pgo: download-network
-	$(BASIC) $(PGOGEN)
-	$(BENCH)
-	$(PGOMERGE)
-	$(BASIC) $(PGOUSE)
-	$(CLEAN)
+ifeq ($(findstring gcc, $(CC)), gcc)
+	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-generate=pgo" all
 
-release: download-network
-	$(RELEASE)-$(VERSION)-x64-ssse3$(EXT)        -march=core2
-	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)         -march=core-avx2
-	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)    -march=core-avx2 -DUSE_PEXT
-	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)       -march=core-avx2 -mavx512f -mavx512bw
-	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT)  -march=core-avx2 -mavx512f -mavx512bw -DUSE_PEXT
+	./$(EXE) bench 13 > pgo.out 2>&1
+	grep Results pgo.out
+	
+	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-use=pgo" all
+	
+	@rm -rf pgo pgo.out
+else ifeq ($(findstring clang, $(CC)), clang)
+	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-instr-generate" all
+	
+	./$(EXE) bench 13 > pgo.out 2>&1
+	grep Results pgo.out
+	
+	llvm-profdata merge -output=berserk.profdata *.profraw
+	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-instr-use=berserk.profdata" all
+	
+	@rm -rf pgo pgo.out berserk.profdata *.profraw
+else
+	@echo "PGO builds not supported for $(CC)"
+endif
+
+all:
+	$(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
 download-network:
 	@if [ "$(EVALFILE)" = "$(MAIN_NETWORK)" ]; then \

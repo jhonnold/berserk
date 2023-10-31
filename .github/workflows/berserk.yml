@@ -23,7 +23,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Compile
-      run: cd src && make basic
+      run: cd src && make build ARCH=avx2
 
     - name: Bench
       run: |
@@ -36,10 +36,10 @@ jobs:
       run: sudo apt-get install -y expect
 
     - name: Perft Test
-      run: ./tests/perft.sh
+      run: ./tests/perft.sh 1>/dev/null
     
     - name: Mate Test
-      run: ./tests/mate-in-1.sh
+      run: ./tests/mate-in-1.sh 1>/dev/null
   
   clang-format-checking:
     runs-on: ubuntu-latest

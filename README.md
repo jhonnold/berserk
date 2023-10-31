@@ -75,7 +75,7 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
 ```bash
 $ git clone https://github.com/jhonnold/berserk
 $ cd berserk/src
-$ make basic
+$ make pgo
 $ ./berserk
 ```
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 error() {
-  echo "mate testing failed on line $1"
+  >&2 echo "mate testing failed on line $1"
   exit 1
 }
 trap 'error ${LINENO}' ERR
