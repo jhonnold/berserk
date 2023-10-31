@@ -283,7 +283,6 @@ void UCILoop() {
   Board board;
   ParseFen(START_FEN, &board);
 
-  setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
   Threads.searching = Threads.sleeping = 0;
