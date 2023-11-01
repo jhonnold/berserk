@@ -558,6 +558,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
     int history         = GetHistory(ss, thread, move);
 
+    // Move reductions
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
     R -= history / 8192; // adjust reduction based on historical score
 
@@ -636,38 +637,19 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
+    // Calculate the remainder of reductions
+    R += 2 * !ttPv;
+    R += !improving;
+    R -= 2 * killerOrCounter;
+    R += IsCap(hashMove) || IsPromo(hashMove);
+    R -= !!board->checkers;
+    R += (1 + !IsCap(move)) * cutnode;
+
     // apply extensions
     int newDepth = depth + extension;
 
     // Late move reductions
     if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
-      // increase reduction on non-pv
-      if (!ttPv)
-        R += 2;
-
-      // increase reduction if our eval is declining
-      if (!improving)
-        R++;
-
-      // reduce these special quiets less
-      if (killerOrCounter)
-        R -= 2;
-
-      // less likely a non-capture is best
-      if (IsCap(hashMove) || IsPromo(hashMove))
-        R++;
-
-      // move GAVE check
-      if (board->checkers)
-        R--;
-
-      // Reduce more on expected cut nodes
-      // idea from komodo/sf, explained by Don Daily here
-      // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
-      // and https://www.chessprogramming.org/Node_Types
-      if (cutnode)
-        R += 1 + !IsCap(move);
-
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(depth - 1, Max(R, 1));
 
@@ -684,7 +666,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
       }
     } else if (!isPV || playedMoves > 1) {
-      score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+      // If lmr doesn't apply, execute a zws for the move at the next depth.
+      // However, even if LMR doesn't apply but the reduction would've been high,
+      // reduce the search depth slightly (SF).
+      score = -Negamax(-alpha - 1, -alpha, newDepth - 1 - (R > 4), !cutnode, thread, &childPv, ss + 1);
     }
 
     if (isPV && (playedMoves == 1 || (score > alpha && (isRoot || score < beta))))
