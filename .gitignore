@@ -58,3 +58,4 @@ dist
 
 *.log
 *.fens
+*.nn
