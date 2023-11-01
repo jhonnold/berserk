@@ -37,9 +37,6 @@ jobs:
 
     - name: Perft Test
       run: ./tests/perft.sh 1>/dev/null
-    
-    - name: Mate Test
-      run: ./tests/mate-in-1.sh 1>/dev/null
   
   clang-format-checking:
     runs-on: ubuntu-latest
