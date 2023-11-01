@@ -12,7 +12,7 @@ STD    = -std=gnu11
 LIBS   = -pthread -lm
 WARN   = -Wall -Wextra -Wshadow -Werror
 
-FLAGS  = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS) 
+FLAGS  = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
 CFLAGS = $(FLAGS) -m64 -mpopcnt -msse -msse2
 
 # Detecting windows
@@ -57,19 +57,19 @@ ifeq ($(findstring gcc, $(CC)), gcc)
 
 	./$(EXE) bench 13 > pgo.out 2>&1
 	grep Results pgo.out
-	
+
 	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-use=pgo" all
-	
+
 	@rm -rf pgo pgo.out
 else ifeq ($(findstring clang, $(CC)), clang)
 	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-instr-generate" all
-	
+
 	./$(EXE) bench 13 > pgo.out 2>&1
 	grep Results pgo.out
-	
+
 	llvm-profdata merge -output=berserk.profdata *.profraw
 	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-instr-use=berserk.profdata" all
-	
+
 	@rm -rf pgo pgo.out berserk.profdata *.profraw
 else
 	@echo "PGO builds not supported for $(CC)"
