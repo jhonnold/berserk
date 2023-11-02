@@ -3,7 +3,7 @@
 # ripped from stockfish
 
 error() {
-  echo "perft testing failed on line $1"
+  >&2 echo "perft testing failed on line $1"
   exit 1
 }
 trap 'error ${LINENO}' ERR
