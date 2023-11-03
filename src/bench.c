@@ -40,17 +40,17 @@ void Bench(int depth) {
   Limits.max     = INT_MAX;
   Limits.timeset = 0;
 
-  FILE* fin = fopen("/home/jhonnold/fens", "r");
+  FILE* fin = fopen("/mnt/data/sorter-fens", "r");
   char * line = NULL;
   size_t len = 0;
   ssize_t read;
 
   int total = 0;
-  while (total < 1e7 && (read = getline(&line, &len, fin)) != -1) {
+  while (total < 2500000 && (read = getline(&line, &len, fin)) != -1) {
     total++;
 
     ParseFen(line, &Threads.threads[0]->board);
-    Predict(&Threads.threads[0]->board);    
+    Predict(&Threads.threads[0]->board);
 
     if (total % 1000 == 0) printf("%d\n", total);
 
