@@ -829,7 +829,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   }
 
   if (!inCheck)
-    InitQSMovePicker(&mp, thread, depth >= -1);
+    InitQSMovePicker(&mp, thread, ss, depth);
   else
     InitQSEvasionsPicker(&mp, hashMove, thread, ss);
 

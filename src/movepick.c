@@ -51,10 +51,10 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     Move move = current->move;
 
     if (type == ST_QUIET)
-      current->score = 2 * ((int) HH(thread->board.stm, move, thread->board.threatened) + //
-                            (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
-                            (int) (*(ss - 2)->ch)[Moving(move)][To(move)]) +       //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +             //
+      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
+                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
+                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
+                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
     else if (type == ST_CAPTURE)
@@ -64,10 +64,10 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       if (IsCap(move))
         current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
       else
-        current->score = 2 * ((int) HH(thread->board.stm, move, thread->board.threatened) + //
-                              (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +        //
-                              (int) (*(ss - 2)->ch)[Moving(move)][To(move)]) +       //
-                         (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +             //
+        current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
+                         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
+                         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
+                         (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
                          (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
     }
 
@@ -190,8 +190,8 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
     // QSearch MP Steps
     case QS_GEN_NOISY_MOVES:
       picker->current = picker->endBad = picker->moves;
-      picker->end                      = AddNoisyMoves(picker->current, board);
-
+      picker->end                      = picker->depth > -5 ? AddNoisyMoves(picker->current, board) :
+                                                              AddRecaptureMoves(picker->current, board, To((picker->ss - 1)->move));
       ScoreMoves(picker, board, ST_CAPTURE);
 
       picker->phase = QS_PLAY_NOISY_MOVES;
@@ -200,7 +200,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       if (picker->current != picker->end)
         return Best(picker->current++, picker->end);
 
-      if (!picker->genChecks) {
+      if (picker->depth < -1) {
         picker->phase = -1;
         return NULL_MOVE;
       }

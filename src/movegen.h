@@ -212,19 +212,31 @@ INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm
   return AddPawnMoves(moves, GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
 }
 
-INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
-  if (BitCount(board->checkers) > 1)
-    return AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
-
-  BitBoard opts =
-    !board->checkers ? ALL : BetweenSquares(LSB(PieceBB(KING, color)), LSB(board->checkers)) | board->checkers;
-
+INLINE ScoredMove* AddPseudoLegalMovesTo(ScoredMove* moves,
+                                         Board* board,
+                                         BitBoard opts,
+                                         BitBoard kingOpts,
+                                         const int type,
+                                         const int color) {
   moves = AddPawnMoves(moves, opts, board, color, type);
   moves = AddPieceMoves(moves, opts, board, color, type, KNIGHT);
   moves = AddPieceMoves(moves, opts, board, color, type, BISHOP);
   moves = AddPieceMoves(moves, opts, board, color, type, ROOK);
   moves = AddPieceMoves(moves, opts, board, color, type, QUEEN);
-  moves = AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
+  return AddPieceMoves(moves, kingOpts, board, color, type, KING);
+}
+
+INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
+  if (BitCount(board->checkers) > 1)
+    return AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
+
+  const int kingSq  = LSB(PieceBB(KING, color));
+  const int checker = LSB(board->checkers);
+
+  BitBoard opts     = !board->checkers ? ALL : BetweenSquares(kingSq, checker) | board->checkers;
+  BitBoard kingOpts = ~board->threatened;
+
+  moves = AddPseudoLegalMovesTo(moves, board, opts, kingOpts, type, color);
   if ((type & GT_QUIET) && !board->checkers)
     moves = AddCastles(moves, board, color);
 
@@ -251,6 +263,7 @@ ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board);
 ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board);
+ScoredMove* AddRecaptureMoves(ScoredMove* moves, Board* board, const int sq);
 ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board);
 
 #endif

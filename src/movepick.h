@@ -36,7 +36,7 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
   picker->killer1  = ss->killers[0];
   picker->killer2  = ss->killers[1];
   if ((ss - 1)->move)
-    picker->counter  = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
+    picker->counter = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
   else
     picker->counter = NULL_MOVE;
 
@@ -45,15 +45,16 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
 }
 
 INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread, int threshold) {
-  picker->phase  = PC_GEN_NOISY_MOVES;
-  picker->thread = thread;
+  picker->phase     = PC_GEN_NOISY_MOVES;
+  picker->thread    = thread;
   picker->seeCutoff = threshold;
 }
 
-INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, int genChecks) {
+INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, SearchStack* ss, int depth) {
   picker->phase  = QS_GEN_NOISY_MOVES;
   picker->thread = thread;
-  picker->genChecks = genChecks;
+  picker->ss     = ss;
+  picker->depth  = depth;
 }
 
 INLINE void InitQSEvasionsPicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {

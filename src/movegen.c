@@ -43,6 +43,12 @@ ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board) {
                                AddQuietChecks(moves, board, BLACK);
 }
 
+ScoredMove* AddRecaptureMoves(ScoredMove* moves, Board* board, const int sq) {
+  return board->stm == WHITE ?
+           AddPseudoLegalMovesTo(moves, board, Bit(sq), Bit(sq) & ~board->threatened, GT_CAPTURE, WHITE) :
+           AddPseudoLegalMovesTo(moves, board, Bit(sq), Bit(sq) & ~board->threatened, GT_CAPTURE, BLACK);
+}
+
 ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
   return board->stm == WHITE ? AddLegalMoves(moves, board, WHITE) : //
                                AddLegalMoves(moves, board, BLACK);
