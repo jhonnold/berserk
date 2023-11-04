@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
 
   // Set all defaults
   fenGenParams.book = NULL;
+  fenGenParams.dir = ".";
   fenGenParams.evalLimit = 1500;
   fenGenParams.nodes = 5000;
   fenGenParams.depth = 0;
@@ -72,6 +73,7 @@ int main(int argc, char** argv) {
     OPT_BOOLEAN(0, "filter-duplicates", &fenGenParams.filterDuplicates, "Filter duplicates?", NULL, 0, 0),
     OPT_BOOLEAN(0, "chess960", &CHESS_960, "Fischer random?", NULL, 0, 0),
     OPT_STRING(0, "book", &fenGenParams.book, "EPD book", NULL, 0, 0),
+    OPT_STRING(0, "output", &fenGenParams.dir, "Output directory", NULL, 0, 0),
 
     OPT_GROUP("Search Level Options"),
     OPT_INTEGER(0, "nodes", &fenGenParams.nodes, "Min nodes", NULL, 0, 0),
@@ -104,6 +106,7 @@ int main(int argc, char** argv) {
   printf("Filter Duplicates: %d\n", fenGenParams.filterDuplicates);
   printf("Chess 960: %d\n", CHESS_960);
   printf("Book: %s\n", fenGenParams.book);
+  printf("Output Dir: %s\n", fenGenParams.dir);
   printf("Nodes: %llu\n", fenGenParams.nodes);
   printf("Depth: %d\n", fenGenParams.depth);
   printf("Random Move Count: %d\n", fenGenParams.randomMoveCount);

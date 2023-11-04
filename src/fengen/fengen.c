@@ -134,7 +134,7 @@ void* PlayGames(void* arg) {
   Board* board       = malloc(sizeof(Board));
 
   char filename[64];
-  sprintf(filename, "berserk" VERSION "_%d.fens", idx);
+  sprintf(filename, "%s/berserk" VERSION "_%d.fens", fenGenParams.dir,idx);
 
   FILE* fp = fopen(filename, "a");
   if (fp == NULL)
