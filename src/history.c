@@ -63,9 +63,6 @@ void UpdateHistories(SearchStack* ss,
   int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
 
   if (!IsCap(bestMove)) {
-    AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
-    UpdateCH(ss, bestMove, inc);
-
     if (PromoPT(bestMove) != QUEEN) {
       AddKillerMove(ss, bestMove);
 
@@ -73,6 +70,13 @@ void UpdateHistories(SearchStack* ss,
         AddCounterMove(thread, bestMove, (ss - 1)->move);
     }
 
+    // Only increase the best move history when it
+    // wasn't trivial. This idea was first thought of
+    // by Alayan in Ethereal
+    if (nQ > 1 || depth > 3) {
+      AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+      UpdateCH(ss, bestMove, inc);
+    }
   } else {
     int piece    = Moving(bestMove);
     int to       = To(bestMove);
