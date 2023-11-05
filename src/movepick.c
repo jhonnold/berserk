@@ -190,7 +190,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
     // QSearch MP Steps
     case QS_GEN_NOISY_MOVES:
       picker->current = picker->endBad = picker->moves;
-      picker->end                      = picker->depth > -4 ? AddNoisyMoves(picker->current, board) :
+      picker->end                      = picker->depth > -6 ? AddNoisyMoves(picker->current, board) :
                                                               AddRecaptureMoves(picker->current, board, To((picker->ss - 1)->move));
       ScoreMoves(picker, board, ST_CAPTURE);
 
