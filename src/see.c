@@ -25,21 +25,22 @@
 #include "util.h"
 
 const int SEE_VALUE[7] = {100, 422, 422, 642, 1015, 30000, 0};
+const int NET_VALUE[7] = {100, 318, 348, 554, 1068, 30000, 0};
 
 // Static exchange evaluation using The Swap Algorithm -
 // https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
-inline int SEE(Board* board, Move move, int threshold) {
+inline int SEEV(Board* board, Move move, int threshold, const int* values) {
   if (IsCas(move) || IsEP(move) || IsPromo(move))
     return 1;
 
   int from = From(move);
   int to   = To(move);
 
-  int v = SEE_VALUE[PieceType(board->squares[to])] - threshold;
+  int v = values[PieceType(board->squares[to])] - threshold;
   if (v < 0)
     return 0;
 
-  v -= SEE_VALUE[PieceType(Moving(move))];
+  v -= values[PieceType(Moving(move))];
   if (v >= 0)
     return 1;
 
@@ -64,7 +65,7 @@ inline int SEE(Board* board, Move move, int threshold) {
 
     stm ^= 1;
 
-    if ((v = -v - 1 - SEE_VALUE[piece]) >= 0) {
+    if ((v = -v - 1 - values[piece]) >= 0) {
       if (piece == KING && (attackers & OccBB(stm)))
         stm ^= 1;
 

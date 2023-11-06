@@ -18,9 +18,19 @@
 #define SEE_H
 
 #include "types.h"
+#include "util.h"
 
 extern const int SEE_VALUE[7];
+extern const int NET_VALUE[7];
 
-int SEE(Board* board, Move move, int threshold);
+int SEEV(Board* board, Move move, int threshold, const int* values);
+
+INLINE int SEE(Board* board, Move move, int threshold) {
+  return SEEV(board, move, threshold, SEE_VALUE);
+}
+
+INLINE int SEEReal(Board* board, Move move, int threshold) {
+  return SEEV(board, move, threshold, NET_VALUE);
+}
 
 #endif

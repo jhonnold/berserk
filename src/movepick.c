@@ -178,7 +178,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       if (picker->current != picker->end) {
         Move move = Best(picker->current++, picker->end);
 
-        if (!SEE(board, move, picker->seeCutoff))
+        if (!SEEReal(board, move, picker->seeCutoff))
           return NextMove(picker, board, skipQuiets);
 
         return move;
