@@ -179,7 +179,7 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
   return count;
 }
 
-INLINE void L1AffineReLU(float* dest, int8_t* src) {
+INLINE void L1Affine(float* dest, int8_t* src) {
   const size_t OUT_WIDTH  = sizeof(__m512i) / sizeof(int32_t);
   const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
@@ -220,8 +220,19 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm512_cvtepi32_ps(_mm512_max_epi32(regs[i], _mm512_setzero_si512()));
+    out[i] = _mm512_cvtepi32_ps(regs[i]);
 }
+
+INLINE void L1ReLU(float* outputs) {
+  const size_t OUT_WIDTH = sizeof(__m512) / sizeof(float);
+  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
+
+  __m512* out = (__m512*) outputs;
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    out[i] = _mm512_max_ps(out[i], _mm512_setzero_ps());
+}
+
 #elif defined(__AVX2__)
 INLINE void m256_add_dpbusd_epi32(__m256i* acc, __m256i a, __m256i b) {
   __m256i p0 = _mm256_maddubs_epi16(a, b);
@@ -275,7 +286,7 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
   return count;
 }
 
-INLINE void L1AffineReLU(float* dest, int8_t* src) {
+INLINE void L1Affine(float* dest, int8_t* src) {
   const size_t OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t);
   const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
@@ -316,7 +327,17 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm256_cvtepi32_ps(_mm256_max_epi32(regs[i], _mm256_setzero_si256()));
+    out[i] = _mm256_cvtepi32_ps(regs[i]);
+}
+
+INLINE void L1ReLU(float* outputs) {
+  const size_t OUT_WIDTH = sizeof(__m256) / sizeof(float);
+  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
+
+  __m256* out = (__m256*) outputs;
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    out[i] = _mm256_max_ps(out[i], _mm256_setzero_ps());
 }
 
 #elif defined(__SSSE3__)
@@ -372,7 +393,7 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
   return count;
 }
 
-INLINE void L1AffineReLU(float* dest, int8_t* src) {
+INLINE void L1Affine(float* dest, int8_t* src) {
   const size_t OUT_WIDTH  = sizeof(__m128i) / sizeof(int32_t);
   const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
@@ -413,10 +434,21 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm_max_ps(_mm_cvtepi32_ps(regs[i]), _mm_setzero_ps());
+    out[i] = _mm_cvtepi32_ps(regs[i]);
 }
+
+INLINE void L1ReLU(float* outputs) {
+  const size_t OUT_WIDTH = sizeof(__m128) / sizeof(float);
+  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
+
+  __m128* out = (__m128*) outputs;
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    out[i] = _mm_max_ps(out[i], _mm_setzero_ps());
+}
+
 #else
-INLINE void L1AffineReLU(float* dest, int8_t* src) {
+INLINE void L1Affine(float* dest, int8_t* src) {
   for (size_t i = 0; i < N_L2; i++)
     dest[i] = L1_BIASES[i];
 
@@ -427,10 +459,13 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
     for (size_t j = 0; j < N_L2; j++)
       dest[j] += src[i] * L1_WEIGHTS[j * N_L1 + i];
   }
-
-  for (size_t i = 0; i < N_L2; i++)
-    dest[i] = Max(0, dest[i]);
 }
+
+INLINE void L1ReLU(float* outputs) {
+  for (size_t i = 0; i < N_L2; i++)
+    outputs[i] = Max(0, outputs[i]);
+}
+
 #endif
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
@@ -647,9 +682,14 @@ int Propagate(Accumulator* accumulator, const int stm) {
   float x2[N_L3] ALIGN;
 
   InputReLU(x0, accumulator, stm);
-  L1AffineReLU(x1, x0);
+
+  L1Affine(x1, x0);
+  float skipNeuron = x1[N_L2 - 1];
+  x1[N_L2 - 1]     = 0;
+  L1ReLU(x1);
+
   L2AffineReLU(x2, x1);
-  return L3Transform(x2) / 32;
+  return (L3Transform(x2) + skipNeuron) / 32;
 }
 
 int Predict(Board* board) {
