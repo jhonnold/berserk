@@ -641,7 +641,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int newDepth = depth + extension;
 
     // Late move reductions
-    if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
+    if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
@@ -666,7 +666,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(depth - 1, Max(R, 1));
+      R = Min(newDepth, Max(R, 1));
 
       int lmrDepth = newDepth - R;
       score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
