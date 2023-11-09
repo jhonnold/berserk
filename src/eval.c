@@ -21,11 +21,9 @@
 #include "attacks.h"
 #include "bits.h"
 #include "board.h"
-#include "endgame.h"
 #include "move.h"
 #include "nn/accumulator.h"
 #include "nn/evaluate.h"
-#include "search.h"
 #include "uci.h"
 #include "util.h"
 
@@ -41,9 +39,8 @@ void SetContempt(int* dest, int stm) {
 
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
-  Score knownEval = EvaluateKnownPositions(board);
-  if (knownEval != UNKNOWN)
-    return knownEval;
+  if (IsMaterialDraw(board))
+    return 0;
 
   Accumulator* acc = board->accumulators;
   for (int c = WHITE; c <= BLACK; c++) {
@@ -63,7 +60,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
 
-  return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
+  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, score));
 }
 
 void EvaluateTrace(Board* board) {

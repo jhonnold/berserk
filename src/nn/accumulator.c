@@ -100,7 +100,7 @@ void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, con
   const int movingSide = Moving(move) & 1;
 
   int from = FeatureIdx(Moving(move), From(move), king, view);
-  int to   = FeatureIdx(Promo(move) ?: Moving(move), To(move), king, view);
+  int to   = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
 
   if (IsCas(move)) {
     int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);

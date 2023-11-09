@@ -1,3 +1,0 @@
-[submodule "src/networks"]
-	path = src/networks
-	url = https://github.com/jhonnold/berserk-networks
