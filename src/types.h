@@ -86,11 +86,11 @@ typedef struct {
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no
                 // active ep)
 
-  BitBoard checkers;     // checking piece squares
-  BitBoard pinned;       // pinned pieces
+  BitBoard checkers; // checking piece squares
+  BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;   // opponent "threatening" these squares
-  BitBoard easyCapture;  // opponent capturing these is a guarantee SEE > 0
+  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0
 
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position

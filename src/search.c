@@ -280,12 +280,8 @@ void Search(ThreadData* thread) {
     // Time Management stuff
     long elapsed = GetTimeMS() - Limits.start;
 
-    // Maximum time exceeded, hard exit
-    if (Limits.timeset && elapsed >= Limits.max) {
-      break;
-    }
     // Soft TM checks
-    else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
+    if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
       int sameBestMove       = bestMove == previousBestMove;                    // same move?
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.3658 - 0.0482 * searchStability;
