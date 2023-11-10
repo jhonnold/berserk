@@ -54,8 +54,6 @@ int IsRepetition(Board* board, int ply);
 int IsMaterialDraw(Board* board);
 int IsFiftyMoveRule(Board* board);
 
-int HasNonPawn(Board* board);
-
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);
 void MakeMove(Move move, Board* board);
@@ -67,6 +65,10 @@ int IsLegal(Move move, Board* board);
 
 void InitCuckoo();
 int HasCycle(Board* board, int ply);
+
+INLINE int HasNonPawn(Board* board, const int color) {
+  return !!(OccBB(color) ^ PieceBB(KING, color) ^ PieceBB(PAWN, color));
+}
 
 INLINE int MoveRequiresRefresh(int piece, int from, int to) {
   if (PieceType(piece) != KING)

@@ -280,12 +280,8 @@ void Search(ThreadData* thread) {
     // Time Management stuff
     long elapsed = GetTimeMS() - Limits.start;
 
-    // Maximum time exceeded, hard exit
-    if (Limits.timeset && elapsed >= Limits.max) {
-      break;
-    }
     // Soft TM checks
-    else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
+    if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
       int sameBestMove       = bestMove == previousBestMove;                    // same move?
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.3658 - 0.0482 * searchStability;
@@ -487,9 +483,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
-        // weiss conditional
-        HasNonPawn(board) > (depth > 12)) {
+    if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta && HasNonPawn(board, board->stm) &&
+        (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
       int R = 5 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4) + !board->easyCapture;
       R     = Min(depth, R); // don't go too low
 
@@ -502,8 +497,23 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       UndoNullMove(board);
 
-      if (score >= beta)
-        return score < TB_WIN_BOUND ? score : beta;
+      if (score >= beta) {
+        if (score >= TB_WIN_BOUND)
+          score = beta;
+
+        if (thread->nmpMinPly || (abs(beta) < TB_WIN_BOUND && depth < 14))
+          return score;
+
+        thread->nmpMinPly = ss->ply + 3 * (depth - R) / 4;
+        thread->npmColor  = board->stm;
+
+        Score verify = Negamax(beta - 1, beta, depth - R, 0, thread, pv, ss);
+
+        thread->nmpMinPly = 0;
+
+        if (verify >= beta)
+          return score;
+      }
     }
 
     // Prob cut
@@ -559,7 +569,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = GetHistory(ss, thread, move);
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= history / 8192; // adjust reduction based on historical score
+    R -= history / 8192;                         // adjust reduction based on historical score
     R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
@@ -641,7 +651,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int newDepth = depth + extension;
 
     // Late move reductions
-    if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
+    if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
@@ -666,7 +676,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(depth - 1, Max(R, 1));
+      R = Min(newDepth, Max(R, 1));
 
       int lmrDepth = newDepth - R;
       score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
