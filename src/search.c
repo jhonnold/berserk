@@ -171,6 +171,9 @@ void MainSearch() {
   ThreadData* mainThread = Threads.threads[0];
   Board* board           = &mainThread->board;
 
+  char startFen[128];
+  BoardToFen(startFen, board);
+
   TTUpdate();
 
   for (int i = 1; i < Threads.count; i++)
@@ -209,6 +212,21 @@ void MainSearch() {
   Move ponderMove = NULL_MOVE;
   if (bestThread->rootMoves[0].pv.count > 1)
     ponderMove = bestThread->rootMoves[0].pv.moves[1];
+  else {
+    // Pull ponder move from the TT if PV doesn't have one.
+    // We reload the startfen because jmp aborts don't guarantee a rolled back board
+    ParseFen(startFen, board);
+
+    MakeMove(bestMove, board);
+    int ttHit = 0, ttScore, ttEval, ttDepth, ttBound, ttPv = 0;
+    TTProbe(board->zobrist, 0, &ttHit, &ponderMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
+
+    // Set to NULL if not legal
+    if (!(ttHit && IsPseudoLegal(ponderMove, board) && IsLegal(ponderMove, board)))
+      ponderMove = NULL_MOVE;
+
+    UndoMove(bestMove, board);
+  }
 
   mainThread->previousScore = bestThread->rootMoves[0].score;
 
@@ -331,12 +349,8 @@ void Search(ThreadData* thread) {
     // Time Management stuff
     long elapsed = GetTimeMS() - Limits.start;
 
-    // Maximum time exceeded, hard exit
-    if (Limits.timeset && elapsed >= Limits.max) {
-      break;
-    }
     // Soft TM checks
-    else if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
+    if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
       int sameBestMove       = bestMove == previousBestMove;                    // same move?
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = f0 - f1 * searchStability;
@@ -538,9 +552,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= k0 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta &&
-        // weiss conditional
-        HasNonPawn(board) > (depth > 12)) {
+    if (depth >= k0 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta && HasNonPawn(board, board->stm) &&
+        (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
 
       int R = k1 + k2 * depth / 1024 + Min(k3 * (eval - beta) / 1024, k4) + !board->easyCapture;
       R     = Min(depth, R); // don't go too low
@@ -554,8 +567,23 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       UndoNullMove(board);
 
-      if (score >= beta)
-        return score < TB_WIN_BOUND ? score : beta;
+      if (score >= beta) {
+        if (score >= TB_WIN_BOUND)
+          score = beta;
+
+        if (thread->nmpMinPly || (abs(beta) < TB_WIN_BOUND && depth < 14))
+          return score;
+
+        thread->nmpMinPly = ss->ply + 3 * (depth - R) / 4;
+        thread->npmColor  = board->stm;
+
+        Score verify = Negamax(beta - 1, beta, depth - R, 0, thread, pv, ss);
+
+        thread->nmpMinPly = 0;
+
+        if (verify >= beta)
+          return score;
+      }
     }
 
     // Prob cut
@@ -610,19 +638,23 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
     int history         = GetHistory(ss, thread, move);
 
+    int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
+    R -= history / 8192;                         // adjust reduction based on historical score
+    R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
-        int lmrDepth = Max(1, depth - LMR[Min(depth, 63)][Min(legalMoves, 63)]);
+        int lmrDepth = Max(1, depth - R);
 
         if (!killerOrCounter && lmrDepth < m0 && history < -m1 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
 
-        if (!inCheck && lmrDepth < n0 && eval + n1 + n2 * lmrDepth + n3 * history / 2048 <= alpha)
+        if (!inCheck && lmrDepth < n0 && eval + n1 + n2 * lmrDepth <= alpha)
           skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
@@ -689,9 +721,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int newDepth = depth + extension;
 
     // Late move reductions
-    if (depth > 2 && legalMoves > 1 && !(isPV && IsCap(move))) {
-      int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-
+    if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
@@ -704,10 +734,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (killerOrCounter)
         R -= 2;
 
-      // less likely a non-capture is best
-      if (IsCap(hashMove) || IsPromo(hashMove))
-        R++;
-
       // move GAVE check
       if (board->checkers)
         R--;
@@ -719,18 +745,20 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (cutnode)
         R += 1 + !IsCap(move);
 
-      // adjust reduction based on historical score
-      R -= p0 * history / 65536;
-
       // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(depth - 1, Max(R, 1));
+      R = Min(newDepth, Max(R, 1));
 
-      score = -Negamax(-alpha - 1, -alpha, newDepth - R, 1, thread, &childPv, ss + 1);
+      int lmrDepth = newDepth - R;
+      score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
 
       if (score > alpha && R > 1) {
+        // Credit to Viz (and lonfom) for the following modification of the zws
+        // re-search depth. They can be found in SF as doDeeperSearch + doShallowerSearch
         newDepth += (score > bestScore + q0);
+        newDepth -= (score < bestScore + newDepth);
 
-        score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+        if (newDepth - 1 > lmrDepth)
+          score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
       }
     } else if (!isPV || playedMoves > 1) {
       score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);

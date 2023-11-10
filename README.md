@@ -26,7 +26,7 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
 - [CCC](https://www.chess.com/computer-chess-championship)
 - [Graham's Broadcasts](https://ccrl.live/)
 
-## Funcational Details 
+## Functional Details
 
 ### Board Representation and Move Generation
 
@@ -57,7 +57,6 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
 - [Countermove Heuristic](https://www.chessprogramming.org/Countermove_Heuristic)
 - [Extensions](https://www.chessprogramming.org/Extensions)
   - [Singular](https://www.chessprogramming.org/Singular_Extensions)
-  - [Check](https://www.chessprogramming.org/Check_Extensions)
 
 ### Evaluation
 
@@ -65,7 +64,9 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
   - Horizontally Mirrored 16 Buckets
   - 2x(12288 -> 512) -> 1
 - [Berserk FenGen](https://github.com/jhonnold/berserk/tree/fen-gen)
-- [Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)
+- [Grapheus](https://github.com/Luecx/Grapheus)
+- ~~[Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)~~
+  - This has been deprecated in favor of an even newer trainer written by Luecx, Grapheus.
 - ~~[Berserk Trainer](https://github.com/jhonnold/berserk-trainer)~~
   - This has been deprecated in favor of Koivisto's trainer, but trained all networks through Berserk 8.5.1+
 
@@ -74,7 +75,7 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
 ```bash
 $ git clone https://github.com/jhonnold/berserk
 $ cd berserk/src
-$ make basic
+$ make pgo
 $ ./berserk
 ```
 
@@ -94,6 +95,7 @@ This engine could not be written without some influence and they are...
 
 ### Additional Resources
 
+- [Grapheus](https://github.com/Luecx/Grapheus)
 - [Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)
 - [OpenBench](https://github.com/AndyGrant/OpenBench)
 - [TalkChess Forum](http://talkchess.com/forum3/viewforum.php?f=7)

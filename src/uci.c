@@ -116,7 +116,7 @@ float w1 = 0.05;
 float x0 = 0.8;
 float x1 = 5.5;
 
-int MOVE_OVERHEAD  = 300;
+int MOVE_OVERHEAD  = 6;
 int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
@@ -129,8 +129,8 @@ SearchParams Limits;
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
-const double as[4] = {-3.07928903, 18.97319804, -8.46890784, 158.46134040};
-const double bs[4] = {-4.96597173, 35.69301252, -74.12937947, 83.89730450};
+const double as[4] = {-5.83465749, 46.43599644, -58.49798392, 172.62328616};
+const double bs[4] = {-7.95320845, 48.50833438, -66.34647240, 56.29169197};
 
 // win% as permilli given score and ply
 int WRModel(Score s, int ply) {
@@ -251,15 +251,15 @@ void ParseGo(char* in, Board* board) {
       Limits.timeset = 1;
 
       if (movesToGo == -1) {
-        int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
+        int total = Max(1, time + 50 * inc - 50 * MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * w0, total * w1);
-        Limits.max   = Min((time - MOVE_OVERHEAD) * x0, Limits.alloc * x1);
+        Limits.max   = Min(time * x0 - MOVE_OVERHEAD, Limits.alloc * x1) - 10;
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * 0.9, (0.9 * total) / Max(1, movesToGo / 2.5));
-        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
+        Limits.max   = Min(time * 0.8 - MOVE_OVERHEAD, Limits.alloc * 5.5) - 10;
       }
     } else {
       // no time control
@@ -335,7 +335,7 @@ void PrintUCIOptions() {
   printf("option name Ponder type check default false\n");
   printf("option name UCI_ShowWDL type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
-  printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
+  printf("option name MoveOverhead type spin default 6 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
 
@@ -412,7 +412,6 @@ void UCILoop() {
   Board board;
   ParseFen(START_FEN, &board);
 
-  setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
   Threads.searching = Threads.sleeping = 0;
@@ -549,7 +548,7 @@ void UCILoop() {
       TTClear();
       SearchClear();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
-      MOVE_OVERHEAD = Min(10000, Max(100, GetOptionIntValue(in)));
+      MOVE_OVERHEAD = Min(10000, Max(0, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
       CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {

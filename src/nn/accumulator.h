@@ -23,7 +23,7 @@
 #include "../types.h"
 #include "../util.h"
 
-#if defined(__AVX512F__)
+#if defined(__AVX512F__) && defined(__AVX512BW__)
 #define UNROLL     512
 #define NUM_REGS   16
 #define regi_t     __m512i
