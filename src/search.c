@@ -858,12 +858,6 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         break;
 
       if (!inCheck && IsCap(move) && !GivesCheck(move, board)) {
-        int captured = IsEP(move) ? PAWN : PieceType(board->squares[To(move)]);
-        if (futility + NET_PC_VALUE[captured] <= alpha) {
-          bestScore = Max(bestScore, futility + NET_PC_VALUE[captured]);
-          continue;
-        }
-
         if (futility <= alpha && !SEE(board, move, 1)) {
           bestScore = Max(bestScore, futility);
           continue;
