@@ -41,7 +41,7 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD  = 300;
+int MOVE_OVERHEAD  = 6;
 int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
@@ -176,15 +176,15 @@ void ParseGo(char* in, Board* board) {
       Limits.timeset = 1;
 
       if (movesToGo == -1) {
-        int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
+        int total = Max(1, time + 50 * inc - 50 * MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * 0.3784, total * 0.0570);
-        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.7776, Limits.alloc * 5.8320);
+        Limits.max   = Min(time * 0.7776 - MOVE_OVERHEAD, Limits.alloc * 5.8320) - 10;
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * 0.9, (0.9 * total) / Max(1, movesToGo / 2.5));
-        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
+        Limits.max   = Min(time * 0.8 - MOVE_OVERHEAD, Limits.alloc * 5.5) - 10;
       }
     } else {
       // no time control
@@ -260,7 +260,7 @@ void PrintUCIOptions() {
   printf("option name Ponder type check default false\n");
   printf("option name UCI_ShowWDL type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
-  printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
+  printf("option name MoveOverhead type spin default 6 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
   printf("uciok\n");
@@ -419,7 +419,7 @@ void UCILoop() {
       TTClear();
       SearchClear();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
-      MOVE_OVERHEAD = Min(10000, Max(100, GetOptionIntValue(in)));
+      MOVE_OVERHEAD = Min(10000, Max(0, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
       CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {

@@ -238,18 +238,6 @@ void PrintBoard(Board* board) {
   printf("\nFEN: %s\n\n", fenBuffer);
 }
 
-inline int HasNonPawn(Board* board) {
-  return BitCount(OccBB(board->stm) ^ PieceBB(KING, board->stm) ^ PieceBB(PAWN, board->stm));
-}
-
-inline int IsOCB(Board* board) {
-  BitBoard nonBishopMaterial = PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK) | PieceBB(ROOK, WHITE) |
-                               PieceBB(ROOK, BLACK) | PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK);
-
-  return !nonBishopMaterial && BitCount(PieceBB(BISHOP, WHITE)) == 1 && BitCount(PieceBB(BISHOP, BLACK)) == 1 &&
-         BitCount((PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)) & DARK_SQS) == 1;
-}
-
 // Special pieces are those giving check, and those that are pinned
 // these must be recalculated every move for faster move legality purposes
 inline void SetSpecialPieces(Board* board) {
