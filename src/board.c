@@ -710,6 +710,40 @@ int IsLegal(Move move, Board* board) {
   return !GetBit(board->pinned, from) || GetBit(PinnedMoves(from, kingSq), to);
 }
 
+int GivesCheck(Move move, Board* board) {
+  const int from = From(move);
+  const int to   = To(move);
+  const int pc   = Moving(move);
+  const int pt   = PieceType(pc);
+
+  const BitBoard oppKing = PieceBB(KING, board->xstm);
+  BitBoard occ           = (OccBB(BOTH) ^ Bit(from)) | Bit(to);
+
+  // Castle gives check with a rook
+  if (IsCas(move))
+    return !!(GetRookAttacks(CASTLE_ROOK_DEST[to], occ) & oppKing);
+
+  // Destination piece gives direct check
+  else if (pt != KING) {
+    const int destType = IsPromo(move) ? PromoPT(move) : pt;
+
+    if (pt == PAWN && GetPawnAttacks(to, board->stm) & oppKing)
+      return 1;
+    else if (GetPieceAttacks(to, occ, destType) & oppKing)
+      return 1;
+  }
+
+  // Update the OccBB in case of EP
+  if (IsEP(move))
+    FlipBit(occ, to - PawnDir(board->stm));
+
+  const BitBoard diag  = PieceBB(BISHOP, board->stm) | PieceBB(QUEEN, board->stm);
+  const BitBoard ortho = PieceBB(ROOK, board->stm) | PieceBB(QUEEN, board->stm);
+  const int oppKingSq  = LSB(oppKing);
+
+  return !!((GetPieceAttacks(oppKingSq, occ, BISHOP) & diag) | (GetPieceAttacks(oppKingSq, occ, ROOK) & ortho));
+}
+
 uint64_t cuckoo[8192];
 Move cuckooMove[8192];
 

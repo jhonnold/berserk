@@ -46,6 +46,8 @@ int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
 int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 
+const int NET_PC_VALUE[7] = {100, 318, 348, 554, 1068, 30000, 0};
+
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
@@ -855,9 +857,17 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       if (inCheck && !(IsCap(move) || IsPromo(move)))
         break;
 
-      if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
-        bestScore = Max(bestScore, futility);
-        continue;
+      if (!inCheck && IsCap(move) && !GivesCheck(move, board)) {
+        int captured = IsEP(move) ? PAWN : PieceType(board->squares[To(move)]);
+        if (futility + NET_PC_VALUE[captured] <= alpha) {
+          bestScore = Max(bestScore, futility + NET_PC_VALUE[captured]);
+          continue;
+        }
+
+        if (futility <= alpha && !SEE(board, move, 1)) {
+          bestScore = Max(bestScore, futility);
+          continue;
+        }
       }
 
       if (!SEE(board, move, 0))
