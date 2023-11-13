@@ -546,6 +546,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
+  int quietSingular = 0;
+
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
@@ -633,6 +635,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           } else {
             extension = 1;
           }
+
+          quietSingular = !IsCap(hashMove);
         } else if (sBeta >= beta)
           return sBeta;
         else if (ttScore >= beta)
@@ -674,6 +678,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
         R += 1 + !IsCap(move);
+
+      if (quietSingular)
+        R--;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(newDepth, Max(R, 1));
