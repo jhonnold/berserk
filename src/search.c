@@ -541,7 +541,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         UndoMove(move, board);
 
         if (score >= probBeta)
-          return score - 197;
+          return score - 99;
       }
     }
   }
