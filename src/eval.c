@@ -30,8 +30,8 @@
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE       = 64;
 
-void SetContempt(int* dest, int stm) {
-  int contempt = CONTEMPT;
+void SetContempt(int* dest, int stm, int score) {
+  int contempt = CONTEMPT + 50 * score / (abs(score) + 125);
 
   dest[stm]     = contempt;
   dest[stm ^ 1] = -contempt;
@@ -54,11 +54,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
 
-  // static contempt
-  score += thread->contempt[board->stm];
-
   // scaled based on phase [1, 1.5]
-  score = (128 + board->phase) * score / 128;
+  score = (128 + board->phase) * score / 128 + board->phase * thread->contempt[board->stm] / 64;
 
   return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, score));
 }

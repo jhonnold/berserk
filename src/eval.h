@@ -26,7 +26,7 @@
 extern const int PHASE_VALUES[6];
 extern const int MAX_PHASE;
 
-void SetContempt(int* dest, int stm);
+void SetContempt(int* dest, int stm, int score);
 Score Evaluate(Board* board, ThreadData* thread);
 void EvaluateTrace(Board* board);
 

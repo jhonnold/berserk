@@ -175,7 +175,6 @@ void Search(ThreadData* thread) {
   board->accumulators = thread->accumulators; // exit jumps can cause this pointer to not be reset
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
-  SetContempt(thread->contempt, board->stm);
 
   PV nullPv;
   int scores[MAX_SEARCH_PLY];
@@ -213,6 +212,8 @@ void Search(ThreadData* thread) {
       int delta       = CHECKMATE;
       int searchDepth = thread->depth;
       int score       = thread->rootMoves[thread->multiPV].previousScore;
+
+      SetContempt(thread->contempt, board->stm, score);
 
       thread->seldepth = 0;
 
