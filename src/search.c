@@ -570,7 +570,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
     R -= history / 8192;                         // adjust reduction based on historical score
-    R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+    R += (legalMoves > 1) && (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
@@ -650,8 +650,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // apply extensions
     int newDepth = depth + extension;
 
-    // Late move reductions
-    if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
+    if (legalMoves > 1) {
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
@@ -674,7 +673,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
         R += 1 + !IsCap(move);
+    }
 
+    // Late move reductions
+    if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(newDepth, Max(R, 1));
 
@@ -691,7 +693,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
       }
     } else if (!isPV || playedMoves > 1) {
-      score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+      score = -Negamax(-alpha - 1, -alpha, newDepth - 1 - (R > 4), !cutnode, thread, &childPv, ss + 1);
     }
 
     if (isPV && (playedMoves == 1 || (score > alpha && (isRoot || score < beta))))
