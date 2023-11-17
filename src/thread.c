@@ -113,7 +113,8 @@ void* ThreadInit(void* arg) {
 
   // Alloc all the necessary accumulators
   thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
-  thread->refreshTable = (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
+  thread->refreshTable =
+    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
   ResetRefreshTable(thread->refreshTable);
 
   // Copy these onto the board for easier access within the engine
@@ -208,9 +209,10 @@ INLINE void InitRootMove(RootMove* rm, Move move) {
 
 void SetupMainThread(Board* board) {
   ThreadData* mainThread = Threads.threads[0];
-  mainThread->calls      = 0;
+  mainThread->calls      = Limits.hitrate;
   mainThread->nodes      = 0;
   mainThread->tbhits     = 0;
+  mainThread->nmpMinPly  = 0;
 
   memcpy(&mainThread->board, board, offsetof(Board, accumulators));
 
@@ -238,9 +240,10 @@ void SetupOtherThreads(Board* board) {
 
   for (int i = 1; i < Threads.count; i++) {
     ThreadData* thread = Threads.threads[i];
-    thread->calls      = 0;
+    thread->calls      = Limits.hitrate;
     thread->nodes      = 0;
     thread->tbhits     = 0;
+    thread->nmpMinPly  = 0;
 
     for (int j = 0; j < mainThread->numRootMoves; j++)
       InitRootMove(&thread->rootMoves[j], mainThread->rootMoves[j].move);
