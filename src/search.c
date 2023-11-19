@@ -641,7 +641,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           extension = -1;
       }
 
-      else if (isPV && move == hashMove && IsCap(move) && IsCap((ss - 1)->move) && To(move) == To((ss - 1)->move) && ttBound != BOUND_UPPER)
+      else if (isPV && depth >= 6 && move == hashMove && IsCap(move) && IsCap((ss - 1)->move) && To(move) == To((ss - 1)->move))
         extension = 1;
     }
 
