@@ -90,7 +90,6 @@ extern int m1;
 extern int n0;
 extern int n1;
 extern int n2;
-extern int n3;
 
 extern int o0;
 extern int o1;
@@ -108,13 +107,12 @@ extern int s0;
 extern int t0;
 
 extern int u0;
-extern int u1;
 
-float w0 = 0.33;
-float w1 = 0.05;
+float w0 = 0.3784;
+float w1 = 0.0570;
 
-float x0 = 0.8;
-float x1 = 5.5;
+float x0 = 0.7776;
+float x1 = 5.8320;
 
 int MOVE_OVERHEAD  = 6;
 int MULTI_PV       = 1;
@@ -375,7 +373,6 @@ void PrintUCIOptions() {
   printf("option name n0 type string\n");
   printf("option name n1 type string\n");
   printf("option name n2 type string\n");
-  printf("option name n3 type string\n");
   printf("option name o0 type string\n");
   printf("option name o1 type string\n");
   printf("option name o2 type string\n");
@@ -386,7 +383,6 @@ void PrintUCIOptions() {
   printf("option name s0 type string\n");
   printf("option name t0 type string\n");
   printf("option name u0 type string\n");
-  printf("option name u1 type string\n");
   printf("option name w0 type string\n");
   printf("option name w1 type string\n");
   printf("option name x0 type string\n");
@@ -604,7 +600,6 @@ void UCILoop() {
     IO(n0)
     IO(n1)
     IO(n2)
-    IO(n3)
     IO(o0)
     IO(o1)
     IO(o2)
@@ -615,7 +610,6 @@ void UCILoop() {
     IO(s0)
     IO(t0)
     IO(u0)
-    IO(u1)
     FO(w0)
     FO(w1)
     FO(x0)

@@ -41,74 +41,72 @@
 #include "util.h"
 #include "zobrist.h"
 
-float a0 = 2.25;
-float a1 = 0.25;
+float a0 = 2.1872;
+float a1 = 0.2487;
 
-float b0 = 1.5;
-float b1 = 0.5;
+float b0 = 1.2973;
+float b1 = 0.3772;
 
-float c0 = 3.0;
-float c1 = 1.0;
+float c0 = 2.7002;
+float c1 = 0.9448;
 
-float d0 = 17.0;
+float d0 = 14.9419;
 
-float e0 = 104.0;
+float e0 = 103.9379;
 
-float f0 = 1.25;
-float f1 = 0.05;
+float f0 = 1.3658;
+float f1 = 0.0482;
 
-float g0 = 0.1;
-float g1 = 0.0275;
-float g2 = 0.0275;
-float g3 = 0.5;
-float g4 = 1.5;
+float g0 = 0.0995;
+float g1 = 0.0286;
+float g2 = 0.0261;
+float g3 = 0.4843;
+float g4 = 1.4498;
 
-float h0 = 0.5;
-float h1 = 2.0;
-float h2 = 0.4;
+float h0 = 0.5464;
+float h1 = 2.1394;
+float h2 = 0.4393;
 
 int i0 = 8;
-int i1 = 69;
+int i1 = 67;
 int i2 = 112;
-int i3 = 12288;
+int i3 = 12525;
 
 int v0 = 6;
-int v1 = 250;
+int v1 = 252;
 
-int k0 = 3;
-int k1 = 4;
-int k2 = 188;
+int k0 = 4;
+int k1 = 5;
+int k2 = 221;
 int k3 = 5;
-int k4 = 3;
+int k4 = 4;
 
-int l0 = 200;
+int l0 = 197;
 int l1 = 5;
 
-int m0 = 6;
-int m1 = 2500;
+int m0 = 7;
+int m1 = 2658;
 
 int n0 = 10;
-int n1 = 88;
-int n2 = 47;
-int n3 = 13;
+int n1 = 87;
+int n2 = 46;
 
 int o0 = 6;
 int o1 = 5;
-int o2 = 18;
+int o2 = 17;
 int o3 = 6;
 
-int p0 = 9;
+int p0 = 8;
 
-int q0 = 75;
+int q0 = 76;
 
-int r0 = 10;
+int r0 = 11;
 
-int s0 = 86;
+int s0 = 78;
 
-int t0 = 55;
+int t0 = 60;
 
-int u0 = 10;
-int u1 = 16;
+int u0 = 9;
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
@@ -326,7 +324,7 @@ void Search(ThreadData* thread) {
           break;
 
         // delta x 1.25
-        delta += u1 * delta / 64;
+        delta += delta / 4;
       }
 
       SortRootMoves(thread, 0);
@@ -639,7 +637,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = GetHistory(ss, thread, move);
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= history / 8192;                         // adjust reduction based on historical score
+    R -= p0 * history / 65536;                         // adjust reduction based on historical score
     R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
