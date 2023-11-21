@@ -563,6 +563,8 @@ void UCILoop() {
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
       CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
     }
+    // else
+    //   printf("Unknown command: %s \n", in);
 
     FO(a0)
     FO(a1)
@@ -615,8 +617,7 @@ void UCILoop() {
     FO(x0)
     FO(x1)
 
-    else
-      printf("Unknown command: %s \n", in);
+    else printf("Unknown command: %s \n", in);
 
     InitPruningAndReductionTables();
   }
