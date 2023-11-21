@@ -472,8 +472,8 @@ void UndoMove(Move move, Board* board) {
   FlipBits(OccBB(board->stm), to, from);
   FlipBits(OccBB(BOTH), to, from);
 
-  board->squares[from] = piece;
   board->squares[to]   = NO_PIECE;
+  board->squares[from] = piece;
 
   if (IsCas(move)) {
     int rookFrom = board->cr[CASTLING_ROOK[to]];

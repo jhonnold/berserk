@@ -152,19 +152,26 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
   BitBoard movers = PieceBB(piece, stm);
   while (movers) {
     int from = PopLSB(&movers);
-
     BitBoard valid = GetPieceAttacks(from, OccBB(BOTH), piece) & opts;
-    BitBoard targets = type == GT_QUIET ? valid & ~OccBB(BOTH) : //
-                       type == GT_CAPTURE ? valid & OccBB(xstm) : //
-                       valid & ~OccBB(stm);
 
-    while (targets) {
-      int to = PopLSB(&targets);
-      int flags = type == GT_QUIET ? QUIET_FLAG : //
-                  type == GT_CAPTURE ? CAPTURE_FLAG : //
-                  GetBit(OccBB(xstm), to) ? CAPTURE_FLAG : QUIET_FLAG;
+    if (type & GT_CAPTURE) {
+      BitBoard targets = valid & OccBB(xstm);
 
-      moves = AddMove(moves, from, to, Piece(piece, stm), flags);
+      while (targets) {
+        int to = PopLSB(&targets);
+
+        moves = AddMove(moves, from, to, Piece(piece, stm), CAPTURE_FLAG);
+      }
+    }
+
+    if (type & GT_QUIET) {
+      BitBoard targets = valid & ~OccBB(BOTH);
+
+      while (targets) {
+        int to = PopLSB(&targets);
+
+        moves = AddMove(moves, from, to, Piece(piece, stm), QUIET_FLAG);
+      }
     }
   }
 
