@@ -15,9 +15,9 @@ WARN   = -Wall -Wextra -Wshadow -Werror
 FLAGS  = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
 CFLAGS = $(FLAGS) -m64 -mpopcnt -msse -msse2
 
-# Detecting windows
-ifeq ($(shell echo "test"), "test")
-	CFLAGS += -static
+KERNEL = $(shell uname -s)
+ifeq ($(KERNEL),Linux)
+	OS = $(shell uname -o)
 endif
 
 # Setup arch
@@ -46,6 +46,11 @@ ifeq ($(ARCH), native)
 	endif
 else ifeq ($(findstring -pext, $(ARCH)), -pext)
 	CFLAGS += -DUSE_PEXT -mbmi2
+endif
+
+# Static target for windows
+ifeq ($(OS),Windows_NT)
+	CFLAGS += -static
 endif
 
 build: download-network
