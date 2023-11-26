@@ -23,7 +23,7 @@
 
 #define EVAL_UNKNOWN 2046
 
-extern const int PHASE_VALUES[6];
+extern const int PHASE_VALUES[7];
 extern const int MAX_PHASE;
 
 void SetContempt(int* dest, int stm);
