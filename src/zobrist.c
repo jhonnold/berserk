@@ -20,13 +20,14 @@
 #include "random.h"
 #include "types.h"
 
-uint64_t ZOBRIST_PIECES[12][64];
+uint64_t ZOBRIST_PIECES[15][64];
 uint64_t ZOBRIST_EP_KEYS[64];
 uint64_t ZOBRIST_CASTLE_KEYS[16];
 uint64_t ZOBRIST_SIDE_KEY;
 
 void InitZobristKeys() {
-  for (int i = 0; i < 12; i++)
+
+  for (int i = 0; i < 15; i++)
     for (int j = 0; j < 64; j++)
       ZOBRIST_PIECES[i][j] = RandomUInt64();
 
@@ -43,10 +44,14 @@ void InitZobristKeys() {
 uint64_t Zobrist(Board* board) {
   uint64_t hash = 0ULL;
 
-  for (int piece = WHITE_PAWN; piece <= BLACK_KING; piece++) {
-    BitBoard pcs = board->pieces[piece];
-    while (pcs)
-      hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
+  for (int color = WHITE; color <= BLACK; color++) {
+    for (int pt = PAWN; pt <= KING; pt++) {
+      const int piece = Piece(pt, color);
+
+      BitBoard pcs = board->pieces[piece];
+      while (pcs)
+        hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
+    }
   }
 
   if (board->epSquare)

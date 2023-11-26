@@ -58,7 +58,7 @@ typedef struct {
 
 typedef struct {
   acc_t values[N_HIDDEN] ALIGN;
-  BitBoard pcs[12];
+  BitBoard pcs[15];
 } AccumulatorKingState;
 
 typedef struct {
@@ -97,7 +97,7 @@ typedef struct {
 
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
-  BitBoard pieces[12];     // individual piece data
+  BitBoard pieces[15];     // individual piece data
 
   int cr[4];
   int castlingRights[64];
@@ -119,7 +119,7 @@ typedef struct {
   Move moves[MAX_SEARCH_PLY];
 } PV;
 
-typedef int16_t PieceTo[12][64];
+typedef int16_t PieceTo[15][64];
 
 typedef struct {
   int ply, staticEval, de;
@@ -183,10 +183,10 @@ struct ThreadData {
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
 
-  Move counters[12][64];         // counter move butterfly table
+  Move counters[15][64];         // counter move butterfly table
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
-  int16_t ch[2][12][64][12][64]; // continuation move history table
-  int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
+  int16_t ch[2][15][64][15][64]; // continuation move history table
+  int16_t caph[15][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
   int action, calls;
   pthread_t nativeThread;
@@ -248,11 +248,7 @@ typedef struct {
   ScoredMove moves[MAX_MOVES];
 } MovePicker;
 
-enum {
-  WHITE,
-  BLACK,
-  BOTH
-};
+
 
 enum {
   A8,
@@ -333,21 +329,13 @@ enum {
 };
 
 enum {
-  WHITE_PAWN,
-  BLACK_PAWN,
-  WHITE_KNIGHT,
-  BLACK_KNIGHT,
-  WHITE_BISHOP,
-  BLACK_BISHOP,
-  WHITE_ROOK,
-  BLACK_ROOK,
-  WHITE_QUEEN,
-  BLACK_QUEEN,
-  WHITE_KING,
-  BLACK_KING
+  WHITE,
+  BLACK,
+  BOTH,
 };
 
 enum {
+  NO_PIECE = 0,
   PAWN,
   KNIGHT,
   BISHOP,
@@ -357,8 +345,18 @@ enum {
 };
 
 enum {
-  MG,
-  EG
+  WHITE_PAWN = 1,
+  WHITE_KNIGHT,
+  WHITE_BISHOP,
+  WHITE_ROOK,
+  WHITE_QUEEN,
+  WHITE_KING,
+  BLACK_PAWN = 9,
+  BLACK_KNIGHT,
+  BLACK_BISHOP,
+  BLACK_ROOK,
+  BLACK_QUEEN,
+  BLACK_KING,
 };
 
 #endif

@@ -154,8 +154,9 @@ void ParseFen(char* fen, Board* board) {
   sscanf(fen, " %d %d", &board->fmr, &board->moveNo);
 
   OccBB(WHITE) = OccBB(BLACK) = OccBB(BOTH) = 0;
-  for (int i = WHITE_PAWN; i <= BLACK_KING; i++)
-    OccBB(i & 1) |= board->pieces[i];
+  for (int color = WHITE; color <= BLACK; color++)
+    for (int pt = PAWN; pt <= KING; pt++)
+      OccBB(color) |= PPieceBB(Piece(pt, color));
   OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
 
   SetSpecialPieces(board);
@@ -171,7 +172,7 @@ void BoardToFen(char* fen, Board* board) {
       int sq    = 8 * r + f;
       int piece = board->squares[sq];
 
-      if (piece != NO_PIECE) {
+      if (piece) {
         if (c)
           *fen++ = c + '0'; // append the amount of empty sqs
 
@@ -222,7 +223,7 @@ void PrintBoard(Board* board) {
       int sq = r * 8 + (f > 7 ? f - 8 : f);
 
       if (f < 8) {
-        if (board->squares[sq] == NO_PIECE)
+        if (!board->squares[sq])
           printf("       |");
         else
           printf("   %c   |", PIECE_TO_CHAR[board->squares[sq]]);
@@ -609,7 +610,7 @@ int IsPseudoLegal(Move move, Board* board) {
   int piece  = Moving(move);
   int pcType = PieceType(piece);
 
-  if (!move || (piece & 1) != board->stm || piece != board->squares[from])
+  if (!move || PieceColor(piece) != board->stm || piece != board->squares[from])
     return 0;
 
   if (IsCas(move)) {
@@ -648,9 +649,9 @@ int IsPseudoLegal(Move move, Board* board) {
     return !!GetBit(goal & opts & valid, to);
   }
 
-  if (IsCap(move) && !IsEP(move) && board->squares[to] == NO_PIECE)
+  if (IsCap(move) && !IsEP(move) && !board->squares[to])
     return 0;
-  if (!IsCap(move) && board->squares[to] != NO_PIECE)
+  if (!IsCap(move) && board->squares[to])
     return 0;
   if (IsEP(move) && to != board->epSquare)
     return 0;
@@ -664,12 +665,12 @@ int IsPseudoLegal(Move move, Board* board) {
       return 0;
 
     if (!IsEP(move)) {
-      if (!(GetPawnAttacks(from, board->stm) & OccBB(board->xstm) & Bit(to))         // capture
-          && !((from + PawnDir(board->stm) == to) && board->squares[to] == NO_PIECE) // single push
-          && !((from + 2 * PawnDir(board->stm) == to)                                // double push
-               && board->squares[to] == NO_PIECE                                     //
-               && board->squares[to - PawnDir(board->stm)] == NO_PIECE               //
-               && (Rank(from ^ (56 * board->stm)) == 6)                              //
+      if (!(GetPawnAttacks(from, board->stm) & OccBB(board->xstm) & Bit(to)) // capture
+          && !((from + PawnDir(board->stm) == to) && !board->squares[to])    // single push
+          && !((from + 2 * PawnDir(board->stm) == to)                        // double push
+               && !board->squares[to]                                        //
+               && !board->squares[to - PawnDir(board->stm)]                  //
+               && (Rank(from ^ (56 * board->stm)) == 6)                      //
                ))
         return 0;
     }
@@ -724,36 +725,36 @@ inline uint64_t Hash2(uint64_t hash) {
 void InitCuckoo() {
   int validate = 0;
 
-  for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
-    int pcType = PieceType(pc);
-    if (pcType == PAWN)
-      continue;
+  for (int color = WHITE; color <= BLACK; color++) {
+    for (int pt = KNIGHT; pt <= KING; pt++) {
+      const int pc = Piece(pt, color);
 
-    for (int s1 = 0; s1 < 64; s1++) {
-      for (int s2 = s1 + 1; s2 < 64; s2++) {
-        if (!GetBit(GetPieceAttacks(s1, 0, pcType), s2))
-          continue;
+      for (int s1 = 0; s1 < 64; s1++) {
+        for (int s2 = s1 + 1; s2 < 64; s2++) {
+          if (!GetBit(GetPieceAttacks(s1, 0, pt), s2))
+            continue;
 
-        Move move     = BuildMove(s1, s2, pc, QUIET_FLAG);
-        uint64_t hash = ZOBRIST_PIECES[pc][s1] ^ ZOBRIST_PIECES[pc][s2] ^ ZOBRIST_SIDE_KEY;
+          Move move     = BuildMove(s1, s2, pc, QUIET_FLAG);
+          uint64_t hash = ZOBRIST_PIECES[pc][s1] ^ ZOBRIST_PIECES[pc][s2] ^ ZOBRIST_SIDE_KEY;
 
-        uint32_t i = Hash1(hash);
-        while (1) {
-          uint64_t temp = cuckoo[i];
-          cuckoo[i]     = hash;
-          hash          = temp;
+          uint32_t i = Hash1(hash);
+          while (1) {
+            uint64_t temp = cuckoo[i];
+            cuckoo[i]     = hash;
+            hash          = temp;
 
-          Move tempMove = cuckooMove[i];
-          cuckooMove[i] = move;
-          move          = tempMove;
+            Move tempMove = cuckooMove[i];
+            cuckooMove[i] = move;
+            move          = tempMove;
 
-          if (move == 0)
-            break;
+            if (move == 0)
+              break;
 
-          i = (i == Hash1(hash)) ? Hash2(hash) : Hash1(hash);
+            i = (i == Hash1(hash)) ? Hash2(hash) : Hash1(hash);
+          }
+
+          validate++;
         }
-
-        validate++;
       }
     }
   }
@@ -789,7 +790,7 @@ int HasCycle(Board* board, int ply) {
         return 1;
 
       int pc = board->squares[From(move)] != NO_PIECE ? board->squares[From(move)] : board->squares[To(move)];
-      if ((pc & 1) != board->stm)
+      if (PieceColor(pc) != board->stm)
         continue;
 
       BoardHistory* prev2 = prev - 2;

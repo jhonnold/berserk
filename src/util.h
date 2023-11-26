@@ -30,6 +30,20 @@
 #define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
 #define IncRlx(x)  atomic_fetch_add_explicit(&(x), 1, memory_order_relaxed)
 
+#define Piece(pt, c)   (8 * (c) + (pt))
+#define PieceType(pc)  ((pc) & 7)
+#define PieceColor(pc) (!!((pc) & 8))
+#define PPieceBB(pc)   (board->pieces[pc])
+#define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
+#define OccBB(c)       (board->occupancies[c])
+
+#define File(sq)        ((sq) & 7)
+#define Rank(sq)        ((sq) >> 3)
+#define Sq(r, f)        ((r) * 8 + (f))
+#define Distance(a, b)  Max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
+#define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
+#define PieceCount(pc)  (1ull << (pc * 4))
+
 long GetTimeMS();
 
 INLINE void* AlignedMalloc(uint64_t size, const size_t on) {

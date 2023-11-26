@@ -24,7 +24,7 @@
 #include "types.h"
 #include "uci.h"
 
-const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
+const char* PIECE_TO_CHAR = "-PNBRQK--pnbrqk";
 
 const char* PROMOTION_TO_CHAR = "-nbrq-";
 

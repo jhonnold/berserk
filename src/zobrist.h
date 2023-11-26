@@ -22,7 +22,7 @@
 #include "types.h"
 #include "util.h"
 
-extern uint64_t ZOBRIST_PIECES[12][64];
+extern uint64_t ZOBRIST_PIECES[15][64];
 extern uint64_t ZOBRIST_EP_KEYS[64];
 extern uint64_t ZOBRIST_CASTLE_KEYS[16];
 extern uint64_t ZOBRIST_SIDE_KEY;
@@ -40,7 +40,7 @@ INLINE uint64_t KeyAfter(Board* board, const Move move) {
 
   uint64_t newKey = board->zobrist ^ ZOBRIST_SIDE_KEY ^ ZOBRIST_PIECES[moving][from] ^ ZOBRIST_PIECES[moving][to];
 
-  if (board->squares[to] != NO_PIECE)
+  if (board->squares[to])
     newKey ^= ZOBRIST_PIECES[board->squares[to]][to];
 
   return newKey;

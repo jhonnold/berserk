@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include <stdio.h>
 #include <string.h>
 
 #include "attacks.h"
@@ -42,6 +43,7 @@ int main(int argc, char** argv) {
   LoadDefaultNN();
   ThreadsInit();
   TTInit(16);
+
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {

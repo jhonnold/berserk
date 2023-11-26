@@ -22,21 +22,6 @@
 #include "types.h"
 #include "util.h"
 
-#define NO_PIECE 12
-
-#define Piece(pc, c)   (((pc) << 1) + c)
-#define PieceType(pc)  ((pc) >> 1)
-#define PPieceBB(pc)   (board->pieces[pc])
-#define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
-#define OccBB(c)       (board->occupancies[c])
-
-#define File(sq)        ((sq) &7)
-#define Rank(sq)        ((sq) >> 3)
-#define Sq(r, f)        ((r) *8 + (f))
-#define Distance(a, b)  Max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
-#define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
-#define PieceCount(pc)  (1ull << (pc * 4))
-
 extern const uint16_t KING_BUCKETS[64];
 
 void ClearBoard(Board* board);
@@ -80,7 +65,7 @@ INLINE int MoveRequiresRefresh(int piece, int from, int to) {
 }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
-  int oP  = 6 * ((piece ^ view) & 0x1) + PieceType(piece);
+  int oP  = 6 * (PieceColor(piece) != view) + PieceType(piece) - 1;
   int oK  = (7 * !(kingsq & 4)) ^ (56 * view) ^ kingsq;
   int oSq = (7 * !(kingsq & 4)) ^ (56 * view) ^ sq;
 

@@ -27,7 +27,7 @@
 #include "uci.h"
 #include "util.h"
 
-const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
+const int PHASE_VALUES[6] = {0, 0, 3, 3, 5, 10};
 const int MAX_PHASE       = 64;
 
 void SetContempt(int* dest, int stm) {
@@ -86,7 +86,7 @@ void EvaluateTrace(Board* board) {
       int sq = r * 8 + (f > 7 ? f - 8 : f);
       int pc = board->squares[sq];
 
-      if (pc == NO_PIECE) {
+      if (!pc) {
         printf("       |");
       } else if (f < 8) {
         printf("   %c   |", PIECE_TO_CHAR[pc]);
