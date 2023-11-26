@@ -74,9 +74,7 @@ void ParseFen(char* fen, Board* board) {
       board->squares[i] = piece;
 
       board->phase += PHASE_VALUES[PieceType(piece)];
-
-      if (*fen != 'K' && *fen != 'k')
-        board->piecesCounts += PieceCount(piece);
+      board->piecesCounts += PieceCount(piece);
     } else if (*fen >= '0' && *fen <= '9') {
       int offset = *fen - '1';
       i += offset;
@@ -572,18 +570,21 @@ inline int IsRepetition(Board* board, int ply) {
 }
 
 inline int IsMaterialDraw(Board* board) {
+  // 0x 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+  //    - k q r b n p - - K Q R B N P -
+
   switch (board->piecesCounts) {
-    case 0x0:      // Kk
-    case 0x100:    // KNk
-    case 0x200:    // KNNk
-    case 0x1000:   // Kkn
-    case 0x2000:   // Kknn
-    case 0x1100:   // KNkn
-    case 0x10000:  // KBk
-    case 0x100000: // Kkb
-    case 0x11000:  // KBkn
-    case 0x100100: // KNkb
-    case 0x110000: // KBkb
+    case 0x0100000001000000: // Kk
+    case 0x0100000001000100: // KNk
+    case 0x0100000001000200: // KNNk
+    case 0x0100010001000000: // Kkn
+    case 0x0100020001000000: // Kknn
+    case 0x0100010001000100: // KNkn
+    case 0x0100000001001000: // KBk
+    case 0x0100100001000000: // Kkb
+    case 0x0100010001001000: // KBkn
+    case 0x0100100001000100: // KNkb
+    case 0x0100100001001000: // KNkb
       return 1;
     default: return 0;
   }
