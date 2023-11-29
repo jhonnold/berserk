@@ -125,24 +125,10 @@ void MainSearch() {
   for (int i = 1; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
 
-  ThreadData* bestThread = mainThread;
-  for (int i = 1; i < Threads.count; i++) {
-    ThreadData* curr = Threads.threads[i];
-
-    int s = curr->rootMoves[0].score - bestThread->rootMoves[0].score;
-    int d = curr->depth - bestThread->depth;
-
-    if (s > 0 && (d >= 0 || curr->rootMoves[0].score >= MATE_BOUND))
-      bestThread = curr;
-  }
-
-  if (bestThread != mainThread)
-    PrintUCI(bestThread, -CHECKMATE, CHECKMATE, board);
-
-  Move bestMove   = bestThread->rootMoves[0].move;
+  Move bestMove   = mainThread->rootMoves[0].move;
   Move ponderMove = NULL_MOVE;
-  if (bestThread->rootMoves[0].pv.count > 1)
-    ponderMove = bestThread->rootMoves[0].pv.moves[1];
+  if (mainThread->rootMoves[0].pv.count > 1)
+    ponderMove = mainThread->rootMoves[0].pv.moves[1];
   else {
     // Pull ponder move from the TT if PV doesn't have one.
     // We reload the startfen because jmp aborts don't guarantee a rolled back board
@@ -159,7 +145,7 @@ void MainSearch() {
     UndoMove(bestMove, board);
   }
 
-  mainThread->previousScore = bestThread->rootMoves[0].score;
+  mainThread->previousScore = mainThread->rootMoves[0].score;
 
   printf("bestmove %s", MoveToStr(bestMove, board));
   if (ponderMove)
@@ -192,14 +178,12 @@ void Search(ThreadData* thread) {
     (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
 
   while (++thread->depth < MAX_SEARCH_PLY) {
-#if defined(_WIN32) || defined(_WIN64)
-    if (_setjmp(thread->exit, NULL)) {
+#if defined(WIN32)
+    if (_setjmp(thread->exit, NULL))
 #else
-    if (setjmp(thread->exit)) {
+    if (setjmp(thread->exit))
 #endif
-      thread->depth--; // hot exit means we didn't finish this depth.
       break;
-    }
 
     if (Limits.depth && mainThread && thread->depth > Limits.depth)
       break;
