@@ -136,8 +136,16 @@ void MainSearch() {
       bestThread = curr;
   }
 
-  if (bestThread != mainThread)
+  if (bestThread != mainThread) {
     PrintUCI(bestThread, -CHECKMATE, CHECKMATE, board);
+
+    // If a new thread is best, make it the main thread
+    mainThread->idx = bestThread->idx;
+    Threads.threads[mainThread->idx] = mainThread;
+
+    bestThread->idx = 0;
+    Threads.threads[0] = bestThread;
+  }
 
   Move bestMove   = bestThread->rootMoves[0].move;
   Move ponderMove = NULL_MOVE;
@@ -159,7 +167,7 @@ void MainSearch() {
     UndoMove(bestMove, board);
   }
 
-  mainThread->previousScore = bestThread->rootMoves[0].score;
+  bestThread->previousScore = bestThread->rootMoves[0].score;
 
   printf("bestmove %s", MoveToStr(bestMove, board));
   if (ponderMove)
