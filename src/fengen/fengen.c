@@ -133,8 +133,12 @@ void* PlayGames(void* arg) {
   ThreadData* thread = Threads.threads[idx];
   Board* board       = malloc(sizeof(Board));
 
-  char filename[64];
-  sprintf(filename, "%s/berserk" VERSION "_%d.fens", fenGenParams.dir,idx);
+  char filename[256];
+  if (fenGenParams.file_prefix[0]) {
+    sprintf(filename, "%s/%s_%d.fens", fenGenParams.dir, fenGenParams.file_prefix, idx);
+  } else {
+    sprintf(filename, "%s/berserk" VERSION "_%d.fens", fenGenParams.dir, idx);
+  }
 
   FILE* fp = fopen(filename, "a");
   if (fp == NULL)
@@ -180,12 +184,8 @@ void* PlayGames(void* arg) {
 
       Move bestMove = thread->rootMoves[0].move;
 
-      if ( !(ply < fenGenParams.writeMin
-          || IsCap(bestMove)
-          || board->checkers
-          || (CHESS_960 && IsCas(bestMove))
-          || (fenGenParams.filterDuplicates && SeenBefore(board->zobrist)))) {
-
+      if (!(ply < fenGenParams.writeMin || IsCap(bestMove) || board->checkers || (CHESS_960 && IsCas(bestMove)) ||
+            (fenGenParams.filterDuplicates && SeenBefore(board->zobrist)))) {
         PositionData* p = &game->positions[game->n++];
         BoardToFen(p->fen, board);
         p->eval = board->stm == WHITE ? score : -score;

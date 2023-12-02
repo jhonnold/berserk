@@ -42,7 +42,9 @@ typedef struct {
 
 typedef struct {
   char* book;
+  char* network;
   char* dir;
+  char* file_prefix;
 
   int filterDuplicates;
   int evalLimit;

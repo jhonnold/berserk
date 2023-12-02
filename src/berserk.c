@@ -49,7 +49,9 @@ int main(int argc, char** argv) {
 
   // Set all defaults
   fenGenParams.book = NULL;
+  fenGenParams.network = NULL;
   fenGenParams.dir = ".";
+  fenGenParams.file_prefix = "";
   fenGenParams.evalLimit = 1500;
   fenGenParams.nodes = 5000;
   fenGenParams.depth = 0;
@@ -73,7 +75,9 @@ int main(int argc, char** argv) {
     OPT_BOOLEAN(0, "filter-duplicates", &fenGenParams.filterDuplicates, "Filter duplicates?", NULL, 0, 0),
     OPT_BOOLEAN(0, "chess960", &CHESS_960, "Fischer random?", NULL, 0, 0),
     OPT_STRING(0, "book", &fenGenParams.book, "EPD book", NULL, 0, 0),
+    OPT_STRING(0, "network", &fenGenParams.network, "Network to use when generating data", NULL, 0, 0),
     OPT_STRING(0, "output", &fenGenParams.dir, "Output directory", NULL, 0, 0),
+    OPT_STRING(0, "file_name", &fenGenParams.file_prefix, "File names prefix", NULL, 0, 0),
 
     OPT_GROUP("Search Level Options"),
     OPT_INTEGER(0, "nodes", &fenGenParams.nodes, "Min nodes", NULL, 0, 0),
@@ -100,13 +104,20 @@ int main(int argc, char** argv) {
 
   ThreadsSetNumber(threads);
 
+  if (fenGenParams.network) {
+    if (!LoadNetwork(fenGenParams.network))
+      exit(EXIT_FAILURE);
+  }
+
   printf("Executing generator with the following:\n");
   printf("Threads: %d\n", threads);
   printf("Total: %llu\n", total);
   printf("Filter Duplicates: %d\n", fenGenParams.filterDuplicates);
   printf("Chess 960: %d\n", CHESS_960);
   printf("Book: %s\n", fenGenParams.book);
+  printf("Network Path: %s\n", fenGenParams.network);
   printf("Output Dir: %s\n", fenGenParams.dir);
+  printf("File Names Prefix: %s\n", fenGenParams.file_prefix);
   printf("Nodes: %llu\n", fenGenParams.nodes);
   printf("Depth: %d\n", fenGenParams.depth);
   printf("Random Move Count: %d\n", fenGenParams.randomMoveCount);
