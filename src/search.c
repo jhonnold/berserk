@@ -573,7 +573,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (!isRoot && legalMoves >= LMP[improving][depth])
+      if (!isRoot && R > -1 && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
