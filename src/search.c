@@ -681,6 +681,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       int lmrDepth = newDepth - R;
       score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
 
+      if (lmrDepth > 0) {
+        int bonus = score <= alpha ? -HistoryBonus(lmrDepth) : score >= beta ? HistoryBonus(lmrDepth) : 0;
+        UpdateCH(ss, move, bonus);
+      }
+
       if (score > alpha && R > 1) {
         // Credit to Viz (and lonfom) for the following modification of the zws
         // re-search depth. They can be found in SF as doDeeperSearch + doShallowerSearch
