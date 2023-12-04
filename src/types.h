@@ -122,7 +122,7 @@ typedef struct {
 typedef int16_t PieceTo[12][64];
 
 typedef struct {
-  int ply, staticEval, de;
+  int ply, staticEval, de, moveCount;
   PieceTo* ch;
   Move move, skip;
   Move killers[2];
