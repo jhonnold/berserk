@@ -46,6 +46,36 @@ INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
   return IsCap(move) ? GetCaptureHistory(thread, move) : GetQuietHistory(ss, thread, move);
 }
 
+INLINE void AddKillerMove(SearchStack* ss, Move move) {
+  if (ss->killers[0] != move) {
+    ss->killers[1] = ss->killers[0];
+    ss->killers[0] = move;
+  }
+}
+
+INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
+  thread->counters[Moving(parent)][To(parent)] = move;
+}
+
+INLINE int16_t HistoryBonus(int depth) {
+  return Min(1896, 4 * depth * depth + 120 * depth - 120);
+}
+
+INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
+  *entry += inc - *entry * abs(inc) / 16384;
+}
+
+INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
+  if ((ss - 1)->move)
+    AddHistoryHeuristic(&(*(ss - 1)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 2)->move)
+    AddHistoryHeuristic(&(*(ss - 2)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 4)->move)
+    AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 6)->move)
+    AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
+}
+
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
