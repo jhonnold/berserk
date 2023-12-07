@@ -670,8 +670,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (board->checkers)
         R--;
 
-      if ((ss - 1)->moveCount > 10)
-        R--;
+      if ((ss - 1)->moveCount < 5)
+        R++;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
