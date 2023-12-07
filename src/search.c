@@ -476,7 +476,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth <= 6 && eval + 252 * depth <= alpha) {
       score = Quiesce(alpha, beta, 0, thread, ss);
       if (score <= alpha)
-        return score;
+        return (score + alpha) / 2;
     }
 
     // Null move pruning
