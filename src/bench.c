@@ -40,7 +40,7 @@ void Bench(int depth) {
   Limits.max     = INT_MAX;
   Limits.timeset = 0;
 
-  FILE* fin = fopen("/mnt/data/sorter-fens", "r");
+  FILE* fin = fopen("/home/jhonnold/nnue-training/sorter-fens", "r");
   char * line = NULL;
   size_t len = 0;
   ssize_t read;
