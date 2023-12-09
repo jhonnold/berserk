@@ -469,7 +469,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth <= 8 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
         eval - 67 * depth + 112 * (improving && !board->easyCapture) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12525))
-      return eval;
+      return (eval + beta) / 2;
 
     // Razoring
     if (depth <= 6 && eval + 252 * depth <= alpha) {
@@ -688,6 +688,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         if (newDepth - 1 > lmrDepth)
           score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+
+        int bonus = score <= alpha ? -HistoryBonus(newDepth - 1) : score >= beta ? HistoryBonus(newDepth - 1) : 0;
+        UpdateCH(ss, move, bonus);
       }
     } else if (!isPV || playedMoves > 1) {
       score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
