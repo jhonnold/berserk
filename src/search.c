@@ -193,13 +193,11 @@ void Search(ThreadData* thread) {
 
   while (++thread->depth < MAX_SEARCH_PLY) {
 #if defined(_WIN32) || defined(_WIN64)
-    if (_setjmp(thread->exit, NULL)) {
+    if (_setjmp(thread->exit, NULL))
 #else
-    if (setjmp(thread->exit)) {
+    if (setjmp(thread->exit))
 #endif
-      thread->depth--; // hot exit means we didn't finish this depth.
       break;
-    }
 
     if (Limits.depth && mainThread && thread->depth > Limits.depth)
       break;
