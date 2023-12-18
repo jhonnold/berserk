@@ -82,6 +82,10 @@ INLINE int AdjustEvalOnFMR(Board* board, int eval) {
   return (200 - board->fmr) * eval / 200;
 }
 
+INLINE int ThreadValue(ThreadData* thread, const int worstScore) {
+  return (thread->rootMoves[0].score - worstScore + 10) * thread->depth;
+}
+
 void StartSearch(Board* board, uint8_t ponder) {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
@@ -125,15 +129,46 @@ void MainSearch() {
   for (int i = 1; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
 
+  int voteMap[64 * 64];
+  int worstScore = UNKNOWN;
+
+  for (int i = 0; i < Threads.count; i++) {
+    ThreadData* thread                         = Threads.threads[i];
+    worstScore                                 = Min(worstScore, thread->rootMoves[0].score);
+    voteMap[FromTo(thread->rootMoves[0].move)] = 0;
+  }
+
+  for (int i = 0; i < Threads.count; i++) {
+    ThreadData* thread = Threads.threads[i];
+    voteMap[FromTo(thread->rootMoves[0].move)] += ThreadValue(thread, worstScore);
+  }
+
   ThreadData* bestThread = mainThread;
+  Score bestScore        = bestThread->rootMoves[0].score;
+  Score bestVoteScore    = voteMap[FromTo(bestThread->rootMoves[0].move)];
+
   for (int i = 1; i < Threads.count; i++) {
-    ThreadData* curr = Threads.threads[i];
+    ThreadData* curr    = Threads.threads[i];
+    Score currScore     = curr->rootMoves[0].score;
+    Score currVoteScore = voteMap[FromTo(curr->rootMoves[0].move)];
 
-    int s = curr->rootMoves[0].score - bestThread->rootMoves[0].score;
-    int d = curr->depth - bestThread->depth;
+    // Always choose the fastest mate or longest avoidance of mate
+    if (abs(bestScore) >= TB_WIN_BOUND) {
+      if (currScore > bestScore)
+        bestThread = curr, bestScore = currScore, bestVoteScore = currVoteScore;
+    }
 
-    if (s > 0 && (d >= 0 || curr->rootMoves[0].score >= MATE_BOUND))
-      bestThread = curr;
+    // If this move avoids mate, choose it if:
+    //   It's strictly better in terms of voting
+    //   or if it's equal in voting and it's individual score is stronger
+    //   when considering if this move was a FH or FL in the window
+    //   This logic originates verbatim in SF ThreadPool::get_best_thread()
+    else if (currScore > -TB_WIN_BOUND &&
+               (currVoteScore > bestVoteScore ||
+                (currVoteScore == bestVoteScore &&
+                 (ThreadValue(curr, worstScore) * (curr->rootMoves[0].pv.count > 2)) >
+                   (ThreadValue(bestThread, worstScore) * (bestThread->rootMoves[0].pv.count > 2)))))
+      bestThread = curr, bestScore = currScore, bestVoteScore = currVoteScore;
   }
 
   if (bestThread != mainThread)
