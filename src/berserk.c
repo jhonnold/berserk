@@ -107,6 +107,8 @@ int main(int argc, char** argv) {
   if (fenGenParams.network) {
     if (!LoadNetwork(fenGenParams.network))
       exit(EXIT_FAILURE);
+    else
+      printf("Successfully set network to: %s\n", fenGenParams.network);
   }
 
   printf("Executing generator with the following:\n");
