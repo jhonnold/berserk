@@ -164,15 +164,25 @@ void MainSearch() {
     //   when considering if this move was a FH or FL in the window
     //   This logic originates verbatim in SF ThreadPool::get_best_thread()
     else if (currScore > -TB_WIN_BOUND &&
-               (currVoteScore > bestVoteScore ||
-                (currVoteScore == bestVoteScore &&
-                 (ThreadValue(curr, worstScore) * (curr->rootMoves[0].pv.count > 2)) >
-                   (ThreadValue(bestThread, worstScore) * (bestThread->rootMoves[0].pv.count > 2)))))
+             (currVoteScore > bestVoteScore ||
+              (currVoteScore == bestVoteScore &&
+               (ThreadValue(curr, worstScore) * (curr->rootMoves[0].pv.count > 2)) >
+                 (ThreadValue(bestThread, worstScore) * (bestThread->rootMoves[0].pv.count > 2)))))
       bestThread = curr, bestScore = currScore, bestVoteScore = currVoteScore;
   }
 
-  if (bestThread != mainThread)
+  if (bestThread != mainThread) {
     PrintUCI(bestThread, -CHECKMATE, CHECKMATE, board);
+
+    // / If a new thread is best, make it the main thread
+    mainThread->idx                  = bestThread->idx;
+    Threads.threads[mainThread->idx] = mainThread;
+
+    bestThread->idx    = 0;
+    Threads.threads[0] = bestThread;
+  }
+
+  bestThread->previousScore = bestThread->rootMoves[0].score;
 
   Move bestMove   = bestThread->rootMoves[0].move;
   Move ponderMove = NULL_MOVE;
