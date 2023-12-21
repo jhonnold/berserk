@@ -872,13 +872,17 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     }
 
     // stand pat
-    if (eval >= beta)
-      return eval;
-
-    if (eval > alpha)
-      alpha = eval;
-
     bestScore = eval;
+
+    if (bestScore >= beta) {
+      if (!isPV)
+        return bestScore;
+
+      bestScore = Min((alpha + beta) / 2, beta - 1); // avoid setting alpha and beta to the same
+    }
+
+    if (bestScore > alpha)
+      alpha = bestScore;
 
     futility = bestScore + 60;
   }
