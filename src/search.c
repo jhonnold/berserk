@@ -83,7 +83,7 @@ INLINE int AdjustEvalOnFMR(Board* board, int eval) {
 }
 
 INLINE int ThreadValue(ThreadData* thread, const int worstScore) {
-  return (thread->rootMoves[0].score - worstScore + 10) * thread->depth;
+  return (thread->rootMoves[0].score - worstScore) * thread->depth;
 }
 
 void StartSearch(Board* board, uint8_t ponder) {
@@ -194,8 +194,6 @@ void MainSearch() {
     UndoMove(bestMove, board);
   }
 
-  mainThread->previousScore = bestThread->rootMoves[0].score;
-
   printf("bestmove %s", MoveToStr(bestMove, board));
   if (ponderMove)
     printf(" ponder %s", MoveToStr(ponderMove, board));
@@ -232,7 +230,6 @@ void Search(ThreadData* thread) {
 #else
     if (setjmp(thread->exit)) {
 #endif
-      thread->depth--; // hot exit means we didn't finish this depth.
       break;
     }
 
