@@ -632,7 +632,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
       } else {
-        if (!SEE(board, move, STATIC_PRUNE[1][depth]))
+        if (depth < 8 && !SEE(board, move, STATIC_PRUNE[1][depth]))
           continue;
       }
     }
