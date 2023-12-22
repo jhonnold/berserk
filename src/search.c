@@ -656,10 +656,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // other moves at a shallow depth on a nullwindow that is somewhere below
     // the tt evaluation implemented using "skip move" recursion like in SF
     // (allows for reductions when doing singular search)
-    if (!isRoot && ss->ply < thread->depth * 2) {
-      // ttHit is implied for move == hashMove to ever be true
-      if (depth >= 6 && move == hashMove && ttDepth >= depth - 3 && (ttBound & BOUND_LOWER) &&
-          abs(ttScore) < TB_WIN_BOUND) {
+    int notExploding = ss->ply < thread->depth * 2;
+    int possiblySingular =
+      depth >= 6 && move == hashMove && ttDepth >= depth - 3 && (ttBound & BOUND_LOWER) && abs(ttScore) < TB_WIN_BOUND;
+
+    if (!isRoot && notExploding) {
+      if (possiblySingular) {
         int sBeta  = Max(ttScore - 5 * depth / 8, -CHECKMATE);
         int sDepth = (depth - 1) / 2;
 
@@ -689,6 +691,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
+    // Check extension
+    if (!isRoot && notExploding && !possiblySingular && !!board->checkers)
+      extension = 1;
+
     // apply extensions
     int newDepth = depth + extension;
 
@@ -705,10 +711,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // reduce these special quiets less
       if (killerOrCounter)
         R -= 2;
-
-      // move GAVE check
-      if (board->checkers)
-        R--;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
