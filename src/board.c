@@ -569,6 +569,7 @@ inline int IsRepetition(Board* board, int ply) {
   return 0;
 }
 
+// TODO: Improve this gross thing.
 inline int IsMaterialDraw(Board* board) {
   // 0x 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
   //    - k q r b n p - - K Q R B N P -

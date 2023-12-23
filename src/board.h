@@ -65,7 +65,7 @@ INLINE int MoveRequiresRefresh(int piece, int from, int to) {
 }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
-  int oP  = 6 * (PieceColor(piece) != view) + PieceType(piece) - 1;
+  int oP  = 6 * (PieceColor(piece) ^ view) + PieceType(piece) - 1;
   int oK  = (7 * !(kingsq & 4)) ^ (56 * view) ^ kingsq;
   int oSq = (7 * !(kingsq & 4)) ^ (56 * view) ^ sq;
 
