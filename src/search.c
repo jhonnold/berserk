@@ -82,6 +82,10 @@ INLINE int AdjustEvalOnFMR(Board* board, int eval) {
   return (200 - board->fmr) * eval / 200;
 }
 
+INLINE int ThreadValue(ThreadData* thread, const int worstScore) {
+  return (thread->rootMoves[0].score - worstScore) * thread->depth;
+}
+
 void StartSearch(Board* board, uint8_t ponder) {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
@@ -125,19 +129,60 @@ void MainSearch() {
   for (int i = 1; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
 
-  ThreadData* bestThread = mainThread;
-  for (int i = 1; i < Threads.count; i++) {
-    ThreadData* curr = Threads.threads[i];
+  int voteMap[64 * 64];
+  int worstScore = UNKNOWN;
 
-    int s = curr->rootMoves[0].score - bestThread->rootMoves[0].score;
-    int d = curr->depth - bestThread->depth;
-
-    if (s > 0 && (d >= 0 || curr->rootMoves[0].score >= MATE_BOUND))
-      bestThread = curr;
+  for (int i = 0; i < Threads.count; i++) {
+    ThreadData* thread                         = Threads.threads[i];
+    worstScore                                 = Min(worstScore, thread->rootMoves[0].score);
+    voteMap[FromTo(thread->rootMoves[0].move)] = 0;
   }
 
-  if (bestThread != mainThread)
+  for (int i = 0; i < Threads.count; i++) {
+    ThreadData* thread = Threads.threads[i];
+    voteMap[FromTo(thread->rootMoves[0].move)] += ThreadValue(thread, worstScore);
+  }
+
+  ThreadData* bestThread = mainThread;
+  Score bestScore        = bestThread->rootMoves[0].score;
+  Score bestVoteScore    = voteMap[FromTo(bestThread->rootMoves[0].move)];
+
+  for (int i = 1; i < Threads.count; i++) {
+    ThreadData* curr    = Threads.threads[i];
+    Score currScore     = curr->rootMoves[0].score;
+    Score currVoteScore = voteMap[FromTo(curr->rootMoves[0].move)];
+
+    // Always choose the fastest mate or longest avoidance of mate
+    if (abs(bestScore) >= TB_WIN_BOUND) {
+      if (currScore > bestScore)
+        bestThread = curr, bestScore = currScore, bestVoteScore = currVoteScore;
+    }
+
+    // If this move avoids mate, choose it if:
+    //   It's strictly better in terms of voting
+    //   or if it's equal in voting and it's individual score is stronger
+    //   when considering if this move was a FH or FL in the window
+    //   This logic originates verbatim in SF ThreadPool::get_best_thread()
+    else if (currScore > -TB_WIN_BOUND &&
+             (currVoteScore > bestVoteScore ||
+              (currVoteScore == bestVoteScore &&
+               (ThreadValue(curr, worstScore) * (curr->rootMoves[0].pv.count > 2)) >
+                 (ThreadValue(bestThread, worstScore) * (bestThread->rootMoves[0].pv.count > 2)))))
+      bestThread = curr, bestScore = currScore, bestVoteScore = currVoteScore;
+  }
+
+  if (bestThread != mainThread) {
     PrintUCI(bestThread, -CHECKMATE, CHECKMATE, board);
+
+    // / If a new thread is best, make it the main thread
+    mainThread->idx                  = bestThread->idx;
+    Threads.threads[mainThread->idx] = mainThread;
+
+    bestThread->idx    = 0;
+    Threads.threads[0] = bestThread;
+  }
+
+  bestThread->previousScore = bestThread->rootMoves[0].score;
 
   Move bestMove   = bestThread->rootMoves[0].move;
   Move ponderMove = NULL_MOVE;
@@ -158,8 +203,6 @@ void MainSearch() {
 
     UndoMove(bestMove, board);
   }
-
-  mainThread->previousScore = bestThread->rootMoves[0].score;
 
   printf("bestmove %s", MoveToStr(bestMove, board));
   if (ponderMove)
@@ -197,7 +240,6 @@ void Search(ThreadData* thread) {
 #else
     if (setjmp(thread->exit)) {
 #endif
-      thread->depth--; // hot exit means we didn't finish this depth.
       break;
     }
 
@@ -470,7 +512,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth <= 8 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
         eval - 67 * depth + 112 * (improving && !board->easyCapture) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12525))
-      return eval;
+      return (eval + beta) / 2;
 
     // Razoring
     if (depth <= 6 && eval + 252 * depth <= alpha) {
@@ -689,6 +731,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         if (newDepth - 1 > lmrDepth)
           score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
+
+        int bonus = score <= alpha ? -HistoryBonus(newDepth - 1) : score >= beta ? HistoryBonus(newDepth - 1) : 0;
+        UpdateCH(ss, move, bonus);
       }
     } else if (!isPV || playedMoves > 1) {
       score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
