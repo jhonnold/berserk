@@ -134,11 +134,9 @@ int CanEfficientlyUpdate(Accumulator* live, const int view) {
   while (1) {
     curr--;
 
-    int from  = From(curr->move) ^ (56 * view); // invert for black
-    int to    = To(curr->move) ^ (56 * view);   // invert for black
-    int piece = Moving(curr->move);
+    const int piece = Moving(curr->move);
 
-    if ((piece & 1) == view && MoveRequiresRefresh(piece, from, to))
+    if ((piece & 1) == view && MoveRequiresRefresh(piece))
       return 0; // refresh only necessary for our view
     if (curr->correct[view])
       return 1;

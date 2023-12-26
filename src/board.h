@@ -30,9 +30,9 @@
 #define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
 #define OccBB(c)       (board->occupancies[c])
 
-#define File(sq)        ((sq) &7)
+#define File(sq)        ((sq) & 7)
 #define Rank(sq)        ((sq) >> 3)
-#define Sq(r, f)        ((r) *8 + (f))
+#define Sq(r, f)        ((r) * 8 + (f))
 #define Distance(a, b)  Max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
 #define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
 #define PieceCount(pc)  (1ull << (pc * 4))
@@ -70,13 +70,8 @@ INLINE int HasNonPawn(Board* board, const int color) {
   return !!(OccBB(color) ^ PieceBB(KING, color) ^ PieceBB(PAWN, color));
 }
 
-INLINE int MoveRequiresRefresh(int piece, int from, int to) {
-  if (PieceType(piece) != KING)
-    return 0;
-
-  if ((from & 4) != (to & 4))
-    return 1;
-  return KING_BUCKETS[from] != KING_BUCKETS[to];
+INLINE int MoveRequiresRefresh(int piece) {
+  return PieceType(piece) == KING;
 }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
