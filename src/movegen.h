@@ -151,7 +151,7 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
 
   BitBoard movers = PieceBB(piece, stm);
   while (movers) {
-    int from = PopLSB(&movers);
+    int from       = PopLSB(&movers);
     BitBoard valid = GetPieceAttacks(from, OccBB(BOTH), piece) & opts;
 
     if (type & GT_CAPTURE) {

@@ -39,11 +39,11 @@ extern const int CASTLE_ROOK_DEST[64];
 extern const int CASTLING_ROOK[64];
 
 #define BuildMove(from, to, piece, flags) (from) | ((to) << 6) | ((piece) << 12) | ((flags) << 16)
-#define FromTo(move)                      (((int) (move) &0x00fff) >> 0)
-#define From(move)                        (((int) (move) &0x0003f) >> 0)
-#define To(move)                          (((int) (move) &0x00fc0) >> 6)
-#define Moving(move)                      (((int) (move) &0x0f000) >> 12)
-#define Flags(move)                       (((int) (move) &0xf0000) >> 16)
+#define FromTo(move)                      (((int) (move) & 0x00fff) >> 0)
+#define From(move)                        (((int) (move) & 0x0003f) >> 0)
+#define To(move)                          (((int) (move) & 0x00fc0) >> 6)
+#define Moving(move)                      (((int) (move) & 0x0f000) >> 12)
+#define Flags(move)                       (((int) (move) & 0xf0000) >> 16)
 
 #define IsCap(move) (!!(Flags(move) & CAPTURE_FLAG))
 #define IsEP(move)  (Flags(move) == EP_FLAG)

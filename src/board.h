@@ -30,9 +30,9 @@
 #define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
 #define OccBB(c)       (board->occupancies[c])
 
-#define File(sq)        ((sq) &7)
+#define File(sq)        ((sq) & 7)
 #define Rank(sq)        ((sq) >> 3)
-#define Sq(r, f)        ((r) *8 + (f))
+#define Sq(r, f)        ((r) * 8 + (f))
 #define Distance(a, b)  Max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
 #define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
 #define PieceCount(pc)  (1ull << (pc * 4))
@@ -45,7 +45,7 @@ void BoardToFen(char* fen, Board* board);
 void PrintBoard(Board* board);
 
 void SetSpecialPieces(Board* board);
-void SetThreatsAndEasyCaptures(Board* board);
+void SetThreats(Board* board);
 
 int DoesMoveCheck(Move move, Board* board);
 

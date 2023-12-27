@@ -436,7 +436,7 @@ void InitRookAttacks() {
       int idx               = (occupancy * ROOK_MAGICS[sq]) >> (64 - bits);
       ROOK_ATTACKS[sq][idx] = GetRookAttacksOTF(sq, occupancy);
 #else
-      ROOK_ATTACKS[sq][_pext_u64(occupancy, mask)]   = GetRookAttacksOTF(sq, occupancy);
+      ROOK_ATTACKS[sq][_pext_u64(occupancy, mask)] = GetRookAttacksOTF(sq, occupancy);
 #endif
     }
   }

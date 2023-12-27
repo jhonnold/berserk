@@ -45,7 +45,7 @@
 #define Bit(sq)                (1ULL << (sq))
 #define BitCount(bb)           (__builtin_popcountll(bb))
 #define SetBit(bb, sq)         ((bb) |= Bit(sq))
-#define GetBit(bb, sq)         ((bb) &Bit(sq))
+#define GetBit(bb, sq)         ((bb) & Bit(sq))
 #define PopBit(bb, sq)         ((bb) &= ~Bit(sq))
 #define FlipBit(bb, sq)        ((bb) ^= Bit(sq))
 #define FlipBits(bb, sq1, sq2) ((bb) ^= Bit(sq1) ^ Bit(sq2))
