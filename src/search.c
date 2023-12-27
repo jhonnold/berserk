@@ -682,6 +682,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         else if (ttScore <= alpha)
           extension = -1;
       }
+
+      else if (isPV && !IsCap(move) && !IsPromo(move) && move == hashMove &&
+               (*(ss - 1)->ch)[Moving(move)][To(move)] >= 8192)
+        extension = 1;
     }
 
     TTPrefetch(KeyAfter(board, move));
