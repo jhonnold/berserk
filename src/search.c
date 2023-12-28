@@ -683,8 +683,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           extension = -1;
       }
 
-      else if (isPV && !IsCap(move) && !IsPromo(move) && move == hashMove &&
-               (*(ss - 1)->ch)[Moving(move)][To(move)] >= 8192)
+      else if (isPV && move == hashMove && move == mp.killer1 && (*(ss - 1)->ch)[Moving(move)][To(move)] >= 8192)
         extension = 1;
     }
 
