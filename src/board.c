@@ -247,6 +247,7 @@ inline void SetSpecialPieces(Board* board) {
   int kingSq = LSB(PieceBB(KING, stm));
 
   board->pinned   = 0;
+  board->pinners  = 0;
   board->checkers = (GetKnightAttacks(kingSq) & PieceBB(KNIGHT, xstm)) | // knight and
                     (GetPawnAttacks(kingSq, stm) & PieceBB(PAWN, xstm)); // pawns are easy
 
@@ -258,8 +259,13 @@ inline void SetSpecialPieces(Board* board) {
     BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(BOTH);
     if (!blockers)
       SetBit(board->checkers, sq);
-    else if (BitCount(blockers) == 1)
-      board->pinned |= (blockers & OccBB(stm));
+    else if (BitCount(blockers) == 1) {
+      BitBoard pinned = blockers & OccBB(stm);
+      if (pinned) {
+        board->pinned |= pinned;
+        SetBit(board->pinners, sq);
+      }
+    }
   }
 }
 
@@ -336,6 +342,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->history[board->histPly].zobrist     = board->zobrist;
   board->history[board->histPly].checkers    = board->checkers;
   board->history[board->histPly].pinned      = board->pinned;
+  board->history[board->histPly].pinners     = board->pinners;
   board->history[board->histPly].threatened  = board->threatened;
   board->history[board->histPly].easyCapture = board->easyCapture;
 
@@ -456,6 +463,7 @@ void UndoMove(Move move, Board* board) {
   board->zobrist     = board->history[board->histPly].zobrist;
   board->checkers    = board->history[board->histPly].checkers;
   board->pinned      = board->history[board->histPly].pinned;
+  board->pinners     = board->history[board->histPly].pinners;
   board->threatened  = board->history[board->histPly].threatened;
   board->easyCapture = board->history[board->histPly].easyCapture;
 
@@ -511,6 +519,7 @@ void MakeNullMove(Board* board) {
   board->history[board->histPly].zobrist     = board->zobrist;
   board->history[board->histPly].checkers    = board->checkers;
   board->history[board->histPly].pinned      = board->pinned;
+  board->history[board->histPly].pinners     = board->pinners;
   board->history[board->histPly].threatened  = board->threatened;
   board->history[board->histPly].easyCapture = board->easyCapture;
 
@@ -544,6 +553,7 @@ void UndoNullMove(Board* board) {
   board->zobrist     = board->history[board->histPly].zobrist;
   board->checkers    = board->history[board->histPly].checkers;
   board->pinned      = board->history[board->histPly].pinned;
+  board->pinners     = board->history[board->histPly].pinners;
   board->threatened  = board->history[board->histPly].threatened;
   board->easyCapture = board->history[board->histPly].easyCapture;
 }

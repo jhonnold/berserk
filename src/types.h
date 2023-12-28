@@ -70,6 +70,7 @@ typedef struct {
   uint64_t zobrist;
   BitBoard checkers;
   BitBoard pinned;
+  BitBoard pinners;
   BitBoard threatened;
   BitBoard easyCapture;
 } BoardHistory;
@@ -88,6 +89,7 @@ typedef struct {
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
+  BitBoard pinners;  // pieces doing the pinning
 
   BitBoard threatened;  // opponent "threatening" these squares
   BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0

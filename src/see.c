@@ -54,6 +54,8 @@ inline int SEE(Board* board, Move move, int threshold) {
     attackers &= occ;
 
     BitBoard mine = attackers & OccBB(stm);
+    if ((mine & board->pinned) && (occ & board->pinners))
+      mine &= ~board->pinned;
     if (!mine)
       break;
 
