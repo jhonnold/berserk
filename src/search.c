@@ -573,12 +573,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
         MakeMove(move, board);
 
-        // qsearch to quickly check
-        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
-
-        // if it's still above our cutoff, revalidate
-        if (score >= probBeta)
-          score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv, ss + 1);
+        score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv, ss + 1);
 
         UndoMove(move, board);
 
