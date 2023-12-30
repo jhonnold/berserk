@@ -20,6 +20,13 @@ ifeq ($(shell echo "test"), "test")
 	CFLAGS += -static
 endif
 
+# Detecting Apple Silicon (ARM64)
+UNAME := $(shell uname -m)
+ifeq ($(UNAME), arm64)
+    ARCH = arm64
+    CC = clang
+endif
+
 # Setup arch
 ifeq ($(ARCH), )
    ARCH = native
@@ -27,6 +34,8 @@ endif
 
 ifeq ($(ARCH), native)
 	CFLAGS  = $(FLAGS) -march=native
+else ifeq ($(ARCH), arm64)
+	CFLAGS = $(FLAGS) -Wno-unused-function -arch arm64
 else ifeq ($(findstring ssse3, $(ARCH)), ssse3)
 	CFLAGS += -mssse3
 else ifeq ($(findstring avx2, $(ARCH)), avx2)
@@ -112,3 +121,6 @@ download-network:
 	else \
 		echo "Unknown network: $(EVALFILE)"; \
 	fi;
+
+clean:
+	rm -f $(EXE)
