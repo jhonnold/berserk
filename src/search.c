@@ -795,7 +795,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
 
-    if (!inCheck && bestMove && !IsCap(bestMove) && !IsPromo(bestMove) && abs(bestScore) < TB_WIN_BOUND &&
+    if (!inCheck && (!bestMove || (!IsCap(bestMove) && !IsPromo(bestMove))) && abs(bestScore) < TB_WIN_BOUND &&
         (bound & (bestScore >= ss->staticEval ? BOUND_LOWER : BOUND_UPPER)))
       UpdateEvalCorrection(ss->staticEval, bestScore, board, thread);
   }

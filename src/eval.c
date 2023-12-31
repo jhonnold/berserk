@@ -16,7 +16,6 @@
 
 #include "eval.h"
 
-#include <stdint.h>
 #include <stdio.h>
 
 #include "attacks.h"
@@ -28,7 +27,6 @@
 #include "random.h"
 #include "uci.h"
 #include "util.h"
-
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE       = 64;
@@ -60,8 +58,8 @@ void UpdateEvalCorrection(int raw, int search, Board* board, ThreadData* thread)
 
   const uint32_t matCorrectionIdx = MurmurHash(board->piecesCounts) & MAT_CORRECTION_MASK;
   thread->matc[matCorrectionIdx] =
-    Min(INT16_MAX,
-        Max(INT16_MIN, (thread->matc[matCorrectionIdx] * (MAT_CORRECTION_BLEND - 1) + diff) / MAT_CORRECTION_BLEND));
+    Min(30000,
+        Max(-30000, (thread->matc[matCorrectionIdx] * (MAT_CORRECTION_BLEND - 1) + diff) / MAT_CORRECTION_BLEND));
 }
 
 // Main evalution method

@@ -191,7 +191,7 @@ struct ThreadData {
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
-  int16_t matc[MAT_CORRECTION_SIZE];
+  int32_t matc[MAT_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;
