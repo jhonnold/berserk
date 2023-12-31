@@ -16,6 +16,7 @@
 
 #include "eval.h"
 
+#include <stdint.h>
 #include <stdio.h>
 
 #include "attacks.h"
@@ -24,8 +25,10 @@
 #include "move.h"
 #include "nn/accumulator.h"
 #include "nn/evaluate.h"
+#include "random.h"
 #include "uci.h"
 #include "util.h"
+
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE       = 64;
@@ -35,6 +38,30 @@ void SetContempt(int* dest, int stm) {
 
   dest[stm]     = contempt;
   dest[stm ^ 1] = -contempt;
+}
+
+// Correction of eval applies two things:
+// - First, a running average of the difference between search and static eval is added
+//   based on the current material configuration on the board. This concept appeared first
+//   in Caissa and can be expanded to pawn configurations as well.
+// - Second, the eval is scaled down based on current FMR.
+int AdjustEval(int raw, Board* board, ThreadData* thread) {
+  const uint32_t matCorrectionIdx = MurmurHash(board->piecesCounts) & MAT_CORRECTION_MASK;
+  const int adjustment            = thread->matc[matCorrectionIdx] / MAT_CORRECTION_GRAIN;
+
+  int adjusted = raw + (board->stm == WHITE ? adjustment : -adjustment);
+  adjusted     = (200 - board->fmr) * adjusted / 200;
+  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, adjusted));
+}
+
+void UpdateEvalCorrection(int raw, int search, Board* board, ThreadData* thread) {
+  int diff = MAT_CORRECTION_GRAIN * (search - raw);
+  diff     = board->stm == WHITE ? diff : -diff;
+
+  const uint32_t matCorrectionIdx = MurmurHash(board->piecesCounts) & MAT_CORRECTION_MASK;
+  thread->matc[matCorrectionIdx] =
+    Min(INT16_MAX,
+        Max(INT16_MIN, (thread->matc[matCorrectionIdx] * (MAT_CORRECTION_BLEND - 1) + diff) / MAT_CORRECTION_BLEND));
 }
 
 // Main evalution method

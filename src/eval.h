@@ -23,10 +23,17 @@
 
 #define EVAL_UNKNOWN 2046
 
+#define MAT_CORRECTION_GRAIN 256
+#define MAT_CORRECTION_BLEND 256
+
 extern const int PHASE_VALUES[6];
 extern const int MAX_PHASE;
 
 void SetContempt(int* dest, int stm);
+
+int AdjustEval(int raw, Board* board, ThreadData* thread);
+void UpdateEvalCorrection(int raw, int search, Board* board, ThreadData* thread);
+
 Score Evaluate(Board* board, ThreadData* thread);
 void EvaluateTrace(Board* board);
 

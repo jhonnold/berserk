@@ -35,6 +35,9 @@
 #define N_L3       32
 #define N_OUTPUT   1
 
+#define MAT_CORRECTION_SIZE 2048
+#define MAT_CORRECTION_MASK (MAT_CORRECTION_SIZE - 1)
+
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
@@ -187,6 +190,8 @@ struct ThreadData {
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
+
+  int16_t matc[MAT_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;

@@ -78,10 +78,6 @@ INLINE int CheckLimits(ThreadData* thread) {
          (Limits.nodes && NodesSearched() >= Limits.nodes);
 }
 
-INLINE int AdjustEvalOnFMR(Board* board, int eval) {
-  return (200 - board->fmr) * eval / 200;
-}
-
 INLINE int ThreadValue(ThreadData* thread, const int worstScore) {
   return (thread->rootMoves[0].score - worstScore) * thread->depth;
 }
@@ -468,17 +464,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       eval = ss->staticEval = ttEval;
       if (ss->staticEval == EVAL_UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
+      eval = AdjustEval(eval, board, thread);
 
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
       eval = ss->staticEval = Evaluate(board, thread);
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
+      eval                  = AdjustEval(eval, board, thread);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
@@ -802,6 +794,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
     int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
+
+    if (!inCheck && bestMove && !IsCap(bestMove) && !IsPromo(bestMove) && abs(bestScore) < TB_WIN_BOUND &&
+        (bound & (bestScore >= ss->staticEval ? BOUND_LOWER : BOUND_UPPER)))
+      UpdateEvalCorrection(ss->staticEval, bestScore, board, thread);
   }
 
   return bestScore;
@@ -857,16 +853,13 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       eval = ss->staticEval = ttEval;
       if (ss->staticEval == EVAL_UNKNOWN)
         eval = ss->staticEval = Evaluate(board, thread);
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
+      eval = AdjustEval(eval, board, thread);
 
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       eval = ss->staticEval = Evaluate(board, thread);
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
+      eval                  = AdjustEval(eval, board, thread);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
     }
@@ -1032,6 +1025,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
+  memset(&thread->matc, 0, sizeof(thread->matc));
 
   thread->board.accumulators = thread->accumulators;
   thread->previousScore      = UNKNOWN;
