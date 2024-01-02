@@ -38,6 +38,9 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
+#define PAWN_CORRECTION_SIZE 16384
+#define PAWN_CORRECTION_MASK (PAWN_CORRECTION_SIZE - 1)
+
 typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
@@ -68,6 +71,7 @@ typedef struct {
   int fmr;
   int nullply;
   uint64_t zobrist;
+  uint64_t pawnZobrist;
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
@@ -94,6 +98,7 @@ typedef struct {
 
   uint64_t piecesCounts; // "material key" - pieces left on the board
   uint64_t zobrist;      // zobrist hash of the position
+  uint64_t pawnZobrist;  // pawn zobrist hash of the position (pawns + stm)
 
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
@@ -187,6 +192,8 @@ struct ThreadData {
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
+
+  int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;
