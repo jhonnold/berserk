@@ -128,10 +128,14 @@ void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
   } while (++curr != live);
 }
 
+const int MAX_DISTANCE = 6;
+
 int CanEfficientlyUpdate(Accumulator* live, const int view) {
   Accumulator* curr = live;
 
-  while (1) {
+  int distance = 0;
+
+  while (++distance < MAX_DISTANCE) {
     curr--;
 
     int from  = From(curr->move) ^ (56 * view); // invert for black
@@ -143,4 +147,6 @@ int CanEfficientlyUpdate(Accumulator* live, const int view) {
     if (curr->correct[view])
       return 1;
   }
+
+  return 0;
 }
