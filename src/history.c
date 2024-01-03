@@ -91,5 +91,5 @@ void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread) {
   const int16_t correction = Min(30000, Max(-30000, (real - raw) * 256));
   const int idx = (board->pawnZobrist & PAWN_CORRECTION_MASK);
 
-  thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 255 + correction) / 256;
+  thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 127 + correction) / 128;
 }
