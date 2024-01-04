@@ -471,7 +471,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         rawEval = Evaluate(board, thread);
       eval = ss->staticEval =
         Min(EVAL_UNKNOWN - 1,
-            Max(-EVAL_UNKNOWN + 1, rawEval + thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 512));
+            Max(-EVAL_UNKNOWN + 1, rawEval + thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 256));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -482,7 +482,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = Evaluate(board, thread);
       eval    = ss->staticEval =
         Min(EVAL_UNKNOWN - 1,
-            Max(-EVAL_UNKNOWN + 1, rawEval + thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 512));
+            Max(-EVAL_UNKNOWN + 1, rawEval + thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 256));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -869,7 +869,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         rawEval = Evaluate(board, thread);
       eval = ss->staticEval =
         Min(EVAL_UNKNOWN - 1,
-            Max(-EVAL_UNKNOWN + 1, rawEval + thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 512));
+            Max(-EVAL_UNKNOWN + 1, rawEval + thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 256));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -880,7 +880,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = Evaluate(board, thread);
       eval    = ss->staticEval =
         Min(EVAL_UNKNOWN - 1,
-            Max(-EVAL_UNKNOWN + 1, rawEval + thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 512));
+            Max(-EVAL_UNKNOWN + 1, rawEval + thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 256));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
