@@ -47,4 +47,16 @@ INLINE uint64_t KeyAfter(Board* board, const Move move) {
   return newKey;
 }
 
+// 42-bit key input -> 32-bit hash output
+// https://cgi.cse.unsw.edu.au/~reports/papers/201703.pdf
+INLINE uint32_t MurmurHash(uint64_t key) {
+  key ^= key >> 33;
+  key *= 0xff51afd7ed558ccdull;
+  key ^= key >> 33;
+  key *= 0xc4ceb9fe1a85ec53ull;
+  key ^= key >> 33;
+
+  return key;
+}
+
 #endif

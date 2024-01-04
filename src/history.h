@@ -22,6 +22,7 @@
 #include "move.h"
 #include "types.h"
 #include "util.h"
+#include "zobrist.h"
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
@@ -76,8 +77,10 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
     AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
 }
 
-INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / PAWN_CORRECTION_GRAIN;
+INLINE int GetCorrection(Board* board, ThreadData* thread) {
+  return (thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] +
+          thread->materialCorrection[board->stm][MurmurHash(board->piecesCounts) & MATERIAL_CORRECTION_MASK]) /
+         CORRECTION_GRAIN;
 }
 
 void UpdateHistories(SearchStack* ss,
@@ -89,6 +92,6 @@ void UpdateHistories(SearchStack* ss,
                      Move captures[],
                      int nC);
 
-void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread);
+void UpdateEvalCorrection(int raw, int real, Board* board, ThreadData* thread);
 
 #endif
