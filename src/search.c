@@ -470,6 +470,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread, &featureKey);
+      else {
+        EvalCacheEntry* entry = &thread->evalCache[board->zobrist & EVAL_CACHE_MASK];
+        if (entry->key == board->zobrist)
+          featureKey = entry->featureKey;
+      }
+
       eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread, featureKey) / 2);
 
       // correct eval on fmr
@@ -865,6 +871,12 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread, &featureKey);
+      else {
+        EvalCacheEntry* entry = &thread->evalCache[board->zobrist & EVAL_CACHE_MASK];
+        if (entry->key == board->zobrist)
+          featureKey = entry->featureKey;
+      }
+
       eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread, featureKey) / 2);
 
       // correct eval on fmr

@@ -77,9 +77,11 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetCorrection(Board* board, ThreadData* thread, uint32_t featureKey) {
-  return (thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] +
-          thread->featureCorrection[featureKey & FT_CORRECTION_MASK]) /
-         CORRECTION_GRAIN;
+  int correction = thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
+  if (featureKey)
+    correction += thread->featureCorrection[featureKey & FT_CORRECTION_MASK];
+
+  return correction / CORRECTION_GRAIN;
 }
 
 void UpdateHistories(SearchStack* ss,
