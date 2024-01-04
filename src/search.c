@@ -374,6 +374,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int inCheck   = !!board->checkers;
   int improving = 0;
   int eval      = ss->staticEval;
+  int rawEval   = eval;
 
   Move bestMove = NULL_MOVE;
   Move hashMove = NULL_MOVE;
@@ -462,12 +463,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   if (inCheck) {
-    eval = ss->staticEval = EVAL_UNKNOWN;
+    rawEval = eval = ss->staticEval = EVAL_UNKNOWN;
   } else {
     if (ttHit) {
-      eval = ss->staticEval = ttEval;
-      if (ss->staticEval == EVAL_UNKNOWN)
-        eval = ss->staticEval = Evaluate(board, thread);
+      rawEval = ttEval;
+      if (rawEval == EVAL_UNKNOWN)
+        rawEval = Evaluate(board, thread);
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -475,12 +477,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
-      eval = ss->staticEval = Evaluate(board, thread);
+      rawEval = Evaluate(board, thread);
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
 
-      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
     }
 
     // Improving
@@ -799,10 +802,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   bestScore = Min(bestScore, maxScore);
 
   // prevent saving when in singular search
-  if (!ss->skip && !(isRoot && thread->multiPV > 0)) {
-    int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
-    TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
-  }
+  int bound = bestScore >= beta ? BOUND_LOWER : bestScore <= origAlpha ? BOUND_UPPER : BOUND_EXACT;
+  if (!ss->skip && !(isRoot && thread->multiPV > 0))
+    TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
+
+  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER)))
+    UpdatePawnCorrection(rawEval, bestScore, board, thread);
 
   return bestScore;
 }
@@ -816,6 +821,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   int isPV      = beta - alpha != 1;
   int inCheck   = !!board->checkers;
   int eval      = ss->staticEval;
+  int rawEval   = eval;
 
   Move hashMove = NULL_MOVE;
   Move bestMove = NULL_MOVE;
@@ -851,12 +857,13 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return ttScore;
 
   if (inCheck) {
-    eval = ss->staticEval = EVAL_UNKNOWN;
+    rawEval = eval = ss->staticEval = EVAL_UNKNOWN;
   } else {
     if (ttHit) {
-      eval = ss->staticEval = ttEval;
-      if (ss->staticEval == EVAL_UNKNOWN)
-        eval = ss->staticEval = Evaluate(board, thread);
+      rawEval = ttEval;
+      if (rawEval == EVAL_UNKNOWN)
+        rawEval = Evaluate(board, thread);
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -864,11 +871,13 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
-      eval = ss->staticEval = Evaluate(board, thread);
+      rawEval = Evaluate(board, thread);
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
 
-      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, ss->staticEval, ttPv);
+      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
     }
 
     // stand pat
@@ -936,7 +945,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return -CHECKMATE + ss->ply;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
-  TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, ss->staticEval, ttPv);
+  TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
   return bestScore;
 }
