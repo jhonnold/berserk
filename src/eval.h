@@ -25,14 +25,27 @@
 #define EVAL_UNKNOWN 2046
 
 INLINE int ClampEval(int eval) {
-    return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
+  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
+}
+
+INLINE EvalCacheEntry* ProbeEvalCache(Board* board, ThreadData* thread) {
+  EvalCacheEntry* entry = &thread->evalCache[board->zobrist & EVAL_CACHE_MASK];
+  return entry->key == board->zobrist ? entry : NULL;
+}
+
+INLINE void SaveEvalCache(Board* board, ThreadData* thread, int eval, uint32_t featureKey) {
+  EvalCacheEntry* entry = &thread->evalCache[board->zobrist & EVAL_CACHE_MASK];
+
+  entry->key        = board->zobrist;
+  entry->eval       = eval;
+  entry->featureKey = featureKey;
 }
 
 extern const int PHASE_VALUES[6];
 extern const int MAX_PHASE;
 
 void SetContempt(int* dest, int stm);
-Score Evaluate(Board* board, ThreadData* thread);
+Score Evaluate(Board* board, ThreadData* thread, uint32_t* featureKey);
 void EvaluateTrace(Board* board);
 
 #endif

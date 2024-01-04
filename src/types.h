@@ -38,9 +38,14 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
-#define PAWN_CORRECTION_GRAIN 256
+#define CORRECTION_GRAIN 256
 #define PAWN_CORRECTION_SIZE  16384
 #define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
+#define FT_CORRECTION_SIZE  16384
+#define FT_CORRECTION_MASK  (FT_CORRECTION_SIZE - 1)
+
+#define EVAL_CACHE_SIZE 65536
+#define EVAL_CACHE_MASK (EVAL_CACHE_SIZE - 1)
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -171,6 +176,12 @@ enum {
   THREAD_RESUME
 };
 
+typedef struct {
+  uint64_t key;
+  int32_t eval;
+  uint32_t featureKey;
+} EvalCacheEntry;
+
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
@@ -195,6 +206,9 @@ struct ThreadData {
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
+  int16_t featureCorrection[FT_CORRECTION_SIZE];
+
+  EvalCacheEntry* evalCache;
 
   int action, calls;
   pthread_t nativeThread;

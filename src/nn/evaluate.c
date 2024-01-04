@@ -27,6 +27,7 @@
 #include "../movegen.h"
 #include "../thread.h"
 #include "../util.h"
+#include "../zobrist.h"
 #include "accumulator.h"
 
 #define INCBIN_PREFIX
@@ -641,7 +642,7 @@ INLINE float L3Transform(float* src) {
 }
 #endif
 
-int Propagate(Accumulator* accumulator, const int stm) {
+int Propagate(Accumulator* accumulator, uint32_t* featureKey, const int stm) {
   int8_t x0[N_L1] ALIGN;
   float x1[N_L2] ALIGN;
   float x2[N_L3] ALIGN;
@@ -649,6 +650,8 @@ int Propagate(Accumulator* accumulator, const int stm) {
   InputReLU(x0, accumulator, stm);
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
+
+  *featureKey = ZobristFeatures(x2);
   return L3Transform(x2) / 32;
 }
 
@@ -656,7 +659,8 @@ int Predict(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  return board->stm == WHITE ? Propagate(board->accumulators, WHITE) : Propagate(board->accumulators, BLACK);
+  uint32_t featureKey = 0;
+  return board->stm == WHITE ? Propagate(board->accumulators, &featureKey, WHITE) : Propagate(board->accumulators, &featureKey, BLACK);
 }
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights
@@ -805,7 +809,7 @@ int LoadNetwork(char* path) {
 
   CopyData(data);
 
-  for (int i = 0; i < Threads.count; i++)
+  for (size_t i = 0; i < Threads.count; i++)
     ResetRefreshTable(Threads.threads[i]->refreshTable);
 
   fclose(fin);

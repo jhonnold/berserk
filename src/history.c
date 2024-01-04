@@ -87,9 +87,11 @@ void UpdateHistories(SearchStack* ss,
   }
 }
 
-void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread) {
-  const int16_t correction = Min(30000, Max(-30000, (real - raw) * PAWN_CORRECTION_GRAIN));
-  const int idx = (board->pawnZobrist & PAWN_CORRECTION_MASK);
+void UpdateCorrection(int raw, int real, Board* board, ThreadData* thread, uint32_t featureKey) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+  const int pawnIdx = (board->pawnZobrist & PAWN_CORRECTION_MASK);
+  const int ftIdx = (featureKey & FT_CORRECTION_MASK);
 
-  thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 255 + correction) / 256;
+  thread->pawnCorrection[pawnIdx] = (thread->pawnCorrection[pawnIdx] * 255 + correction) / 256;
+  thread->featureCorrection[ftIdx] = (thread->featureCorrection[ftIdx] * 255 + correction) / 256;
 }

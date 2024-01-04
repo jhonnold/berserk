@@ -111,7 +111,7 @@ void MainSearch() {
 
   TTUpdate();
 
-  for (int i = 1; i < Threads.count; i++)
+  for (size_t i = 1; i < Threads.count; i++)
     ThreadWake(Threads.threads[i], THREAD_SEARCH);
   Search(mainThread);
 
@@ -126,19 +126,19 @@ void MainSearch() {
 
   Threads.stop = 1;
 
-  for (int i = 1; i < Threads.count; i++)
+  for (size_t i = 1; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
 
   int voteMap[64 * 64];
   int worstScore = UNKNOWN;
 
-  for (int i = 0; i < Threads.count; i++) {
+  for (size_t i = 0; i < Threads.count; i++) {
     ThreadData* thread                         = Threads.threads[i];
     worstScore                                 = Min(worstScore, thread->rootMoves[0].score);
     voteMap[FromTo(thread->rootMoves[0].move)] = 0;
   }
 
-  for (int i = 0; i < Threads.count; i++) {
+  for (size_t i = 0; i < Threads.count; i++) {
     ThreadData* thread = Threads.threads[i];
     voteMap[FromTo(thread->rootMoves[0].move)] += ThreadValue(thread, worstScore);
   }
@@ -147,7 +147,7 @@ void MainSearch() {
   Score bestScore        = bestThread->rootMoves[0].score;
   Score bestVoteScore    = voteMap[FromTo(bestThread->rootMoves[0].move)];
 
-  for (int i = 1; i < Threads.count; i++) {
+  for (size_t i = 1; i < Threads.count; i++) {
     ThreadData* curr    = Threads.threads[i];
     Score currScore     = curr->rootMoves[0].score;
     Score currVoteScore = voteMap[FromTo(curr->rootMoves[0].move)];
@@ -365,16 +365,17 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   PV childPv;
   pv->count = 0;
 
-  int isPV      = beta - alpha != 1; // pv node when doing a full window
-  int isRoot    = !ss->ply;          //
-  int score     = -CHECKMATE;        // initially assume the worst case
-  int bestScore = -CHECKMATE;        //
-  int maxScore  = CHECKMATE;         // best possible
-  int origAlpha = alpha;             // remember first alpha for tt storage
-  int inCheck   = !!board->checkers;
-  int improving = 0;
-  int eval      = ss->staticEval;
-  int rawEval   = eval;
+  int isPV            = beta - alpha != 1; // pv node when doing a full window
+  int isRoot          = !ss->ply;          //
+  int score           = -CHECKMATE;        // initially assume the worst case
+  int bestScore       = -CHECKMATE;        //
+  int maxScore        = CHECKMATE;         // best possible
+  int origAlpha       = alpha;             // remember first alpha for tt storage
+  int inCheck         = !!board->checkers;
+  int improving       = 0;
+  int eval            = ss->staticEval;
+  int rawEval         = eval;
+  uint32_t featureKey = 0;
 
   Move bestMove = NULL_MOVE;
   Move hashMove = NULL_MOVE;
@@ -406,7 +407,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Prevent overflows
     if (ss->ply >= MAX_SEARCH_PLY - 1)
-      return inCheck ? 0 : Evaluate(board, thread);
+      return inCheck ? 0 : Evaluate(board, thread, &featureKey);
 
     // Mate distance pruning
     alpha = Max(alpha, -CHECKMATE + ss->ply);
@@ -468,8 +469,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (ttHit) {
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
-        rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+        rawEval = Evaluate(board, thread, &featureKey);
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread, featureKey) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -477,8 +478,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
-      rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+      rawEval = Evaluate(board, thread, &featureKey);
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread, featureKey) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -807,7 +808,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
   if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER)))
-    UpdatePawnCorrection(rawEval, bestScore, board, thread);
+    UpdateCorrection(rawEval, bestScore, board, thread, featureKey);
 
   return bestScore;
 }
@@ -815,13 +816,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
   Board* board = &thread->board;
 
-  int score     = -CHECKMATE;
-  int futility  = -CHECKMATE;
-  int bestScore = -CHECKMATE + ss->ply;
-  int isPV      = beta - alpha != 1;
-  int inCheck   = !!board->checkers;
-  int eval      = ss->staticEval;
-  int rawEval   = eval;
+  int score           = -CHECKMATE;
+  int futility        = -CHECKMATE;
+  int bestScore       = -CHECKMATE + ss->ply;
+  int isPV            = beta - alpha != 1;
+  int inCheck         = !!board->checkers;
+  int eval            = ss->staticEval;
+  int rawEval         = eval;
+  uint32_t featureKey = 0;
 
   Move hashMove = NULL_MOVE;
   Move bestMove = NULL_MOVE;
@@ -840,7 +842,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
   // prevent overflows
   if (ss->ply >= MAX_SEARCH_PLY - 1)
-    return inCheck ? 0 : Evaluate(board, thread);
+    return inCheck ? 0 : Evaluate(board, thread, &featureKey);
 
   // check the transposition table for previous info
   int ttHit   = 0;
@@ -862,8 +864,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     if (ttHit) {
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
-        rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+        rawEval = Evaluate(board, thread, &featureKey);
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread, featureKey) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -871,8 +873,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
-      rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+      rawEval = Evaluate(board, thread, &featureKey);
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread, featureKey) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -1047,8 +1049,8 @@ void SearchClearThread(ThreadData* thread) {
 }
 
 void SearchClear() {
-  for (int i = 0; i < Threads.count; i++)
+  for (size_t i = 0; i < Threads.count; i++)
     ThreadWake(Threads.threads[i], THREAD_SEARCH_CLEAR);
-  for (int i = 0; i < Threads.count; i++)
+  for (size_t i = 0; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
 }

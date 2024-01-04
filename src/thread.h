@@ -24,7 +24,7 @@
 
 typedef struct {
   ThreadData* threads[256];
-  int count;
+  size_t count;
 
   pthread_mutex_t mutex, lock;
   pthread_cond_t sleep;
@@ -40,9 +40,9 @@ void ThreadWait(ThreadData* thread, atomic_uchar* cond);
 void ThreadWake(ThreadData* thread, int action);
 void ThreadIdle(ThreadData* thread);
 void* ThreadInit(void* arg);
-void ThreadCreate(int i);
+void ThreadCreate(size_t i);
 void ThreadDestroy(ThreadData* thread);
-void ThreadsSetNumber(int n);
+void ThreadsSetNumber(size_t n);
 void ThreadsExit();
 void ThreadsInit();
 

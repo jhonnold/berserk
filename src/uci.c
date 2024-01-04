@@ -383,7 +383,7 @@ void UCILoop() {
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
       ThreadsSetNumber(Max(1, Min(256, n)));
-      printf("info string set Threads to value %d\n", Threads.count);
+      printf("info string set Threads to value %zu\n", Threads.count);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
       int success = tb_init(in + 32);
       if (success)

@@ -78,9 +78,9 @@ void TTClearPart(int idx) {
 }
 
 inline void TTClear() {
-  for (int i = 0; i < Threads.count; i++)
+  for (size_t i = 0; i < Threads.count; i++)
     ThreadWake(Threads.threads[i], THREAD_TT_CLEAR);
-  for (int i = 0; i < Threads.count; i++)
+  for (size_t i = 0; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
 }
 

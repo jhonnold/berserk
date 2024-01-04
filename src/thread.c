@@ -117,6 +117,8 @@ void* ThreadInit(void* arg) {
     (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
   ResetRefreshTable(thread->refreshTable);
 
+  thread->evalCache = (EvalCacheEntry*) AlignedMalloc(sizeof(EvalCacheEntry) * EVAL_CACHE_SIZE, alignment);
+
   // Copy these onto the board for easier access within the engine
   thread->board.accumulators = thread->accumulators;
   thread->board.refreshTable = thread->refreshTable;
@@ -137,7 +139,7 @@ void* ThreadInit(void* arg) {
 }
 
 // Create a thread with idx i
-void ThreadCreate(int i) {
+void ThreadCreate(size_t i) {
   pthread_t thread;
 
   Threads.init = 1;
@@ -164,12 +166,13 @@ void ThreadDestroy(ThreadData* thread) {
 
   AlignedFree(thread->accumulators);
   AlignedFree(thread->refreshTable);
+  AlignedFree(thread->evalCache);
 
   free(thread);
 }
 
 // Build the pool to a certain amnt
-void ThreadsSetNumber(int n) {
+void ThreadsSetNumber(size_t n) {
   while (Threads.count < n)
     ThreadCreate(Threads.count++);
   while (Threads.count > n)
@@ -238,7 +241,7 @@ void SetupMainThread(Board* board) {
 void SetupOtherThreads(Board* board) {
   ThreadData* mainThread = Threads.threads[0];
 
-  for (int i = 1; i < Threads.count; i++) {
+  for (size_t i = 1; i < Threads.count; i++) {
     ThreadData* thread = Threads.threads[i];
     thread->calls      = Limits.hitrate;
     thread->nodes      = 0;
@@ -257,7 +260,7 @@ void SetupOtherThreads(Board* board) {
 // sum node counts
 uint64_t NodesSearched() {
   uint64_t nodes = 0;
-  for (int i = 0; i < Threads.count; i++)
+  for (size_t i = 0; i < Threads.count; i++)
     nodes += LoadRlx(Threads.threads[i]->nodes);
 
   return nodes;
@@ -265,7 +268,7 @@ uint64_t NodesSearched() {
 
 uint64_t TBHits() {
   uint64_t tbhits = 0;
-  for (int i = 0; i < Threads.count; i++)
+  for (size_t i = 0; i < Threads.count; i++)
     tbhits += LoadRlx(Threads.threads[i]->tbhits);
 
   return tbhits;

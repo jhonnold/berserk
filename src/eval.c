@@ -38,9 +38,15 @@ void SetContempt(int* dest, int stm) {
 }
 
 // Main evalution method
-Score Evaluate(Board* board, ThreadData* thread) {
+Score Evaluate(Board* board, ThreadData* thread, uint32_t* featureKey) {
   if (IsMaterialDraw(board))
     return 0;
+
+  EvalCacheEntry* entry = ProbeEvalCache(board, thread);
+  if (entry) {
+    *featureKey = entry->featureKey;
+    return entry->eval;
+  }
 
   Accumulator* acc = board->accumulators;
   for (int c = WHITE; c <= BLACK; c++) {
@@ -52,7 +58,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  int score = board->stm == WHITE ? Propagate(acc, featureKey, WHITE) : Propagate(acc, featureKey, BLACK);
 
   // static contempt
   score += thread->contempt[board->stm];
@@ -60,7 +66,12 @@ Score Evaluate(Board* board, ThreadData* thread) {
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
 
-  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, score));
+  // keep within valid range after scaling
+  score = ClampEval(score);
+
+  SaveEvalCache(board, thread, score, *featureKey);
+
+  return score;
 }
 
 void EvaluateTrace(Board* board) {
@@ -70,7 +81,8 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base   = Propagate(board->accumulators, board->stm);
+  uint32_t featureKey = 0;
+  int base   = Propagate(board->accumulators, &featureKey, board->stm);
   base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
@@ -98,7 +110,7 @@ void EvaluateTrace(Board* board) {
         PopBit(OccBB(BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
-        int new = Propagate(board->accumulators, board->stm);
+        int new = Propagate(board->accumulators, &featureKey, board->stm);
         new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 

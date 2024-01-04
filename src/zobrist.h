@@ -27,6 +27,8 @@ extern uint64_t ZOBRIST_EP_KEYS[64];
 extern uint64_t ZOBRIST_CASTLE_KEYS[16];
 extern uint64_t ZOBRIST_SIDE_KEY;
 
+extern uint64_t ZOBRIST_FEATURE_KEYS[N_L3];
+
 void InitZobristKeys();
 uint64_t Zobrist(Board* board);
 uint64_t PawnZobrist(Board* board);
@@ -45,6 +47,15 @@ INLINE uint64_t KeyAfter(Board* board, const Move move) {
     newKey ^= ZOBRIST_PIECES[board->squares[to]][to];
 
   return newKey;
+}
+
+INLINE uint32_t ZobristFeatures(float* x2) {
+  uint64_t hash = 0;
+
+  for (size_t i = 0; i < N_L3; i++)
+    hash ^= (x2[i] > 0.0) * ZOBRIST_FEATURE_KEYS[i];
+
+  return (uint32_t) (hash & 0xffffffffull);
 }
 
 #endif
