@@ -38,8 +38,9 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
-#define PAWN_CORRECTION_SIZE 16384
-#define PAWN_CORRECTION_MASK (PAWN_CORRECTION_SIZE - 1)
+#define PAWN_CORRECTION_GRAIN 256
+#define PAWN_CORRECTION_SIZE  16384
+#define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
 
 typedef int Score;
 typedef uint64_t BitBoard;
