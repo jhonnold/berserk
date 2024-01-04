@@ -24,7 +24,6 @@ endif
 UNAME := $(shell uname -m)
 ifeq ($(UNAME), arm64)
     ARCH = arm64
-    CC = clang
 endif
 
 # Setup arch
