@@ -499,8 +499,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   if ((ss - 1)->move && (ss - 1)->staticEval != EVAL_UNKNOWN && !IsCap((ss - 1)->move) && !inCheck) {
-    const int diff = (ss - 1)->staticEval + ss->staticEval;
-    const int bonus = Min(1896, Max(-1896, -4 * diff));
+    const int diff = (ss - 1)->staticEval + ss->staticEval - 100;
+    const int bonus = Min(1896, Max(-1896, -diff));
 
     AddHistoryHeuristic((ss - 1)->hh, bonus);
   }
