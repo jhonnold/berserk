@@ -49,7 +49,7 @@ void UpdateHistories(SearchStack* ss,
     // by Alayan in Ethereal
     if (nQ > 1 || depth > 3) {
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
-      AddHistoryHeuristic(&PH(board->pawnZobrist, Moving(bestMove), To(bestMove)), inc);
+      AddHistoryHeuristic(&PH(board->pawnZobrist, To(bestMove)), inc);
       UpdateCH(ss, bestMove, inc);
     }
   } else {
@@ -69,7 +69,7 @@ void UpdateHistories(SearchStack* ss,
         continue;
 
       AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
-      AddHistoryHeuristic(&PH(board->pawnZobrist, Moving(m), To(m)), -inc);
+      AddHistoryHeuristic(&PH(board->pawnZobrist, To(m)), -inc);
       UpdateCH(ss, m, -inc);
     }
   }
