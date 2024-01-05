@@ -157,7 +157,7 @@ typedef struct {
 typedef struct {
   Move move;
   int seldepth;
-  int score, previousScore;
+  int score, previousScore, avgScore;
   uint64_t nodes;
   PV pv;
 } RootMove;

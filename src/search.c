@@ -254,7 +254,7 @@ void Search(ThreadData* thread) {
       int beta        = CHECKMATE;
       int delta       = CHECKMATE;
       int searchDepth = thread->depth;
-      int score       = thread->rootMoves[thread->multiPV].previousScore;
+      int score       = thread->rootMoves[thread->multiPV].avgScore;
 
       thread->seldepth = 0;
 
@@ -756,6 +756,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         }
 
       rm->nodes += thread->nodes - startingNodeCount;
+      rm->avgScore = rm->avgScore == -CHECKMATE ? score : (rm->avgScore + score) / 2;
 
       if (playedMoves == 1 || score > alpha) {
         rm->score    = score;
