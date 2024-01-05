@@ -58,12 +58,12 @@
 #define TB_RESULT_EP_SHIFT       19
 #define TB_RESULT_DTZ_SHIFT      20
 
-#define TB_GET_WDL(_res)      (((_res) &TB_RESULT_WDL_MASK) >> TB_RESULT_WDL_SHIFT)
-#define TB_GET_TO(_res)       (((_res) &TB_RESULT_TO_MASK) >> TB_RESULT_TO_SHIFT)
-#define TB_GET_FROM(_res)     (((_res) &TB_RESULT_FROM_MASK) >> TB_RESULT_FROM_SHIFT)
-#define TB_GET_PROMOTES(_res) (((_res) &TB_RESULT_PROMOTES_MASK) >> TB_RESULT_PROMOTES_SHIFT)
-#define TB_GET_EP(_res)       (((_res) &TB_RESULT_EP_MASK) >> TB_RESULT_EP_SHIFT)
-#define TB_GET_DTZ(_res)      (((_res) &TB_RESULT_DTZ_MASK) >> TB_RESULT_DTZ_SHIFT)
+#define TB_GET_WDL(_res)      (((_res) & TB_RESULT_WDL_MASK) >> TB_RESULT_WDL_SHIFT)
+#define TB_GET_TO(_res)       (((_res) & TB_RESULT_TO_MASK) >> TB_RESULT_TO_SHIFT)
+#define TB_GET_FROM(_res)     (((_res) & TB_RESULT_FROM_MASK) >> TB_RESULT_FROM_SHIFT)
+#define TB_GET_PROMOTES(_res) (((_res) & TB_RESULT_PROMOTES_MASK) >> TB_RESULT_PROMOTES_SHIFT)
+#define TB_GET_EP(_res)       (((_res) & TB_RESULT_EP_MASK) >> TB_RESULT_EP_SHIFT)
+#define TB_GET_DTZ(_res)      (((_res) & TB_RESULT_DTZ_MASK) >> TB_RESULT_DTZ_SHIFT)
 
 #define TB_SET_WDL(_res, _wdl) (((_res) & ~TB_RESULT_WDL_MASK) | (((_wdl) << TB_RESULT_WDL_SHIFT) & TB_RESULT_WDL_MASK))
 #define TB_SET_TO(_res, _to)   (((_res) & ~TB_RESULT_TO_MASK) | (((_to) << TB_RESULT_TO_SHIFT) & TB_RESULT_TO_MASK))

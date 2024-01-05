@@ -231,8 +231,10 @@ void Search(ThreadData* thread) {
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
     (ss + i)->ply = i;
-  for (size_t i = 1; i <= searchOffset; i++)
+  for (size_t i = 1; i <= searchOffset; i++) {
     (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
+    (ss - i)->hh = &thread->hh[WHITE][0][0][0];
+  }
 
   while (++thread->depth < MAX_SEARCH_PLY) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -496,6 +498,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
+  if ((ss - 1)->move && (ss - 1)->staticEval != EVAL_UNKNOWN && !IsCap((ss - 1)->move) && !inCheck) {
+    const int diff = (ss - 1)->staticEval + ss->staticEval;
+    const int bonus = Min(1896, Max(-1896, -4 * diff));
+
+    AddHistoryHeuristic((ss - 1)->hh, bonus);
+  }
+
   // reset moves to moves related to 1 additional ply
   (ss + 1)->skip       = NULL_MOVE;
   (ss + 1)->killers[0] = NULL_MOVE;
@@ -536,6 +545,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       TTPrefetch(KeyAfter(board, NULL_MOVE));
       ss->move = NULL_MOVE;
       ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
+      ss->hh   = &thread->hh[WHITE][0][0][0];
       MakeNullMove(board);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
@@ -574,6 +584,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         TTPrefetch(KeyAfter(board, move));
         ss->move = move;
         ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        ss->hh   = &HH(board->stm, move, board->threatened);
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -690,6 +701,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->hh   = &HH(board->stm, move, board->threatened);
     MakeMove(move, board);
 
     // apply extensions
@@ -921,6 +933,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->hh   = &HH(board->stm, move, board->threatened);
     MakeMove(move, board);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);

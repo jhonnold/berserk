@@ -118,7 +118,7 @@
 #define bswap16(x) __builtin_bswap16(x)
 #else
 inline uint16_t bswap16(uint16_t x) {
-  return (uint16_t) ((((uint16_t) (x) &0xff00) >> 8) | (((uint16_t) (x) &0x00ff) << 8));
+  return (uint16_t) ((((uint16_t) (x) & 0xff00) >> 8) | (((uint16_t) (x) & 0x00ff) << 8));
 }
 #endif
 #endif
