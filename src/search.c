@@ -182,7 +182,7 @@ void MainSearch() {
     Threads.threads[0] = bestThread;
   }
 
-  bestThread->previousScore = bestThread->rootMoves[0].score;
+  bestThread->previousScore = bestThread->rootMoves[0].avgScore;
 
   Move bestMove   = bestThread->rootMoves[0].move;
   Move ponderMove = NULL_MOVE;
