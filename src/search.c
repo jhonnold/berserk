@@ -756,7 +756,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         }
 
       rm->nodes += thread->nodes - startingNodeCount;
-      rm->avgScore = rm->avgScore == -CHECKMATE ? score : (rm->avgScore + score) / 2;
+      rm->avgScore = rm->avgScore == -CHECKMATE ? score : (rm->avgScore + 2 * score) / 3;
 
       if (playedMoves == 1 || score > alpha) {
         rm->score    = score;
