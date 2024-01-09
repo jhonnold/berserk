@@ -222,8 +222,9 @@ enum {
   PLAY_KILLER_2,
   PLAY_COUNTER,
   GEN_QUIET_MOVES,
-  PLAY_QUIETS,
+  PLAY_GOOD_QUIETS,
   PLAY_BAD_NOISY,
+  PLAY_BAD_QUIETS,
   // ProbCut
   PC_GEN_NOISY_MOVES,
   PC_PLAY_GOOD_NOISY,
@@ -252,7 +253,7 @@ typedef struct {
   Move hashMove, killer1, killer2, counter;
   int seeCutoff, phase, genChecks;
 
-  ScoredMove *current, *end, *endBad;
+  ScoredMove *current, *end, *endBad, *startBadQuiets, *endBadQuiets;
   ScoredMove moves[MAX_MOVES];
 } MovePicker;
 

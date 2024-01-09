@@ -130,23 +130,31 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
     case GEN_QUIET_MOVES:
       if (!skipQuiets) {
         picker->current = picker->endBad;
-        picker->end     = AddQuietMoves(picker->current, board);
+        picker->end = picker->startBadQuiets = picker->endBadQuiets = AddQuietMoves(picker->current, board);
 
         ScoreMoves(picker, board, ST_QUIET);
       }
 
-      picker->phase = PLAY_QUIETS;
+      picker->phase = PLAY_GOOD_QUIETS;
       // fallthrough
-    case PLAY_QUIETS:
+    case PLAY_GOOD_QUIETS:
       if (picker->current != picker->end && !skipQuiets) {
-        Move move = Best(picker->current++, picker->end);
+        Move move = Best(picker->current, picker->end);
+        int score = picker->current->score;
+        picker->current++;
 
         if (move == picker->hashMove || //
             move == picker->killer1 ||  //
             move == picker->killer2 ||  //
             move == picker->counter)
           return NextMove(picker, board, skipQuiets);
-        else
+        else if (score < -8192) {
+          picker->startBadQuiets = picker->current - 1;
+          picker->current        = picker->moves;
+          picker->end            = picker->endBad;
+          picker->phase          = PLAY_BAD_NOISY;
+          return NextMove(picker, board, skipQuiets);
+        } else
           return move;
       }
 
@@ -162,7 +170,25 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
         return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
       }
 
-      picker->phase = -1;
+      picker->current = picker->startBadQuiets;
+      picker->end     = picker->endBadQuiets;
+
+      picker->phase = PLAY_BAD_QUIETS;
+      // fallthrough
+    case PLAY_BAD_QUIETS:
+      if (picker->current != picker->end && !skipQuiets) {
+        Move move = Best(picker->current++, picker->end);
+
+        if (move == picker->hashMove || //
+            move == picker->killer1 ||  //
+            move == picker->killer2 ||  //
+            move == picker->counter)
+          return NextMove(picker, board, skipQuiets);
+        else
+          return move;
+      }
+
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     // Probcut MP Steps
@@ -265,8 +291,9 @@ char* PhaseName(MovePicker* picker) {
     case PLAY_KILLER_1: return "PLAY_KILLER_1";
     case PLAY_KILLER_2: return "PLAY_KILLER_2";
     case PLAY_COUNTER: return "PLAY_COUNTER";
-    case PLAY_QUIETS: return "PLAY_QUIETS";
+    case PLAY_GOOD_QUIETS: return "PLAY_GOOD_QUIETS";
     case PLAY_BAD_NOISY: return "PLAY_BAD_NOISY";
+    case PLAY_BAD_QUIETS: return "PLAY_BAD_QUIETS";
     default: return "UNKNOWN";
   }
 }
