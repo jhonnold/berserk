@@ -199,7 +199,7 @@ void ThreadsInit() {
 INLINE void InitRootMove(RootMove* rm, Move move) {
   rm->move = move;
 
-  rm->previousScore = rm->score = -CHECKMATE;
+  rm->previousScore = rm->score = rm->avgScore = -CHECKMATE;
 
   rm->pv.moves[0] = move;
   rm->pv.count    = 1;
