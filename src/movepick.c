@@ -148,7 +148,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
             move == picker->killer2 ||  //
             move == picker->counter)
           return NextMove(picker, board, skipQuiets);
-        else if (score < -8192) {
+        else if (score < 0) {
           picker->startBadQuiets = picker->current - 1;
           picker->current        = picker->moves;
           picker->end            = picker->endBad;
