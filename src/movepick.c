@@ -129,8 +129,8 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       // fallthrough
     case GEN_QUIET_MOVES:
       if (!skipQuiets) {
-        picker->current = picker->endBad = picker->startBadQuiets = picker->endBadQuiets;
-        picker->end                                               = AddQuietMoves(picker->current, board);
+        picker->current = picker->startBadQuiets = picker->endBadQuiets = picker->endBad;
+        picker->end                                                     = AddQuietMoves(picker->current, board);
 
         ScoreMoves(picker, board, ST_QUIET);
       }
@@ -149,8 +149,10 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
             move == picker->counter)
           return NextMove(picker, board, skipQuiets);
 
-        else if (score < 0 && !SEE(board, move, 0))
+        else if (score < 0 && !SEE(board, move, 0)) {
           *picker->endBadQuiets++ = *(picker->current - 1);
+          return NextMove(picker, board, skipQuiets);
+        }
 
         else
           return move;
