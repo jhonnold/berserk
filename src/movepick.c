@@ -129,8 +129,8 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       // fallthrough
     case GEN_QUIET_MOVES:
       if (!skipQuiets) {
-        picker->current = picker->endBad;
-        picker->end = picker->startBadQuiets = picker->endBadQuiets = AddQuietMoves(picker->current, board);
+        picker->current = picker->endBad = picker->startBadQuiets = picker->endBadQuiets;
+        picker->end                                               = AddQuietMoves(picker->current, board);
 
         ScoreMoves(picker, board, ST_QUIET);
       }
@@ -148,13 +148,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
             move == picker->killer2 ||  //
             move == picker->counter)
           return NextMove(picker, board, skipQuiets);
-        else if (score < Min(-2048 * picker->depth, -6144)) {
-          picker->startBadQuiets = picker->current - 1;
-          picker->current        = picker->moves;
-          picker->end            = picker->endBad;
-          picker->phase          = PLAY_BAD_NOISY;
-          return NextMove(picker, board, skipQuiets);
-        } else
+
+        else if (score < 0 && !SEE(board, move, 0))
+          *picker->endBadQuiets++ = *(picker->current - 1);
+
+        else
           return move;
       }
 
@@ -176,19 +174,10 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PLAY_BAD_QUIETS;
       // fallthrough
     case PLAY_BAD_QUIETS:
-      if (picker->current != picker->end && !skipQuiets) {
-        Move move = Best(picker->current++, picker->end);
+      if (picker->current != picker->end && !skipQuiets)
+        return (picker->current++)->move;
 
-        if (move == picker->hashMove || //
-            move == picker->killer1 ||  //
-            move == picker->killer2 ||  //
-            move == picker->counter)
-          return NextMove(picker, board, skipQuiets);
-        else
-          return move;
-      }
-
-      picker->phase = NO_MORE_MOVES;
+      picker->phase = -1;
       return NULL_MOVE;
 
     // Probcut MP Steps
