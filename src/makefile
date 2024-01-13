@@ -56,6 +56,9 @@ else ifeq ($(findstring -pext, $(ARCH)), -pext)
 	CFLAGS += -DUSE_PEXT -mbmi2
 endif
 
+openbench: download-network
+	$(MAKE) ARCH=avx2 all
+
 build: download-network
 	$(MAKE) ARCH=$(ARCH) all
 
