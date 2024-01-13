@@ -16,7 +16,6 @@
 
 #include "evaluate.h"
 
-#include <immintrin.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +49,7 @@ float OUTPUT_BIAS;
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
+#include <immintrin.h>
 INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m512i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
@@ -71,6 +71,7 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   }
 }
 #elif defined(__AVX2__)
+#include <immintrin.h>
 INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
@@ -92,6 +93,7 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   }
 }
 #elif defined(__SSE2__)
+#include <immintrin.h>
 INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
