@@ -22,6 +22,7 @@
 #include "move.h"
 #include "types.h"
 #include "util.h"
+#include "zobrist.h"
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
@@ -77,7 +78,8 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / PAWN_CORRECTION_GRAIN;
+  const int idx = (board->pawnZobrist ^ ZOBRIST_PHASE[Min(board->phase, 64)]) & PAWN_CORRECTION_MASK;
+  return thread->pawnCorrection[idx] / PAWN_CORRECTION_GRAIN;
 }
 
 void UpdateHistories(SearchStack* ss,

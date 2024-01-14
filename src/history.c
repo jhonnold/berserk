@@ -22,6 +22,7 @@
 #include "board.h"
 #include "move.h"
 #include "util.h"
+#include "zobrist.h"
 
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
@@ -89,7 +90,7 @@ void UpdateHistories(SearchStack* ss,
 
 void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread) {
   const int16_t correction = Min(30000, Max(-30000, (real - raw) * PAWN_CORRECTION_GRAIN));
-  const int idx = (board->pawnZobrist & PAWN_CORRECTION_MASK);
+  const int idx = (board->pawnZobrist ^ ZOBRIST_PHASE[Min(board->phase, 64)]) & PAWN_CORRECTION_MASK;
 
   thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 255 + correction) / 256;
 }

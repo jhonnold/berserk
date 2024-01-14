@@ -24,6 +24,7 @@ uint64_t ZOBRIST_PIECES[12][64];
 uint64_t ZOBRIST_EP_KEYS[64];
 uint64_t ZOBRIST_CASTLE_KEYS[16];
 uint64_t ZOBRIST_SIDE_KEY;
+uint64_t ZOBRIST_PHASE[65];
 
 void InitZobristKeys() {
   for (int i = 0; i < 12; i++)
@@ -37,6 +38,9 @@ void InitZobristKeys() {
     ZOBRIST_CASTLE_KEYS[i] = RandomUInt64();
 
   ZOBRIST_SIDE_KEY = RandomUInt64();
+
+  for (int i = 0; i < 65; i++)
+    ZOBRIST_PHASE[i] = RandomUInt64();
 }
 
 // Generate a Zobrist key for the current board state
