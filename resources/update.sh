@@ -12,7 +12,7 @@ fi
 
 # Clone Berserk
 echo "Cloning Berserk"
-git clone --depth 1 --branch main https://github.com/jhonnold/berserk.git
+git clone --depth 1 --branch tcec-swiss6 https://github.com/jhonnold/berserk.git
 success=$?
 
 if [[ success -eq 0 ]]; then
