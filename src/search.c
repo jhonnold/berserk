@@ -739,6 +739,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         UpdateCH(ss, move, bonus);
       }
     } else if (!isPV || playedMoves > 1) {
+      if (!hashMove)
+        R += 2;
+
       score =
         -Negamax(-alpha - 1, -alpha, newDepth - 1 - (playedMoves > 1 && R > 4), !cutnode, thread, &childPv, ss + 1);
     }
