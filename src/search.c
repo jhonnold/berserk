@@ -616,6 +616,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
     R -= history / 8192;                         // adjust reduction based on historical score
     R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+    R += 2 * !ttPv;
+    R += !improving;
+    R -= 2 * killerOrCounter;
+    R -= GivesCheck(move, board);
+    R += (1 + !IsCap(move)) * cutnode;
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
@@ -697,29 +702,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Late move reductions
     if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
-      // increase reduction on non-pv
-      if (!ttPv)
-        R += 2;
-
-      // increase reduction if our eval is declining
-      if (!improving)
-        R++;
-
-      // reduce these special quiets less
-      if (killerOrCounter)
-        R -= 2;
-
-      // move GAVE check
-      if (board->checkers)
-        R--;
-
-      // Reduce more on expected cut nodes
-      // idea from komodo/sf, explained by Don Daily here
-      // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
-      // and https://www.chessprogramming.org/Node_Types
-      if (cutnode)
-        R += 1 + !IsCap(move);
-
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(newDepth, Max(R, 1));
 

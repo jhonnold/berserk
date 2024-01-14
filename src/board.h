@@ -47,7 +47,7 @@ void PrintBoard(Board* board);
 void SetSpecialPieces(Board* board);
 void SetThreatsAndEasyCaptures(Board* board);
 
-int DoesMoveCheck(Move move, Board* board);
+int GivesCheck(Move move, Board* board);
 
 int IsDraw(Board* board, int ply);
 int IsRepetition(Board* board, int ply);
