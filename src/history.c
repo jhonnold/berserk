@@ -87,8 +87,8 @@ void UpdateHistories(SearchStack* ss,
   }
 }
 
-void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread) {
-  const int16_t correction = Min(30000, Max(-30000, (real - raw) * PAWN_CORRECTION_GRAIN));
+void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * 16 * Min(7 + depth, 24)));
   const int idx = (board->pawnZobrist & PAWN_CORRECTION_MASK);
 
   thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 255 + correction) / 256;
