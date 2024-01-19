@@ -65,6 +65,14 @@ typedef struct {
   BitBoard pcs[12];
 } AccumulatorKingState;
 
+#define DELTA_CACHE_ENTRIES 4096
+#define DELTA_CACHE_MASK (DELTA_CACHE_ENTRIES - 1)
+
+typedef struct {
+  uint64_t* keys;
+  acc_t* values;
+} DeltaCache;
+
 typedef struct {
   int capture;
   int castling;
@@ -112,6 +120,7 @@ typedef struct {
 
   Accumulator* accumulators;
   AccumulatorKingState* refreshTable;
+  DeltaCache* deltaCache;
 } Board;
 
 typedef struct {
@@ -181,6 +190,7 @@ struct ThreadData {
 
   Accumulator* accumulators;
   AccumulatorKingState* refreshTable;
+  DeltaCache* deltaCache;
 
   Board board;
 

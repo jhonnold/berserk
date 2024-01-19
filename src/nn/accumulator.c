@@ -25,6 +25,7 @@
 #include "../move.h"
 #include "../movegen.h"
 #include "../util.h"
+#include "../zobrist.h"
 
 void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
@@ -94,6 +95,9 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   dest->correct[perspective] = 1;
 }
 
+extern uint64_t total;
+extern uint64_t hits;
+
 void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
@@ -112,7 +116,18 @@ void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, con
 
     ApplySubSubAdd(output, prev, from, capturedTo, to);
   } else {
-    ApplySubAdd(output, prev, from, to);
+    uint64_t key     = ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ (ZOBRIST_FT_DIR * (from > to));
+    uint64_t idx     = key & DELTA_CACHE_MASK;
+    uint64_t curr    = board->deltaCache->keys[idx];
+    acc_t* delta     = &board->deltaCache->values[N_HIDDEN * idx];
+
+    if (curr != key) {
+      DetermineDeltaAndApplySubAdd(output, prev, from, to, delta);
+
+      board->deltaCache->keys[idx] = key;
+    } else {
+      AddCachedDelta(output, prev, delta);
+    }
   }
 }
 

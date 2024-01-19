@@ -117,9 +117,14 @@ void* ThreadInit(void* arg) {
     (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
   ResetRefreshTable(thread->refreshTable);
 
+  thread->deltaCache         = (DeltaCache*) AlignedMalloc(sizeof(DeltaCache), alignment);
+  thread->deltaCache->keys   = (uint64_t*) calloc(DELTA_CACHE_ENTRIES, sizeof(uint64_t));
+  thread->deltaCache->values = (acc_t*) AlignedMalloc(sizeof(acc_t) * N_HIDDEN * DELTA_CACHE_ENTRIES, alignment);
+
   // Copy these onto the board for easier access within the engine
   thread->board.accumulators = thread->accumulators;
   thread->board.refreshTable = thread->refreshTable;
+  thread->board.deltaCache   = thread->deltaCache;
 
   pthread_mutex_init(&thread->mutex, NULL);
   pthread_cond_init(&thread->sleep, NULL);
@@ -164,6 +169,10 @@ void ThreadDestroy(ThreadData* thread) {
 
   AlignedFree(thread->accumulators);
   AlignedFree(thread->refreshTable);
+
+  AlignedFree(thread->deltaCache->values);
+  free(thread->deltaCache->keys);
+  AlignedFree(thread->deltaCache);
 
   free(thread);
 }

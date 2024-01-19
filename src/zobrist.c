@@ -25,6 +25,9 @@ uint64_t ZOBRIST_EP_KEYS[64];
 uint64_t ZOBRIST_CASTLE_KEYS[16];
 uint64_t ZOBRIST_SIDE_KEY;
 
+uint64_t ZOBRIST_FT_KEYS[N_FEATURES];
+uint64_t ZOBRIST_FT_DIR;
+
 void InitZobristKeys() {
   for (int i = 0; i < 12; i++)
     for (int j = 0; j < 64; j++)
@@ -37,6 +40,11 @@ void InitZobristKeys() {
     ZOBRIST_CASTLE_KEYS[i] = RandomUInt64();
 
   ZOBRIST_SIDE_KEY = RandomUInt64();
+
+  for (int i = 0; i < N_FEATURES; i++)
+    ZOBRIST_FT_KEYS[i] = RandomUInt64();
+
+  ZOBRIST_FT_DIR = RandomUInt64();
 }
 
 // Generate a Zobrist key for the current board state
@@ -59,7 +67,6 @@ uint64_t Zobrist(Board* board) {
 
   return hash;
 }
-
 
 // Generate a Pawn Zobrist key for the current board state
 uint64_t PawnZobrist(Board* board) {

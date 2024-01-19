@@ -17,6 +17,7 @@
 #ifndef ACCUMULATOR_H
 #define ACCUMULATOR_H
 
+
 #include "../board.h"
 #include "../types.h"
 #include "../util.h"
@@ -125,6 +126,37 @@ INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
   }
 }
 
+INLINE void DetermineDeltaAndApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2, acc_t* delta) {
+  regi_t regs[NUM_REGS];
+
+  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
+    const size_t unrollOffset = c * UNROLL;
+
+    const regi_t* inputs = (regi_t*) &src[unrollOffset];
+    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
+    regi_t* diff         = (regi_t*) &delta[unrollOffset];
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_load(&inputs[i]);
+
+    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
+    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_sub(regs[i], w1[i]);
+
+    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
+    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_add(regs[i], w2[i]);
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      diff[i] = regi_sub(w2[i], w1[i]);
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regi_store(&outputs[i], regs[i]);
+  }
+}
+
 INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
   regi_t regs[NUM_REGS];
 
@@ -191,6 +223,19 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
 
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);
+  }
+}
+
+INLINE void AddCachedDelta(acc_t* dest, acc_t* src, acc_t* delta) {
+  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
+    const size_t unrollOffset = c * UNROLL;
+
+    const regi_t* inputs = (regi_t*) &src[unrollOffset];
+    const regi_t* diff   = (regi_t*) &delta[unrollOffset];
+    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      outputs[i] = regi_add(inputs[i], diff[i]);
   }
 }
 
