@@ -95,9 +95,6 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   dest->correct[perspective] = 1;
 }
 
-extern uint64_t total;
-extern uint64_t hits;
-
 void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
@@ -105,46 +102,41 @@ void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, con
   int from = FeatureIdx(Moving(move), From(move), king, view);
   int to   = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
 
-  if (IsCas(move)) {
-    int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
-    int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
+  uint64_t key  = ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ (ZOBRIST_FT_DIR * (from > to));
+  uint64_t idx  = key & DELTA_CACHE_MASK;
+  uint64_t curr = board->deltaCache->keys[idx];
+  acc_t* delta  = &board->deltaCache->values[N_HIDDEN * idx];
 
-    uint64_t key = ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ ZOBRIST_FT_KEYS[rookFrom] ^ ZOBRIST_FT_KEYS[rookTo] ^
-                   (ZOBRIST_FT_DIR * (from > to));
-    uint64_t idx  = key & DELTA_CACHE_MASK;
-    uint64_t curr = board->deltaCache->keys[idx];
-    acc_t* delta  = &board->deltaCache->values[N_HIDDEN * idx];
+  if (curr == key) {
+    if (IsCas(move)) {
+      int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
+      int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
-    if (curr != key) {
-      DetermineDeltaAndApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo, delta);
+      AddCachedDeltaSubAdd(output, prev, rookFrom, rookTo, delta);
+    } else if (IsCap(move)) {
+      int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
+      int capturedTo = FeatureIdx(captured, capSq, king, view);
 
-      board->deltaCache->keys[idx] = key;
+      AddCachedDeltaSub(output, prev, capturedTo, delta);
     } else {
       AddCachedDelta(output, prev, delta);
     }
-
-    // ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
-  } else if (IsCap(move)) {
-    int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
-    int capturedTo = FeatureIdx(captured, capSq, king, view);
-
-    uint64_t key =
-      ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ ZOBRIST_FT_KEYS[capturedTo] ^ (ZOBRIST_FT_DIR * (from > to));
-    uint64_t idx  = key & DELTA_CACHE_MASK;
-    uint64_t curr = board->deltaCache->keys[idx];
-    acc_t* delta  = &board->deltaCache->values[N_HIDDEN * idx];
-
-    if (curr != key) {
-      DetermineDeltaAndApplySubSubAdd(output, prev, from, capturedTo, to, delta);
-
-      board->deltaCache->keys[idx] = key;
-    } else {
-      AddCachedDelta(output, prev, delta);
-    }
-
-    // ApplySubSubAdd(output, prev, from, capturedTo, to);
   } else {
-    ApplySubAdd(output, prev, from, to);
+    if (IsCas(move)) {
+      int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
+      int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
+
+      DetermineDeltaAndApplySubAddSubAdd(output, prev, from, to, rookFrom, rookTo, delta);
+    } else if (IsCap(move)) {
+      int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
+      int capturedTo = FeatureIdx(captured, capSq, king, view);
+
+      DetermineDeltaAndApplySubAddSub(output, prev, from, to, capturedTo, delta);
+    } else {
+      DetermineDeltaAndApplySubAdd(output, prev, from, to, delta);
+    }
+
+    board->deltaCache->keys[idx] = key;
   }
 }
 
