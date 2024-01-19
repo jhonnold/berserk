@@ -144,18 +144,7 @@ void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, con
 
     // ApplySubSubAdd(output, prev, from, capturedTo, to);
   } else {
-    uint64_t key  = ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ (ZOBRIST_FT_DIR * (from > to));
-    uint64_t idx  = key & DELTA_CACHE_MASK;
-    uint64_t curr = board->deltaCache->keys[idx];
-    acc_t* delta  = &board->deltaCache->values[N_HIDDEN * idx];
-
-    if (curr != key) {
-      DetermineDeltaAndApplySubAdd(output, prev, from, to, delta);
-
-      board->deltaCache->keys[idx] = key;
-    } else {
-      AddCachedDelta(output, prev, delta);
-    }
+    ApplySubAdd(output, prev, from, to);
   }
 }
 
