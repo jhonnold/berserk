@@ -17,7 +17,6 @@
 #ifndef ACCUMULATOR_H
 #define ACCUMULATOR_H
 
-
 #include "../board.h"
 #include "../types.h"
 #include "../util.h"
@@ -189,6 +188,42 @@ INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
   }
 }
 
+INLINE void DetermineDeltaAndApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, acc_t* delta) {
+  regi_t regs[NUM_REGS];
+
+  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
+    const size_t unrollOffset = c * UNROLL;
+
+    const regi_t* inputs = (regi_t*) &src[unrollOffset];
+    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
+    regi_t* diff         = (regi_t*) &delta[unrollOffset];
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_load(&inputs[i]);
+
+    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
+    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_sub(regs[i], w1[i]);
+
+    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
+    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_sub(regs[i], w2[i]);
+
+    const size_t o3  = f3 * N_HIDDEN + unrollOffset;
+    const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_add(regs[i], w3[i]);
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      diff[i] = regi_sub(w3[i], regi_add(w1[i], w2[i]));
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regi_store(&outputs[i], regs[i]);
+  }
+}
+
 INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4) {
   regi_t regs[NUM_REGS];
 
@@ -220,6 +255,47 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
     const regi_t* w4 = (regi_t*) &INPUT_WEIGHTS[o4];
     for (size_t i = 0; i < NUM_REGS; i++)
       regs[i] = regi_add(regs[i], w4[i]);
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regi_store(&outputs[i], regs[i]);
+  }
+}
+
+INLINE void DetermineDeltaAndApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4, acc_t* delta) {
+  regi_t regs[NUM_REGS];
+
+  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
+    const size_t unrollOffset = c * UNROLL;
+
+    const regi_t* inputs = (regi_t*) &src[unrollOffset];
+    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
+    regi_t* diff         = (regi_t*) &delta[unrollOffset];
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_load(&inputs[i]);
+
+    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
+    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_sub(regs[i], w1[i]);
+
+    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
+    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_sub(regs[i], w2[i]);
+
+    const size_t o3  = f3 * N_HIDDEN + unrollOffset;
+    const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_add(regs[i], w3[i]);
+
+    const size_t o4  = f4 * N_HIDDEN + unrollOffset;
+    const regi_t* w4 = (regi_t*) &INPUT_WEIGHTS[o4];
+    for (size_t i = 0; i < NUM_REGS; i++)
+      regs[i] = regi_add(regs[i], w4[i]);
+
+    for (size_t i = 0; i < NUM_REGS; i++)
+      diff[i] = regi_sub(regi_add(w3[i], w4[i]), regi_add(w1[i], w2[i]));
 
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);

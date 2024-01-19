@@ -109,17 +109,45 @@ void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, con
     int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
     int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
-    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
+    uint64_t key = ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ ZOBRIST_FT_KEYS[rookFrom] ^ ZOBRIST_FT_KEYS[rookTo] ^
+                   (ZOBRIST_FT_DIR * (from > to));
+    uint64_t idx  = key & DELTA_CACHE_MASK;
+    uint64_t curr = board->deltaCache->keys[idx];
+    acc_t* delta  = &board->deltaCache->values[N_HIDDEN * idx];
+
+    if (curr != key) {
+      DetermineDeltaAndApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo, delta);
+
+      board->deltaCache->keys[idx] = key;
+    } else {
+      AddCachedDelta(output, prev, delta);
+    }
+
+    // ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
   } else if (IsCap(move)) {
     int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
-    ApplySubSubAdd(output, prev, from, capturedTo, to);
+    uint64_t key =
+      ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ ZOBRIST_FT_KEYS[capturedTo] ^ (ZOBRIST_FT_DIR * (from > to));
+    uint64_t idx  = key & DELTA_CACHE_MASK;
+    uint64_t curr = board->deltaCache->keys[idx];
+    acc_t* delta  = &board->deltaCache->values[N_HIDDEN * idx];
+
+    if (curr != key) {
+      DetermineDeltaAndApplySubSubAdd(output, prev, from, capturedTo, to, delta);
+
+      board->deltaCache->keys[idx] = key;
+    } else {
+      AddCachedDelta(output, prev, delta);
+    }
+
+    // ApplySubSubAdd(output, prev, from, capturedTo, to);
   } else {
-    uint64_t key     = ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ (ZOBRIST_FT_DIR * (from > to));
-    uint64_t idx     = key & DELTA_CACHE_MASK;
-    uint64_t curr    = board->deltaCache->keys[idx];
-    acc_t* delta     = &board->deltaCache->values[N_HIDDEN * idx];
+    uint64_t key  = ZOBRIST_FT_KEYS[from] ^ ZOBRIST_FT_KEYS[to] ^ (ZOBRIST_FT_DIR * (from > to));
+    uint64_t idx  = key & DELTA_CACHE_MASK;
+    uint64_t curr = board->deltaCache->keys[idx];
+    acc_t* delta  = &board->deltaCache->values[N_HIDDEN * idx];
 
     if (curr != key) {
       DetermineDeltaAndApplySubAdd(output, prev, from, to, delta);
