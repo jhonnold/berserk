@@ -55,25 +55,36 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     const int pt       = PieceType(pc);
     const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
 
-    if (type == ST_QUIET)
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 +              //
-                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                                            //
-                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                                            //
-                       (int) (*(ss - 4)->ch)[pc][to] +                                                //
-                       (int) (*(ss - 6)->ch)[pc][to] +                                                //
-                       (pt != KING) * 24 * SEE_VALUE[pt] * !!GetBit(thread->board.easyCapture, from); //
+    if (type == ST_QUIET) {
+      current->score = (int) HH(board->stm, move, board->threatened) * 2 + //
+                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
+                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
+                       (int) (*(ss - 4)->ch)[pc][to] +                     //
+                       (int) (*(ss - 6)->ch)[pc][to];
 
-    else if (type == ST_CAPTURE)
-      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[captured];
+      if (GetBit(OpponentsEasyCaptures(board), from)) {
+        const BitBoard pawnThreats  = board->threatenedBy[PAWN];
+        const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
+        const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
+
+        switch (pt) {
+          case QUEEN: current->score += 25000 * !GetBit(rookThreats, to); break;
+          case ROOK: current->score += 15000 * !GetBit(minorThreats, to); break;
+          case BISHOP: current->score += 10000 * !GetBit(pawnThreats, to); break;
+          case KNIGHT: current->score += 10000 * !GetBit(pawnThreats, to); break;
+        }
+      }
+    } else if (type == ST_CAPTURE)
+      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
       current->score = 1e7 + SEE_VALUE[captured];
 
     else if (type == ST_EVASION_QT)
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                               //
-                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                               //
-                       (int) (*(ss - 4)->ch)[pc][to] +                                   //
+      current->score = (int) HH(board->stm, move, board->threatened) * 2 + //
+                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
+                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
+                       (int) (*(ss - 4)->ch)[pc][to] +                     //
                        (int) (*(ss - 6)->ch)[pc][to];
 
     else if (type == ST_MVV)

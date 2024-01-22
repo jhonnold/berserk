@@ -160,7 +160,7 @@ void ParseFen(char* fen, Board* board) {
   OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
 
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreats(board);
 
   board->zobrist     = Zobrist(board);
   board->pawnZobrist = PawnZobrist(board);
@@ -265,32 +265,29 @@ inline void SetSpecialPieces(Board* board) {
   }
 }
 
-inline void SetThreatsAndEasyCaptures(Board* board) {
+inline void SetThreats(Board* board) {
   // Invert these to be confusing.
   const int stm  = board->xstm;
   const int xstm = board->stm;
 
-  board->threatened = board->easyCapture = 0;
+  board->threatened = 0;
+  for (size_t i = PAWN; i <= KING; i++)
+    board->threatenedBy[i] = 0;
 
   // Take the enemy king off for through threats.
   BitBoard occ = OccBB(BOTH) ^ PieceBB(KING, xstm);
 
-  BitBoard opponentPieces = OccBB(xstm) ^ PieceBB(PAWN, xstm);
-
   BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
                                         ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
   board->threatened |= pawnAttacks;
-  board->easyCapture |= pawnAttacks & opponentPieces;
-
-  // remove minors
-  opponentPieces ^= PieceBB(KNIGHT, xstm) | PieceBB(BISHOP, xstm);
+  board->threatenedBy[PAWN] = pawnAttacks;
 
   BitBoard knights = PieceBB(KNIGHT, stm);
   while (knights) {
     BitBoard atx = GetKnightAttacks(PopLSB(&knights));
 
     board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
+    board->threatenedBy[KNIGHT] |= atx;
   }
 
   BitBoard bishops = PieceBB(BISHOP, stm);
@@ -298,25 +295,28 @@ inline void SetThreatsAndEasyCaptures(Board* board) {
     BitBoard atx = GetBishopAttacks(PopLSB(&bishops), occ);
 
     board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
+    board->threatenedBy[BISHOP] |= atx;
   }
-
-  // remove rooks
-  opponentPieces ^= PieceBB(ROOK, xstm);
 
   BitBoard rooks = PieceBB(ROOK, stm);
   while (rooks) {
     BitBoard atx = GetRookAttacks(PopLSB(&rooks), occ);
 
     board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
+    board->threatenedBy[ROOK] |= atx;
   }
 
   BitBoard queens = PieceBB(QUEEN, stm);
-  while (queens)
-    board->threatened |= GetQueenAttacks(PopLSB(&queens), occ);
+  while (queens) {
+    BitBoard atx = GetQueenAttacks(PopLSB(&queens), occ);
 
-  board->threatened |= GetKingAttacks(LSB(PieceBB(KING, stm)));
+    board->threatened |= atx;
+    board->threatenedBy[QUEEN] |= atx;
+  }
+
+  BitBoard kingAttacks = GetKingAttacks(LSB(PieceBB(KING, stm)));
+  board->threatened |= kingAttacks;
+  board->threatenedBy[KING] = kingAttacks;
 }
 
 void MakeMove(Move move, Board* board) {
@@ -340,7 +340,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->history[board->histPly].checkers    = board->checkers;
   board->history[board->histPly].pinned      = board->pinned;
   board->history[board->histPly].threatened  = board->threatened;
-  board->history[board->histPly].easyCapture = board->easyCapture;
+  for (size_t i = PAWN; i <= KING; i++)
+    board->history[board->histPly].threatenedBy[i] = board->threatenedBy[i];
 
   board->fmr++;
   board->nullply++;
@@ -435,7 +436,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreats(board);
 
   if (update) {
     board->accumulators->move     = move;
@@ -467,7 +468,8 @@ void UndoMove(Move move, Board* board) {
   board->checkers    = board->history[board->histPly].checkers;
   board->pinned      = board->history[board->histPly].pinned;
   board->threatened  = board->history[board->histPly].threatened;
-  board->easyCapture = board->history[board->histPly].easyCapture;
+  for (size_t i = PAWN; i <= KING; i++)
+    board->threatenedBy[i] = board->history[board->histPly].threatenedBy[i];
 
   if (IsPromo(move)) {
     int promoted = PromoPiece(move, board->stm);
@@ -523,7 +525,8 @@ void MakeNullMove(Board* board) {
   board->history[board->histPly].checkers    = board->checkers;
   board->history[board->histPly].pinned      = board->pinned;
   board->history[board->histPly].threatened  = board->threatened;
-  board->history[board->histPly].easyCapture = board->easyCapture;
+  for (size_t i = PAWN; i <= KING; i++)
+    board->history[board->histPly].threatenedBy[i] = board->threatenedBy[i];
 
   board->fmr++;
   board->nullply = 0;
@@ -540,7 +543,7 @@ void MakeNullMove(Board* board) {
   board->xstm ^= 1;
 
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreats(board);
 }
 
 void UndoNullMove(Board* board) {
@@ -558,7 +561,8 @@ void UndoNullMove(Board* board) {
   board->checkers    = board->history[board->histPly].checkers;
   board->pinned      = board->history[board->histPly].pinned;
   board->threatened  = board->history[board->histPly].threatened;
-  board->easyCapture = board->history[board->histPly].easyCapture;
+  for (size_t i = PAWN; i <= KING; i++)
+    board->threatenedBy[i] = board->history[board->histPly].threatenedBy[i];
 }
 
 inline int IsDraw(Board* board, int ply) {

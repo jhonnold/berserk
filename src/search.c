@@ -510,10 +510,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   if (!isPV && !inCheck) {
+    const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
+
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 8 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
-        eval - 67 * depth + 112 * (improving && !board->easyCapture) >= beta &&
+        eval - 67 * depth + 112 * (improving && !opponentHasEasyCapture) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12525))
       return (eval + beta) / 2;
 
@@ -530,7 +532,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // threats)
     if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta && HasNonPawn(board, board->stm) &&
         (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
-      int R = 5 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4) + !board->easyCapture;
+      int R = 5 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4) + !opponentHasEasyCapture;
       R     = Min(depth, R); // don't go too low
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
