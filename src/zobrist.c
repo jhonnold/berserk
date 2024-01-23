@@ -60,7 +60,6 @@ uint64_t Zobrist(Board* board) {
   return hash;
 }
 
-
 // Generate a Pawn Zobrist key for the current board state
 uint64_t PawnZobrist(Board* board) {
   uint64_t hash = 0ULL;
