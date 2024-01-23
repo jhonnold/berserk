@@ -17,6 +17,7 @@
 #include "board.h"
 
 #include <inttypes.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -330,17 +331,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int captured = IsEP(move) ? Piece(PAWN, board->xstm) : board->squares[to];
 
   // store hard to recalculate values
-  board->history[board->histPly].capture     = captured;
-  board->history[board->histPly].castling    = board->castling;
-  board->history[board->histPly].ep          = board->epSquare;
-  board->history[board->histPly].fmr         = board->fmr;
-  board->history[board->histPly].nullply     = board->nullply;
-  board->history[board->histPly].zobrist     = board->zobrist;
-  board->history[board->histPly].pawnZobrist = board->pawnZobrist;
-  board->history[board->histPly].checkers    = board->checkers;
-  board->history[board->histPly].pinned      = board->pinned;
-  board->history[board->histPly].threatened  = board->threatened;
-  board->history[board->histPly].easyCapture = board->easyCapture;
+  memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
+  board->history[board->histPly].capture = captured;
 
   board->fmr++;
   board->nullply++;
@@ -458,16 +450,7 @@ void UndoMove(Move move, Board* board) {
   board->accumulators--;
 
   // reload historical values
-  board->castling    = board->history[board->histPly].castling;
-  board->epSquare    = board->history[board->histPly].ep;
-  board->fmr         = board->history[board->histPly].fmr;
-  board->nullply     = board->history[board->histPly].nullply;
-  board->zobrist     = board->history[board->histPly].zobrist;
-  board->pawnZobrist = board->history[board->histPly].pawnZobrist;
-  board->checkers    = board->history[board->histPly].checkers;
-  board->pinned      = board->history[board->histPly].pinned;
-  board->threatened  = board->history[board->histPly].threatened;
-  board->easyCapture = board->history[board->histPly].easyCapture;
+  memcpy(board, &board->history[board->histPly], offsetof(Board, stm));
 
   if (IsPromo(move)) {
     int promoted = PromoPiece(move, board->stm);
@@ -513,17 +496,7 @@ void UndoMove(Move move, Board* board) {
 }
 
 void MakeNullMove(Board* board) {
-  board->history[board->histPly].capture     = NO_PIECE;
-  board->history[board->histPly].castling    = board->castling;
-  board->history[board->histPly].ep          = board->epSquare;
-  board->history[board->histPly].fmr         = board->fmr;
-  board->history[board->histPly].nullply     = board->nullply;
-  board->history[board->histPly].zobrist     = board->zobrist;
-  board->history[board->histPly].pawnZobrist = board->pawnZobrist;
-  board->history[board->histPly].checkers    = board->checkers;
-  board->history[board->histPly].pinned      = board->pinned;
-  board->history[board->histPly].threatened  = board->threatened;
-  board->history[board->histPly].easyCapture = board->easyCapture;
+  memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
 
   board->fmr++;
   board->nullply = 0;
@@ -549,16 +522,7 @@ void UndoNullMove(Board* board) {
   board->histPly--;
 
   // reload historical values
-  board->castling    = board->history[board->histPly].castling;
-  board->epSquare    = board->history[board->histPly].ep;
-  board->fmr         = board->history[board->histPly].fmr;
-  board->nullply     = board->history[board->histPly].nullply;
-  board->zobrist     = board->history[board->histPly].zobrist;
-  board->pawnZobrist = board->history[board->histPly].pawnZobrist;
-  board->checkers    = board->history[board->histPly].checkers;
-  board->pinned      = board->history[board->histPly].pinned;
-  board->threatened  = board->history[board->histPly].threatened;
-  board->easyCapture = board->history[board->histPly].easyCapture;
+  memcpy(board, &board->history[board->histPly], offsetof(Board, stm));
 }
 
 inline int IsDraw(Board* board, int ply) {
