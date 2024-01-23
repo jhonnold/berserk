@@ -47,6 +47,10 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   ThreadData* thread  = picker->thread;
   SearchStack* ss     = picker->ss;
 
+  const BitBoard pawnThreats  = board->threatenedBy[PAWN];
+  const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
+  const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
+
   while (current < picker->end) {
     const Move move    = current->move;
     const int from     = From(move);
@@ -63,15 +67,18 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                        (int) (*(ss - 6)->ch)[pc][to];
 
       if (GetBit(OpponentsEasyCaptures(board), from)) {
-        const BitBoard pawnThreats  = board->threatenedBy[PAWN];
-        const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
-        const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
-
         switch (pt) {
           case QUEEN: current->score += 25000 * !GetBit(rookThreats, to); break;
           case ROOK: current->score += 15000 * !GetBit(minorThreats, to); break;
           case BISHOP: current->score += 10000 * !GetBit(pawnThreats, to); break;
           case KNIGHT: current->score += 10000 * !GetBit(pawnThreats, to); break;
+        }
+      } else {
+        switch (pt) {
+          case QUEEN: current->score -= 25000 * !!GetBit(rookThreats, to); break;
+          case ROOK: current->score -= 15000 * !!GetBit(minorThreats, to); break;
+          case BISHOP: current->score -= 10000 * !!GetBit(pawnThreats, to); break;
+          case KNIGHT: current->score -= 10000 * !!GetBit(pawnThreats, to); break;
         }
       }
     } else if (type == ST_CAPTURE)

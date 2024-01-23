@@ -25,7 +25,7 @@
 #define EVAL_UNKNOWN 2046
 
 INLINE int ClampEval(int eval) {
-    return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
+  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
 }
 
 extern const int PHASE_VALUES[6];
