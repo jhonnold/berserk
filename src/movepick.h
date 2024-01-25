@@ -25,7 +25,8 @@
 enum {
   ST_QUIET,
   ST_CAPTURE,
-  ST_EVASION,
+  ST_EVASION_CAP,
+  ST_EVASION_QT,
   ST_MVV
 };
 
