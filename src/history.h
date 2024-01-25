@@ -77,7 +77,8 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / PAWN_CORRECTION_GRAIN;
+  return (Min(64, board->phase) * thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK]) /
+         (64 * PAWN_CORRECTION_GRAIN);
 }
 
 void UpdateHistories(SearchStack* ss,
