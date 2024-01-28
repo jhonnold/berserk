@@ -26,36 +26,56 @@
 #define UNROLL     512
 #define NUM_REGS   16
 #define regi_t     __m512i
+#define regi_out_t __m512i
 #define regi_load  _mm512_load_si512
 #define regi_sub   _mm512_sub_epi16
 #define regi_add   _mm512_add_epi16
 #define regi_store _mm512_store_si512
+#define regi_zero  _mm512_setzero_si512
+#define regi_max   _mm512_max_epi16
+#define regi_madd  _mm512_madd_epi16
+#define regi_add32 _mm512_add_epi32
 #elif defined(__AVX2__)
 #include <immintrin.h>
 #define UNROLL     256
 #define NUM_REGS   16
 #define regi_t     __m256i
+#define regi_out_t __m256i
 #define regi_load  _mm256_load_si256
 #define regi_sub   _mm256_sub_epi16
 #define regi_add   _mm256_add_epi16
 #define regi_store _mm256_store_si256
+#define regi_zero  _mm256_setzero_si256
+#define regi_max   _mm256_max_epi16
+#define regi_madd  _mm256_madd_epi16
+#define regi_add32 _mm256_add_epi32
 #elif defined(__SSE2__)
 #include <immintrin.h>
 #define UNROLL     128
 #define NUM_REGS   16
 #define regi_t     __m128i
+#define regi_out_t __m128i
 #define regi_load  _mm_load_si128
 #define regi_sub   _mm_sub_epi16
 #define regi_add   _mm_add_epi16
 #define regi_store _mm_store_si128
+#define regi_zero  _mm_setzero_si128
+#define regi_max   _mm_max_epi16
+#define regi_madd  _mm_madd_epi16
+#define regi_add32 _mm_add_epi32
 #else
 #define UNROLL           16
 #define NUM_REGS         16
 #define regi_t           acc_t
+#define regi_out_t       int32_t
 #define regi_load(a)     (*(a))
 #define regi_sub(a, b)   ((a) - (b))
 #define regi_add(a, b)   ((a) + (b))
 #define regi_store(a, b) (*(a) = (b))
+#define regi_zero()      0
+#define regi_max(a, b)   ((a) > (b) ? (a) : (b))
+#define regi_madd(a, b)  ((a) * (b))
+#define regi_add32(a, b) ((a) + (b))
 #endif
 
 extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
