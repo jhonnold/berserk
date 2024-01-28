@@ -42,8 +42,9 @@ int32_t OUTPUT_BIAS;
 
 const size_t OUT_WIDTH = sizeof(regi_t) / sizeof(acc_t);
 const size_t CHUNKS    = N_HIDDEN / OUT_WIDTH;
-const size_t OUT_CC    = 8;
+const size_t OUT_CC    = 8; // intentionally not 16 to avoid 32-byte spills
 
+// https://godbolt.org/z/8jK3W4G4Y
 int Propagate(Accumulator* accumulator, const int stm) {
   const int views[2] = {stm, !stm};
 
