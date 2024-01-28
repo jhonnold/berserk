@@ -41,29 +41,34 @@ int16_t OUTPUT_WEIGHTS[N_L1 * N_OUTPUT] ALIGN;
 int32_t OUTPUT_BIAS;
 
 const size_t OUT_WIDTH = sizeof(regi_t) / sizeof(acc_t);
-const size_t OUT_CC    = N_HIDDEN / OUT_WIDTH;
+const size_t CHUNKS    = N_HIDDEN / OUT_WIDTH;
+const size_t OUT_CC    = 8;
 
 int Propagate(Accumulator* accumulator, const int stm) {
   const int views[2] = {stm, !stm};
 
-  regi_out_t acc    = regi_zero();
   const regi_t zero = regi_zero();
+  regi_out_t regs[OUT_CC];
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    regs[i] = regi_zero();
 
   for (size_t v = 0; v < 2; v++) {
     const regi_t* in      = (regi_t*) accumulator->values[views[v]];
     const regi_t* weights = (regi_t*) &OUTPUT_WEIGHTS[v * N_HIDDEN];
 
-    for (size_t c = 0; c < OUT_CC; c++) {
-      const regi_t a0 = regi_max(zero, in[c]);
-
-      acc = regi_add32(acc, regi_madd(a0, weights[c]));
-    }
+    for (size_t c = 0; c < CHUNKS; c += OUT_CC)
+      for (size_t i = 0; i < OUT_CC; i++)
+        regs[i] = regi_add32(regs[i], regi_madd(regi_max(zero, in[c + i]), weights[c + i]));
   }
 
+  for (size_t i = 1; i < OUT_CC; i++)
+    regs[0] = regi_add32(regs[0], regs[i]);
+
 #if defined(__AVX512F__) && defined(__AVX512BW__)
-  const __m256i r8 = _mm256_add_epi32(_mm512_castsi512_si256(acc), _mm512_extracti32x8_epi32(acc, 1));
+  const __m256i r8 = _mm256_add_epi32(_mm512_castsi512_si256(regs[0]), _mm512_extracti32x8_epi32(regs[0], 1));
 #elif defined(__AVX2__)
-  const __m256i r8 = acc;
+  const __m256i r8 = regs[0];
 #endif
 
 #if defined(__AVX2__)
