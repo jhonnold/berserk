@@ -432,7 +432,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // equal or greater depth, then we accept this score and prune
   if (!isPV && ttScore != UNKNOWN && ttDepth >= depth && (cutnode || ttScore <= alpha) &&
       (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
-    return ttScore;
+    return ttScore >= beta && abs(ttScore) < TB_WIN_BOUND ? (ttScore + beta) / 2 : ttScore;
 
   // tablebase - we do not do this at root
   if (!isRoot && !ss->skip) {
