@@ -60,10 +60,10 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
     __m512i* out      = (__m512i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], 5);
-      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], 5);
-      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], 5);
-      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], 5);
+      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], 7);
+      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], 7);
+      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], 7);
+      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], 7);
 
       out[i]     = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512());
       out[i + 1] = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512());
@@ -82,10 +82,10 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 5);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 5);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 5);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 5);
+      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 7);
+      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], 7);
+      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 7);
+      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 7);
 
       out[i]     = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256());
       out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256());
@@ -106,8 +106,8 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
     __m128i* out      = (__m128i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i++) {
-      __m128i s0 = _mm_srai_epi16(in[2 * i + 0], 5);
-      __m128i s1 = _mm_srai_epi16(in[2 * i + 1], 5);
+      __m128i s0 = _mm_srai_epi16(in[2 * i + 0], 7);
+      __m128i s1 = _mm_srai_epi16(in[2 * i + 1], 7);
 
       out[i] = _mm_subs_epi8(_mm_adds_epi8(_mm_packs_epi16(s0, s1), k0x80s), k0x80s);
     }
@@ -116,14 +116,14 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
 #else
 INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
-  const int max      = 127 << 5;
+  const int max      = 127 << 7;
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
     int8_t* out     = &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < N_HIDDEN; i++)
-      out[i] = Min(max, Max(0, in[i])) >> 5;
+      out[i] = Min(max, Max(0, in[i])) >> 7;
   }
 }
 #endif
@@ -651,7 +651,7 @@ int Propagate(Accumulator* accumulator, const int stm) {
   InputReLU(x0, accumulator, stm);
   L1AffineReLU(x1, x0);
   L2AffineReLU(x2, x1);
-  return L3Transform(x2) / 32;
+  return L3Transform(x2) / 64;
 }
 
 int Predict(Board* board) {
