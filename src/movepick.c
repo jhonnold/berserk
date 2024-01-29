@@ -27,7 +27,7 @@
 #include "transposition.h"
 #include "types.h"
 
-Move Best(ScoredMove* current, ScoredMove* end) {
+INLINE Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* orig = current;
   ScoredMove* max  = current;
 
@@ -42,7 +42,7 @@ Move Best(ScoredMove* current, ScoredMove* end) {
   return orig->move;
 }
 
-void ScoreMoves(MovePicker* picker, Board* board, const int type) {
+INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   ScoredMove* current = picker->current;
   ThreadData* thread  = picker->thread;
   SearchStack* ss     = picker->ss;
@@ -50,25 +50,29 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   while (current < picker->end) {
     Move move = current->move;
 
-    if (type == ST_QUIET)
+    if (type == ST_QUIET || type == ST_EVASION_QT) {
       current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
                        (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
-    else if (type == ST_CAPTURE)
+      if (PieceType(Moving(move)) == PAWN) {
+        const BitBoard defenders = GetPawnAttacks(To(move), board->xstm) & PieceBB(PAWN, board->stm);
+        if (defenders) {
+          const BitBoard attacks = GetPawnAttacks(To(move), board->stm);
+          for (int pt = PAWN; pt < KING; pt++)
+            if (attacks & PieceBB(pt, board->xstm)) {
+              current->score += 10 * SEE_VALUE[pt];
+              break;
+            }
+        }
+      }
+    } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
       current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
-
-    else if (type == ST_EVASION_QT)
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
-                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
     else if (type == ST_MVV)
       current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * IsPromo(move);
