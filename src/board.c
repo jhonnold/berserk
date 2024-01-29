@@ -277,7 +277,7 @@ inline void SetThreats(Board* board) {
   BitBoard pawnAttacks      = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
                                              ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
   board->threatenedBy[PAWN] = pawnAttacks;
-  board->threatened         = pawnAttacks;
+  board->threatened         = board->threatenedBy[PAWN];
 
   board->threatenedBy[KNIGHT] = 0;
   BitBoard knights            = PieceBB(KNIGHT, stm);
