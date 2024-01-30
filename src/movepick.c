@@ -27,7 +27,7 @@
 #include "transposition.h"
 #include "types.h"
 
-Move Best(ScoredMove* current, ScoredMove* end) {
+INLINE Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* orig = current;
   ScoredMove* max  = current;
 
@@ -42,36 +42,45 @@ Move Best(ScoredMove* current, ScoredMove* end) {
   return orig->move;
 }
 
-void ScoreMoves(MovePicker* picker, Board* board, const int type) {
+INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   ScoredMove* current = picker->current;
   ThreadData* thread  = picker->thread;
   SearchStack* ss     = picker->ss;
 
+  const BitBoard pawnThreats  = board->threatenedBy[PAWN];
+  const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
+  const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
+  const BitBoard threats[3]   = {pawnThreats, minorThreats, rookThreats};
+
   while (current < picker->end) {
     const Move move    = current->move;
+    const int from     = From(move);
     const int to       = To(move);
     const int pc       = Moving(move);
+    const int pt       = PieceType(pc);
     const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
 
-    if (type == ST_QUIET)
+    if (type == ST_QUIET || type == ST_EVASION_QT) {
       current->score = (int) HH(board->stm, move, board->threatened) * 2 + //
                        (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
                        (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
                        (int) (*(ss - 4)->ch)[pc][to] +                     //
                        (int) (*(ss - 6)->ch)[pc][to];
 
-    else if (type == ST_CAPTURE)
+      if (!(pt == PAWN || pt == KING)) {
+        const int idx         = Max(0, pt - BISHOP);
+        const BitBoard danger = threats[idx];
+
+        if (GetBit(danger, from))
+          current->score += (idx + 1) * 4096;
+        if (GetBit(danger, to))
+          current->score -= (idx + 1) * 4096;
+      }
+    } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
       current->score = 1e7 + SEE_VALUE[captured];
-
-    else if (type == ST_EVASION_QT)
-      current->score = (int) HH(board->stm, move, board->threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
-                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
-                       (int) (*(ss - 4)->ch)[pc][to] +                     //
-                       (int) (*(ss - 6)->ch)[pc][to];
 
     else if (type == ST_MVV)
       current->score = SEE_VALUE[captured] + 2000 * IsPromo(move);
