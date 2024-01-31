@@ -68,13 +68,13 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                        (int) (*(ss - 6)->ch)[pc][to];
 
       if (!(pt == PAWN || pt == KING)) {
-        const int idx         = Max(0, pt - BISHOP);
-        const BitBoard danger = threats[idx];
+        const int threatIdx   = Max(0, pt - BISHOP);
+        const BitBoard danger = threats[threatIdx];
 
         if (GetBit(danger, from))
-          current->score += (idx + 1) * 4096;
+          current->score += (threatIdx + 1) * 8192;
         if (GetBit(danger, to))
-          current->score -= (idx + 1) * 4096;
+          current->score -= (threatIdx + 1) * 8192;
       }
     } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
