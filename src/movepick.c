@@ -71,9 +71,9 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
         const int threatIdx   = Max(0, pt - BISHOP);
         const BitBoard danger = threats[threatIdx];
 
-        if (GetBit(danger, from))
+        if (GetBit(danger, from) && !GetBit(danger, to))
           current->score += (threatIdx + 1) * 8192;
-        if (GetBit(danger, to))
+        if (GetBit(danger, to) && !GetBit(danger, from))
           current->score -= (threatIdx + 1) * 8192;
       }
     } else if (type == ST_CAPTURE)
