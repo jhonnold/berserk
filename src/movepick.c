@@ -47,36 +47,19 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   ThreadData* thread  = picker->thread;
   SearchStack* ss     = picker->ss;
 
-  const BitBoard pawnThreats  = board->threatenedBy[PAWN];
-  const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
-  const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
-  const BitBoard threats[3]   = {pawnThreats, minorThreats, rookThreats};
-
   while (current < picker->end) {
     const Move move    = current->move;
-    const int from     = From(move);
     const int to       = To(move);
     const int pc       = Moving(move);
-    const int pt       = PieceType(pc);
     const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
 
-    if (type == ST_QUIET || type == ST_EVASION_QT) {
-      current->score = (int) HH(board->stm, move, board->threatened) + //
-                       (int) (*(ss - 1)->ch)[pc][to] * 2 +             //
-                       (int) (*(ss - 2)->ch)[pc][to] * 2 +             //
-                       (int) (*(ss - 4)->ch)[pc][to] +                 //
+    if (type == ST_QUIET || type == ST_EVASION_QT)
+      current->score = (int) HH(board->stm, move, board->threatened) * 2 + //
+                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
+                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
+                       (int) (*(ss - 4)->ch)[pc][to] +                     //
                        (int) (*(ss - 6)->ch)[pc][to];
-
-      if (!(pt == PAWN || pt == KING)) {
-        const int threatIdx   = Max(0, pt - BISHOP);
-        const BitBoard danger = threats[threatIdx];
-
-        if (GetBit(danger, from))
-          current->score += (threatIdx + 1) * 8192;
-        if (GetBit(danger, to))
-          current->score -= (threatIdx + 1) * 8192;
-      }
-    } else if (type == ST_CAPTURE)
+    else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
