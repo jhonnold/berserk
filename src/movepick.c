@@ -71,10 +71,10 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
         const int threatIdx   = Max(0, pt - BISHOP);
         const BitBoard danger = threats[threatIdx];
 
-        if (GetBit(danger, from) && !GetBit(danger, to))
-          current->score += (threatIdx + 1) * 8192;
-        if (GetBit(danger, to) && !GetBit(danger, from))
-          current->score -= (threatIdx + 1) * 8192;
+        if (GetBit(danger, from))
+          current->score += (threatIdx + 1) * 16384;
+        if (GetBit(danger, to))
+          current->score -= (threatIdx + 1) * 16384;
       }
     } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
