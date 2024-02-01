@@ -431,7 +431,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // if the TT has a value that fits our position and has been searched to an
   // equal or greater depth, then we accept this score and prune
   if (!isPV && ttScore != UNKNOWN && ttDepth >= depth && (cutnode || ttScore <= alpha) &&
-      (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
+      (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)) && IsPseudoLegal(hashMove, board))
     return ttScore;
 
   // tablebase - we do not do this at root
@@ -854,7 +854,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   TTEntry* tt = TTProbe(board->zobrist, ss->ply, &ttHit, &hashMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
 
   // TT score pruning, ttHit implied with adjusted score
-  if (!isPV && ttScore != UNKNOWN && (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
+  if (!isPV && ttScore != UNKNOWN && (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)) &&
+      IsPseudoLegal(hashMove, board))
     return ttScore;
 
   if (inCheck) {
