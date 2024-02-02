@@ -23,6 +23,7 @@
 #include "history.h"
 #include "move.h"
 #include "movegen.h"
+#include "nodecache.h"
 #include "see.h"
 #include "transposition.h"
 #include "types.h"
@@ -50,14 +51,23 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   while (current < picker->end) {
     Move move = current->move;
 
-    if (type == ST_QUIET)
+    if (type == ST_QUIET) {
       current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
                        (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
-    else if (type == ST_CAPTURE)
+      if (picker->nodeCacheEntry && picker->nodeCacheEntry->nodes > 512) {
+        const LowPlyMove* moveEntry = GetLowPlyMove(picker->nodeCacheEntry, move);
+        if (moveEntry) {
+          const float pctSearched = (float) moveEntry->nodes / picker->nodeCacheEntry->nodes;
+
+          current->score += 8192 * sqrtf(pctSearched) * FastLog2(picker->nodeCacheEntry->nodes / 512.0f);
+        }
+      }
+
+    } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)

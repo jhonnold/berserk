@@ -43,4 +43,20 @@ INLINE void AlignedFree(void* ptr) {
   free(((void**) ptr)[-1]);
 }
 
+INLINE float FastLog2(float x) {
+  // https://stackoverflow.com/questions/9411823/fast-log2float-x-implementation-c/9411984#9411984
+
+  union {
+    int32_t i32;
+    float f;
+  } u;
+
+  u.f          = x;
+  float result = (float) (((u.i32 >> 23) & 255) - 128);
+  u.i32 &= ~(255 << 23);
+  u.i32 += 127 << 23;
+  result += ((-0.33333333f) * u.f + 2.0f) * u.f - 0.66666666f;
+  return result;
+}
+
 #endif

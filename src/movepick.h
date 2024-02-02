@@ -30,7 +30,11 @@ enum {
   ST_MVV
 };
 
-INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {
+INLINE void InitNormalMovePicker(MovePicker* picker,
+                                 Move hashMove,
+                                 ThreadData* thread,
+                                 SearchStack* ss,
+                                 LowPlyNodeCounter* nodeCacheEntry) {
   picker->phase = HASH_MOVE;
 
   picker->hashMove = hashMove;
@@ -41,8 +45,9 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
   else
     picker->counter = NULL_MOVE;
 
-  picker->thread = thread;
-  picker->ss     = ss;
+  picker->thread         = thread;
+  picker->ss             = ss;
+  picker->nodeCacheEntry = nodeCacheEntry;
 }
 
 INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread, int threshold) {

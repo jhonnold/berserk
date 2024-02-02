@@ -24,6 +24,7 @@
 
 #include "eval.h"
 #include "nn/accumulator.h"
+#include "nodecache.h"
 #include "search.h"
 #include "tb.h"
 #include "transposition.h"
@@ -215,6 +216,7 @@ void SetupMainThread(Board* board) {
   mainThread->nmpMinPly  = 0;
 
   memcpy(&mainThread->board, board, offsetof(Board, accumulators));
+  UpdateNodeCache(&mainThread->nodeCache);
 
   if (Limits.searchMoves) {
     for (int i = 0; i < Limits.searchable.count; i++)
@@ -251,6 +253,7 @@ void SetupOtherThreads(Board* board) {
     thread->numRootMoves = mainThread->numRootMoves;
 
     memcpy(&thread->board, board, offsetof(Board, accumulators));
+    UpdateNodeCache(&thread->nodeCache);
   }
 }
 

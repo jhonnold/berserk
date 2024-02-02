@@ -165,6 +165,25 @@ typedef struct {
   PV pv;
 } RootMove;
 
+#define LOW_PLY_CACHE_ENTRIES 512
+
+typedef struct {
+  Move move;
+  uint64_t nodes;
+} LowPlyMove;
+
+typedef struct {
+  uint64_t zobrist;
+  uint32_t generation;
+  uint64_t nodes;
+  LowPlyMove moves[MAX_MOVES];
+} LowPlyNodeCounter;
+
+typedef struct {
+  uint32_t generation;
+  LowPlyNodeCounter counts[LOW_PLY_CACHE_ENTRIES];
+} LowPlyNodeCache;
+
 enum {
   THREAD_SLEEP,
   THREAD_SEARCH,
@@ -191,6 +210,8 @@ struct ThreadData {
   int previousScore;
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
+
+  LowPlyNodeCache nodeCache;
 
   Move counters[12][64];         // counter move butterfly table
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
@@ -254,6 +275,7 @@ typedef struct {
 typedef struct {
   ThreadData* thread;
   SearchStack* ss;
+  LowPlyNodeCounter* nodeCacheEntry;
   Move hashMove, killer1, killer2, counter;
   int seeCutoff, phase, genChecks;
 

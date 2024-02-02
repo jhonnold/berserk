@@ -31,6 +31,7 @@
 #include "movegen.h"
 #include "movepick.h"
 #include "nn/accumulator.h"
+#include "nodecache.h"
 #include "pyrrhic/tbprobe.h"
 #include "see.h"
 #include "tb.h"
@@ -594,8 +595,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
+  LowPlyNodeCounter* nodeCacheEntry = ss->ply < 3 ? ProbeNodeCache(&thread->nodeCache, board->zobrist) : NULL;
+
   int legalMoves = 0, playedMoves = 0, skipQuiets = 0;
-  InitNormalMovePicker(&mp, hashMove, thread, ss);
+  InitNormalMovePicker(&mp, hashMove, thread, ss, nodeCacheEntry);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
@@ -769,6 +772,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         rm->score = -CHECKMATE;
       }
     }
+
+    if (nodeCacheEntry != NULL)
+      AddLowPlyMoveStats(nodeCacheEntry, move, thread->nodes - startingNodeCount);
 
     if (score > bestScore) {
       bestScore = score;
@@ -1043,6 +1049,8 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
+
+  ResetNodeCache(&thread->nodeCache);
 
   thread->board.accumulators = thread->accumulators;
   thread->previousScore      = UNKNOWN;
