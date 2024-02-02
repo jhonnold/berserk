@@ -529,7 +529,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
     if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta && HasNonPawn(board, board->stm) &&
-        (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
+        ss->ply >= thread->nmpMinPly) {
       int R = 5 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4) + !board->easyCapture;
       R     = Min(depth, R); // don't go too low
 
@@ -550,7 +550,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           return score;
 
         thread->nmpMinPly = ss->ply + 3 * (depth - R) / 4;
-        thread->npmColor  = board->stm;
 
         Score verify = Negamax(beta - 1, beta, depth - R, 0, thread, pv, ss);
 

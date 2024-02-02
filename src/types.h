@@ -180,7 +180,7 @@ struct ThreadData {
   int idx, multiPV, depth, seldepth;
   atomic_uint_fast64_t nodes, tbhits;
 
-  int nmpMinPly, npmColor;
+  int nmpMinPly;
 
   Accumulator* accumulators;
   AccumulatorKingState* refreshTable;
