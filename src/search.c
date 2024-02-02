@@ -817,7 +817,6 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   Board* board = &thread->board;
 
   int score     = -CHECKMATE;
-  int futility  = -CHECKMATE;
   int bestScore = -CHECKMATE + ss->ply;
   int isPV      = beta - alpha != 1;
   int inCheck   = !!board->checkers;
@@ -889,8 +888,6 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       alpha = eval;
 
     bestScore = eval;
-
-    futility = bestScore + 60;
   }
 
   if (!inCheck)
@@ -907,10 +904,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     legalMoves++;
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
-        bestScore = Max(bestScore, futility);
+      if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && eval + 60 <= alpha && !SEE(board, move, 1))
         continue;
-      }
 
       if (!SEE(board, move, 0))
         continue;
