@@ -90,9 +90,8 @@ void UpdateHistories(SearchStack* ss,
 void UpdateEvalCorrection(int raw, int real, Board* board, ThreadData* thread) {
   const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
   const int pawnIdx        = (board->pawnZobrist & PAWN_CORRECTION_MASK);
-  const int matIdx         = (MurmurHash(board->piecesCounts) & MATERIAL_CORRECTION_MASK);
+  const int matIdx = ((MurmurHash(board->piecesCounts) ^ (board->stm * ZOBRIST_SIDE_KEY)) & MATERIAL_CORRECTION_MASK);
 
-  thread->pawnCorrection[pawnIdx] = (thread->pawnCorrection[pawnIdx] * 255 + correction) / 256;
-  thread->materialCorrection[board->stm][matIdx] =
-    (thread->materialCorrection[board->stm][matIdx] * 255 + correction) / 256;
+  thread->pawnCorrection[pawnIdx]    = (thread->pawnCorrection[pawnIdx] * 255 + correction) / 256;
+  thread->materialCorrection[matIdx] = (thread->materialCorrection[matIdx] * 255 + correction) / 256;
 }

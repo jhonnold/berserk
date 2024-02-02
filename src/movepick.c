@@ -60,16 +60,15 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
-    else if (type == ST_EVASION) {
-      if (IsCap(move))
-        current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
-      else
-        current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
-                         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                         (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
-                         (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
-    }
+    else if (type == ST_EVASION_CAP)
+      current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
+
+    else if (type == ST_EVASION_QT)
+      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
+                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
+                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
+                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
+                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
     else if (type == ST_MVV)
       current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * IsPromo(move);
@@ -189,8 +188,8 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
     // QSearch MP Steps
     case QS_GEN_NOISY_MOVES:
-      picker->current = picker->endBad = picker->moves;
-      picker->end                      = AddNoisyMoves(picker->current, board);
+      picker->current = picker->moves;
+      picker->end     = AddNoisyMoves(picker->current, board);
 
       ScoreMoves(picker, board, ST_CAPTURE);
 
@@ -224,20 +223,42 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
     // QSearch Evasion Steps
     case QS_EVASION_HASH_MOVE:
-      picker->phase = QS_GEN_EVASIONS;
+      picker->phase = QS_EVASION_GEN_NOISY;
       if (IsPseudoLegal(picker->hashMove, board))
         return picker->hashMove;
       // fallthrough
-    case QS_GEN_EVASIONS:
-      picker->current = picker->endBad = picker->moves;
-      picker->end                      = AddEvasionMoves(picker->current, board);
+    case QS_EVASION_GEN_NOISY:
+      picker->current = picker->moves;
+      picker->end     = AddNoisyMoves(picker->current, board);
 
-      ScoreMoves(picker, board, ST_EVASION);
+      ScoreMoves(picker, board, ST_EVASION_CAP);
 
-      picker->phase = QS_PLAY_EVASIONS;
+      picker->phase = QS_EVASION_PLAY_NOISY;
+
       // fallthrough
-    case QS_PLAY_EVASIONS:
+    case QS_EVASION_PLAY_NOISY:
       if (picker->current != picker->end) {
+        Move move = Best(picker->current++, picker->end);
+
+        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
+      }
+
+      picker->phase = QS_EVASION_GEN_QUIET;
+
+      // fallthrough
+    case QS_EVASION_GEN_QUIET:
+      if (!skipQuiets) {
+        picker->current = picker->moves;
+        picker->end     = AddQuietMoves(picker->current, board);
+
+        ScoreMoves(picker, board, ST_EVASION_QT);
+      }
+
+      picker->phase = QS_EVASION_PLAY_QUIET;
+
+      // fallthrough
+    case QS_EVASION_PLAY_QUIET:
+      if (picker->current != picker->end && !skipQuiets) {
         Move move = Best(picker->current++, picker->end);
 
         return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);

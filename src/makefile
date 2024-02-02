@@ -2,8 +2,8 @@
 EXE      = berserk
 SRC      = *.c nn/*.c pyrrhic/tbprobe.c
 CC       = gcc
-VERSION  = 20240103
-MAIN_NETWORK = berserk-3095fe6f8ce5.nn
+VERSION  = 20240201
+MAIN_NETWORK = berserk-da85741a5582.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
@@ -20,6 +20,12 @@ ifeq ($(shell echo "test"), "test")
 	CFLAGS += -static
 endif
 
+# Detecting Apple Silicon (ARM64)
+UNAME := $(shell uname -m)
+ifeq ($(UNAME), arm64)
+    ARCH = arm64
+endif
+
 # Setup arch
 ifeq ($(ARCH), )
    ARCH = native
@@ -27,6 +33,8 @@ endif
 
 ifeq ($(ARCH), native)
 	CFLAGS  = $(FLAGS) -march=native
+else ifeq ($(ARCH), arm64)
+	CFLAGS = $(FLAGS) -Wno-unused-function -arch arm64
 else ifeq ($(findstring ssse3, $(ARCH)), ssse3)
 	CFLAGS += -mssse3
 else ifeq ($(findstring avx2, $(ARCH)), avx2)
@@ -47,6 +55,9 @@ ifeq ($(ARCH), native)
 else ifeq ($(findstring -pext, $(ARCH)), -pext)
 	CFLAGS += -DUSE_PEXT -mbmi2
 endif
+
+openbench: download-network
+	$(MAKE) ARCH=avx2 all
 
 build: download-network
 	$(MAKE) ARCH=$(ARCH) all
@@ -112,3 +123,6 @@ download-network:
 	else \
 		echo "Unknown network: $(EVALFILE)"; \
 	fi;
+
+clean:
+	rm -f $(EXE)

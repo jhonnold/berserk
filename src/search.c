@@ -254,7 +254,7 @@ void Search(ThreadData* thread) {
       int beta        = CHECKMATE;
       int delta       = CHECKMATE;
       int searchDepth = thread->depth;
-      int score       = thread->rootMoves[thread->multiPV].previousScore;
+      int score       = thread->rootMoves[thread->multiPV].avgScore;
 
       thread->seldepth = 0;
 
@@ -469,7 +469,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread) / 4);
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -478,7 +478,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread) / 4);
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -756,6 +756,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         }
 
       rm->nodes += thread->nodes - startingNodeCount;
+      rm->avgScore = rm->avgScore == -CHECKMATE ? score : (rm->avgScore + score) / 2;
 
       if (playedMoves == 1 || score > alpha) {
         rm->score    = score;
@@ -863,7 +864,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread) / 4);
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -872,7 +873,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread) / 4);
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrection(board, thread) / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -897,18 +898,15 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   else
     InitQSEvasionsPicker(&mp, hashMove, thread, ss);
 
-  int legalMoves = 0;
+  int legalMoves = 0, skipQuiets = !inCheck;
 
-  while ((move = NextMove(&mp, board, 1))) {
+  while ((move = NextMove(&mp, board, skipQuiets))) {
     if (!IsLegal(move, board))
       continue;
 
     legalMoves++;
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (inCheck && !(IsCap(move) || IsPromo(move)))
-        break;
-
       if (!inCheck && mp.phase != QS_PLAY_QUIET_CHECKS && futility <= alpha && !SEE(board, move, 1)) {
         bestScore = Max(bestScore, futility);
         continue;
@@ -926,6 +924,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
 
     UndoMove(move, board);
+
+    if (score > -TB_WIN_BOUND)
+      skipQuiets = 1;
 
     if (score > bestScore) {
       bestScore = score;
@@ -1041,6 +1042,8 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
+  memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
+  memset(&thread->materialCorrection, 0, sizeof(thread->materialCorrection));
 
   thread->board.accumulators = thread->accumulators;
   thread->previousScore      = UNKNOWN;

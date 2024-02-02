@@ -39,9 +39,9 @@
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
 #define CORRECTION_GRAIN 256
-#define PAWN_CORRECTION_SIZE  16384
+#define PAWN_CORRECTION_SIZE  131072
 #define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
-#define MATERIAL_CORRECTION_SIZE  8192
+#define MATERIAL_CORRECTION_SIZE  131072
 #define MATERIAL_CORRECTION_MASK  (MATERIAL_CORRECTION_SIZE - 1)
 
 typedef int Score;
@@ -68,7 +68,6 @@ typedef struct {
 } AccumulatorKingState;
 
 typedef struct {
-  int capture;
   int castling;
   int ep;
   int fmr;
@@ -79,19 +78,19 @@ typedef struct {
   BitBoard pinned;
   BitBoard threatened;
   BitBoard easyCapture;
+  int capture;
 } BoardHistory;
 
 typedef struct {
-  int stm;      // side to move
-  int xstm;     // not side to move
-  int histPly;  // ply for historical state
-  int moveNo;   // game move number
-  int fmr;      // half move count for 50 move rule
-  int nullply;  // distance from last nullmove
+  // The below are in order of BoardHistory above for copies
   int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
-  int phase;    // efficiently updated phase for scaling
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no
                 // active ep)
+  int fmr;      // half move count for 50 move rule
+  int nullply;  // distance from last nullmove
+
+  uint64_t zobrist;     // zobrist hash of the position
+  uint64_t pawnZobrist; // pawn zobrist hash of the position (pawns + stm)
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
@@ -99,9 +98,13 @@ typedef struct {
   BitBoard threatened;  // opponent "threatening" these squares
   BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0
 
+  int stm;     // side to move
+  int xstm;    // not side to move
+  int histPly; // ply for historical state
+  int moveNo;  // game move number
+  int phase;   // efficiently updated phase for scaling
+
   uint64_t piecesCounts; // "material key" - pieces left on the board
-  uint64_t zobrist;      // zobrist hash of the position
-  uint64_t pawnZobrist;  // pawn zobrist hash of the position (pawns + stm)
 
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
@@ -159,7 +162,7 @@ typedef struct {
 typedef struct {
   Move move;
   int seldepth;
-  int score, previousScore;
+  int score, previousScore, avgScore;
   uint64_t nodes;
   PV pv;
 } RootMove;
@@ -197,7 +200,7 @@ struct ThreadData {
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
-  int16_t materialCorrection[2][MATERIAL_CORRECTION_SIZE];
+  int16_t materialCorrection[MATERIAL_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;
@@ -237,8 +240,10 @@ enum {
   QS_PLAY_QUIET_CHECKS,
   // QSearch Evasions
   QS_EVASION_HASH_MOVE,
-  QS_GEN_EVASIONS,
-  QS_PLAY_EVASIONS,
+  QS_EVASION_GEN_NOISY,
+  QS_EVASION_PLAY_NOISY,
+  QS_EVASION_GEN_QUIET,
+  QS_EVASION_PLAY_QUIET,
   // ...
   NO_MORE_MOVES,
   PERFT_MOVES,

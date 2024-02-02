@@ -79,7 +79,8 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 
 INLINE int GetCorrection(Board* board, ThreadData* thread) {
   return (thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] +
-          thread->materialCorrection[board->stm][MurmurHash(board->piecesCounts) & MATERIAL_CORRECTION_MASK]) /
+          thread->materialCorrection[(MurmurHash(board->piecesCounts) ^ (board->stm * ZOBRIST_SIDE_KEY)) &
+                                     MATERIAL_CORRECTION_MASK]) /
          CORRECTION_GRAIN;
 }
 
