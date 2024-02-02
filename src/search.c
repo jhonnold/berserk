@@ -505,7 +505,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
   if (!(ss->skip || inCheck)) {
-    if (cutnode && depth >= 4 && !hashMove)
+    if (isPV && depth >= 4 && !hashMove)
       depth--;
   }
 
