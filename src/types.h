@@ -74,6 +74,7 @@ typedef struct {
   uint64_t pawnZobrist;
   BitBoard checkers;
   BitBoard pinned;
+  BitBoard pinners;
   BitBoard threatened;
   BitBoard easyCapture;
   int capture;
@@ -92,6 +93,7 @@ typedef struct {
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
+  BitBoard pinners;
 
   BitBoard threatened;  // opponent "threatening" these squares
   BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0

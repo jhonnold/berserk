@@ -250,19 +250,26 @@ inline void SetSpecialPieces(Board* board) {
   int kingSq = LSB(PieceBB(KING, stm));
 
   board->pinned   = 0;
+  board->pinners  = 0;
   board->checkers = (GetKnightAttacks(kingSq) & PieceBB(KNIGHT, xstm)) | // knight and
                     (GetPawnAttacks(kingSq, stm) & PieceBB(PAWN, xstm)); // pawns are easy
 
   BitBoard sliders = ((PieceBB(BISHOP, xstm) | PieceBB(QUEEN, xstm)) & GetBishopAttacks(kingSq, 0)) |
                      ((PieceBB(ROOK, xstm) | PieceBB(QUEEN, xstm)) & GetRookAttacks(kingSq, 0));
   while (sliders) {
-    int sq = PopLSB(&sliders);
+    const int sq = PopLSB(&sliders);
 
     BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(BOTH);
     if (!blockers)
       SetBit(board->checkers, sq);
-    else if (BitCount(blockers) == 1)
-      board->pinned |= (blockers & OccBB(stm));
+    else if (BitCount(blockers) == 1) {
+      BitBoard pinned = blockers & OccBB(stm);
+
+      if (pinned) {
+        board->pinned |= pinned;
+        SetBit(board->pinners, sq);
+      }
+    }
   }
 }
 
