@@ -57,7 +57,7 @@ else ifeq ($(findstring -pext, $(ARCH)), -pext)
 endif
 
 openbench: download-network
-	$(MAKE) ARCH=avx2 pgo
+	$(MAKE) CC=gcc ARCH=avx2 pgo
 
 build: download-network
 	$(MAKE) ARCH=$(ARCH) all
