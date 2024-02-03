@@ -51,12 +51,6 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     Move move = current->move;
 
     if (type == ST_QUIET) {
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
-                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
-
       if (picker->ss->ply == 0) {
         RootMove* rm = NULL;
         for (int i = 0; i < thread->numRootMoves; i++)
@@ -66,7 +60,15 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
           }
 
         if (rm)
-          current->score += 8192 * sqrtf((float) rm->nodes / thread->nodes);
+          current->score = 1024 * 1024 * sqrtf((float) rm->nodes / thread->nodes);
+        else
+          current->score = 0;
+      } else {
+        current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
+                         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
+                         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
+                         (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
+                         (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
       }
 
     } else if (type == ST_CAPTURE)
