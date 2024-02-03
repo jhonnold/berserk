@@ -699,7 +699,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
       // increase reduction on non-pv
       if (!ttPv)
-        R += 2;
+        R += 1 + !IsCap(move);
 
       // increase reduction if our eval is declining
       if (!improving)
