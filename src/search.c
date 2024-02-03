@@ -46,6 +46,8 @@ int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
 int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 
+const int NET_PC_VALUE[7] = {100, 318, 348, 554, 1068, 30000, 0};
+
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
@@ -635,6 +637,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
       } else {
+        if (!inCheck && IsCap(move) && depth < 6) {
+          int captured = IsEP(move) ? PAWN : PieceType(board->squares[To(move)]);
+
+          if (eval + NET_PC_VALUE[captured] + 150 + 150 * depth <= alpha)
+            continue;
+        }
+
         if (!SEE(board, move, STATIC_PRUNE[1][depth]))
           continue;
       }
