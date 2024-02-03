@@ -63,6 +63,8 @@ void UndoMove(Move move, Board* board);
 int IsPseudoLegal(Move move, Board* board);
 int IsLegal(Move move, Board* board);
 
+int GivesCheck(Move move, Board* board);
+
 void InitCuckoo();
 int HasCycle(Board* board, int ply);
 
