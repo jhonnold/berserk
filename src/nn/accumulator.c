@@ -31,13 +31,14 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
     AccumulatorKingState* state = refreshTable + b;
 
     memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
-    memset(state->pcs, 0, sizeof(BitBoard) * 12);
+    memcpy(state->lazy, LAZY_INPUT_BIASES, sizeof(acc_t) * N_LAZY);
+    memset(state->pcs, 0, sizeof(BitBoard) * 2 * 12);
   }
 }
 
 // Refreshes an accumulator using a diff from the last known board state
 // with proper king bucketing
-void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) {
+void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective, const int lazy) {
   Delta delta[1];
   delta->r = delta->a = 0;
 
@@ -49,7 +50,7 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
 
   for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
     BitBoard curr = board->pieces[pc];
-    BitBoard prev = state->pcs[pc];
+    BitBoard prev = state->pcs[lazy][pc];
 
     BitBoard rem = prev & ~curr;
     BitBoard add = curr & ~prev;
@@ -64,18 +65,24 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
       delta->add[delta->a++] = FeatureIdx(pc, sq, kingSq, perspective);
     }
 
-    state->pcs[pc] = curr;
+    state->pcs[lazy][pc] = curr;
   }
 
-  ApplyDelta(state->values, state->values, delta);
+  if (lazy) {
+    ApplyDelta(state->lazy, state->lazy, delta, N_LAZY, LAZY_INPUT_WEIGHTS);
+    memcpy(dest->lazy[perspective], state->lazy, sizeof(acc_t) * N_LAZY);
 
-  // Copy in state
-  memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
-  dest->correct[perspective] = 1;
+    dest->lazyCorrect[perspective] = 1;
+  } else {
+    ApplyDelta(state->values, state->values, delta, N_HIDDEN, INPUT_WEIGHTS);
+    memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
+
+    dest->correct[perspective] = 1;
+  }
 }
 
 // Resets an accumulator from pieces on the board
-void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
+void ResetAccumulator(Accumulator* dest, Board* board, const int perspective, const int lazy) {
   Delta delta[1];
   delta->r = delta->a = 0;
 
@@ -88,13 +95,29 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
     delta->add[delta->a++] = FeatureIdx(pc, sq, kingSq, perspective);
   }
 
-  acc_t* values = dest->values[perspective];
-  memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
-  ApplyDelta(values, values, delta);
-  dest->correct[perspective] = 1;
+  if (lazy) {
+    acc_t* values = dest->lazy[perspective];
+
+    memcpy(values, LAZY_INPUT_BIASES, sizeof(acc_t) * N_LAZY);
+    ApplyDelta(values, values, delta, N_LAZY, LAZY_INPUT_WEIGHTS);
+    dest->lazyCorrect[perspective] = 1;
+  } else {
+    acc_t* values = dest->values[perspective];
+
+    memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
+    ApplyDelta(values, values, delta, N_HIDDEN, INPUT_WEIGHTS);
+    dest->correct[perspective] = 1;
+  }
 }
 
-void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
+void ApplyUpdates(acc_t* output,
+                  acc_t* prev,
+                  Board* board,
+                  const Move move,
+                  const int captured,
+                  const int view,
+                  const size_t width,
+                  const acc_t* inputWeights) {
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
 
@@ -105,29 +128,54 @@ void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, con
     int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
     int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
-    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
+    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo, width, inputWeights);
   } else if (IsCap(move)) {
     int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
-    ApplySubSubAdd(output, prev, from, capturedTo, to);
+    ApplySubSubAdd(output, prev, from, capturedTo, to, width, inputWeights);
   } else {
-    ApplySubAdd(output, prev, from, to);
+    ApplySubAdd(output, prev, from, to, width, inputWeights);
   }
 }
 
-void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
+void BackfillUpdates(Accumulator* live, Board* board, const int view, const int lazy) {
   Accumulator* curr = live;
-  while (!(--curr)->correct[view])
-    ; // go back to the latest correct accumulator
 
-  do {
-    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr->move, curr->captured, view);
-    (curr + 1)->correct[view] = 1;
-  } while (++curr != live);
+  if (lazy) {
+    while (!(--curr)->lazyCorrect[view])
+      ; // go back to the latest correct accumulator
+
+    do {
+      ApplyUpdates((curr + 1)->lazy[view],
+                   curr->lazy[view],
+                   board,
+                   curr->move,
+                   curr->captured,
+                   view,
+                   N_LAZY,
+                   LAZY_INPUT_WEIGHTS);
+      (curr + 1)->lazyCorrect[view] = 1;
+    } while (++curr != live);
+  } else {
+    while (!(--curr)->correct[view])
+      ; // go back to the latest correct accumulator
+
+    do {
+      ApplyUpdates((curr + 1)->values[view],
+                   curr->values[view],
+                   board,
+                   curr->move,
+                   curr->captured,
+                   view,
+                   N_HIDDEN,
+                   INPUT_WEIGHTS);
+      (curr + 1)->correct[view] = 1;
+    } while (++curr != live);
+  }
 }
 
-int CanEfficientlyUpdate(Accumulator* live, const int view) {
+int CanEfficientlyUpdate(Accumulator* live, const int view, const int lazy) {
   Accumulator* curr = live;
 
   while (1) {
@@ -139,7 +187,9 @@ int CanEfficientlyUpdate(Accumulator* live, const int view) {
 
     if ((piece & 1) == view && MoveRequiresRefresh(piece, from, to))
       return 0; // refresh only necessary for our view
-    if (curr->correct[view])
+
+    const int correct = lazy ? curr->lazyCorrect[view] : curr->correct[view];
+    if (correct)
       return 1;
   }
 }

@@ -27,6 +27,7 @@
 #include "uci.h"
 #include "util.h"
 
+const int PC_VALUES[12]   = {100, -100, 318, -318, 348, -348, 554, -554, 1068, -1068, 0, 0};
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE       = 64;
 
@@ -42,17 +43,22 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (IsMaterialDraw(board))
     return 0;
 
+  const int lazy = abs(board->matScore) >= EVAL_LAZY_MARGIN;
+
   Accumulator* acc = board->accumulators;
   for (int c = WHITE; c <= BLACK; c++) {
-    if (!acc->correct[c]) {
-      if (CanEfficientlyUpdate(acc, c))
-        ApplyLazyUpdates(acc, board, c);
+    int correct = lazy ? acc->lazyCorrect[c] : acc->correct[c];
+
+    if (!correct) {
+      if (CanEfficientlyUpdate(acc, c, lazy))
+        BackfillUpdates(acc, board, c, lazy);
       else
-        RefreshAccumulator(acc, board, c);
+        RefreshAccumulator(acc, board, c, lazy);
     }
   }
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  int score = Propagate(acc, board->stm, lazy);
+  // int score = Predict(board);
 
   // static contempt
   score += thread->contempt[board->stm];
@@ -64,77 +70,79 @@ Score Evaluate(Board* board, ThreadData* thread) {
 }
 
 void EvaluateTrace(Board* board) {
-  // The UCI board has no guarantee of accumulator allocation
-  // so we have to set that up here.
-  board->accumulators = AlignedMalloc(sizeof(Accumulator), 64);
-  ResetAccumulator(board->accumulators, board, WHITE);
-  ResetAccumulator(board->accumulators, board, BLACK);
+  for (int lazy = 0; lazy <= 1; lazy++) {
+    // The UCI board has no guarantee of accumulator allocation
+    // so we have to set that up here.
+    board->accumulators = AlignedMalloc(sizeof(Accumulator), 64);
+    ResetAccumulator(board->accumulators, board, WHITE, lazy);
+    ResetAccumulator(board->accumulators, board, BLACK, lazy);
 
-  int base   = Propagate(board->accumulators, board->stm);
-  base       = board->stm == WHITE ? base : -base;
-  int scaled = (128 + board->phase) * base / 128;
+    int base   = Propagate(board->accumulators, board->stm, lazy);
+    base       = board->stm == WHITE ? base : -base;
+    int scaled = (128 + board->phase) * base / 128;
 
-  printf("\nNNUE derived piece values:\n");
+    printf("\nNNUE derived piece values:\n");
 
-  for (int r = 0; r < 8; r++) {
-    printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
-    printf("|");
-    for (int f = 0; f < 16; f++) {
-      if (f == 8)
-        printf("\n|");
+    for (int r = 0; r < 8; r++) {
+      printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n");
+      printf("|");
+      for (int f = 0; f < 16; f++) {
+        if (f == 8)
+          printf("\n|");
 
-      int sq = r * 8 + (f > 7 ? f - 8 : f);
-      int pc = board->squares[sq];
+        int sq = r * 8 + (f > 7 ? f - 8 : f);
+        int pc = board->squares[sq];
 
-      if (pc == NO_PIECE) {
-        printf("       |");
-      } else if (f < 8) {
-        printf("   %c   |", PIECE_TO_CHAR[pc]);
-      } else if (PieceType(pc) == KING) {
-        printf("       |");
-      } else {
-        // To calculate the piece value, we pop it
-        // reset the accumulators and take a diff
-        PopBit(OccBB(BOTH), sq);
-        ResetAccumulator(board->accumulators, board, WHITE);
-        ResetAccumulator(board->accumulators, board, BLACK);
-        int new = Propagate(board->accumulators, board->stm);
-        new     = board->stm == WHITE ? new : -new;
-        SetBit(OccBB(BOTH), sq);
-
-        int diff       = base - new;
-        int normalized = Normalize(diff);
-        int v          = abs(normalized);
-
-        char buffer[6];
-        buffer[5] = '\0';
-        buffer[0] = diff > 0 ? '+' : diff < 0 ? '-' : ' ';
-        if (v >= 1000) {
-          buffer[1] = '0' + v / 1000;
-          v %= 1000;
-          buffer[2] = '0' + v / 100;
-          v %= 100;
-          buffer[3] = '.';
-          buffer[4] = '0' + v / 10;
+        if (pc == NO_PIECE) {
+          printf("       |");
+        } else if (f < 8) {
+          printf("   %c   |", PIECE_TO_CHAR[pc]);
+        } else if (PieceType(pc) == KING) {
+          printf("       |");
         } else {
-          buffer[1] = '0' + v / 100;
-          v %= 100;
-          buffer[2] = '.';
-          buffer[3] = '0' + v / 10;
-          v %= 10;
-          buffer[4] = '0' + v;
+          // To calculate the piece value, we pop it
+          // reset the accumulators and take a diff
+          PopBit(OccBB(BOTH), sq);
+          ResetAccumulator(board->accumulators, board, WHITE, lazy);
+          ResetAccumulator(board->accumulators, board, BLACK, lazy);
+          int new = Propagate(board->accumulators, board->stm, lazy);
+          new     = board->stm == WHITE ? new : -new;
+          SetBit(OccBB(BOTH), sq);
+
+          int diff       = base - new;
+          int normalized = Normalize(diff);
+          int v          = abs(normalized);
+
+          char buffer[6];
+          buffer[5] = '\0';
+          buffer[0] = diff > 0 ? '+' : diff < 0 ? '-' : ' ';
+          if (v >= 1000) {
+            buffer[1] = '0' + v / 1000;
+            v %= 1000;
+            buffer[2] = '0' + v / 100;
+            v %= 100;
+            buffer[3] = '.';
+            buffer[4] = '0' + v / 10;
+          } else {
+            buffer[1] = '0' + v / 100;
+            v %= 100;
+            buffer[2] = '.';
+            buffer[3] = '0' + v / 10;
+            v %= 10;
+            buffer[4] = '0' + v;
+          }
+          printf(" %s |", buffer);
         }
-        printf(" %s |", buffer);
       }
+
+      printf("\n");
     }
 
-    printf("\n");
+    printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
+
+    printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
+    printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
+
+    AlignedFree(board->accumulators);
   }
-
-  printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
-
-  printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
-  printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
-
-  AlignedFree(board->accumulators);
 }

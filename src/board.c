@@ -64,6 +64,7 @@ void ClearBoard(Board* board) {
   board->fmr      = 0;
   board->nullply  = 0;
   board->phase    = 0;
+  board->matScore = 0;
 }
 
 void ParseFen(char* fen, Board* board) {
@@ -76,6 +77,7 @@ void ParseFen(char* fen, Board* board) {
       board->squares[i] = piece;
 
       board->phase += PHASE_VALUES[PieceType(piece)];
+      board->matScore += PC_VALUES[piece];
 
       if (*fen != 'K' && *fen != 'k')
         board->piecesCounts += PieceCount(piece);
@@ -379,6 +381,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->piecesCounts -= PieceCount(captured);
     board->phase -= PHASE_VALUES[PieceType(captured)];
+    board->matScore -= PC_VALUES[captured];
     board->fmr = 0;
   }
 
@@ -412,6 +415,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
       board->phase += PHASE_VALUES[PieceType(promoted)];
+      board->matScore += PC_VALUES[promoted] - PC_VALUES[piece];
     }
 
     board->fmr = 0;
@@ -435,6 +439,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
+    board->accumulators->lazyCorrect[WHITE] = board->accumulators->lazyCorrect[BLACK] = 0;
   }
 }
 
@@ -459,6 +464,7 @@ void UndoMove(Move move, Board* board) {
     board->squares[to] = piece;
     board->piecesCounts -= PieceCount(promoted) - PieceCount(piece);
     board->phase -= PHASE_VALUES[PieceType(promoted)];
+    board->matScore -= PC_VALUES[promoted] - PC_VALUES[piece];
   }
 
   FlipBits(board->pieces[piece], to, from);
@@ -492,6 +498,7 @@ void UndoMove(Move move, Board* board) {
 
     board->piecesCounts += PieceCount(captured);
     board->phase += PHASE_VALUES[PieceType(captured)];
+    board->matScore += PC_VALUES[captured];
   }
 }
 

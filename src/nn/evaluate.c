@@ -46,6 +46,18 @@ float L2_BIASES[N_L3] ALIGN;
 float OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
 float OUTPUT_BIAS;
 
+int16_t LAZY_INPUT_WEIGHTS[N_FEATURES * N_LAZY] ALIGN;
+int16_t LAZY_INPUT_BIASES[N_LAZY] ALIGN;
+
+int8_t LAZY_L1_WEIGHTS[2 * N_LAZY * N_L2] ALIGN;
+int32_t LAZY_L1_BIASES[N_L2] ALIGN;
+
+float LAZY_L2_WEIGHTS[N_L2 * N_L3] ALIGN;
+float LAZY_L2_BIASES[N_L3] ALIGN;
+
+float LAZY_OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
+float LAZY_OUTPUT_BIAS;
+
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
@@ -72,14 +84,14 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
 }
 #elif defined(__AVX2__)
 #include <immintrin.h>
-INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
-  const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
-  const size_t CHUNKS = N_HIDDEN / WIDTH;
-  const int views[2]  = {stm, !stm};
+INLINE void InputReLU(int8_t* outputs, acc_t* stm, acc_t* xstm, const size_t inWidth) {
+  const size_t REG_WIDTH = sizeof(__m256i) / sizeof(acc_t);
+  const size_t CHUNKS    = inWidth / REG_WIDTH;
+  const acc_t* views[2]  = {stm, xstm};
 
   for (int v = 0; v < 2; v++) {
-    const __m256i* in = (__m256i*) acc->values[views[v]];
-    __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
+    const __m256i* in = (__m256i*) views[v];
+    __m256i* out      = (__m256i*) &outputs[inWidth * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
       __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], 5);
@@ -277,13 +289,18 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
   return count;
 }
 
-INLINE void L1AffineReLU(float* dest, int8_t* src) {
+INLINE void L1AffineReLU(float* dest,
+                         int8_t* src,
+                         const size_t outWidth,
+                         const size_t inWidth,
+                         const int8_t* wei,
+                         const int32_t* bia) {
   const size_t OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t);
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+  const size_t NUM_CHUNKS = inWidth / SPARSE_CHUNK_SIZE;
+  const size_t OUT_CC     = outWidth / OUT_WIDTH;
 
   const int32_t* in32   = (int32_t*) src;
-  const __m256i* biases = (__m256i*) L1_BIASES;
+  const __m256i* biases = (__m256i*) bia;
   __m256* out           = (__m256*) dest;
 
   uint16_t nnz[NUM_CHUNKS];
@@ -301,8 +318,8 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
     const __m256i f0 = _mm256_set1_epi32(in32[i0]);
     const __m256i f1 = _mm256_set1_epi32(in32[i1]);
 
-    const __m256i* c0 = (__m256i*) &L1_WEIGHTS[i0 * N_L2 * SPARSE_CHUNK_SIZE];
-    const __m256i* c1 = (__m256i*) &L1_WEIGHTS[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const __m256i* c0 = (__m256i*) &wei[i0 * outWidth * SPARSE_CHUNK_SIZE];
+    const __m256i* c1 = (__m256i*) &wei[i1 * outWidth * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++)
       m256_add_dpbusd_epi32x2(regs + j, f0, c0[j], f1, c1[j]);
@@ -311,7 +328,7 @@ INLINE void L1AffineReLU(float* dest, int8_t* src) {
   if (i < count) {
     const uint16_t i0 = nnz[i];
     const __m256i f0  = _mm256_set1_epi32(in32[i0]);
-    const __m256i* c0 = (__m256i*) &L1_WEIGHTS[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const __m256i* c0 = (__m256i*) &wei[i0 * outWidth * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++)
       m256_add_dpbusd_epi32(regs + j, f0, c0[j]);
@@ -503,15 +520,20 @@ INLINE __m128 m256_hadd_psx4(__m256* regs) {
   return _mm_add_ps(sum128lo, sum128hi);
 }
 
-INLINE void L2AffineReLU(float* dest, float* src) {
+INLINE void L2AffineReLU(float* dest,
+                         float* src,
+                         const size_t outWidth,
+                         const size_t inWidth,
+                         const float* wei,
+                         const float* bia) {
   const size_t IN_WIDTH   = sizeof(__m256) / sizeof(float);
-  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
+  const size_t IN_CHUNKS  = inWidth / IN_WIDTH;
   const size_t OUT_CC     = 8;
-  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+  const size_t OUT_CHUNKS = outWidth / OUT_CC;
 
   const __m256* in      = (__m256*) src;
-  const __m256* weights = (__m256*) L2_WEIGHTS;
-  const __m256* biases  = (__m256*) L2_BIASES;
+  const __m256* weights = (__m256*) wei;
+  const __m256* biases  = (__m256*) bia;
   __m256* out           = (__m256*) dest;
 
   __m256 regs[OUT_CC];
@@ -598,12 +620,12 @@ INLINE int L3Transform(float* src) {
   return _mm_cvtss_f32(a1) + OUTPUT_BIAS;
 }
 #elif defined(__AVX2__)
-INLINE int L3Transform(float* src) {
+INLINE int L3Transform(float* src, const size_t inWidth, const float* wei, const float bia) {
   const size_t WIDTH  = sizeof(__m256) / sizeof(float);
-  const size_t CHUNKS = N_L3 / WIDTH;
+  const size_t CHUNKS = inWidth / WIDTH;
 
   const __m256* in      = (__m256*) src;
-  const __m256* weights = (__m256*) OUTPUT_WEIGHTS;
+  const __m256* weights = (__m256*) wei;
 
   __m256 a0 = _mm256_setzero_ps();
   for (size_t i = 0; i < CHUNKS; i++)
@@ -613,7 +635,7 @@ INLINE int L3Transform(float* src) {
   const __m128 a2 = _mm_add_ps(a4, _mm_movehl_ps(a4, a4));
   const __m128 a1 = _mm_add_ss(a2, _mm_shuffle_ps(a2, a2, 0x1));
 
-  return _mm_cvtss_f32(a1) + OUTPUT_BIAS;
+  return _mm_cvtss_f32(a1) + bia;
 }
 #elif defined(__SSE__)
 INLINE float L3Transform(float* src) {
@@ -643,22 +665,31 @@ INLINE float L3Transform(float* src) {
 }
 #endif
 
-int Propagate(Accumulator* accumulator, const int stm) {
+int Propagate(Accumulator* accumulator, const int stm, const int lazy) {
   int8_t x0[N_L1] ALIGN;
   float x1[N_L2] ALIGN;
   float x2[N_L3] ALIGN;
 
-  InputReLU(x0, accumulator, stm);
-  L1AffineReLU(x1, x0);
-  L2AffineReLU(x2, x1);
-  return L3Transform(x2) / 32;
+  if (lazy) {
+    InputReLU(x0, accumulator->lazy[stm], accumulator->lazy[!stm], N_LAZY);
+    L1AffineReLU(x1, x0, N_L2, 2 * N_LAZY, LAZY_L1_WEIGHTS, LAZY_L1_BIASES);
+    L2AffineReLU(x2, x1, N_L3, N_L2, LAZY_L2_WEIGHTS, LAZY_L2_BIASES);
+    return L3Transform(x2, N_L3, LAZY_OUTPUT_WEIGHTS, LAZY_OUTPUT_BIAS) / 32;
+  } else {
+    InputReLU(x0, accumulator->values[stm], accumulator->values[!stm], N_HIDDEN);
+    L1AffineReLU(x1, x0, N_L2, N_L1, L1_WEIGHTS, L1_BIASES);
+    L2AffineReLU(x2, x1, N_L3, N_L2, L2_WEIGHTS, L2_BIASES);
+    return L3Transform(x2, N_L3, OUTPUT_WEIGHTS, OUTPUT_BIAS) / 32;
+  }
 }
 
 int Predict(Board* board) {
-  ResetAccumulator(board->accumulators, board, WHITE);
-  ResetAccumulator(board->accumulators, board, BLACK);
+  const int lazy = abs(board->matScore) >= EVAL_LAZY_MARGIN;
 
-  return board->stm == WHITE ? Propagate(board->accumulators, WHITE) : Propagate(board->accumulators, BLACK);
+  ResetAccumulator(board->accumulators, board, WHITE, lazy);
+  ResetAccumulator(board->accumulators, board, BLACK, lazy);
+
+  return Propagate(board->accumulators, board->stm, lazy);
 }
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights
@@ -668,11 +699,20 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(float) * N_L2 * N_L3 +             // input biases
                             sizeof(float) * N_L3 +                    // input biases
                             sizeof(float) * N_L3 +                    // output weights
-                            sizeof(float);                            // output bias
+                            sizeof(float) +                           // output bias
+                            // lazy network portion
+                            sizeof(int16_t) * N_FEATURES * N_LAZY + // input weights
+                            sizeof(int16_t) * N_LAZY +              // input biases
+                            sizeof(int8_t) * 2 * N_LAZY * N_L2 +    // input biases
+                            sizeof(int32_t) * N_L2 +                // input biases
+                            sizeof(float) * N_L2 * N_L3 +           // input biases
+                            sizeof(float) * N_L3 +                  // input biases
+                            sizeof(float) * N_L3 +                  // output weights
+                            sizeof(float);                          // output bias
 
-INLINE int WeightIdxScrambled(int idx) {
-  return ((idx / SPARSE_CHUNK_SIZE) % (N_L1 / SPARSE_CHUNK_SIZE) * N_L2 * SPARSE_CHUNK_SIZE) +
-         (idx / N_L1 * SPARSE_CHUNK_SIZE) + (idx % SPARSE_CHUNK_SIZE);
+INLINE int WeightIdxScrambled(int idx, const size_t inWidth, const size_t outWidth) {
+  return ((idx / SPARSE_CHUNK_SIZE) % (inWidth / SPARSE_CHUNK_SIZE) * outWidth * SPARSE_CHUNK_SIZE) +
+         (idx / inWidth * SPARSE_CHUNK_SIZE) + (idx % SPARSE_CHUNK_SIZE);
 }
 
 INLINE void CopyData(const unsigned char* in) {
@@ -680,7 +720,8 @@ INLINE void CopyData(const unsigned char* in) {
 
   // Alloc a chunk of memory for the L1 weights which we
   // cannot copy into the stack directly
-  int8_t* l1 = malloc(N_L1 * N_L2 * sizeof(int8_t));
+  int8_t* l1     = malloc(N_L1 * N_L2 * sizeof(int8_t));
+  int8_t* lazyL1 = malloc(2 * N_LAZY * N_L2 * sizeof(int8_t));
 
   memcpy(INPUT_WEIGHTS, &in[offset], N_FEATURES * N_HIDDEN * sizeof(int16_t));
   offset += N_FEATURES * N_HIDDEN * sizeof(int16_t);
@@ -700,17 +741,45 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
   offset += N_L3 * N_OUTPUT * sizeof(float);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
+  offset += N_OUTPUT * sizeof(float);
+
+  // lazy network portion
+
+  memcpy(LAZY_INPUT_WEIGHTS, &in[offset], N_FEATURES * N_LAZY * sizeof(int16_t));
+  offset += N_FEATURES * N_LAZY * sizeof(int16_t);
+  memcpy(LAZY_INPUT_BIASES, &in[offset], N_LAZY * sizeof(int16_t));
+  offset += N_LAZY * sizeof(int16_t);
+
+  memcpy(lazyL1, &in[offset], 2 * N_LAZY * N_L2 * sizeof(int8_t));
+  offset += 2 * N_LAZY * N_L2 * sizeof(int8_t);
+  memcpy(LAZY_L1_BIASES, &in[offset], N_L2 * sizeof(int32_t));
+  offset += N_L2 * sizeof(int32_t);
+
+  memcpy(LAZY_L2_WEIGHTS, &in[offset], N_L2 * N_L3 * sizeof(float));
+  offset += N_L2 * N_L3 * sizeof(float);
+  memcpy(LAZY_L2_BIASES, &in[offset], N_L3 * sizeof(float));
+  offset += N_L3 * sizeof(float);
+
+  memcpy(LAZY_OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
+  offset += N_L3 * N_OUTPUT * sizeof(float);
+  memcpy(&LAZY_OUTPUT_BIAS, &in[offset], sizeof(float));
+  offset += N_OUTPUT * sizeof(float);
 
 #if defined(__SSSE3__)
   // Shuffle the L1 weights for sparse matmul
   for (int i = 0; i < N_L1 * N_L2; i++)
-    L1_WEIGHTS[WeightIdxScrambled(i)] = l1[i];
+    L1_WEIGHTS[WeightIdxScrambled(i, N_L1, N_L2)] = l1[i];
+  for (int i = 0; i < 2 * N_LAZY * N_L2; i++)
+    LAZY_L1_WEIGHTS[WeightIdxScrambled(i, 2 * N_LAZY, N_L2)] = lazyL1[i];
 #else
   for (int i = 0; i < N_L1 * N_L2; i++)
     L1_WEIGHTS[i] = l1[i];
+  for (int i = 0; i < 2 * N_LAZY * N_L2; i++)
+    LAZY_L1_WEIGHTS[i] = lazyL1[i];
 #endif
 
   free(l1);
+  free(lazyL1);
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
   const size_t WIDTH         = sizeof(__m512i) / sizeof(int16_t);
@@ -768,6 +837,28 @@ INLINE void CopyData(const unsigned char* in) {
   }
 
   for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
+    __m128i a1 = _mm256_extracti128_si256(biases[i], 1);
+    __m128i b0 = _mm256_extracti128_si256(biases[i + 1], 0);
+
+    biases[i]     = _mm256_inserti128_si256(biases[i], b0, 1);
+    biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a1, 0);
+  }
+
+  const size_t LAZY_WEIGHT_CHUNKS = (N_FEATURES * N_LAZY) / WIDTH;
+  const size_t LAZY_BIAS_CHUNKS   = N_LAZY / WIDTH;
+
+  weights = (__m256i*) LAZY_INPUT_WEIGHTS;
+  biases  = (__m256i*) LAZY_INPUT_BIASES;
+
+  for (size_t i = 0; i < LAZY_WEIGHT_CHUNKS; i += 2) {
+    __m128i a1 = _mm256_extracti128_si256(weights[i], 1);
+    __m128i b0 = _mm256_extracti128_si256(weights[i + 1], 0);
+
+    weights[i]     = _mm256_inserti128_si256(weights[i], b0, 1);
+    weights[i + 1] = _mm256_inserti128_si256(weights[i + 1], a1, 0);
+  }
+
+  for (size_t i = 0; i < LAZY_BIAS_CHUNKS; i += 2) {
     __m128i a1 = _mm256_extracti128_si256(biases[i], 1);
     __m128i b0 = _mm256_extracti128_si256(biases[i + 1], 0);
 
