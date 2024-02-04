@@ -110,7 +110,7 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective, co
   }
 }
 
-void ApplyUpdates(acc_t* output,
+INLINE void ApplyUpdates(acc_t* output,
                   acc_t* prev,
                   Board* board,
                   const Move move,
