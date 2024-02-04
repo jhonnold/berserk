@@ -46,6 +46,9 @@ float L2_BIASES[N_L3] ALIGN;
 float OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
 float OUTPUT_BIAS;
 
+int16_t SHALLOW_WEIGHTS[N_L1 * N_OUTPUT] ALIGN;
+int32_t SHALLOW_BIAS;
+
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
@@ -65,8 +68,10 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
       __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], 5);
       __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], 5);
 
-      out[i]     = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512());
-      out[i + 1] = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512());
+      out[i]     = _mm512_permutexvar_epi64(_mm512_setr_epi64(0, 2, 4, 6, 1, 3, 5, 7),
+                                        _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512()));
+      out[i + 1] = _mm512_permutexvar_epi64(_mm512_setr_epi64(0, 2, 4, 6, 1, 3, 5, 7),
+                                            _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512()));
     }
   }
 }
@@ -87,8 +92,10 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
       __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], 5);
       __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], 5);
 
-      out[i]     = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256());
-      out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256());
+      out[i] =
+        _mm256_permute4x64_epi64(_mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256()), 0b11011000);
+      out[i + 1] =
+        _mm256_permute4x64_epi64(_mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256()), 0b11011000);
     }
   }
 }
@@ -654,6 +661,54 @@ int Propagate(Accumulator* accumulator, const int stm) {
   return L3Transform(x2) / 32;
 }
 
+int ShallowPropagate(Accumulator* accumulator, const int stm) {
+  const size_t OUT_WIDTH = sizeof(regi_t) / sizeof(acc_t);
+  const size_t CHUNKS    = N_HIDDEN / OUT_WIDTH;
+  const size_t OUT_CC    = 8; // intentionally not 16 to avoid 32-byte spills
+
+  const int views[2] = {stm, !stm};
+
+  const regi_t zero = regi_zero();
+  regi_out_t regs[OUT_CC];
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    regs[i] = regi_zero();
+
+  for (size_t v = 0; v < 2; v++) {
+    const regi_t* in      = (regi_t*) accumulator->values[views[v]];
+    const regi_t* weights = (regi_t*) &SHALLOW_WEIGHTS[v * N_HIDDEN];
+
+    for (size_t c = 0; c < CHUNKS; c += OUT_CC)
+      for (size_t i = 0; i < OUT_CC; i++)
+        regs[i] = regi_add32(regs[i], regi_madd(regi_max(zero, in[c + i]), weights[c + i]));
+  }
+
+  for (size_t i = 1; i < OUT_CC; i++)
+    regs[0] = regi_add32(regs[0], regs[i]);
+
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+  const __m256i r8 = _mm256_add_epi32(_mm512_castsi512_si256(regs[0]), _mm512_extracti32x8_epi32(regs[0], 1));
+#elif defined(__AVX2__)
+  const __m256i r8     = regs[0];
+#endif
+
+#if defined(__AVX2__)
+  const __m128i r4 = _mm_add_epi32(_mm256_castsi256_si128(r8), _mm256_extractf128_si256(r8, 1));
+#elif defined(__SSE2__)
+  const __m128i r4     = acc;
+#endif
+
+#if defined(__SSE2__)
+  const __m128i r2     = _mm_add_epi32(r4, _mm_srli_si128(r4, 8));
+  const __m128i r1     = _mm_add_epi32(r2, _mm_srli_si128(r2, 4));
+  const int32_t result = _mm_cvtsi128_si32(r1);
+#else
+  const int32_t result = acc;
+#endif
+
+  return (result + SHALLOW_BIAS) / 32 / 256;
+}
+
 int Predict(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
@@ -668,7 +723,9 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(float) * N_L2 * N_L3 +             // input biases
                             sizeof(float) * N_L3 +                    // input biases
                             sizeof(float) * N_L3 +                    // output weights
-                            sizeof(float);                            // output bias
+                            sizeof(float) +                           // output bias
+                            sizeof(int16_t) * N_L1 +                  // shallow weights
+                            sizeof(int32_t);                          // shallow bias
 
 INLINE int WeightIdxScrambled(int idx) {
   return ((idx / SPARSE_CHUNK_SIZE) % (N_L1 / SPARSE_CHUNK_SIZE) * N_L2 * SPARSE_CHUNK_SIZE) +
@@ -700,6 +757,12 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
   offset += N_L3 * N_OUTPUT * sizeof(float);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(float));
+  offset += N_OUTPUT * sizeof(float);
+
+  memcpy(SHALLOW_WEIGHTS, &in[offset], N_L1 * N_OUTPUT * sizeof(int16_t));
+  offset += N_L1 * N_OUTPUT * sizeof(int16_t);
+  memcpy(&SHALLOW_BIAS, &in[offset], N_OUTPUT * sizeof(int32_t));
+  offset += N_OUTPUT * sizeof(int32_t);
 
 #if defined(__SSSE3__)
   // Shuffle the L1 weights for sparse matmul
@@ -711,70 +774,6 @@ INLINE void CopyData(const unsigned char* in) {
 #endif
 
   free(l1);
-
-#if defined(__AVX512F__) && defined(__AVX512BW__)
-  const size_t WIDTH         = sizeof(__m512i) / sizeof(int16_t);
-  const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
-  const size_t BIAS_CHUNKS   = N_HIDDEN / WIDTH;
-
-  __m512i* weights = (__m512i*) INPUT_WEIGHTS;
-  __m512i* biases  = (__m512i*) INPUT_BIASES;
-
-  for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
-    __m128i a1 = _mm512_extracti32x4_epi32(weights[i], 1);
-    __m128i a2 = _mm512_extracti32x4_epi32(weights[i], 2);
-    __m128i a3 = _mm512_extracti32x4_epi32(weights[i], 3);
-    __m128i b0 = _mm512_extracti32x4_epi32(weights[i + 1], 0);
-    __m128i b1 = _mm512_extracti32x4_epi32(weights[i + 1], 1);
-    __m128i b2 = _mm512_extracti32x4_epi32(weights[i + 1], 2);
-
-    weights[i]     = _mm512_inserti32x4(weights[i], a2, 1);
-    weights[i]     = _mm512_inserti32x4(weights[i], b0, 2);
-    weights[i]     = _mm512_inserti32x4(weights[i], b2, 3);
-    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], a1, 0);
-    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], a3, 1);
-    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], b1, 2);
-  }
-
-  for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
-    __m128i a1 = _mm512_extracti32x4_epi32(biases[i], 1);
-    __m128i a2 = _mm512_extracti32x4_epi32(biases[i], 2);
-    __m128i a3 = _mm512_extracti32x4_epi32(biases[i], 3);
-    __m128i b0 = _mm512_extracti32x4_epi32(biases[i + 1], 0);
-    __m128i b1 = _mm512_extracti32x4_epi32(biases[i + 1], 1);
-    __m128i b2 = _mm512_extracti32x4_epi32(biases[i + 1], 2);
-
-    biases[i]     = _mm512_inserti32x4(biases[i], a2, 1);
-    biases[i]     = _mm512_inserti32x4(biases[i], b0, 2);
-    biases[i]     = _mm512_inserti32x4(biases[i], b2, 3);
-    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], a1, 0);
-    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], a3, 1);
-    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], b1, 2);
-  }
-#elif defined(__AVX2__)
-  const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
-  const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
-  const size_t BIAS_CHUNKS   = N_HIDDEN / WIDTH;
-
-  __m256i* weights = (__m256i*) INPUT_WEIGHTS;
-  __m256i* biases  = (__m256i*) INPUT_BIASES;
-
-  for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
-    __m128i a1 = _mm256_extracti128_si256(weights[i], 1);
-    __m128i b0 = _mm256_extracti128_si256(weights[i + 1], 0);
-
-    weights[i]     = _mm256_inserti128_si256(weights[i], b0, 1);
-    weights[i + 1] = _mm256_inserti128_si256(weights[i + 1], a1, 0);
-  }
-
-  for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
-    __m128i a1 = _mm256_extracti128_si256(biases[i], 1);
-    __m128i b0 = _mm256_extracti128_si256(biases[i + 1], 0);
-
-    biases[i]     = _mm256_inserti128_si256(biases[i], b0, 1);
-    biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a1, 0);
-  }
-#endif
 }
 
 INLINE void InitLookupIndices() {

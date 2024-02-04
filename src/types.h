@@ -111,6 +111,8 @@ typedef struct {
   int cr[4];
   int castlingRights[64];
 
+  int materialScore[2];
+
   BoardHistory history[MAX_SEARCH_PLY + 100];
 
   Accumulator* accumulators;

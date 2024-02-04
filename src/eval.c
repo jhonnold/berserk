@@ -27,6 +27,7 @@
 #include "uci.h"
 #include "util.h"
 
+const int PC_VALUES[6]    = {100, 318, 348, 554, 1068, 0};
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 const int MAX_PHASE       = 64;
 
@@ -52,7 +53,9 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  const int simpleEval = board->materialScore[board->stm] - board->materialScore[board->xstm];
+  const int lazy       = abs(simpleEval) > 505;
+  int score            = lazy ? ShallowPropagate(acc, board->stm) : Propagate(acc, board->stm);
 
   // static contempt
   score += thread->contempt[board->stm];
@@ -70,7 +73,10 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base   = Propagate(board->accumulators, board->stm);
+  const int simpleEval = board->materialScore[board->stm] - board->materialScore[board->xstm];
+  const int lazy       = abs(simpleEval) > 505;
+
+  int base   = lazy ? ShallowPropagate(board->accumulators, board->stm) : Propagate(board->accumulators, board->stm);
   base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
@@ -98,7 +104,7 @@ void EvaluateTrace(Board* board) {
         PopBit(OccBB(BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
-        int new = Propagate(board->accumulators, board->stm);
+        int new = lazy ? ShallowPropagate(board->accumulators, board->stm) : Propagate(board->accumulators, board->stm);
         new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 

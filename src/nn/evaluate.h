@@ -23,6 +23,7 @@
 
 int Predict(Board* board);
 int Propagate(Accumulator* accumulator, const int stm);
+int ShallowPropagate(Accumulator* accumulator, const int stm);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);
