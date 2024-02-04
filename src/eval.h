@@ -23,7 +23,7 @@
 #include "util.h"
 
 #define EVAL_UNKNOWN     2046
-#define EVAL_LAZY_MARGIN 505
+#define EVAL_LAZY_MARGIN 450
 
 INLINE int ClampEval(int eval) {
   return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
