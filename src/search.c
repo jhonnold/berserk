@@ -371,6 +371,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int bestScore = -CHECKMATE;        //
   int maxScore  = CHECKMATE;         // best possible
   int origAlpha = alpha;             // remember first alpha for tt storage
+  int origDepth = depth;
   int inCheck   = !!board->checkers;
   int improving = 0;
   int eval      = ss->staticEval;
@@ -789,7 +790,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 78), quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss, thread, move, origDepth + (bestScore > beta + 78), quiets, numQuiets, captures, numCaptures);
         break;
       }
     }
