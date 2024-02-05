@@ -323,7 +323,7 @@ void Search(ThreadData* thread) {
     long elapsed = GetTimeMS() - Limits.start;
 
     // Hard TM check
-    if (Limits.timeset && thread->depth >= 3 && elapsed >= Limits.max)
+    if (Limits.timeset && elapsed >= Limits.max)
       break;
 
     // Soft TM checks

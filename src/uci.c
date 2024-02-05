@@ -41,7 +41,7 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD  = 6;
+int MOVE_OVERHEAD  = 3;
 int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
