@@ -215,6 +215,8 @@ void SetupMainThread(Board* board) {
   mainThread->nmpMinPly  = 0;
 
   memcpy(&mainThread->board, board, offsetof(Board, accumulators));
+  memcpy(&mainThread->lp[0], &mainThread->lp[2], sizeof(int16_t) * 64 * 64 * 2);
+  memset(&mainThread->lp[2], 0, sizeof(int16_t) * 64 * 64 * 2);
 
   if (Limits.searchMoves) {
     for (int i = 0; i < Limits.searchable.count; i++)
@@ -251,6 +253,8 @@ void SetupOtherThreads(Board* board) {
     thread->numRootMoves = mainThread->numRootMoves;
 
     memcpy(&thread->board, board, offsetof(Board, accumulators));
+    memcpy(&thread->lp[0], &thread->lp[2], sizeof(int16_t) * 64 * 64 * 2);
+    memset(&thread->lp[2], 0, sizeof(int16_t) * 64 * 64 * 2);
   }
 }
 

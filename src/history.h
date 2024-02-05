@@ -23,6 +23,7 @@
 #include "types.h"
 #include "util.h"
 
+#define LP(ply, m)          (thread->lp[ply][FromTo(m)])
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
 

@@ -51,6 +51,9 @@ void UpdateHistories(SearchStack* ss,
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
+
+    if (depth >= 10 && ss->ply < 4)
+      AddHistoryHeuristic(&LP(ss->ply, bestMove), HistoryBonus(depth - 5));
   } else {
     int piece    = Moving(bestMove);
     int to       = To(bestMove);
