@@ -74,8 +74,8 @@ INLINE int CheckLimits(ThreadData* thread) {
     return 0;
 
   long elapsed = GetTimeMS() - Limits.start;
-  return (Limits.timeset && elapsed >= Limits.max) || //
-         (Limits.nodes && NodesSearched() >= Limits.nodes);
+  return thread->depth > 1 && ((Limits.timeset && elapsed >= Limits.max) || //
+                               (Limits.nodes && NodesSearched() >= Limits.nodes));
 }
 
 INLINE int AdjustEvalOnFMR(Board* board, int eval) {
@@ -321,6 +321,10 @@ void Search(ThreadData* thread) {
 
     // Time Management stuff
     long elapsed = GetTimeMS() - Limits.start;
+
+    // Hard TM check
+    if (Limits.timeset && thread->depth >= 3 && elapsed >= Limits.max)
+      break;
 
     // Soft TM checks
     if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
