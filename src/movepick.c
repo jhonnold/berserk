@@ -51,15 +51,14 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     Move move = current->move;
 
     if (type == ST_QUIET) {
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
-                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
-
       if (ss->ply < 4)
         current->score += (int) LP(ss->ply, move) * 2;
-
+      else
+        current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
+                         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
+                         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
+                         (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
+                         (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
     } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
