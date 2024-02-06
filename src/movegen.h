@@ -211,10 +211,18 @@ INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm
   const BitBoard bishopMask = GetBishopAttacks(oppKingSq, OccBB(BOTH));
   const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(BOTH));
 
-  moves = AddPieceMoves(moves, bishopMask | rookMask, board, stm, GT_QUIET, QUEEN);
-  moves = AddPieceMoves(moves, rookMask, board, stm, GT_QUIET, ROOK);
-  moves = AddPieceMoves(moves, bishopMask, board, stm, GT_QUIET, BISHOP);
-  moves = AddPieceMoves(moves, GetKnightAttacks(oppKingSq), board, stm, GT_QUIET, KNIGHT);
+  const BitBoard minorThreats = board->threatenedBy[PAWN] | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
+  const BitBoard rookThreats = minorThreats | board->threatenedBy[ROOK];
+
+  const BitBoard queenOpts = (bishopMask | rookMask) & ~rookThreats;
+  const BitBoard rookOpts = rookMask & ~minorThreats;
+  const BitBoard bishopOpts = bishopMask & ~board->threatenedBy[PAWN];
+  const BitBoard knightOpts = GetKnightAttacks(oppKingSq) & ~board->threatenedBy[PAWN];
+
+  moves = AddPieceMoves(moves, queenOpts, board, stm, GT_QUIET, QUEEN);
+  moves = AddPieceMoves(moves, rookOpts, board, stm, GT_QUIET, ROOK);
+  moves = AddPieceMoves(moves, bishopOpts, board, stm, GT_QUIET, BISHOP);
+  moves = AddPieceMoves(moves, knightOpts, board, stm, GT_QUIET, KNIGHT);
 
   return AddPawnMoves(moves, GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
 }
