@@ -22,28 +22,3 @@ const int CASTLE_MAP[4][3] = {
   {BLACK_KS, G8, F8},
   {BLACK_QS, C8, D8},
 };
-
-ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board) {
-  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_CAPTURE, WHITE) : //
-                               AddPseudoLegalMoves(moves, board, GT_CAPTURE, BLACK);
-}
-
-ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
-  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_QUIET, WHITE) : //
-                               AddPseudoLegalMoves(moves, board, GT_QUIET, BLACK);
-}
-
-ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board) {
-  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_LEGAL, WHITE) : //
-                               AddPseudoLegalMoves(moves, board, GT_LEGAL, BLACK);
-}
-
-ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board) {
-  return board->stm == WHITE ? AddQuietChecks(moves, board, WHITE) : //
-                               AddQuietChecks(moves, board, BLACK);
-}
-
-ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
-  return board->stm == WHITE ? AddLegalMoves(moves, board, WHITE) : //
-                               AddLegalMoves(moves, board, BLACK);
-}

@@ -211,15 +211,28 @@ INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm
   const BitBoard bishopMask = GetBishopAttacks(oppKingSq, OccBB(BOTH));
   const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(BOTH));
 
-  moves = AddPieceMoves(moves, bishopMask | rookMask, board, stm, GT_QUIET, QUEEN);
-  moves = AddPieceMoves(moves, rookMask, board, stm, GT_QUIET, ROOK);
-  moves = AddPieceMoves(moves, bishopMask, board, stm, GT_QUIET, BISHOP);
-  moves = AddPieceMoves(moves, GetKnightAttacks(oppKingSq), board, stm, GT_QUIET, KNIGHT);
+  const BitBoard pawnThreats  = board->threatenedBy[PAWN];
+  const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
+  const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
+
+  BitBoard queenOpts  = (bishopMask | rookMask) & ~rookThreats;
+  BitBoard rookOpts   = rookMask & ~minorThreats;
+  BitBoard bishopOpts = bishopMask & ~pawnThreats;
+  BitBoard knightOpts = GetKnightAttacks(oppKingSq) & ~pawnThreats;
+
+  moves = AddPieceMoves(moves, queenOpts, board, stm, GT_QUIET, QUEEN);
+  moves = AddPieceMoves(moves, rookOpts, board, stm, GT_QUIET, ROOK);
+  moves = AddPieceMoves(moves, bishopOpts, board, stm, GT_QUIET, BISHOP);
+  moves = AddPieceMoves(moves, knightOpts, board, stm, GT_QUIET, KNIGHT);
 
   return AddPawnMoves(moves, GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
 }
 
-INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
+INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves,
+                                       Board* board,
+                                       const int type,
+                                       const int color,
+                                       const int avoidBad) {
   if (BitCount(board->checkers) > 1)
     return AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
 
@@ -227,10 +240,20 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
     !board->checkers ? ALL : BetweenSquares(LSB(PieceBB(KING, color)), LSB(board->checkers)) | board->checkers;
 
   moves = AddPawnMoves(moves, opts, board, color, type);
-  moves = AddPieceMoves(moves, opts, board, color, type, KNIGHT);
-  moves = AddPieceMoves(moves, opts, board, color, type, BISHOP);
-  moves = AddPieceMoves(moves, opts, board, color, type, ROOK);
-  moves = AddPieceMoves(moves, opts, board, color, type, QUEEN);
+
+  const BitBoard pawnThreats  = board->threatenedBy[PAWN];
+  const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
+  const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
+
+  BitBoard minorOpts = opts & ~(pawnThreats * avoidBad);
+  BitBoard rookOpts  = opts & ~(minorThreats * avoidBad);
+  BitBoard queenOpts = opts & ~(rookThreats * avoidBad);
+
+  moves = AddPieceMoves(moves, minorOpts, board, color, type, KNIGHT);
+  moves = AddPieceMoves(moves, minorOpts, board, color, type, BISHOP);
+  moves = AddPieceMoves(moves, rookOpts, board, color, type, ROOK);
+  moves = AddPieceMoves(moves, queenOpts, board, color, type, QUEEN);
+
   moves = AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
   if ((type & GT_QUIET) && !board->checkers)
     moves = AddCastles(moves, board, color);
@@ -242,7 +265,7 @@ INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int colo
   ScoredMove* curr = moves;
   BitBoard pinned  = board->pinned;
 
-  moves = AddPseudoLegalMoves(moves, board, GT_LEGAL, color);
+  moves = AddPseudoLegalMoves(moves, board, GT_LEGAL, color, 0);
 
   while (curr != moves) {
     if (((pinned && GetBit(pinned, From(curr->move))) || IsEP(curr->move)) && !IsLegal(curr->move, board))
@@ -254,10 +277,34 @@ INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int colo
   return moves;
 }
 
-ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board);
+INLINE ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_CAPTURE, WHITE, 0) : //
+                               AddPseudoLegalMoves(moves, board, GT_CAPTURE, BLACK, 0);
+}
+
+INLINE ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_QUIET, WHITE, 0) : //
+                               AddPseudoLegalMoves(moves, board, GT_QUIET, BLACK, 0);
+}
+
+INLINE ScoredMove* AddMostlySafeQuietMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_QUIET, WHITE, 1) : //
+                               AddPseudoLegalMoves(moves, board, GT_QUIET, BLACK, 1);
+}
+
+INLINE ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_LEGAL, WHITE, 0) : //
+                               AddPseudoLegalMoves(moves, board, GT_LEGAL, BLACK, 0);
+}
+
+INLINE ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddQuietChecks(moves, board, WHITE) : //
+                               AddQuietChecks(moves, board, BLACK);
+}
+
+INLINE ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddLegalMoves(moves, board, WHITE) : //
+                               AddLegalMoves(moves, board, BLACK);
+}
 
 #endif

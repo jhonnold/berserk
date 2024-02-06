@@ -596,8 +596,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
+  int avoidSEELosingQuiets = (!inCheck && depth < 10 && eval + 90 + 50 * depth <= alpha);
   int legalMoves = 0, playedMoves = 0, skipQuiets = 0;
-  InitNormalMovePicker(&mp, hashMove, thread, ss);
+  InitNormalMovePicker(&mp, hashMove, thread, ss, avoidSEELosingQuiets);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)

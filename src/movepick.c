@@ -124,7 +124,8 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
     case GEN_QUIET_MOVES:
       if (!skipQuiets) {
         picker->current = picker->endBad;
-        picker->end     = AddQuietMoves(picker->current, board);
+        picker->end     = picker->avoidSEELosingQuiets ? AddMostlySafeQuietMoves(picker->current, board) :
+                                                         AddQuietMoves(picker->current, board);
 
         ScoreMoves(picker, board, ST_QUIET);
       }
