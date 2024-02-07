@@ -907,9 +907,14 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     legalMoves++;
 
     if (bestScore > -TB_WIN_BOUND) {
-      if (!inCheck && futility <= alpha && !GivesCheck(move, board) && !SEE(board, move, 1)) {
-        bestScore = Max(bestScore, futility);
-        continue;
+      if (!inCheck && !GivesCheck(move, board)) {
+        if (legalMoves > 2)
+          continue;
+
+        if (futility <= alpha && !SEE(board, move, 1)) {
+          bestScore = Max(bestScore, futility);
+          continue;
+        }
       }
 
       if (!SEE(board, move, 0))
