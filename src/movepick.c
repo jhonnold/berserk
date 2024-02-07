@@ -51,10 +51,10 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     Move move = current->move;
 
     if (type == ST_QUIET)
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
+      current->score = (int) HH(board->stm, move, board->threatened, board->easyCapture) * 2 + //
+                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +                     //
+                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +                     //
+                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                         //
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
     else if (type == ST_CAPTURE)
@@ -64,10 +64,10 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_QT)
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
+      current->score = (int) HH(board->stm, move, board->threatened, board->easyCapture) * 2 + //
+                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +                     //
+                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +                     //
+                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                         //
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
     else if (type == ST_MVV)
