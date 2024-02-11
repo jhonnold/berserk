@@ -54,7 +54,7 @@ int32_t OUTPUT_BIAS;
 
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
-INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputClippedReLU(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
@@ -261,17 +261,12 @@ int Propagate(Accumulator* accumulator, const int stm) {
   int8_t x0[N_L1] ALIGN;
   int32_t x1[N_L3] ALIGN;
 
-  InputReLU(x0, accumulator, stm);
-
+  InputClippedReLU(x0, accumulator, stm);
   AffineTransformSparse(x1, x0, L1_WEIGHTS, L1_BIASES, N_L1, N_L2);
-
-  int32_t skip = x1[N_L2 - 1];
-  x1[N_L2 - 1] = 0;
-
   ClippedReLU(x0, x1, N_L2);
   AffineTransform(x1, x0, L2_WEIGHTS, L2_BIASES, N_L2, N_L3);
   ClippedReLU(x0, x1, N_L3);
-  return (skip + AffineOut(x0, OUTPUT_WEIGHTS, OUTPUT_BIAS, N_L3)) >> QUANT_BITS;
+  return AffineOut(x0, OUTPUT_WEIGHTS, OUTPUT_BIAS, N_L3) >> QUANT_BITS;
 }
 
 int Predict(Board* board) {
