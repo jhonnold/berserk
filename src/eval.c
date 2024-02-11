@@ -52,7 +52,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  const int layer = (BitCount(OccBB(BOTH)) - 1) / 4;
+  int score       = board->stm == WHITE ? Propagate(acc, WHITE, layer) : Propagate(acc, BLACK, layer);
 
   // static contempt
   score += thread->contempt[board->stm];
@@ -70,7 +71,9 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base   = Propagate(board->accumulators, board->stm);
+  const int layer = (BitCount(OccBB(BOTH)) - 1) / 4;
+
+  int base   = Propagate(board->accumulators, board->stm, layer);
   base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
@@ -98,7 +101,7 @@ void EvaluateTrace(Board* board) {
         PopBit(OccBB(BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
-        int new = Propagate(board->accumulators, board->stm);
+        int new = Propagate(board->accumulators, board->stm, layer);
         new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 
@@ -131,7 +134,93 @@ void EvaluateTrace(Board* board) {
     printf("\n");
   }
 
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
+
   printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
+
+  printf("+-------+-------+-------+\n");
+  printf("+  Pos  + Psqt  + Final +\n");
+  printf("+-------+-------+-------+\n");
+
+  for (int l = 0; l < N_LAYERS; l++) {
+    const int psqt  = (board->accumulators[0].psqts[board->stm][l] - board->accumulators[0].psqts[!board->stm][l]) / 64;
+    const int final = Propagate(board->accumulators, board->stm, l);
+    const int pos   = final - psqt;
+
+    const int nPsqt  = Normalize(psqt);
+    const int nFinal = Normalize(final);
+    const int nPos   = Normalize(pos);
+
+    char buffer[6];
+
+    int v     = abs(nPos);
+    buffer[5] = '\0';
+    buffer[0] = nPos > 0 ? '+' : nPos < 0 ? '-' : ' ';
+    if (v >= 1000) {
+      buffer[1] = '0' + v / 1000;
+      v %= 1000;
+      buffer[2] = '0' + v / 100;
+      v %= 100;
+      buffer[3] = '.';
+      buffer[4] = '0' + v / 10;
+    } else {
+      buffer[1] = '0' + v / 100;
+      v %= 100;
+      buffer[2] = '.';
+      buffer[3] = '0' + v / 10;
+      v %= 10;
+      buffer[4] = '0' + v;
+    }
+    printf("| %s ", buffer);
+
+    v     = abs(nPsqt);
+    buffer[5] = '\0';
+    buffer[0] = nPsqt > 0 ? '+' : nPsqt < 0 ? '-' : ' ';
+    if (v >= 1000) {
+      buffer[1] = '0' + v / 1000;
+      v %= 1000;
+      buffer[2] = '0' + v / 100;
+      v %= 100;
+      buffer[3] = '.';
+      buffer[4] = '0' + v / 10;
+    } else {
+      buffer[1] = '0' + v / 100;
+      v %= 100;
+      buffer[2] = '.';
+      buffer[3] = '0' + v / 10;
+      v %= 10;
+      buffer[4] = '0' + v;
+    }
+    printf("| %s ", buffer);
+
+    v     = abs(nFinal);
+    buffer[5] = '\0';
+    buffer[0] = nFinal > 0 ? '+' : nFinal < 0 ? '-' : ' ';
+    if (v >= 1000) {
+      buffer[1] = '0' + v / 1000;
+      v %= 1000;
+      buffer[2] = '0' + v / 100;
+      v %= 100;
+      buffer[3] = '.';
+      buffer[4] = '0' + v / 10;
+    } else {
+      buffer[1] = '0' + v / 100;
+      v %= 100;
+      buffer[2] = '.';
+      buffer[3] = '0' + v / 10;
+      v %= 10;
+      buffer[4] = '0' + v;
+    }
+    printf("| %s |", buffer);
+
+    if (l == layer)
+      printf(" <---\n");
+    else
+      printf("\n");
+  }
+
+  printf("+-------+-------+-------+\n\n");
 
   printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));

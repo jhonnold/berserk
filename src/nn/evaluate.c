@@ -43,14 +43,16 @@ INCBIN(Embed, EVALFILE);
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 
-int8_t L1_WEIGHTS[N_L1 * N_L2] ALIGN;
-int32_t L1_BIASES[N_L2] ALIGN;
+int8_t L1_WEIGHTS[N_LAYERS][N_L1 * N_L2] ALIGN;
+int32_t L1_BIASES[N_LAYERS][N_L2] ALIGN;
 
-int8_t L2_WEIGHTS[N_L2 * N_L3] ALIGN;
-int32_t L2_BIASES[N_L3] ALIGN;
+int8_t L2_WEIGHTS[N_LAYERS][N_L2 * N_L3] ALIGN;
+int32_t L2_BIASES[N_LAYERS][N_L3] ALIGN;
 
-int8_t OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
-int32_t OUTPUT_BIAS;
+int8_t OUTPUT_WEIGHTS[N_LAYERS][N_L3 * N_OUTPUT] ALIGN;
+int32_t OUTPUT_BIAS[N_LAYERS];
+
+int32_t PSQT_WEIGHTS[N_FEATURES * N_LAYERS] ALIGN;
 
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
@@ -257,84 +259,60 @@ INLINE void ClippedReLU(int8_t* dest, int32_t* src, const size_t width) {
   }
 }
 
-int Propagate(Accumulator* accumulator, const int stm) {
+int Propagate(Accumulator* accumulator, const int stm, const int layer) {
   int8_t x0[N_L1] ALIGN;
   int32_t x1[N_L3] ALIGN;
 
   InputReLU(x0, accumulator, stm);
-
-  AffineTransformSparse(x1, x0, L1_WEIGHTS, L1_BIASES, N_L1, N_L2);
-
-  int32_t skip = x1[N_L2 - 1];
-  x1[N_L2 - 1] = 0;
-
+  AffineTransformSparse(x1, x0, L1_WEIGHTS[layer], L1_BIASES[layer], N_L1, N_L2);
   ClippedReLU(x0, x1, N_L2);
-  AffineTransform(x1, x0, L2_WEIGHTS, L2_BIASES, N_L2, N_L3);
+  AffineTransform(x1, x0, L2_WEIGHTS[layer], L2_BIASES[layer], N_L2, N_L3);
   ClippedReLU(x0, x1, N_L3);
-  return (skip + AffineOut(x0, OUTPUT_WEIGHTS, OUTPUT_BIAS, N_L3)) >> QUANT_BITS;
+
+  const int positionalScore = AffineOut(x0, OUTPUT_WEIGHTS[layer], OUTPUT_BIAS[layer], N_L3);
+  const int psqtScore = (accumulator->psqts[stm][layer] - accumulator->psqts[!stm][layer]) / 2;
+
+  return (positionalScore + psqtScore) >> QUANT_BITS;
 }
 
 int Predict(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  return board->stm == WHITE ? Propagate(board->accumulators, WHITE) : Propagate(board->accumulators, BLACK);
+  const int layer = (BitCount(OccBB(BOTH)) - 1) / 4;
+
+  return board->stm == WHITE ? Propagate(board->accumulators, WHITE, layer) : Propagate(board->accumulators, BLACK, layer);
 }
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights
                             sizeof(int16_t) * N_HIDDEN +              // input biases
-                            sizeof(int8_t) * N_L1 * N_L2 +            // input biases
-                            sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(int8_t) * N_L2 * N_L3 +            // input biases
-                            sizeof(int32_t) * N_L3 +                  // input biases
-                            sizeof(int8_t) * N_L3 +                   // output weights
-                            sizeof(int32_t);                          // output bias
+                            sizeof(int8_t) * N_L1 * N_L2 * N_LAYERS + // l1 weights
+                            sizeof(int32_t) * N_L2 * N_LAYERS +       // l1 biases
+                            sizeof(int8_t) * N_L2 * N_L3 * N_LAYERS + // l2 weights
+                            sizeof(int32_t) * N_L3 * N_LAYERS +       // l2 biases
+                            sizeof(int8_t) * N_L3 * N_LAYERS +        // output weights
+                            sizeof(int32_t) * N_LAYERS +              // output bias
+                            sizeof(int32_t) * N_FEATURES * N_LAYERS;  // psqt weights
 
 INLINE int WeightIdxScrambled(int idx, const size_t inWidth, const size_t outWidth) {
+#if defined(__SSSE3__)
   return ((idx / SPARSE_CHUNK_SIZE) % (inWidth / SPARSE_CHUNK_SIZE) * outWidth * SPARSE_CHUNK_SIZE) +
          (idx / inWidth * SPARSE_CHUNK_SIZE) + (idx % SPARSE_CHUNK_SIZE);
+#else
+  return idx;
+#endif
 }
 
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
 
-  int8_t* l1 = calloc(N_L1 * N_L2, sizeof(int8_t));
-  int8_t* l2 = calloc(N_L2 * N_L3, sizeof(int8_t));
-
+  // Input Layer
+  // -----------------------------------------------------------------------------
   memcpy(INPUT_WEIGHTS, &in[offset], N_FEATURES * N_HIDDEN * sizeof(int16_t));
   offset += N_FEATURES * N_HIDDEN * sizeof(int16_t);
+
   memcpy(INPUT_BIASES, &in[offset], N_HIDDEN * sizeof(int16_t));
   offset += N_HIDDEN * sizeof(int16_t);
-
-  memcpy(l1, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
-  offset += N_L1 * N_L2 * sizeof(int8_t);
-  memcpy(L1_BIASES, &in[offset], N_L2 * sizeof(int32_t));
-  offset += N_L2 * sizeof(int32_t);
-
-  memcpy(l2, &in[offset], N_L2 * N_L3 * sizeof(int8_t));
-  offset += N_L2 * N_L3 * sizeof(int8_t);
-  memcpy(L2_BIASES, &in[offset], N_L3 * sizeof(int32_t));
-  offset += N_L3 * sizeof(int32_t);
-
-  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(int8_t));
-  offset += N_L3 * N_OUTPUT * sizeof(int8_t);
-  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
-
-#if defined(__SSSE3__)
-  // Shuffle the L1 weights for sparse matmul
-  for (int i = 0; i < N_L1 * N_L2; i++)
-    L1_WEIGHTS[WeightIdxScrambled(i, N_L1, N_L2)] = l1[i];
-  for (int i = 0; i < N_L2 * N_L3; i++)
-    L2_WEIGHTS[WeightIdxScrambled(i, N_L2, N_L3)] = l2[i];
-#else
-  for (int i = 0; i < N_L1 * N_L2; i++)
-    L1_WEIGHTS[i] = l1[i];
-  for (int i = 0; i < N_L1 * N_L2; i++)
-    L2_WEIGHTS[i] = l2[i];
-#endif
-
-  free(l1);
-  free(l2);
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
   const size_t WIDTH         = sizeof(__m512i) / sizeof(int16_t);
@@ -399,6 +377,57 @@ INLINE void CopyData(const unsigned char* in) {
     biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a1, 0);
   }
 #endif
+  // -----------------------------------------------------------------------------
+
+  // L1 Layer
+  // -----------------------------------------------------------------------------
+  int8_t* temp = calloc(N_L1 * N_L2, sizeof(int8_t));
+
+  for (size_t l = 0; l < N_LAYERS; l++) {
+    memcpy(temp, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
+    offset += N_L1 * N_L2 * sizeof(int8_t);
+
+    for (size_t i = 0; i < N_L1 * N_L2; i++)
+      L1_WEIGHTS[l][WeightIdxScrambled(i, N_L1, N_L2)] = temp[i];
+  }
+
+  memcpy(L1_BIASES, &in[offset], N_L2 * N_LAYERS * sizeof(int32_t));
+  offset += N_L2 * N_LAYERS * sizeof(int32_t);
+
+  free(temp);
+  // -----------------------------------------------------------------------------
+
+  // L2 Layer
+  // -----------------------------------------------------------------------------
+  temp = calloc(N_L2 * N_L3, sizeof(int8_t));
+
+  for (size_t l = 0; l < N_LAYERS; l++) {
+    memcpy(temp, &in[offset], N_L2 * N_L3 * sizeof(int8_t));
+    offset += N_L2 * N_L3 * sizeof(int8_t);
+
+    for (size_t i = 0; i < N_L2 * N_L3; i++)
+      L2_WEIGHTS[l][WeightIdxScrambled(i, N_L2, N_L3)] = temp[i];
+  }
+
+  memcpy(L2_BIASES, &in[offset], N_L3 * N_LAYERS * sizeof(int32_t));
+  offset += N_L3 * N_LAYERS * sizeof(int32_t);
+
+  free(temp);
+  // -----------------------------------------------------------------------------
+
+  // L3 Layer
+  // -----------------------------------------------------------------------------
+  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_LAYERS * sizeof(int8_t));
+  offset += N_L3 * N_LAYERS * sizeof(int8_t);
+  memcpy(OUTPUT_BIAS, &in[offset], N_LAYERS * sizeof(int32_t));
+  offset += N_LAYERS * sizeof(int32_t);
+  // -----------------------------------------------------------------------------
+
+  // PSQT Layer
+  // -----------------------------------------------------------------------------
+  memcpy(PSQT_WEIGHTS, &in[offset], N_FEATURES * N_LAYERS * sizeof(int32_t));
+  offset += N_FEATURES * N_LAYERS * sizeof(int32_t);
+  // -----------------------------------------------------------------------------
 }
 
 INLINE void InitLookupIndices() {

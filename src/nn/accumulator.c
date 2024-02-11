@@ -31,6 +31,7 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
     AccumulatorKingState* state = refreshTable + b;
 
     memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
+    memset(state->psqts, 0, sizeof(int32_t) * N_LAYERS);
     memset(state->pcs, 0, sizeof(BitBoard) * 12);
   }
 }
@@ -68,9 +69,11 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
   }
 
   ApplyDelta(state->values, state->values, delta);
+  ApplyDeltaPsqt(state->psqts, state->psqts, delta);
 
   // Copy in state
   memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
+  memcpy(dest->psqts[perspective], state->psqts, sizeof(int32_t) * N_LAYERS);
   dest->correct[perspective] = 1;
 }
 
@@ -88,13 +91,21 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
     delta->add[delta->a++] = FeatureIdx(pc, sq, kingSq, perspective);
   }
 
-  acc_t* values = dest->values[perspective];
-  memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
-  ApplyDelta(values, values, delta);
+  memcpy(dest->values[perspective], INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
+  ApplyDelta(dest->values[perspective], dest->values[perspective], delta);
+
+  memset(dest->psqts[perspective], 0, sizeof(int32_t) * N_LAYERS);
+  ApplyDeltaPsqt(dest->psqts[perspective], dest->psqts[perspective], delta);
+
   dest->correct[perspective] = 1;
 }
 
-void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
+void ApplyUpdates(Accumulator* output,
+                  Accumulator* prev,
+                  Board* board,
+                  const Move move,
+                  const int captured,
+                  const int view) {
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
 
@@ -105,14 +116,17 @@ void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, con
     int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
     int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
-    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
+    ApplySubSubAddAdd(output->values[view], prev->values[view], from, rookFrom, to, rookTo);
+    ApplySubSubAddAddPsqt(output->psqts[view], prev->psqts[view], from, rookFrom, to, rookTo);
   } else if (IsCap(move)) {
     int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
-    ApplySubSubAdd(output, prev, from, capturedTo, to);
+    ApplySubSubAdd(output->values[view], prev->values[view], from, capturedTo, to);
+    ApplySubSubAddPsqt(output->psqts[view], prev->psqts[view], from, capturedTo, to);
   } else {
-    ApplySubAdd(output, prev, from, to);
+    ApplySubAdd(output->values[view], prev->values[view], from, to);
+    ApplySubAddPsqt(output->psqts[view], prev->psqts[view], from, to);
   }
 }
 
@@ -122,7 +136,7 @@ void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
     ; // go back to the latest correct accumulator
 
   do {
-    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr->move, curr->captured, view);
+    ApplyUpdates(curr + 1, curr, board, curr->move, curr->captured, view);
     (curr + 1)->correct[view] = 1;
   } while (++curr != live);
 }

@@ -12,7 +12,7 @@ STD    = -std=gnu11
 LIBS   = -pthread -lm
 WARN   = -Wall -Wextra -Wshadow
 
-FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
+FLAGS   = $(STD) $(WARN) -g -O1 -flto $(PGOFLAGS) $(DEFS)
 M64     = -m64 -mpopcnt
 MSSE2   = $(M64) -msse -msse2
 MSSSE3  = $(MSSE2) -mssse3

@@ -61,6 +61,8 @@
 extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
 extern int16_t INPUT_BIASES[N_HIDDEN];
 
+extern int32_t PSQT_WEIGHTS[N_FEATURES * N_LAYERS];
+
 typedef struct {
   uint8_t r, a;
   int rem[32];
@@ -98,6 +100,19 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
   }
 }
 
+INLINE void ApplyDeltaPsqt(int32_t* dest, int32_t* src, Delta* delta) {
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] = src[i];
+
+  for (size_t r = 0; r < delta->r; r++)
+    for (size_t i = 0; i < N_LAYERS; i++)
+      dest[i] -= PSQT_WEIGHTS[i * N_FEATURES + delta->rem[r]];
+
+  for (size_t a = 0; a < delta->a; a++)
+    for (size_t i = 0; i < N_LAYERS; i++)
+      dest[i] += PSQT_WEIGHTS[i * N_FEATURES + delta->add[a]];
+}
+
 INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
   regi_t regs[NUM_REGS];
 
@@ -123,6 +138,14 @@ INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);
   }
+}
+
+INLINE void ApplySubAddPsqt(int32_t* dest, int32_t* src, int f1, int f2) {
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] = src[i] - PSQT_WEIGHTS[i * N_LAYERS + f1];
+
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] += PSQT_WEIGHTS[i * N_LAYERS + f2];
 }
 
 INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
@@ -155,6 +178,17 @@ INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);
   }
+}
+
+INLINE void ApplySubSubAddPsqt(int32_t* dest, int32_t* src, int f1, int f2, int f3) {
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] = src[i] - PSQT_WEIGHTS[i * N_LAYERS + f1];
+
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] -= PSQT_WEIGHTS[i * N_LAYERS + f2];
+
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] += PSQT_WEIGHTS[i * N_LAYERS + f3];
 }
 
 INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4) {
@@ -192,6 +226,20 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);
   }
+}
+
+INLINE void ApplySubSubAddAddPsqt(int32_t* dest, int32_t* src, int f1, int f2, int f3, int f4) {
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] = src[i] - PSQT_WEIGHTS[i * N_LAYERS + f1];
+
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] -= PSQT_WEIGHTS[i * N_LAYERS + f2];
+
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] += PSQT_WEIGHTS[i * N_LAYERS + f3];
+
+  for (size_t i = 0; i < N_LAYERS; i++)
+    dest[i] += PSQT_WEIGHTS[i * N_LAYERS + f4];
 }
 
 void ResetRefreshTable(AccumulatorKingState* refreshTable);

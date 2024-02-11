@@ -34,6 +34,7 @@
 #define N_L2       16
 #define N_L3       32
 #define N_OUTPUT   1
+#define N_LAYERS   8
 
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
@@ -58,10 +59,12 @@ typedef struct {
   uint16_t captured;
   Move move;
   acc_t values[2][N_HIDDEN] ALIGN;
+  int32_t psqts[2][N_LAYERS] ALIGN;
 } Accumulator;
 
 typedef struct {
   acc_t values[N_HIDDEN] ALIGN;
+  int32_t psqts[N_LAYERS] ALIGN;
   BitBoard pcs[12];
 } AccumulatorKingState;
 
