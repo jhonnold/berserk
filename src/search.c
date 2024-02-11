@@ -591,6 +591,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
+  if (inCheck && !isPV && IsCap(hashMove) && (ttBound & BOUND_LOWER) && ttDepth >= depth - 3 && ttScore >= beta + 300 &&
+      abs(ttScore) < TB_WIN_BOUND && abs(beta) < TB_WIN_BOUND)
+    return beta + 300;
+
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
