@@ -61,6 +61,8 @@
 extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
 extern int16_t INPUT_BIASES[N_HIDDEN];
 
+extern int32_t PSQT_WEIGHTS[N_FEATURES];
+
 typedef struct {
   uint8_t r, a;
   int rem[32];

@@ -70,8 +70,12 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base   = Propagate(board->accumulators, board->stm);
-  base       = board->stm == WHITE ? base : -base;
+  int base = Propagate(board->accumulators, board->stm);
+  int psqt = (board->accumulators->psqt[board->stm] - board->accumulators->psqt[!board->stm]) / 64;
+
+  base     = board->stm == WHITE ? base : -base;
+  psqt     = board->stm == WHITE ? psqt : -psqt;
+
   int scaled = (128 + board->phase) * base / 128;
 
   printf("\nNNUE derived piece values:\n");
@@ -133,6 +137,7 @@ void EvaluateTrace(Board* board) {
 
   printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
 
+  printf(" PSQT Score: %dcp (white)\n", (int) Normalize(psqt));
   printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
 

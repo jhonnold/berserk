@@ -58,10 +58,12 @@ typedef struct {
   uint16_t captured;
   Move move;
   acc_t values[2][N_HIDDEN] ALIGN;
+  int32_t psqt[2];
 } Accumulator;
 
 typedef struct {
   acc_t values[N_HIDDEN] ALIGN;
+  int32_t psqt;
   BitBoard pcs[12];
 } AccumulatorKingState;
 

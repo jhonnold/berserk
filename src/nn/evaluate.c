@@ -52,6 +52,8 @@ int32_t L2_BIASES[N_L3] ALIGN;
 int8_t OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
 int32_t OUTPUT_BIAS;
 
+int32_t PSQT_WEIGHTS[N_FEATURES] ALIGN;
+
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 INLINE void InputClippedReLU(int8_t* outputs, Accumulator* acc, const int stm) {
@@ -261,12 +263,16 @@ int Propagate(Accumulator* accumulator, const int stm) {
   int8_t x0[N_L1] ALIGN;
   int32_t x1[N_L3] ALIGN;
 
+  int psqtScore = (accumulator->psqt[stm] - accumulator->psqt[!stm]) / 2;
+
   InputClippedReLU(x0, accumulator, stm);
   AffineTransformSparse(x1, x0, L1_WEIGHTS, L1_BIASES, N_L1, N_L2);
   ClippedReLU(x0, x1, N_L2);
   AffineTransform(x1, x0, L2_WEIGHTS, L2_BIASES, N_L2, N_L3);
   ClippedReLU(x0, x1, N_L3);
-  return AffineOut(x0, OUTPUT_WEIGHTS, OUTPUT_BIAS, N_L3) >> QUANT_BITS;
+  int positionalScore = AffineOut(x0, OUTPUT_WEIGHTS, OUTPUT_BIAS, N_L3);
+
+  return (positionalScore + psqtScore) >> QUANT_BITS;
 }
 
 int Predict(Board* board) {
@@ -283,7 +289,8 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(int8_t) * N_L2 * N_L3 +            // input biases
                             sizeof(int32_t) * N_L3 +                  // input biases
                             sizeof(int8_t) * N_L3 +                   // output weights
-                            sizeof(int32_t);                          // output bias
+                            sizeof(int32_t) +                         // output bias
+                            sizeof(int32_t) * N_FEATURES;             // psqt weights
 
 INLINE int WeightIdxScrambled(int idx, const size_t inWidth, const size_t outWidth) {
   return ((idx / SPARSE_CHUNK_SIZE) % (inWidth / SPARSE_CHUNK_SIZE) * outWidth * SPARSE_CHUNK_SIZE) +
@@ -311,9 +318,13 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(L2_BIASES, &in[offset], N_L3 * sizeof(int32_t));
   offset += N_L3 * sizeof(int32_t);
 
-  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(int8_t));
-  offset += N_L3 * N_OUTPUT * sizeof(int8_t);
+  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * sizeof(int8_t));
+  offset += N_L3 * sizeof(int8_t);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
+  offset += sizeof(int32_t);
+
+  memcpy(PSQT_WEIGHTS, &in[offset], N_FEATURES * sizeof(int32_t));
+  offset += N_FEATURES * sizeof(int32_t);
 
 #if defined(__SSSE3__)
   // Shuffle the L1 weights for sparse matmul
