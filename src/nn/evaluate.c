@@ -52,8 +52,6 @@ int32_t L2_BIASES[N_LAYERS][N_L3] ALIGN;
 int8_t OUTPUT_WEIGHTS[N_LAYERS][N_L3 * N_OUTPUT] ALIGN;
 int32_t OUTPUT_BIAS[N_LAYERS];
 
-int32_t PSQT_WEIGHTS[N_FEATURES * N_LAYERS] ALIGN;
-
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
@@ -268,11 +266,7 @@ int Propagate(Accumulator* accumulator, const int stm, const int layer) {
   ClippedReLU(x0, x1, N_L2);
   AffineTransform(x1, x0, L2_WEIGHTS[layer], L2_BIASES[layer], N_L2, N_L3);
   ClippedReLU(x0, x1, N_L3);
-
-  const int positionalScore = AffineOut(x0, OUTPUT_WEIGHTS[layer], OUTPUT_BIAS[layer], N_L3);
-  const int psqtScore = (accumulator->psqts[stm][layer] - accumulator->psqts[!stm][layer]) / 2;
-
-  return (positionalScore + psqtScore) >> QUANT_BITS;
+  return AffineOut(x0, OUTPUT_WEIGHTS[layer], OUTPUT_BIAS[layer], N_L3) >> QUANT_BITS;
 }
 
 int Predict(Board* board) {
@@ -291,8 +285,7 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(int8_t) * N_L2 * N_L3 * N_LAYERS + // l2 weights
                             sizeof(int32_t) * N_L3 * N_LAYERS +       // l2 biases
                             sizeof(int8_t) * N_L3 * N_LAYERS +        // output weights
-                            sizeof(int32_t) * N_LAYERS +              // output bias
-                            sizeof(int32_t) * N_FEATURES * N_LAYERS;  // psqt weights
+                            sizeof(int32_t) * N_LAYERS;              // output bias
 
 INLINE int WeightIdxScrambled(int idx, const size_t inWidth, const size_t outWidth) {
 #if defined(__SSSE3__)
@@ -421,12 +414,6 @@ INLINE void CopyData(const unsigned char* in) {
   offset += N_L3 * N_LAYERS * sizeof(int8_t);
   memcpy(OUTPUT_BIAS, &in[offset], N_LAYERS * sizeof(int32_t));
   offset += N_LAYERS * sizeof(int32_t);
-  // -----------------------------------------------------------------------------
-
-  // PSQT Layer
-  // -----------------------------------------------------------------------------
-  memcpy(PSQT_WEIGHTS, &in[offset], N_FEATURES * N_LAYERS * sizeof(int32_t));
-  offset += N_FEATURES * N_LAYERS * sizeof(int32_t);
   // -----------------------------------------------------------------------------
 }
 

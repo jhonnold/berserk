@@ -31,7 +31,6 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
     AccumulatorKingState* state = refreshTable + b;
 
     memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
-    memset(state->psqts, 0, sizeof(int32_t) * N_LAYERS);
     memset(state->pcs, 0, sizeof(BitBoard) * 12);
   }
 }
@@ -69,11 +68,9 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
   }
 
   ApplyDelta(state->values, state->values, delta);
-  ApplyDeltaPsqt(state->psqts, state->psqts, delta);
 
   // Copy in state
   memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
-  memcpy(dest->psqts[perspective], state->psqts, sizeof(int32_t) * N_LAYERS);
   dest->correct[perspective] = 1;
 }
 
@@ -93,9 +90,6 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
 
   memcpy(dest->values[perspective], INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
   ApplyDelta(dest->values[perspective], dest->values[perspective], delta);
-
-  memset(dest->psqts[perspective], 0, sizeof(int32_t) * N_LAYERS);
-  ApplyDeltaPsqt(dest->psqts[perspective], dest->psqts[perspective], delta);
 
   dest->correct[perspective] = 1;
 }
@@ -117,16 +111,13 @@ void ApplyUpdates(Accumulator* output,
     int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
     ApplySubSubAddAdd(output->values[view], prev->values[view], from, rookFrom, to, rookTo);
-    ApplySubSubAddAddPsqt(output->psqts[view], prev->psqts[view], from, rookFrom, to, rookTo);
   } else if (IsCap(move)) {
     int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
     ApplySubSubAdd(output->values[view], prev->values[view], from, capturedTo, to);
-    ApplySubSubAddPsqt(output->psqts[view], prev->psqts[view], from, capturedTo, to);
   } else {
     ApplySubAdd(output->values[view], prev->values[view], from, to);
-    ApplySubAddPsqt(output->psqts[view], prev->psqts[view], from, to);
   }
 }
 

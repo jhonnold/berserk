@@ -139,24 +139,21 @@ void EvaluateTrace(Board* board) {
 
   printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
 
-  printf("+-------+-------+-------+\n");
-  printf("+  Pos  + Psqt  + Final +\n");
-  printf("+-------+-------+-------+\n");
+  printf("+-------+-------+\n");
+  printf("+ Layer + Score +\n");
+  printf("+-------+-------+\n");
 
   for (int l = 0; l < N_LAYERS; l++) {
-    const int psqt  = (board->accumulators[0].psqts[board->stm][l] - board->accumulators[0].psqts[!board->stm][l]) / 64;
-    const int final = Propagate(board->accumulators, board->stm, l);
-    const int pos   = final - psqt;
+    printf("|   %d   |", l + 1);
 
-    const int nPsqt  = Normalize(psqt);
-    const int nFinal = Normalize(final);
-    const int nPos   = Normalize(pos);
+    int lScore     = Propagate(board->accumulators, board->stm, l);
+    lScore         = board->stm == WHITE ? lScore : -lScore;
+    int normalized = Normalize(lScore);
+    int v          = abs(normalized);
 
     char buffer[6];
-
-    int v     = abs(nPos);
     buffer[5] = '\0';
-    buffer[0] = nPos > 0 ? '+' : nPos < 0 ? '-' : ' ';
+    buffer[0] = lScore > 0 ? '+' : lScore < 0 ? '-' : ' ';
     if (v >= 1000) {
       buffer[1] = '0' + v / 1000;
       v %= 1000;
@@ -172,55 +169,16 @@ void EvaluateTrace(Board* board) {
       v %= 10;
       buffer[4] = '0' + v;
     }
-    printf("| %s ", buffer);
 
-    v     = abs(nPsqt);
-    buffer[5] = '\0';
-    buffer[0] = nPsqt > 0 ? '+' : nPsqt < 0 ? '-' : ' ';
-    if (v >= 1000) {
-      buffer[1] = '0' + v / 1000;
-      v %= 1000;
-      buffer[2] = '0' + v / 100;
-      v %= 100;
-      buffer[3] = '.';
-      buffer[4] = '0' + v / 10;
-    } else {
-      buffer[1] = '0' + v / 100;
-      v %= 100;
-      buffer[2] = '.';
-      buffer[3] = '0' + v / 10;
-      v %= 10;
-      buffer[4] = '0' + v;
-    }
-    printf("| %s ", buffer);
-
-    v     = abs(nFinal);
-    buffer[5] = '\0';
-    buffer[0] = nFinal > 0 ? '+' : nFinal < 0 ? '-' : ' ';
-    if (v >= 1000) {
-      buffer[1] = '0' + v / 1000;
-      v %= 1000;
-      buffer[2] = '0' + v / 100;
-      v %= 100;
-      buffer[3] = '.';
-      buffer[4] = '0' + v / 10;
-    } else {
-      buffer[1] = '0' + v / 100;
-      v %= 100;
-      buffer[2] = '.';
-      buffer[3] = '0' + v / 10;
-      v %= 10;
-      buffer[4] = '0' + v;
-    }
-    printf("| %s |", buffer);
+    printf(" %s |", buffer);
 
     if (l == layer)
-      printf(" <---\n");
+      printf(" <--- Used\n");
     else
       printf("\n");
   }
 
-  printf("+-------+-------+-------+\n\n");
+  printf("+-------+-------+\n\n");
 
   printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
