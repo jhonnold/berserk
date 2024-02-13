@@ -799,6 +799,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!legalMoves)
     return ss->skip ? alpha : inCheck ? -CHECKMATE + ss->ply : 0;
 
+  else if (!bestMove && (ss - 1)->move && !IsCap((ss - 1)->move)) {
+    int bonus = HistoryBonus(depth);
+
+    UpdateCH(ss - 1, (ss - 1)->move, bonus);
+  }
+
   // don't let our score inflate too high (tb)
   bestScore = Min(bestScore, maxScore);
 
