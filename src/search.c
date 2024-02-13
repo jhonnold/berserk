@@ -672,10 +672,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          if (!isPV && score < sBeta - 50 && ss->de <= 6 && !IsCap(move)) {
+          if (!isPV && score < sBeta - 50 && ss->de <= 12 && !IsCap(move)) {
             extension = 3;
             ss->de    = (ss - 1)->de + 1;
-          } else if (!isPV && score < sBeta - 17 && ss->de <= 6) {
+          } else if (!isPV && score < sBeta - 17 && ss->de <= 12) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
           } else {
