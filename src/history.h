@@ -43,7 +43,7 @@ INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
 }
 
 INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return IsCap(move) ? GetCaptureHistory(thread, move) : GetQuietHistory(ss, thread, move);
+  return Noisy(move) ? GetCaptureHistory(thread, move) : GetQuietHistory(ss, thread, move);
 }
 
 INLINE void AddKillerMove(SearchStack* ss, Move move) {

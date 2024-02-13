@@ -36,13 +36,11 @@ void UpdateHistories(SearchStack* ss,
 
   int16_t inc = HistoryBonus(depth);
 
-  if (!IsCap(bestMove)) {
-    if (PromoPT(bestMove) != QUEEN) {
-      AddKillerMove(ss, bestMove);
+  if (!Noisy(bestMove)) {
+    AddKillerMove(ss, bestMove);
 
-      if ((ss - 1)->move)
-        AddCounterMove(thread, bestMove, (ss - 1)->move);
-    }
+    if ((ss - 1)->move)
+      AddCounterMove(thread, bestMove, (ss - 1)->move);
 
     // Only increase the best move history when it
     // wasn't trivial. This idea was first thought of
@@ -61,7 +59,7 @@ void UpdateHistories(SearchStack* ss,
   }
 
   // Update quiets
-  if (!IsCap(bestMove)) {
+  if (!Noisy(bestMove)) {
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
       if (m == bestMove)

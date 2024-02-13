@@ -573,7 +573,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         TTPrefetch(KeyAfter(board, move));
         ss->move = move;
-        ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        ss->ch   = &thread->ch[Noisy(move)][Moving(move)][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -615,13 +615,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
     R -= history / 8192;                         // adjust reduction based on historical score
-    R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+    R += (Noisy(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
-      if (!IsCap(move) && PromoPT(move) != QUEEN) {
+      if (!Noisy(move)) {
         int lmrDepth = Max(1, depth - R);
 
         if (!killerOrCounter && lmrDepth < 7 && history < -2658 * (depth - 1)) {
@@ -648,9 +648,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
              MoveToStr(move, board),
              playedMoves + thread->multiPV);
 
-    if (!IsCap(move) && numQuiets < 64)
+    if (!Noisy(move) && numQuiets < 64)
       quiets[numQuiets++] = move;
-    else if (IsCap(move) && numCaptures < 32)
+    else if (Noisy(move) && numCaptures < 32)
       captures[numCaptures++] = move;
 
     // singular extension
@@ -672,7 +672,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          if (!isPV && score < sBeta - 50 && ss->de <= 6 && !IsCap(move)) {
+          if (!isPV && score < sBeta - 50 && ss->de <= 6 && !Noisy(move)) {
             extension = 3;
             ss->de    = (ss - 1)->de + 1;
           } else if (!isPV && score < sBeta - 17 && ss->de <= 6) {
@@ -692,14 +692,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->ch   = &thread->ch[Noisy(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
     // apply extensions
     int newDepth = depth + extension;
 
     // Late move reductions
-    if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
+    if (depth > 1 && legalMoves > 1 && !(isPV && Noisy(move))) {
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
@@ -721,7 +721,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
-        R += 1 + !IsCap(move);
+        R += 1 + !Noisy(move);
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(newDepth, Max(R, 1));
@@ -810,7 +810,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!ss->skip && !(isRoot && thread->multiPV > 0))
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
-  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER)))
+  if (!inCheck && !Noisy(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER)))
     UpdatePawnCorrection(rawEval, bestScore, board, thread);
 
   return bestScore;
@@ -921,7 +921,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->ch   = &thread->ch[Noisy(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
