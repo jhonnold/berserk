@@ -333,6 +333,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   // store hard to recalculate values
   memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
   board->history[board->histPly].capture = captured;
+  board->history[board->histPly].move = move;
 
   board->fmr++;
   board->nullply++;
@@ -497,6 +498,7 @@ void UndoMove(Move move, Board* board) {
 
 void MakeNullMove(Board* board) {
   memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
+  board->history[board->histPly].move = NULL_MOVE;
 
   board->fmr++;
   board->nullply = 0;

@@ -231,8 +231,15 @@ void Search(ThreadData* thread) {
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
     (ss + i)->ply = i;
-  for (size_t i = 1; i <= searchOffset; i++)
-    (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
+  for (size_t i = 1; i <= searchOffset; i++) {
+    if (i > (size_t) board->histPly)
+      (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
+    else {
+      const Move prevMove = board->history[board->histPly - i].move;
+      (ss - i)->move      = prevMove;
+      (ss - i)->ch        = &thread->ch[IsCap(prevMove)][Moving(prevMove)][To(prevMove)];
+    }
+  }
 
   while (++thread->depth < MAX_SEARCH_PLY) {
 #if defined(_WIN32) || defined(_WIN64)

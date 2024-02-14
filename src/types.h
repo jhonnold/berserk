@@ -77,6 +77,7 @@ typedef struct {
   BitBoard threatened;
   BitBoard easyCapture;
   int capture;
+  Move move;
 } BoardHistory;
 
 typedef struct {
