@@ -629,8 +629,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           continue;
         }
 
-        if (!inCheck && lmrDepth < 10 && eval + 87 + 46 * lmrDepth <= alpha)
+        if (!inCheck && lmrDepth < 10 && eval + 87 + 46 * lmrDepth <= alpha) {
           skipQuiets = 1;
+          continue;
+        }
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
