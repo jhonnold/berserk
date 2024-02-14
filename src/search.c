@@ -675,7 +675,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           if (!isPV && score < sBeta - 50 && ss->de <= 6 && !IsCap(move)) {
             extension = 3;
             ss->de    = (ss - 1)->de + 1;
-          } else if (!isPV && score < sBeta - 17 && ss->de <= 6) {
+          } else if (!isPV && score < sBeta - 17 && ss->de <= 6 && !IsCap(move)) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
           } else {
