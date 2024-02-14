@@ -61,7 +61,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
-      current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
+      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_QT)
       current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
@@ -71,7 +71,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                        (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
 
     else if (type == ST_MVV)
-      current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * IsPromo(move);
+      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     current++;
   }
