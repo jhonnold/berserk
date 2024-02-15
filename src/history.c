@@ -49,6 +49,7 @@ void UpdateHistories(SearchStack* ss,
     // by Alayan in Ethereal
     if (nQ > 1 || depth > 3) {
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+      AddSmallHistoryHeuristic(&PH(bestMove), inc);
       UpdateCH(ss, bestMove, inc);
     }
   } else {
@@ -68,6 +69,7 @@ void UpdateHistories(SearchStack* ss,
         continue;
 
       AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
+      AddSmallHistoryHeuristic(&PH(m), -inc);
       UpdateCH(ss, m, -inc);
     }
   }
@@ -89,7 +91,7 @@ void UpdateHistories(SearchStack* ss,
 
 void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread) {
   const int16_t correction = Min(30000, Max(-30000, (real - raw) * PAWN_CORRECTION_GRAIN));
-  const int idx            = (board->pawnZobrist & PAWN_CORRECTION_MASK);
+  const int idx            = (PawnKey(board) & PAWN_CORRECTION_MASK);
 
   thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 255 + correction) / 256;
 }

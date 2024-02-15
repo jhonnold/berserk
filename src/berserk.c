@@ -19,6 +19,7 @@
 #include "attacks.h"
 #include "bench.h"
 #include "bits.h"
+#include "board.h"
 #include "eval.h"
 #include "nn/evaluate.h"
 #include "random.h"

@@ -1045,6 +1045,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
+  memset(&thread->ph, 0, sizeof(thread->ph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
 
   thread->board.accumulators = thread->accumulators;

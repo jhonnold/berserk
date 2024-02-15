@@ -422,7 +422,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->xstm = board->stm;
   board->stm ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
-  board->pawnZobrist ^= ZOBRIST_SIDE_KEY;
 
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
@@ -506,7 +505,6 @@ void MakeNullMove(Board* board) {
   board->epSquare = 0;
 
   board->zobrist ^= ZOBRIST_SIDE_KEY;
-  board->pawnZobrist ^= ZOBRIST_SIDE_KEY;
 
   board->histPly++;
   board->stm = board->xstm;

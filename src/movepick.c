@@ -52,6 +52,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
 
     if (type == ST_QUIET)
       current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
+                       (int) PH(move) +                                                  //
                        (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
@@ -65,6 +66,7 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
 
     else if (type == ST_EVASION_QT)
       current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
+                       (int) PH(move) +                                                  //
                        (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //

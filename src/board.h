@@ -21,8 +21,7 @@
 
 #include "types.h"
 #include "util.h"
-
-#define NO_PIECE 12
+#include "zobrist.h"
 
 #define Piece(pc, c)   (((pc) << 1) + c)
 #define PieceType(pc)  ((pc) >> 1)
@@ -65,6 +64,10 @@ int IsLegal(Move move, Board* board);
 
 void InitCuckoo();
 int HasCycle(Board* board, int ply);
+
+INLINE uint64_t PawnKey(Board* board) {
+  return board->pawnZobrist ^ (ZOBRIST_SIDE_KEY * board->stm);
+}
 
 INLINE int HasNonPawn(Board* board, const int color) {
   return !!(OccBB(color) ^ PieceBB(KING, color) ^ PieceBB(PAWN, color));

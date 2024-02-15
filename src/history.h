@@ -25,6 +25,7 @@
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
+#define PH(m)               (thread->ph[PawnKey(board) & 511][Moving(m)][To(m)])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
   return (int) HH(thread->board.stm, move, thread->board.threatened) + //
@@ -65,6 +66,10 @@ INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
   *entry += inc - *entry * abs(inc) / 16384;
 }
 
+INLINE void AddSmallHistoryHeuristic(int16_t* entry, int16_t inc) {
+  *entry += inc - *entry * abs(inc) / 4096;
+}
+
 INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
   if ((ss - 1)->move)
     AddHistoryHeuristic(&(*(ss - 1)->ch)[Moving(move)][To(move)], bonus);
@@ -77,7 +82,7 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / PAWN_CORRECTION_GRAIN;
+  return thread->pawnCorrection[PawnKey(board) & PAWN_CORRECTION_MASK] / PAWN_CORRECTION_GRAIN;
 }
 
 void UpdateHistories(SearchStack* ss,
