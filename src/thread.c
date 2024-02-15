@@ -105,7 +105,7 @@ void* ThreadInit(void* arg) {
   ThreadData* thread = calloc(1, sizeof(ThreadData));
   thread->idx        = i;
 
-#if defined(__linx__)
+#if defined(__linux__)
   const size_t alignment = MEGABYTE * 2;
 #else
   const size_t alignment = 4096;
