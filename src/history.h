@@ -17,6 +17,7 @@
 #ifndef HISTORY_H
 #define HISTORY_H
 
+#include "attacks.h"
 #include "bits.h"
 #include "board.h"
 #include "move.h"
@@ -77,10 +78,18 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
     AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
 }
 
+INLINE int KingThreatenedKey(Board* board) {
+  const int kingSq             = LSB(PieceBB(KING, board->stm));
+  const BitBoard kingThreats   = GetKingAttacks(kingSq) & board->threatened;
+  const BitBoard shifted       = kingSq > 9 ? kingThreats >> (kingSq - 9) : kingThreats << (9 - kingSq);
+  const uint16_t kingThreatIdx = (shifted & 0x7ull) | ((shifted & 0x700ull) >> 5) | ((shifted & 0x70000ull) >> 10);
+
+  return board->stm * 32768 + kingSq * 512 + kingThreatIdx; // max 65536
+}
+
 INLINE int GetCorrection(Board* board, ThreadData* thread) {
   return (thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] +
-          thread->materialCorrection[(MurmurHash(board->piecesCounts) ^ (board->stm * ZOBRIST_SIDE_KEY)) &
-                                     MATERIAL_CORRECTION_MASK]) /
+          thread->kingCorrection[KingThreatenedKey(board)]) /
          CORRECTION_GRAIN;
 }
 

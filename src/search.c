@@ -1046,7 +1046,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
-  memset(&thread->materialCorrection, 0, sizeof(thread->materialCorrection));
+  memset(&thread->kingCorrection, 0, sizeof(thread->kingCorrection));
 
   thread->board.accumulators = thread->accumulators;
   thread->previousScore      = UNKNOWN;

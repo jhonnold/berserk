@@ -41,8 +41,8 @@
 #define CORRECTION_GRAIN 256
 #define PAWN_CORRECTION_SIZE  131072
 #define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
-#define MATERIAL_CORRECTION_SIZE  131072
-#define MATERIAL_CORRECTION_MASK  (MATERIAL_CORRECTION_SIZE - 1)
+#define KING_CORRECTION_SIZE  65536
+#define KING_CORRECTION_MASK  (KING_CORRECTION_SIZE - 1)
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -200,7 +200,7 @@ struct ThreadData {
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
-  int16_t materialCorrection[MATERIAL_CORRECTION_SIZE];
+  int16_t kingCorrection[KING_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;
