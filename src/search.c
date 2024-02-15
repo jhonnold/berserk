@@ -231,8 +231,10 @@ void Search(ThreadData* thread) {
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
     (ss + i)->ply = i;
-  for (size_t i = 1; i <= searchOffset; i++)
+  for (size_t i = 1; i <= searchOffset; i++) {
     (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
+    (ss - i)->fh = &thread->fh[0][WHITE_PAWN][A1];
+  }
 
   while (++thread->depth < MAX_SEARCH_PLY) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -536,6 +538,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       TTPrefetch(KeyAfter(board, NULL_MOVE));
       ss->move = NULL_MOVE;
       ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
+      ss->fh   = &thread->fh[0][WHITE_PAWN][A1];
       MakeNullMove(board);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
@@ -574,6 +577,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         TTPrefetch(KeyAfter(board, move));
         ss->move = move;
         ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        ss->fh   = &thread->fh[IsCap(move)][Moving(move)][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -693,6 +697,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->fh   = &thread->fh[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
     // apply extensions
@@ -922,6 +927,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->fh   = &thread->fh[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
@@ -1044,6 +1050,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->counters, 0, sizeof(thread->counters));
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
+  memset(&thread->fh, 0, sizeof(thread->fh));
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
 

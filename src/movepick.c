@@ -54,8 +54,8 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
                        (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
-                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
+                       (int) (*(ss - 4)->fh)[Moving(move)][To(move)] +                   //
+                       (int) (*(ss - 6)->fh)[Moving(move)][To(move)];
 
     else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
@@ -67,8 +67,8 @@ void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
                        (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
                        (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
-                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
+                       (int) (*(ss - 4)->fh)[Moving(move)][To(move)] +                   //
+                       (int) (*(ss - 6)->fh)[Moving(move)][To(move)];
 
     else if (type == ST_MVV)
       current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * IsPromo(move);

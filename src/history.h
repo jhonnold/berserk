@@ -30,7 +30,7 @@ INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
   return (int) HH(thread->board.stm, move, thread->board.threatened) + //
          (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +               //
          (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +               //
-         (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
+         (int) (*(ss - 4)->fh)[Moving(move)][To(move)];
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
@@ -71,9 +71,9 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
   if ((ss - 2)->move)
     AddHistoryHeuristic(&(*(ss - 2)->ch)[Moving(move)][To(move)], bonus);
   if ((ss - 4)->move)
-    AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
+    AddHistoryHeuristic(&(*(ss - 4)->fh)[Moving(move)][To(move)], bonus);
   if ((ss - 6)->move)
-    AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
+    AddHistoryHeuristic(&(*(ss - 6)->fh)[Moving(move)][To(move)], bonus);
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
