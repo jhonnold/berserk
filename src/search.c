@@ -44,7 +44,8 @@
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
-int STATIC_PRUNE[2][MAX_SEARCH_PLY];
+int QUIET_SEE_PRUNE[2][MAX_SEARCH_PLY];
+int NOISY_SEE_PRUNE[MAX_SEARCH_PLY];
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
@@ -60,8 +61,9 @@ void InitPruningAndReductionTables() {
     LMP[0][depth] = 1.2973 + 0.3772 * depth * depth;
     LMP[1][depth] = 2.7002 + 0.9448 * depth * depth;
 
-    STATIC_PRUNE[0][depth] = -14.9419 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -103.9379 * depth;        // capture cutoff
+    QUIET_SEE_PRUNE[0][depth] = -18 * depth * depth; // quiet move cutoff
+    QUIET_SEE_PRUNE[1][depth] = -11 * depth * depth; // quiet move cutoff
+    NOISY_SEE_PRUNE[depth] = -103.9379 * depth;        // capture cutoff
   }
 }
 
@@ -632,10 +634,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (!inCheck && lmrDepth < 10 && eval + 87 + 46 * lmrDepth <= alpha)
           skipQuiets = 1;
 
-        if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
+        if (!SEE(board, move, QUIET_SEE_PRUNE[cutnode][lmrDepth]))
           continue;
       } else {
-        if (!SEE(board, move, STATIC_PRUNE[1][depth]))
+        if (!SEE(board, move, NOISY_SEE_PRUNE[depth]))
           continue;
       }
     }
