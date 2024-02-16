@@ -3,7 +3,7 @@ EXE      = berserk
 SRC      = *.c nn/*.c pyrrhic/tbprobe.c fengen/*.c
 CC       = clang
 VERSION  = 20240215
-MAIN_NETWORK = berserk-da85741a5582.nn
+MAIN_NETWORK = berserk-73e434fab450.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
