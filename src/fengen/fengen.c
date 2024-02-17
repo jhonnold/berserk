@@ -55,11 +55,6 @@ enum {
 
 volatile int STOPPED = 0;
 
-static void SigintHandler() {
-  printf("Ending games...\n");
-  STOPPED = 1;
-}
-
 char* NextPosition() {
   pthread_mutex_lock(&book->mutex);
   char* fen = book->fens[book->idx++];
@@ -135,9 +130,9 @@ void* PlayGames(void* arg) {
 
   char filename[256];
   if (fenGenParams.file_prefix[0]) {
-    sprintf(filename, "%s/%s_%d.fens", fenGenParams.dir, fenGenParams.file_prefix, idx);
+    sprintf(filename, "%s/%s.%d.fens", fenGenParams.dir, fenGenParams.file_prefix, idx);
   } else {
-    sprintf(filename, "%s/berserk" VERSION "_%d.fens", fenGenParams.dir, idx);
+    sprintf(filename, "%s/berserk" VERSION ".%d.fens", fenGenParams.dir, idx);
   }
 
   FILE* fp = fopen(filename, "a");
@@ -233,8 +228,6 @@ void* PlayGames(void* arg) {
 }
 
 void Generate(uint64_t total) {
-  signal(SIGINT, SigintHandler);
-
   int hashSize = 40.96 * Threads.count;
   TTInit(hashSize);
   printf("Initiating hash table to size: %d\n", hashSize);
@@ -268,19 +261,21 @@ void Generate(uint64_t total) {
   for (int i = 0; i < Threads.count; i++)
     pthread_create(&Threads.threads[i]->nativeThread, NULL, PlayGames, (void*) (intptr_t) i);
 
-  uint64_t generated = 0;
+  const int sleepInSeconds = 5;
+  uint64_t generated, last = 0;
   while (!STOPPED) {
     generated = 0;
     for (int i = 0; i < Threads.count; i++)
       generated += Threads.threads[i]->fens;
 
-    long elapsed = GetTimeMS() - startTime;
-    printf("Generated: %10lld [%6.2f/s] [%6lds]\n", generated, 1000.0 * generated / elapsed, elapsed / 1000);
+    long elapsed = Max(1, GetTimeMS() - startTime);
+    printf("Generated: %10lld [%8.2f/s] [%8.2f/s] [%8lds]\n", generated, 1000.0 * generated / elapsed, 1000.0 * (generated - last) / (sleepInSeconds * 1000.0), elapsed / 1000);
 
     if (generated >= total)
       break;
 
-    SleepInSeconds(5);
+    last = generated;
+    SleepInSeconds(sleepInSeconds);
   }
 
   STOPPED = 1;

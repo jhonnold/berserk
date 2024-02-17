@@ -1,6 +1,6 @@
 # General
 EXE      = berserk
-SRC      = *.c nn/*.c pyrrhic/tbprobe.c fengen/*.c
+SRC      = $(shell find {.,nn,fengen} -type f -name '*.c' -maxdepth 1) pyrrhic/tbprobe.c
 CC       = clang
 VERSION  = 20240215
 MAIN_NETWORK = berserk-73e434fab450.nn
