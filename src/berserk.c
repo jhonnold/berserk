@@ -37,7 +37,8 @@
 
 // Welcome to berserk
 int main(int argc, char** argv) {
-  SeedRandom(time(NULL));
+  SeedRandom(0);
+
   InitZobristKeys();
   InitPruningAndReductionTables();
   InitAttacks();

@@ -12,7 +12,7 @@ while true
 do
 	./berserk --threads $thread_count \
 	          --total 1000000 \
-	          --output $1 \
+	          --output "$1" \
 	          --nodes 10000 \
 	          --depth 0 \
 	          --random-move-count 10 \
@@ -20,7 +20,7 @@ do
 	          --random-move-max 10 \
 	          --random-multipv 0 \
 	          --write-min 16 \
-	          --file_name $file_name
+	          --file_name "$file_name";
 
-	sleep 5
+	sleep 5;
 done

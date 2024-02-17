@@ -228,6 +228,8 @@ void* PlayGames(void* arg) {
 }
 
 void Generate(uint64_t total) {
+  SeedRandom(time(NULL));
+
   int hashSize = 40.96 * Threads.count;
   TTInit(hashSize);
   printf("Initiating hash table to size: %d\n", hashSize);
