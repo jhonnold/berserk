@@ -21,4 +21,6 @@ do
 	          --random-multipv 0 \
 	          --write-min 16 \
 	          --file_name $file_name
+
+	sleep 5
 done
