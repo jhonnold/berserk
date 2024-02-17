@@ -1,6 +1,7 @@
 # General
 EXE      = berserk
-SRC      = $(shell find {.,nn} -type f -name '*.c' -maxdepth 1) pyrrhic/tbprobe.c
+SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
+		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
 CC       = clang
 VERSION  = 20240215
 MAIN_NETWORK = berserk-da85741a5582.nn
