@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -uex
+
 # Select a compiler, prioritize Clang
 if hash clang 2>/dev/null; then
     cc=clang
@@ -11,7 +13,6 @@ else
 fi
 
 # Clone Berserk
-echo "Cloning Berserk"
 git clone --depth 1 --branch main https://github.com/jhonnold/berserk.git
 success=$?
 
@@ -23,8 +24,7 @@ else
 fi;
 
 cd berserk/src
-echo "Compiling Berserk with make pgo CC=$cc"
-make pgo CC=$cc
+make build CC=$cc ARCH=native
 
 if test -f berserk; then
     echo "Compilation complete..."
@@ -34,7 +34,6 @@ else
 fi
 
 EXE=$PWD/berserk
-echo "Setting EXE to $EXE"
 
 $EXE bench 13 > bench.log 2 >&1
 grep Results bench.log
