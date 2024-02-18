@@ -591,6 +591,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
+  int tripleExt = 0;
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
@@ -674,6 +675,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (score < sBeta) {
           if (!isPV && score < sBeta - 50 && ss->de <= 6 && !IsCap(move)) {
             extension = 3;
+            tripleExt = 1;
             ss->de    = (ss - 1)->de + 1;
           } else if (!isPV && score < sBeta - 17 && ss->de <= 6) {
             extension = 2;
@@ -722,6 +724,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
         R += 1 + !IsCap(move);
+
+      if (tripleExt)
+        R++;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(newDepth, Max(R, 1));
