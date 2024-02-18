@@ -345,7 +345,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->squares[to]   = piece;
 
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
-  if (PieceType(piece) == PAWN)
+  if (PieceType(piece) == PAWN || PieceType(piece) == KING)
     board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
   if (IsCas(move)) {

@@ -70,6 +70,8 @@ uint64_t PawnZobrist(Board* board) {
       hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
   }
 
+  hash ^= ZOBRIST_PIECES[WHITE_KING][LSB(PieceBB(KING, WHITE))] ^ ZOBRIST_PIECES[BLACK_KING][LSB(PieceBB(KING, BLACK))];
+
   if (board->stm)
     hash ^= ZOBRIST_SIDE_KEY;
 
