@@ -1,8 +1,9 @@
 # General
 EXE      = berserk
-SRC      = *.c nn/*.c pyrrhic/tbprobe.c
+SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
+		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 20240205
+VERSION  = 20240215
 MAIN_NETWORK = berserk-da85741a5582.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
