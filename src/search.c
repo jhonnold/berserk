@@ -359,22 +359,26 @@ void Search(ThreadData* thread) {
   }
 }
 
+extern float total;
+extern int64_t hits;
+
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
   Board* board = &thread->board;
 
   PV childPv;
   pv->count = 0;
 
-  int isPV      = beta - alpha != 1; // pv node when doing a full window
-  int isRoot    = !ss->ply;          //
-  int score     = -CHECKMATE;        // initially assume the worst case
-  int bestScore = -CHECKMATE;        //
-  int maxScore  = CHECKMATE;         // best possible
-  int origAlpha = alpha;             // remember first alpha for tt storage
-  int inCheck   = !!board->checkers;
-  int improving = 0;
-  int eval      = ss->staticEval;
-  int rawEval   = eval;
+  int isPV           = beta - alpha != 1; // pv node when doing a full window
+  int isRoot         = !ss->ply;          //
+  int score          = -CHECKMATE;        // initially assume the worst case
+  int bestScore      = -CHECKMATE;        //
+  int maxScore       = CHECKMATE;         // best possible
+  int origAlpha      = alpha;             // remember first alpha for tt storage
+  int inCheck        = !!board->checkers;
+  int improving      = 0;
+  int eval           = ss->staticEval;
+  int rawEval        = eval;
+  int pawnCorrection = 0;
 
   Move bestMove = NULL_MOVE;
   Move hashMove = NULL_MOVE;
@@ -469,7 +473,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+      pawnCorrection = GetPawnCorrection(board, thread);
+      eval = ss->staticEval = ClampEval(rawEval + pawnCorrection / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -478,7 +483,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+      pawnCorrection = GetPawnCorrection(board, thread);
+      eval = ss->staticEval = ClampEval(rawEval + pawnCorrection / 2);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -711,6 +717,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // reduce these special quiets less
       if (killerOrCounter)
         R -= 2;
+
+      if (abs(pawnCorrection) > 60)
+        R--;
 
       // move GAVE check
       if (board->checkers)
