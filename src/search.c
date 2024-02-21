@@ -685,6 +685,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           return sBeta;
         else if (ttScore >= beta)
           extension = -2 + isPV;
+        else if (cutnode)
+          extension = -2;
         else if (ttScore <= alpha)
           extension = -1;
       }
@@ -947,6 +949,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
   if (!legalMoves && inCheck)
     return -CHECKMATE + ss->ply;
+
+  if (bestScore >= beta && abs(bestScore) < TB_WIN_BOUND)
+      bestScore = (bestScore + beta) / 2;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
