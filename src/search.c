@@ -804,6 +804,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!legalMoves)
     return ss->skip ? alpha : inCheck ? -CHECKMATE + ss->ply : 0;
 
+  if (!isPV && bestScore >= beta && abs(bestScore) < TB_WIN_BOUND)
+    bestScore = ((depth + 1) * bestScore + beta) / (depth + 2);
+
   // don't let our score inflate too high (tb)
   bestScore = Min(bestScore, maxScore);
 
