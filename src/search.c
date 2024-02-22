@@ -741,6 +741,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           score = -Negamax(-alpha - 1, -alpha, newDepth - 1, !cutnode, thread, &childPv, ss + 1);
 
         int bonus = score <= alpha ? -HistoryBonus(newDepth - 1) : score >= beta ? HistoryBonus(newDepth - 1) : 0;
+        AddHistoryHeuristic(&HH(board->xstm, move, board->history[board->histPly - 1].threatened), bonus);
         UpdateCH(ss, move, bonus);
       }
     } else if (!isPV || playedMoves > 1) {
