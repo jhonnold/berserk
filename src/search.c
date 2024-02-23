@@ -614,8 +614,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = GetHistory(ss, thread, move);
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= history / 8192;                         // adjust reduction based on historical score
-    R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+    R -= history / 8192; // adjust reduction based on historical score
+    R += IsCap(move) + (IsCap(move) && IsCap((ss - 1)->move) && To(move) == To((ss - 1)->move));
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
@@ -951,7 +951,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return -CHECKMATE + ss->ply;
 
   if (bestScore >= beta && abs(bestScore) < TB_WIN_BOUND)
-      bestScore = (bestScore + beta) / 2;
+    bestScore = (bestScore + beta) / 2;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
