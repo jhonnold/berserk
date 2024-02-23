@@ -189,6 +189,7 @@ struct ThreadData {
 
   int contempt[2];
   int previousScore;
+  int rootDelta;
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
 

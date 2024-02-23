@@ -274,6 +274,7 @@ void Search(ThreadData* thread) {
           beta = CHECKMATE;
 
         // search!
+        thread->rootDelta = beta - alpha;
         score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
 
         SortRootMoves(thread, thread->multiPV);
@@ -724,6 +725,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
         R += 1 + !IsCap(move);
+
+      R -= ((beta - alpha) + thread->rootDelta / 4) / thread->rootDelta;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(newDepth, Max(R, 1));
