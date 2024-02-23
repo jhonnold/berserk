@@ -379,7 +379,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move bestMove = NULL_MOVE;
   Move hashMove = NULL_MOVE;
   Move move     = NULL_MOVE;
-  MovePicker mp;
 
   if (!isRoot && board->fmr >= 3 && alpha < 0 && HasCycle(board, ss->ply)) {
     alpha = 2 - (thread->nodes & 0x3);
@@ -508,6 +507,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       depth--;
   }
 
+  MovePicker mp;
   if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
@@ -684,6 +684,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           return sBeta;
         else if (ttScore >= beta)
           extension = -2 + isPV;
+        else if (cutnode)
+          extension = -2;
         else if (ttScore <= alpha)
           extension = -1;
       }
@@ -829,7 +831,6 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   Move hashMove = NULL_MOVE;
   Move bestMove = NULL_MOVE;
   Move move     = NULL_MOVE;
-  MovePicker mp;
 
   if (thread->maxNodes && thread->nodes >= thread->maxNodes)
     // hot exit
@@ -895,6 +896,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     futility = bestScore + 60;
   }
 
+  MovePicker mp;
   if (!inCheck)
     InitQSMovePicker(&mp, thread, depth >= -1);
   else
@@ -946,6 +948,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
   if (!legalMoves && inCheck)
     return -CHECKMATE + ss->ply;
+
+  if (bestScore >= beta && abs(bestScore) < TB_WIN_BOUND)
+      bestScore = (bestScore + beta) / 2;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
