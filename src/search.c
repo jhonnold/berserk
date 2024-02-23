@@ -379,7 +379,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move bestMove = NULL_MOVE;
   Move hashMove = NULL_MOVE;
   Move move     = NULL_MOVE;
-  MovePicker mp;
 
   if (!isRoot && board->fmr >= 3 && alpha < 0 && HasCycle(board, ss->ply)) {
     alpha = 2 - (thread->nodes & 0x3);
@@ -509,6 +508,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       depth--;
   }
 
+  MovePicker mp;
   if (!isPV && !inCheck) {
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
 
@@ -674,7 +674,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          if (!isPV && score < sBeta - 17 && ss->de <= 6) {
+          if (!isPV && score < sBeta - 50 && ss->de <= 6 && !IsCap(move)) {
+            extension = 3;
+            ss->de    = (ss - 1)->de + 1;
+          } else if (!isPV && score < sBeta - 17 && ss->de <= 6) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
           } else {
@@ -684,6 +687,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           return sBeta;
         else if (ttScore >= beta)
           extension = -2 + isPV;
+        else if (cutnode)
+          extension = -2;
         else if (ttScore <= alpha)
           extension = -1;
       }
@@ -829,7 +834,6 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   Move hashMove = NULL_MOVE;
   Move bestMove = NULL_MOVE;
   Move move     = NULL_MOVE;
-  MovePicker mp;
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     // hot exit
@@ -895,6 +899,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     futility = bestScore + 60;
   }
 
+  MovePicker mp;
   if (!inCheck)
     InitQSMovePicker(&mp, thread, depth >= -1);
   else
@@ -946,6 +951,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
   if (!legalMoves && inCheck)
     return -CHECKMATE + ss->ply;
+
+  if (bestScore >= beta && abs(bestScore) < TB_WIN_BOUND)
+      bestScore = (bestScore + beta) / 2;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
