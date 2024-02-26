@@ -532,8 +532,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // threats)
     if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && !opponentHasEasyCapture && eval >= beta &&
         HasNonPawn(board, board->stm) && (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
-      int R = 5 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4) + !opponentHasEasyCapture;
-      R     = Min(depth, R); // don't go too low
+      int R = 6 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4);
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
       ss->move = NULL_MOVE;
