@@ -67,7 +67,11 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                        (int) (*(ss - 4)->ch)[pc][to] +                     //
                        (int) (*(ss - 6)->ch)[pc][to];
 
-      if (pt != PAWN && pt != KING) {
+      if (pt == PAWN) {
+        const BitBoard attacks = GetPawnAttacks(to, board->stm);
+        if (attacks & OccBB(board->xstm) & ~PieceBB(PAWN, board->xstm))
+          current->score += 16384;
+      } else if (pt != KING) {
         const BitBoard danger = threats[Max(0, pt - BISHOP)];
 
         if (GetBit(danger, from))
