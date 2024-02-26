@@ -93,7 +93,7 @@ typedef struct {
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard threatened; // opponent "threatening" these squares
   BitBoard threatenedBy[6];
 
   int stm;     // side to move
@@ -131,7 +131,7 @@ typedef struct {
 typedef int16_t PieceTo[12][64];
 
 typedef struct {
-  int ply, staticEval, de;
+  int ply, staticEval, de, cutoffs;
   PieceTo* ch;
   Move move, skip;
   Move killers[2];
