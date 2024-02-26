@@ -618,6 +618,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
     R -= history / 8192;                         // adjust reduction based on historical score
     R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+    R += !improving;
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
@@ -707,10 +708,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
-
-      // increase reduction if our eval is declining
-      if (!improving)
-        R++;
 
       // reduce these special quiets less
       if (killerOrCounter)
