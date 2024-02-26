@@ -530,9 +530,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip &&
-        eval >= beta + opponentHasEasyCapture * (600 + 100 * depth) && HasNonPawn(board, board->stm) &&
-        (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
+    if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && !opponentHasEasyCapture && eval >= beta &&
+        HasNonPawn(board, board->stm) && (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
       int R = 5 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4) + !opponentHasEasyCapture;
       R     = Min(depth, R); // don't go too low
 
