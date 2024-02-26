@@ -104,19 +104,18 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PLAY_GOOD_NOISY;
       // fallthrough
     case PLAY_GOOD_NOISY:
-      if (picker->current != picker->end) {
+      while (picker->current != picker->end) {
         Move move = Best(picker->current, picker->end);
         int score = picker->current->score;
         picker->current++;
 
-        if (move == picker->hashMove) {
-          return NextMove(picker, board, skipQuiets);
-        } else if (!SEE(board, move, -score / 2)) {
-          *picker->endBad++ = *(picker->current - 1);
-          return NextMove(picker, board, skipQuiets);
-        } else {
+        if (move == picker->hashMove)
+          continue;
+
+        else if (SEE(board, move, -score / 2))
           return move;
-        }
+
+        *picker->endBad++ = *(picker->current - 1);
       }
 
       picker->phase = PLAY_KILLER_1;
@@ -148,15 +147,13 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PLAY_QUIETS;
       // fallthrough
     case PLAY_QUIETS:
-      if (picker->current != picker->end && !skipQuiets) {
+      while (picker->current != picker->end && !skipQuiets) {
         Move move = Best(picker->current++, picker->end);
 
-        if (move == picker->hashMove || //
-            move == picker->killer1 ||  //
-            move == picker->killer2 ||  //
-            move == picker->counter)
-          return NextMove(picker, board, skipQuiets);
-        else
+        if (move != picker->hashMove && //
+            move != picker->killer1 &&  //
+            move != picker->killer2 &&  //
+            move != picker->counter)
           return move;
       }
 
@@ -166,10 +163,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PLAY_BAD_NOISY;
       // fallthrough
     case PLAY_BAD_NOISY:
-      if (picker->current != picker->end) {
+      while (picker->current != picker->end) {
         Move move = (picker->current++)->move;
 
-        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
+        if (move != picker->hashMove)
+          return move;
       }
 
       picker->phase = -1;
@@ -185,13 +183,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PC_PLAY_GOOD_NOISY;
       // fallthrough
     case PC_PLAY_GOOD_NOISY:
-      if (picker->current != picker->end) {
+      while (picker->current != picker->end) {
         Move move = Best(picker->current++, picker->end);
 
-        if (!SEE(board, move, picker->seeCutoff))
-          return NextMove(picker, board, skipQuiets);
-
-        return move;
+        if (SEE(board, move, picker->seeCutoff))
+          return move;
       }
 
       picker->phase = -1;
@@ -207,7 +203,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = QS_PLAY_NOISY_MOVES;
       // fallthrough
     case QS_PLAY_NOISY_MOVES:
-      if (picker->current != picker->end)
+      while (picker->current != picker->end)
         return Best(picker->current++, picker->end);
 
       if (!picker->genChecks) {
@@ -226,7 +222,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       // fallthrough
     case QS_PLAY_QUIET_CHECKS:
-      if (picker->current != picker->end)
+      while (picker->current != picker->end)
         return (picker->current++)->move;
 
       picker->phase = -1;
@@ -248,10 +244,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       // fallthrough
     case QS_EVASION_PLAY_NOISY:
-      if (picker->current != picker->end) {
+      while (picker->current != picker->end) {
         Move move = Best(picker->current++, picker->end);
 
-        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
+        if (move != picker->hashMove)
+          return move;
       }
 
       picker->phase = QS_EVASION_GEN_QUIET;
@@ -269,25 +266,24 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       // fallthrough
     case QS_EVASION_PLAY_QUIET:
-      if (picker->current != picker->end && !skipQuiets) {
+      while (picker->current != picker->end && !skipQuiets) {
         Move move = Best(picker->current++, picker->end);
 
-        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
+        if (move != picker->hashMove)
+          return move;
       }
 
       picker->phase = -1;
       return NULL_MOVE;
 
     case PERFT_MOVES:
-      if (picker->current != picker->end)
+      while (picker->current != picker->end)
         return (picker->current++)->move;
 
       picker->phase = -1;
       return NULL_MOVE;
     default: return NULL_MOVE;
   }
-
-  return NULL_MOVE;
 }
 
 char* PhaseName(MovePicker* picker) {
