@@ -3,7 +3,7 @@ EXE      = berserk
 SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
 		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 20240225
+VERSION  = 20240225b
 MAIN_NETWORK = berserk-e4712455eaf4.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
