@@ -510,10 +510,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   MovePicker mp;
   if (!isPV && !inCheck) {
+    const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
+
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 8 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
-        eval - 67 * depth + 112 * (improving && !board->easyCapture) >= beta &&
+        eval - 67 * depth + 112 * (improving && !opponentHasEasyCapture) >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 12525))
       return (eval + beta) / 2;
 
@@ -528,10 +530,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // i.e. Our position is so good we can give our opponnent a free move and
     // they still can't catch up (this is usually countered by captures or mate
     // threats)
-    if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && eval >= beta && HasNonPawn(board, board->stm) &&
-        (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
-      int R = 5 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4) + !board->easyCapture;
-      R     = Min(depth, R); // don't go too low
+    if (depth >= 4 && (ss - 1)->move != NULL_MOVE && !ss->skip && !opponentHasEasyCapture && eval >= beta &&
+        HasNonPawn(board, board->stm) && (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
+      int R = 6 + 221 * depth / 1024 + Min(5 * (eval - beta) / 1024, 4);
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
       ss->move = NULL_MOVE;
@@ -897,6 +898,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     futility = bestScore + 60;
   }
 
+  int numQuiets = 0, numCaptures = 0;
+  Move quiets[64], captures[32];
+
   MovePicker mp;
   if (!inCheck)
     InitQSMovePicker(&mp, thread, depth >= -1);
@@ -921,6 +925,11 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         continue;
     }
 
+    if (!IsCap(move) && numQuiets < 64)
+      quiets[numQuiets++] = move;
+    else if (IsCap(move) && numCaptures < 32)
+      captures[numCaptures++] = move;
+
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
@@ -942,8 +951,10 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       }
 
       // failed high
-      if (alpha >= beta)
+      if (alpha >= beta) {
+        UpdateHistories(ss, thread, move, 1, quiets, numQuiets, captures, numCaptures);
         break;
+      }
     }
   }
 
@@ -951,7 +962,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     return -CHECKMATE + ss->ply;
 
   if (bestScore >= beta && abs(bestScore) < TB_WIN_BOUND)
-      bestScore = (bestScore + beta) / 2;
+    bestScore = (bestScore + beta) / 2;
 
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
