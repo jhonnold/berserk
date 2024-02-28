@@ -13,7 +13,7 @@ do
 	./berserk --threads $thread_count \
 	          --total 1000000 \
 	          --output "$1" \
-	          --nodes 10000 \
+	          --nodes 15000 \
 	          --depth 0 \
 	          --random-move-count 10 \
 	          --random-move-min 1 \
