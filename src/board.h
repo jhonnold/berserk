@@ -68,13 +68,12 @@ INLINE BitBoard OpponentsEasyCaptures(Board* board) {
   const int stm         = board->stm;
   const BitBoard queens = PieceBB(QUEEN, stm);
   const BitBoard rooks  = queens | PieceBB(ROOK, stm);
-  const BitBoard minors = rooks | PieceBB(BISHOP, stm) | PieceBB(KNIGHT, stm);
 
   const BitBoard pawnThreats  = board->threatenedBy[PAWN];
   const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
   const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
 
-  return (queens & rookThreats) | (rooks & minorThreats) | (minors & pawnThreats);
+  return (queens & rookThreats) | (rooks & minorThreats);
 }
 
 INLINE int HasNonPawn(Board* board, const int color) {
