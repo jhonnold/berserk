@@ -725,6 +725,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (cutnode)
         R += 1 + !IsCap(move);
 
+      if (ttDepth >= depth)
+        R--;
+
       // prevent dropping into QS, extending, or reducing all extensions
       R = Min(newDepth, Max(R, 1));
 
