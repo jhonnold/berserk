@@ -592,6 +592,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
+  hashMove = (ttHit && !hashMove) ? TTMove(tt) : hashMove;
+
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
