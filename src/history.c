@@ -48,7 +48,7 @@ void UpdateHistories(SearchStack* ss,
     // wasn't trivial. This idea was first thought of
     // by Alayan in Ethereal
     if (nQ > 1 || depth > 3) {
-      AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+      AddHistoryHeuristic(&HH(stm, bestMove, board->threatened, board->doubleThreatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
   } else {
@@ -67,7 +67,7 @@ void UpdateHistories(SearchStack* ss,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
+      AddHistoryHeuristic(&HH(stm, m, board->threatened, board->doubleThreatened), -inc);
       UpdateCH(ss, m, -inc);
     }
   }

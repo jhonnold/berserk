@@ -276,35 +276,51 @@ inline void SetThreats(Board* board) {
 
   BitBoard pawnAttacks      = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
                                              ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
+  board->doubleThreatened   = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) & ShiftNE(PieceBB(PAWN, WHITE)) :
+                                             ShiftSW(PieceBB(PAWN, BLACK)) & ShiftSE(PieceBB(PAWN, BLACK));
   board->threatenedBy[PAWN] = pawnAttacks;
   board->threatened         = board->threatenedBy[PAWN];
 
   board->threatenedBy[KNIGHT] = 0;
   BitBoard knights            = PieceBB(KNIGHT, stm);
-  while (knights)
-    board->threatenedBy[KNIGHT] |= GetKnightAttacks(PopLSB(&knights));
-  board->threatened |= board->threatenedBy[KNIGHT];
+  while (knights) {
+    const BitBoard knightAttacks = GetKnightAttacks(PopLSB(&knights));
+    board->doubleThreatened |= (knightAttacks & board->threatened);
+    board->threatened |= knightAttacks;
+    board->threatenedBy[KNIGHT] |= knightAttacks;
+  }
 
   board->threatenedBy[BISHOP] = 0;
   BitBoard bishops            = PieceBB(BISHOP, stm);
-  while (bishops)
-    board->threatenedBy[BISHOP] |= GetBishopAttacks(PopLSB(&bishops), occ);
-  board->threatened |= board->threatenedBy[BISHOP];
+  while (bishops) {
+    const BitBoard bishopAttacks = GetBishopAttacks(PopLSB(&bishops), occ);
+    board->doubleThreatened |= (bishopAttacks & board->threatened);
+    board->threatened |= bishopAttacks;
+    board->threatenedBy[BISHOP] |= bishopAttacks;
+  }
 
   board->threatenedBy[ROOK] = 0;
   BitBoard rooks            = PieceBB(ROOK, stm);
-  while (rooks)
-    board->threatenedBy[ROOK] |= GetRookAttacks(PopLSB(&rooks), occ);
-  board->threatened |= board->threatenedBy[ROOK];
+  while (rooks) {
+    const BitBoard rookAttacks = GetRookAttacks(PopLSB(&rooks), occ);
+    board->doubleThreatened |= (rookAttacks & board->threatened);
+    board->threatened |= rookAttacks;
+    board->threatenedBy[ROOK] |= rookAttacks;
+  }
 
   board->threatenedBy[QUEEN] = 0;
   BitBoard queens            = PieceBB(QUEEN, stm);
-  while (queens)
-    board->threatenedBy[QUEEN] |= GetQueenAttacks(PopLSB(&queens), occ);
-  board->threatened |= board->threatenedBy[QUEEN];
+  while (queens) {
+    const BitBoard queenAttacks = GetQueenAttacks(PopLSB(&queens), occ);
+    board->doubleThreatened |= (queenAttacks & board->threatened);
+    board->threatened |= queenAttacks;
+    board->threatenedBy[QUEEN] |= queenAttacks;
+  }
 
-  board->threatenedBy[KING] = GetKingAttacks(LSB(PieceBB(KING, stm)));
-  board->threatened |= board->threatenedBy[KING];
+  const BitBoard kingAttacks = GetKingAttacks(LSB(PieceBB(KING, stm)));
+  board->doubleThreatened |= (kingAttacks & board->threatened);
+  board->threatened |= kingAttacks;
+  board->threatenedBy[KING] = kingAttacks;
 }
 
 void MakeMove(Move move, Board* board) {

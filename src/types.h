@@ -75,6 +75,7 @@ typedef struct {
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
+  BitBoard doubleThreatened;
   BitBoard threatenedBy[6];
   int capture;
 } BoardHistory;
@@ -93,7 +94,8 @@ typedef struct {
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard threatened; // opponent "threatening" these squares
+  BitBoard doubleThreatened;
   BitBoard threatenedBy[6];
 
   int stm;     // side to move
@@ -193,7 +195,7 @@ struct ThreadData {
   RootMove rootMoves[MAX_MOVES];
 
   Move counters[12][64];         // counter move butterfly table
-  int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
+  int16_t hh[2][3][3][64 * 64];  // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
