@@ -6,7 +6,7 @@ thread_count=$(($(nproc --all) - 1));
 host_name=$(hostname | cut -c13-)
 version=$(grep -Po '(?<=VERSION  = )[\d]+' makefile)
 network=$(grep -Po '(?<=MAIN_NETWORK = berserk-)[A-Za-z0-9]+(?=\.nn)' makefile)
-file_name="berserk$version.$network.$host_name"
+file_name="berserk$version.$network.$host_name.fens"
 
 while true; do
   	./berserk --threads $thread_count \
