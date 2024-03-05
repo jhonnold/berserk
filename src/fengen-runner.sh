@@ -10,7 +10,7 @@ file_name="berserk$version.$network.$host_name.fens"
 
 while true; do
   	./berserk --threads $thread_count \
-  	          --total 1000 \
+  	          --total 1000000 \
   	          --nodes 15000 \
   	          --depth 0 \
   	          --random-move-count 10 \
