@@ -47,13 +47,22 @@ uint64_t DUPLICATE_HASH[DUPLICATE_HASH_SIZE];
 FenGenParams fenGenParams;
 Book* book = NULL;
 
+FILE* fout = NULL;
+pthread_mutex_t fileMutex;
+
 enum {
   STM_LOSS = 1,
   DRAW     = 2,
   STM_WIN  = 3,
 };
 
+volatile int KILLED  = 0;
 volatile int STOPPED = 0;
+
+static void SigintHandler() {
+  printf("Ending games...\n");
+  KILLED = 1;
+}
 
 char* NextPosition() {
   pthread_mutex_lock(&book->mutex);
@@ -128,24 +137,13 @@ void* PlayGames(void* arg) {
   ThreadData* thread = Threads.threads[idx];
   Board* board       = malloc(sizeof(Board));
 
-  char filename[256];
-  if (fenGenParams.file_prefix[0]) {
-    sprintf(filename, "%s/%s.%d.fens", fenGenParams.dir, fenGenParams.file_prefix, idx);
-  } else {
-    sprintf(filename, "%s/berserk" VERSION ".%d.fens", fenGenParams.dir, idx);
-  }
-
-  FILE* fp = fopen(filename, "a");
-  if (fp == NULL)
-    return NULL;
-
   int* scores     = malloc(sizeof(int) * (fenGenParams.writeMax + 1));
   GameData* game  = malloc(sizeof(GameData));
   game->positions = malloc(sizeof(PositionData) * (fenGenParams.writeMax + 1));
 
   uint8_t* randoms = malloc(sizeof(uint8_t) * fenGenParams.randomMoveMax);
 
-  while (!STOPPED) {
+  while (!STOPPED && !KILLED) {
     SearchClearThread(thread);
     DetermineRandomMoves(randoms);
 
@@ -210,29 +208,38 @@ void* PlayGames(void* arg) {
         board->histPly = 0;
     }
 
-    if (result) {
-      float fResult = result == STM_WIN ? 1.0 : result == DRAW ? 0.5 : 0.0;
-      if (board->stm == BLACK)
-        fResult = 1.0 - fResult;
+    float fResult = result == STM_WIN ? 1.0 : result == DRAW ? 0.5 : 0.0;
+    if (board->stm == BLACK)
+      fResult = 1.0 - fResult;
 
-      for (size_t i = 0; i < game->n; i++) {
-        fputs(game->positions[i].fen, fp);
-        fprintf(fp, " [%1.1f] %d\n", fResult, game->positions[i].eval);
-      }
-      thread->fens += game->n;
+    pthread_mutex_lock(&fileMutex);
+    for (size_t i = 0; i < game->n; i++) {
+      fputs(game->positions[i].fen, fout);
+      fprintf(fout, " [%1.1f] %d\n", fResult, game->positions[i].eval);
     }
+    pthread_mutex_unlock(&fileMutex);
+
+    thread->fens += game->n;
   }
 
-  fclose(fp);
   return NULL;
 }
 
-void Generate(uint64_t total) {
+int Generate(uint64_t total) {
+  signal(SIGINT, SigintHandler);
+
   SeedRandom(time(NULL));
 
   int hashSize = 40.96 * Threads.count;
   TTInit(hashSize);
   printf("Initiating hash table to size: %d\n", hashSize);
+
+  pthread_mutex_init(&fileMutex, NULL);
+  fout = fopen(fenGenParams.fileName, "a");
+  if (fout == NULL) {
+    printf("Unable to write to file %s!\n", fenGenParams.fileName);
+    exit(EXIT_FAILURE);
+  }
 
   if (fenGenParams.book) {
     FILE* fbook = fopen(fenGenParams.book, "r");
@@ -265,13 +272,17 @@ void Generate(uint64_t total) {
 
   const int sleepInSeconds = 5;
   uint64_t generated, last = 0;
-  while (!STOPPED) {
+  while (!STOPPED && !KILLED) {
     generated = 0;
     for (int i = 0; i < Threads.count; i++)
       generated += Threads.threads[i]->fens;
 
     long elapsed = Max(1, GetTimeMS() - startTime);
-    printf("Generated: %10lld [%8.2f/s] [%8.2f/s] [%8lds]\n", generated, 1000.0 * generated / elapsed, 1000.0 * (generated - last) / (sleepInSeconds * 1000.0), elapsed / 1000);
+    printf("Generated: %10lld [%8.2f/s] [%8.2f/s] [%8lds]\n",
+           generated,
+           1000.0 * generated / elapsed,
+           1000.0 * (generated - last) / (sleepInSeconds * 1000.0),
+           elapsed / 1000);
 
     if (generated >= total)
       break;
@@ -285,8 +296,16 @@ void Generate(uint64_t total) {
   for (int i = 0; i < Threads.count; i++)
     pthread_join(Threads.threads[i]->nativeThread, NULL);
 
+  fclose(fout);
+
+  pthread_mutex_destroy(&fileMutex);
   if (book) {
     pthread_mutex_destroy(&book->mutex);
     free(book);
   }
+
+  if (KILLED)
+    printf("Killed!\n");
+
+  return KILLED ? EXIT_FAILURE : EXIT_SUCCESS;
 }

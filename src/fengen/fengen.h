@@ -43,8 +43,7 @@ typedef struct {
 typedef struct {
   char* book;
   char* network;
-  char* dir;
-  char* file_prefix;
+  char* fileName;
 
   int filterDuplicates;
   int evalLimit;
@@ -60,6 +59,6 @@ typedef struct {
 
 extern FenGenParams fenGenParams;
 
-void Generate(uint64_t total);
+int Generate(uint64_t total);
 
 #endif
