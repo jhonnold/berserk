@@ -164,7 +164,7 @@ void ParseFen(char* fen, Board* board) {
   OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
 
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreats(board);
 
   board->zobrist     = Zobrist(board);
   board->pawnZobrist = PawnZobrist(board);
@@ -269,58 +269,45 @@ inline void SetSpecialPieces(Board* board) {
   }
 }
 
-inline void SetThreatsAndEasyCaptures(Board* board) {
+inline void SetThreats(Board* board) {
   // Invert these to be confusing.
   const int stm  = board->xstm;
   const int xstm = board->stm;
 
-  board->threatened = board->easyCapture = 0;
-
   // Take the enemy king off for through threats.
   BitBoard occ = OccBB(BOTH) ^ PieceBB(KING, xstm);
 
-  BitBoard opponentPieces = OccBB(xstm) ^ PieceBB(PAWN, xstm);
+  BitBoard pawnAttacks      = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
+                                             ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
+  board->threatenedBy[PAWN] = pawnAttacks;
+  board->threatened         = board->threatenedBy[PAWN];
 
-  BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
-                                        ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
-  board->threatened |= pawnAttacks;
-  board->easyCapture |= pawnAttacks & opponentPieces;
+  board->threatenedBy[KNIGHT] = 0;
+  BitBoard knights            = PieceBB(KNIGHT, stm);
+  while (knights)
+    board->threatenedBy[KNIGHT] |= GetKnightAttacks(PopLSB(&knights));
+  board->threatened |= board->threatenedBy[KNIGHT];
 
-  // remove minors
-  opponentPieces ^= PieceBB(KNIGHT, xstm) | PieceBB(BISHOP, xstm);
+  board->threatenedBy[BISHOP] = 0;
+  BitBoard bishops            = PieceBB(BISHOP, stm);
+  while (bishops)
+    board->threatenedBy[BISHOP] |= GetBishopAttacks(PopLSB(&bishops), occ);
+  board->threatened |= board->threatenedBy[BISHOP];
 
-  BitBoard knights = PieceBB(KNIGHT, stm);
-  while (knights) {
-    BitBoard atx = GetKnightAttacks(PopLSB(&knights));
+  board->threatenedBy[ROOK] = 0;
+  BitBoard rooks            = PieceBB(ROOK, stm);
+  while (rooks)
+    board->threatenedBy[ROOK] |= GetRookAttacks(PopLSB(&rooks), occ);
+  board->threatened |= board->threatenedBy[ROOK];
 
-    board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
-  }
-
-  BitBoard bishops = PieceBB(BISHOP, stm);
-  while (bishops) {
-    BitBoard atx = GetBishopAttacks(PopLSB(&bishops), occ);
-
-    board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
-  }
-
-  // remove rooks
-  opponentPieces ^= PieceBB(ROOK, xstm);
-
-  BitBoard rooks = PieceBB(ROOK, stm);
-  while (rooks) {
-    BitBoard atx = GetRookAttacks(PopLSB(&rooks), occ);
-
-    board->threatened |= atx;
-    board->easyCapture |= opponentPieces & atx;
-  }
-
-  BitBoard queens = PieceBB(QUEEN, stm);
+  board->threatenedBy[QUEEN] = 0;
+  BitBoard queens            = PieceBB(QUEEN, stm);
   while (queens)
-    board->threatened |= GetQueenAttacks(PopLSB(&queens), occ);
+    board->threatenedBy[QUEEN] |= GetQueenAttacks(PopLSB(&queens), occ);
+  board->threatened |= board->threatenedBy[QUEEN];
 
-  board->threatened |= GetKingAttacks(LSB(PieceBB(KING, stm)));
+  board->threatenedBy[KING] = GetKingAttacks(LSB(PieceBB(KING, stm)));
+  board->threatened |= board->threatenedBy[KING];
 }
 
 void MakeMove(Move move, Board* board) {
@@ -432,7 +419,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreats(board);
 
   if (update) {
     board->accumulators->move     = move;
@@ -520,7 +507,7 @@ void MakeNullMove(Board* board) {
   board->xstm ^= 1;
 
   SetSpecialPieces(board);
-  SetThreatsAndEasyCaptures(board);
+  SetThreats(board);
 }
 
 void UndoNullMove(Board* board) {

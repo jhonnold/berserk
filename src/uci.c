@@ -41,7 +41,7 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD  = 10;
+int MOVE_OVERHEAD  = 50;
 int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
@@ -260,7 +260,7 @@ void PrintUCIOptions() {
   printf("option name Ponder type check default false\n");
   printf("option name UCI_ShowWDL type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
-  printf("option name MoveOverhead type spin default 10 min 0 max 10000\n");
+  printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
   printf("uciok\n");
@@ -354,7 +354,6 @@ void UCILoop() {
       int depth = atoi(d);
       Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
-      PrintBB(board.easyCapture);
       PrintBB(board.threatened);
     } else if (!strncmp(in, "eval", 4)) {
       EvaluateTrace(&board);

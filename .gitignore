@@ -54,6 +54,7 @@ dkms.conf
 berserk
 berserk-popcnt
 .vscode
+.idea
 dist
 
 *.log

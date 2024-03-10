@@ -17,8 +17,6 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#include <math.h>
-
 #include "types.h"
 #include "util.h"
 
@@ -46,7 +44,7 @@ void BoardToFen(char* fen, Board* board);
 void PrintBoard(Board* board);
 
 void SetSpecialPieces(Board* board);
-void SetThreatsAndEasyCaptures(Board* board);
+void SetThreats(Board* board);
 
 int DoesMoveCheck(Move move, Board* board);
 
@@ -66,6 +64,19 @@ int IsLegal(Move move, Board* board);
 
 void InitCuckoo();
 int HasCycle(Board* board, int ply);
+
+INLINE BitBoard OpponentsEasyCaptures(Board* board) {
+  const int stm         = board->stm;
+  const BitBoard queens = PieceBB(QUEEN, stm);
+  const BitBoard rooks  = queens | PieceBB(ROOK, stm);
+  const BitBoard minors = rooks | PieceBB(BISHOP, stm) | PieceBB(KNIGHT, stm);
+
+  const BitBoard pawnThreats  = board->threatenedBy[PAWN];
+  const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
+  const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
+
+  return (queens & rookThreats) | (rooks & minorThreats) | (minors & pawnThreats);
+}
 
 INLINE int HasNonPawn(Board* board, const int color) {
   return !!(OccBB(color) ^ PieceBB(KING, color) ^ PieceBB(PAWN, color));
