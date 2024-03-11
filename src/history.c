@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,32 +23,6 @@
 #include "move.h"
 #include "util.h"
 
-INLINE void AddKillerMove(SearchStack* ss, Move move) {
-  if (ss->killers[0] != move) {
-    ss->killers[1] = ss->killers[0];
-    ss->killers[0] = move;
-  }
-}
-
-INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
-  thread->counters[Moving(parent)][To(parent)] = move;
-}
-
-INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
-  *entry += inc - *entry * abs(inc) / 16384;
-}
-
-INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
-  if ((ss - 1)->move)
-    AddHistoryHeuristic(&(*(ss - 1)->ch)[Moving(move)][To(move)], bonus);
-  if ((ss - 2)->move)
-    AddHistoryHeuristic(&(*(ss - 2)->ch)[Moving(move)][To(move)], bonus);
-  if ((ss - 4)->move)
-    AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
-  if ((ss - 6)->move)
-    AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
-}
-
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
@@ -57,29 +31,33 @@ void UpdateHistories(SearchStack* ss,
                      int nQ,
                      Move captures[],
                      int nC) {
-  Board* board     = &thread->board;
-  int stm          = board->stm;
-  BitBoard threats = ss->oppThreat.sqs;
+  Board* board = &thread->board;
+  int stm      = board->stm;
 
-  int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
+  int16_t inc = HistoryBonus(depth);
 
   if (!IsCap(bestMove)) {
-    AddHistoryHeuristic(&HH(stm, bestMove, threats), inc);
-    UpdateCH(ss, bestMove, inc);
-
-    if (Promo(bestMove) < WHITE_QUEEN) {
+    if (PromoPT(bestMove) != QUEEN) {
       AddKillerMove(ss, bestMove);
 
       if ((ss - 1)->move)
         AddCounterMove(thread, bestMove, (ss - 1)->move);
     }
 
+    // Only increase the best move history when it
+    // wasn't trivial. This idea was first thought of
+    // by Alayan in Ethereal
+    if (nQ > 1 || depth > 3) {
+      AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+      UpdateCH(ss, bestMove, inc);
+    }
   } else {
     int piece    = Moving(bestMove);
     int to       = To(bestMove);
+    int defended = !GetBit(board->threatened, to);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, captured), inc);
+    AddHistoryHeuristic(&TH(piece, to, defended, captured), inc);
   }
 
   // Update quiets
@@ -89,7 +67,7 @@ void UpdateHistories(SearchStack* ss,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, threats), -inc);
+      AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
       UpdateCH(ss, m, -inc);
     }
   }
@@ -102,8 +80,16 @@ void UpdateHistories(SearchStack* ss,
 
     int piece    = Moving(m);
     int to       = To(m);
+    int defended = !GetBit(board->threatened, to);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, captured), -inc);
+    AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);
   }
+}
+
+void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * PAWN_CORRECTION_GRAIN));
+  const int idx            = (board->pawnZobrist & PAWN_CORRECTION_MASK);
+
+  thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 255 + correction) / 256;
 }

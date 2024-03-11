@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ extern int CONTEMPT;
 extern SearchParams Limits;
 
 // Normalization of a score to 50% WR at 100cp
-#define Normalize(s) ((s) / 1.65)
+#define Normalize(s) ((s) / 1.54)
 
 int WRModel(Score s, int ply);
 

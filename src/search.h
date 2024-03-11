@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,16 +27,6 @@
 #define MATE_BOUND   (32200 - MAX_SEARCH_PLY)
 #define TB_WIN_SCORE MATE_BOUND
 #define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
-
-// static evaluation pruning
-#define SEE_PRUNE_CAPTURE_CUTOFF 104
-#define SEE_PRUNE_CUTOFF         17
-
-// delta pruning in QS
-#define DELTA_CUTOFF 55
-
-// base window value
-#define WINDOW 10
 
 void InitPruningAndReductionTables();
 

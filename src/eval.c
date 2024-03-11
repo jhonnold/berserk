@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,11 +21,9 @@
 #include "attacks.h"
 #include "bits.h"
 #include "board.h"
-#include "endgame.h"
 #include "move.h"
 #include "nn/accumulator.h"
 #include "nn/evaluate.h"
-#include "search.h"
 #include "uci.h"
 #include "util.h"
 
@@ -39,61 +37,10 @@ void SetContempt(int* dest, int stm) {
   dest[stm ^ 1] = -contempt;
 }
 
-// "Threats" logic to be utilized in search
-// idea originating in Koivisto
-void Threats(Threat* threats, Board* board, int stm) {
-  int xstm     = stm ^ 1;
-  threats->pcs = threats->sqs = 0;
-
-  BitBoard opponentPieces = OccBB(xstm) ^ PieceBB(PAWN, xstm);
-
-  BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
-                                        ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
-  threats->sqs |= pawnAttacks;
-  threats->pcs |= pawnAttacks & opponentPieces;
-
-  // remove minors
-  opponentPieces ^= PieceBB(KNIGHT, xstm) | PieceBB(BISHOP, xstm);
-
-  BitBoard knights = PieceBB(KNIGHT, stm);
-  while (knights) {
-    BitBoard atx = GetKnightAttacks(PopLSB(&knights));
-
-    threats->sqs |= atx;
-    threats->pcs |= opponentPieces & atx;
-  }
-
-  BitBoard bishops = PieceBB(BISHOP, stm);
-  while (bishops) {
-    BitBoard atx = GetBishopAttacks(PopLSB(&bishops), OccBB(BOTH));
-
-    threats->sqs |= atx;
-    threats->pcs |= opponentPieces & atx;
-  }
-
-  // remove rooks
-  opponentPieces ^= PieceBB(ROOK, xstm);
-
-  BitBoard rooks = PieceBB(ROOK, stm);
-  while (rooks) {
-    BitBoard atx = GetRookAttacks(PopLSB(&rooks), OccBB(BOTH));
-
-    threats->sqs |= atx;
-    threats->pcs |= opponentPieces & atx;
-  }
-
-  BitBoard queens = PieceBB(QUEEN, stm);
-  while (queens)
-    threats->sqs |= GetQueenAttacks(PopLSB(&queens), OccBB(BOTH));
-
-  threats->sqs |= GetKingAttacks(LSB(PieceBB(KING, stm)));
-}
-
 // Main evalution method
 Score Evaluate(Board* board, ThreadData* thread) {
-  Score knownEval = EvaluateKnownPositions(board);
-  if (knownEval != UNKNOWN)
-    return knownEval;
+  if (IsMaterialDraw(board))
+    return 0;
 
   Accumulator* acc = board->accumulators;
   for (int c = WHITE; c <= BLACK; c++) {
@@ -107,16 +54,12 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
 
-  // static contempt
-  score += thread->contempt[board->stm];
-
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
-
-  // adjust based on FMR
+  score += board->phase * thread->contempt[board->stm] / 64;
   score = (200 - board->fmr) * score / 200;
 
-  return Min(TB_WIN_BOUND - 1, Max(-TB_WIN_BOUND + 1, score));
+  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, score));
 }
 
 void EvaluateTrace(Board* board) {
@@ -126,8 +69,8 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base = Propagate(board->accumulators, board->stm);
-  base = board->stm == WHITE ? base : -base;
+  int base   = Propagate(board->accumulators, board->stm);
+  base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
   printf("\nNNUE derived piece values:\n");
@@ -155,12 +98,12 @@ void EvaluateTrace(Board* board) {
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
         int new = Propagate(board->accumulators, board->stm);
-        new = board->stm == WHITE ? new : -new;
+        new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 
-        int diff = base - new;
+        int diff       = base - new;
         int normalized = Normalize(diff);
-        int v = abs(normalized);
+        int v          = abs(normalized);
 
         char buffer[6];
         buffer[5] = '\0';

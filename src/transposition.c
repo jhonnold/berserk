@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -96,14 +96,32 @@ inline void TTPrefetch(uint64_t hash) {
   __builtin_prefetch(&TT.buckets[TTIdx(hash)]);
 }
 
-inline TTEntry* TTProbe(uint64_t hash, int* hit) {
+inline TTEntry* TTProbe(uint64_t hash,
+                        int ply,
+                        int* hit,
+                        Move* hashMove,
+                        int* ttScore,
+                        int* ttEval,
+                        int* ttDepth,
+                        int* ttBound,
+                        int* pv) {
   TTEntry* const bucket    = TT.buckets[TTIdx(hash)].entries;
-  const uint32_t shortHash = (uint32_t) hash;
+  const uint16_t shortHash = (uint16_t) hash;
 
   for (int i = 0; i < BUCKET_SIZE; i++) {
     if (bucket[i].hash == shortHash || !bucket[i].depth) {
       bucket[i].agePvBound = (uint8_t) (TT.age | (bucket[i].agePvBound & (PV_MASK | BOUND_MASK)));
       *hit                 = !!bucket[i].depth;
+
+      if (*hit) {
+        *hashMove = TTMove(&bucket[i]);
+        *ttEval   = TTEval(&bucket[i]);
+        *ttScore  = TTScore(&bucket[i], ply);
+        *ttDepth  = TTDepth(&bucket[i]);
+        *ttBound  = TTBound(&bucket[i]);
+        *pv       = *pv || TTPV(&bucket[i]);
+      }
+
       return &bucket[i];
     }
   }
@@ -121,7 +139,7 @@ inline TTEntry* TTProbe(uint64_t hash, int* hit) {
 
 inline void
 TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
-  uint32_t shortHash = (uint32_t) hash;
+  uint16_t shortHash = (uint16_t) hash;
 
   if (score >= TB_WIN_BOUND)
     score += ply;
@@ -129,14 +147,14 @@ TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move 
     score -= ply;
 
   if (move || shortHash != tt->hash)
-    tt->move = move;
+    TTStoreMove(tt, move);
 
   if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 4 > TTDepth(tt)) {
     tt->hash       = shortHash;
-    tt->eval       = eval;
     tt->score      = score;
     tt->depth      = (uint8_t) (depth - DEPTH_OFFSET);
     tt->agePvBound = (uint8_t) (TT.age | (pv << 2) | bound);
+    TTStoreEval(tt, eval);
   }
 }
 

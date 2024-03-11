@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 #define INLINE static inline __attribute__((always_inline))
 
 #define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
-#define IncRlx(x) atomic_fetch_add_explicit(&(x), 1, memory_order_relaxed)
+#define IncRlx(x)  atomic_fetch_add_explicit(&(x), 1, memory_order_relaxed)
 
 long GetTimeMS();
 

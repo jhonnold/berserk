@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -39,7 +39,7 @@ void InitZobristKeys() {
   ZOBRIST_SIDE_KEY = RandomUInt64();
 }
 
-// Generate a Zobirst key for the current board state
+// Generate a Zobrist key for the current board state
 uint64_t Zobrist(Board* board) {
   uint64_t hash = 0ULL;
 
@@ -53,6 +53,22 @@ uint64_t Zobrist(Board* board) {
     hash ^= ZOBRIST_EP_KEYS[board->epSquare];
 
   hash ^= ZOBRIST_CASTLE_KEYS[board->castling];
+
+  if (board->stm)
+    hash ^= ZOBRIST_SIDE_KEY;
+
+  return hash;
+}
+
+// Generate a Pawn Zobrist key for the current board state
+uint64_t PawnZobrist(Board* board) {
+  uint64_t hash = 0ULL;
+
+  for (int piece = WHITE_PAWN; piece <= BLACK_PAWN; piece++) {
+    BitBoard pcs = board->pieces[piece];
+    while (pcs)
+      hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
+  }
 
   if (board->stm)
     hash ^= ZOBRIST_SIDE_KEY;

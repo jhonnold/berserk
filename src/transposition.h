@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 
 #define NO_ENTRY    0ULL
 #define MEGABYTE    (1024ull * 1024ull)
-#define BUCKET_SIZE 2
+#define BUCKET_SIZE 3
 
 #define BOUND_MASK (0x3)
 #define PV_MASK    (0x4)
@@ -30,15 +30,17 @@
 #define AGE_INC    (0x8)
 #define AGE_CYCLE  (255 + AGE_INC)
 
-typedef struct {
-  Move move;
-  uint32_t hash;
-  int16_t eval, score;
-  uint8_t depth, agePvBound;
+typedef struct __attribute__((packed)) {
+  uint16_t hash;
+  uint8_t depth;
+  uint8_t agePvBound;
+  uint32_t evalAndMove;
+  int16_t score;
 } TTEntry;
 
 typedef struct {
   TTEntry entries[BUCKET_SIZE];
+  uint16_t padding;
 } TTBucket;
 
 typedef struct {
@@ -63,7 +65,15 @@ void TTClearPart(int idx);
 void TTClear();
 void TTUpdate();
 void TTPrefetch(uint64_t hash);
-TTEntry* TTProbe(uint64_t hash, int* hit);
+TTEntry* TTProbe(uint64_t hash,
+                 int ply,
+                 int* hit,
+                 Move* hashMove,
+                 int* ttScore,
+                 int* ttEval,
+                 int* ttDepth,
+                 int* ttBound,
+                 int* pv);
 void TTPut(TTEntry* tt,
            uint64_t hash,
            int depth,
@@ -76,6 +86,25 @@ void TTPut(TTEntry* tt,
 int TTFull();
 
 #define HASH_MAX ((int) (pow(2, 32) * sizeof(TTBucket) / MEGABYTE))
+
+INLINE Move TTMove(TTEntry* e) {
+  // Lower 20 bits for move
+  return (e->evalAndMove & 0xfffff);
+}
+
+INLINE int TTEval(TTEntry* e) {
+  // Top 12 bits for eval offset by 2048
+  return ((e->evalAndMove >> 20) & 0xfff) - 2048;
+}
+
+INLINE void TTStoreMove(TTEntry* e, Move move) {
+  e->evalAndMove = (e->evalAndMove & 0xfff00000) | move;
+}
+
+INLINE void TTStoreEval(TTEntry* e, int eval) {
+  uint32_t ueval = eval + 2048;
+  e->evalAndMove = (ueval << 20) | (e->evalAndMove & 0x000fffff);
+}
 
 INLINE int TTScore(TTEntry* e, int ply) {
   if (e->score == UNKNOWN)

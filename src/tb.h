@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,17 +30,23 @@ INLINE Move TBMoveFromResult(unsigned res, Board* board) {
   unsigned promo = TB_GET_PROMOTES(res);
   int piece      = board->squares[from];
   int capture    = board->squares[to] != NO_PIECE;
-  int promoPiece = promo ? Piece(KING - promo, board->stm) : 0;
 
-  int flags = QUIET;
+  int flags = QUIET_FLAG;
   if (ep)
-    flags = EP;
+    flags = EP_FLAG;
   else if (capture)
-    flags = CAPTURE;
-  else if (PieceType(piece) == PAWN && (from ^ to) == 16)
-    flags = DP;
+    flags = CAPTURE_FLAG;
 
-  return BuildMove(from, to, piece, promoPiece, flags);
+  if (promo) {
+    switch (KING - promo) {
+      case KNIGHT: flags |= KNIGHT_PROMO_FLAG; break;
+      case BISHOP: flags |= BISHOP_PROMO_FLAG; break;
+      case ROOK: flags |= ROOK_PROMO_FLAG; break;
+      case QUEEN: flags |= QUEEN_PROMO_FLAG; break;
+    }
+  }
+
+  return BuildMove(from, to, piece, flags);
 }
 
 void TBRootMoves(SimpleMoveList* moves, Board* board);

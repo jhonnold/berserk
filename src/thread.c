@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -105,7 +105,7 @@ void* ThreadInit(void* arg) {
   ThreadData* thread = calloc(1, sizeof(ThreadData));
   thread->idx        = i;
 
-#if defined(__linx__)
+#if defined(__linux__)
   const size_t alignment = MEGABYTE * 2;
 #else
   const size_t alignment = 4096;
@@ -113,7 +113,8 @@ void* ThreadInit(void* arg) {
 
   // Alloc all the necessary accumulators
   thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
-  thread->refreshTable = (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
+  thread->refreshTable =
+    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
   ResetRefreshTable(thread->refreshTable);
 
   // Copy these onto the board for easier access within the engine
@@ -198,7 +199,7 @@ void ThreadsInit() {
 INLINE void InitRootMove(RootMove* rm, Move move) {
   rm->move = move;
 
-  rm->previousScore = rm->score = -CHECKMATE;
+  rm->previousScore = rm->score = rm->avgScore = -CHECKMATE;
 
   rm->pv.moves[0] = move;
   rm->pv.count    = 1;
@@ -208,9 +209,10 @@ INLINE void InitRootMove(RootMove* rm, Move move) {
 
 void SetupMainThread(Board* board) {
   ThreadData* mainThread = Threads.threads[0];
-  mainThread->calls      = 0;
+  mainThread->calls      = Limits.hitrate;
   mainThread->nodes      = 0;
   mainThread->tbhits     = 0;
+  mainThread->nmpMinPly  = 0;
 
   memcpy(&mainThread->board, board, offsetof(Board, accumulators));
 
@@ -238,9 +240,10 @@ void SetupOtherThreads(Board* board) {
 
   for (int i = 1; i < Threads.count; i++) {
     ThreadData* thread = Threads.threads[i];
-    thread->calls      = 0;
+    thread->calls      = Limits.hitrate;
     thread->nodes      = 0;
     thread->tbhits     = 0;
+    thread->nmpMinPly  = 0;
 
     for (int j = 0; j < mainThread->numRootMoves; j++)
       InitRootMove(&thread->rootMoves[j], mainThread->rootMoves[j].move);

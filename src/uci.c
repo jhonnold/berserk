@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD  = 300;
+int MOVE_OVERHEAD  = 50;
 int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
@@ -54,8 +54,8 @@ SearchParams Limits;
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
-const double as[4] = {-3.07928903, 18.97319804, -8.46890784, 158.46134040};
-const double bs[4] = {-4.96597173, 35.69301252, -74.12937947, 83.89730450};
+const double as[4] = {-5.83465749, 46.43599644, -58.49798392, 172.62328616};
+const double bs[4] = {-7.95320845, 48.50833438, -66.34647240, 56.29169197};
 
 // win% as permilli given score and ply
 int WRModel(Score s, int ply) {
@@ -176,15 +176,15 @@ void ParseGo(char* in, Board* board) {
       Limits.timeset = 1;
 
       if (movesToGo == -1) {
-        int total = Max(1, time + 50 * inc - MOVE_OVERHEAD);
+        int total = Max(1, time + 50 * inc - 50 * MOVE_OVERHEAD);
 
-        Limits.alloc = Min(time * 0.33, total / 20.0);
-        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
+        Limits.alloc = Min(time * 0.3784, total * 0.0570);
+        Limits.max   = Min(time * 0.7776 - MOVE_OVERHEAD, Limits.alloc * 5.8320) - 10;
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
         Limits.alloc = Min(time * 0.9, (0.9 * total) / Max(1, movesToGo / 2.5));
-        Limits.max   = Min((time - MOVE_OVERHEAD) * 0.8, Limits.alloc * 5.5);
+        Limits.max   = Min(time * 0.8 - MOVE_OVERHEAD, Limits.alloc * 5.5) - 10;
       }
     } else {
       // no time control
@@ -260,7 +260,7 @@ void PrintUCIOptions() {
   printf("option name Ponder type check default false\n");
   printf("option name UCI_ShowWDL type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
-  printf("option name MoveOverhead type spin default 300 min 100 max 10000\n");
+  printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
   printf("uciok\n");
@@ -283,7 +283,6 @@ void UCILoop() {
   Board board;
   ParseFen(START_FEN, &board);
 
-  setbuf(stdin, NULL);
   setbuf(stdout, NULL);
 
   Threads.searching = Threads.sleeping = 0;
@@ -355,11 +354,7 @@ void UCILoop() {
       int depth = atoi(d);
       Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
-      Threat threats[1];
-      Threats(threats, &board, board.stm);
-
-      PrintBB(threats->pcs);
-      PrintBB(threats->sqs);
+      PrintBB(board.threatened);
     } else if (!strncmp(in, "eval", 4)) {
       EvaluateTrace(&board);
     } else if (!strncmp(in, "see ", 4)) {
@@ -400,19 +395,19 @@ void UCILoop() {
       MULTI_PV = Max(1, Min(256, n));
       printf("info string set MultiPV to value %d\n", MULTI_PV);
     } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
-      char opt[5];
+      char opt[6];
       sscanf(in, "%*s %*s %*s %*s %5s", opt);
 
       PONDER_ENABLED = !strncmp(opt, "true", 4);
       printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_ShowWDL value ", 33)) {
-      char opt[5];
+      char opt[6];
       sscanf(in, "%*s %*s %*s %*s %5s", opt);
 
       SHOW_WDL = !strncmp(opt, "true", 4);
       printf("info string set SHOW_WDL to value %s\n", SHOW_WDL ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_Chess960 value ", 34)) {
-      char opt[5];
+      char opt[6];
       sscanf(in, "%*s %*s %*s %*s %5s", opt);
 
       CHESS_960 = !strncmp(opt, "true", 4);
@@ -423,7 +418,7 @@ void UCILoop() {
       TTClear();
       SearchClear();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
-      MOVE_OVERHEAD = Min(10000, Max(100, GetOptionIntValue(in)));
+      MOVE_OVERHEAD = Min(10000, Max(0, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
       CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {

@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,7 +25,9 @@
 enum {
   ST_QUIET,
   ST_CAPTURE,
-  ST_EVASION
+  ST_EVASION_CAP,
+  ST_EVASION_QT,
+  ST_MVV
 };
 
 INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* thread, SearchStack* ss) {
@@ -35,7 +37,7 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
   picker->killer1  = ss->killers[0];
   picker->killer2  = ss->killers[1];
   if ((ss - 1)->move)
-    picker->counter  = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
+    picker->counter = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
   else
     picker->counter = NULL_MOVE;
 
@@ -43,14 +45,15 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
   picker->ss     = ss;
 }
 
-INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread) {
-  picker->phase  = PC_GEN_NOISY_MOVES;
-  picker->thread = thread;
+INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread, int threshold) {
+  picker->phase     = PC_GEN_NOISY_MOVES;
+  picker->thread    = thread;
+  picker->seeCutoff = threshold;
 }
 
 INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, int genChecks) {
-  picker->phase  = QS_GEN_NOISY_MOVES;
-  picker->thread = thread;
+  picker->phase     = QS_GEN_NOISY_MOVES;
+  picker->thread    = thread;
   picker->genChecks = genChecks;
 }
 

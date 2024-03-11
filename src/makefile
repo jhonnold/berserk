@@ -1,77 +1,137 @@
-# Credit to Weiss for this simple and elegant makefile
-
 # General
 EXE      = berserk
-SRC      = *.c nn/*.c pyrrhic/tbprobe.c
-CC       = gcc
-VERSION  = 20230902
-MAIN_NETWORK = networks/berserk-7dc28215434e.nn
+SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
+		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
+CC       = clang
+VERSION  = 20240311
+MAIN_NETWORK = berserk-d3561c0273c8.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
 # Flags
 STD    = -std=gnu11
 LIBS   = -pthread -lm
-WARN   = -Wall -Wextra -Wshadow -Werror
+WARN   = -Wall -Wextra -Wshadow
 
-FLAGS  = $(STD) $(WARN) -O3 -flto -g $(DEFS)
-CFLAGS = $(FLAGS) -march=native
-RFLAGS = $(FLAGS) -static
+FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
+M64     = -m64 -mpopcnt
+MSSE2   = $(M64) -msse -msse2
+MSSSE3  = $(MSSE2) -mssse3
+MAVX2   = $(MSSSE3) -msse4.1 -mbmi -mfma -mavx2
+MAVX512 = $(MAVX2) -mavx512f -mavx512bw
 
-# PGO
-ifneq ($(findstring gcc, $(CC)),)
-	PGODIR = "pgo"
-	PGOGEN = -fprofile-generate=$(PGODIR)
-	PGOUSE = -fprofile-use=$(PGODIR)
-else ifneq ($(findstring clang, $(CC)),)
-	PGOMERGE = llvm-profdata merge -output=berserk.profdata *.profraw
-	PGOGEN = -fprofile-instr-generate
-	PGOUSE = -fprofile-instr-use=berserk.profdata
+# Detecting windows
+ifeq ($(shell echo "test"), "test")
+	FLAGS += -static
 endif
 
-# Use pext if supported and not a ryzen 1/2 cpu
-PROPS = $(shell echo | $(CC) -march=native -E -dM -)
-ifneq ($(findstring __BMI2__, $(PROPS)),)
-	ifeq ($(findstring __znver1, $(PROPS)),)
-		ifeq ($(findstring __znver2, $(PROPS)),)
-			CFLAGS += -DUSE_PEXT
+# Detecting Apple Silicon (ARM64)
+UNAME := $(shell uname -m)
+ifeq ($(UNAME), arm64)
+    ARCH = arm64
+endif
+
+# Setup arch
+ifeq ($(ARCH), )
+   ARCH = native
+endif
+
+ifeq ($(ARCH), native)
+	CFLAGS = $(FLAGS) -march=native
+else ifeq ($(ARCH), arm64)
+	CFLAGS = $(FLAGS) -arch arm64
+else ifeq ($(findstring x86-64, $(ARCH)), x86-64)
+	CFLAGS = $(FLAGS) $(M64)
+else ifeq ($(findstring sse2, $(ARCH)), sse2)
+	CFLAGS = $(FLAGS) $(MSSE2)
+else ifeq ($(findstring ssse3, $(ARCH)), ssse3)
+	CFLAGS = $(FLAGS) $(MSSSE3)
+else ifeq ($(findstring avx2, $(ARCH)), avx2)
+	CFLAGS = $(FLAGS) $(MAVX2)
+else ifeq ($(findstring avx512, $(ARCH)), avx512)
+	CFLAGS = $(FLAGS) $(MAVX512)
+endif
+
+ifeq ($(ARCH), native)
+	PROPS = $(shell echo | $(CC) -march=native -E -dM -)
+	ifneq ($(findstring __BMI2__, $(PROPS)),)
+		ifeq ($(findstring __znver1, $(PROPS)),)
+			ifeq ($(findstring __znver2, $(PROPS)),)
+				CFLAGS += -DUSE_PEXT
+			endif
 		endif
 	endif
+else ifeq ($(findstring -pext, $(ARCH)), -pext)
+	CFLAGS += -DUSE_PEXT -mbmi2
 endif
 
-# Try to detect windows environment by seeing
-# whether the shell filters out " or not.
-ifeq ($(shell echo "test"), "test")
-	BENCH = $(EXE) bench 12 > nul 2>&1
-	CLEAN = rmdir /s /q $(PGODIR)
+openbench: download-network
+	$(MAKE) ARCH=avx2 all
+
+build: download-network
+	$(MAKE) ARCH=$(ARCH) all
+
+pgo: download-network
+ifeq ($(findstring gcc, $(CC)), gcc)
+	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-generate=pgo" all
+
+	./$(EXE) bench 13 > pgo.out 2>&1
+	grep Results pgo.out
+
+	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-use=pgo" all
+
+	@rm -rf pgo pgo.out
+else ifeq ($(findstring clang, $(CC)), clang)
+	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-instr-generate" all
+
+	./$(EXE) bench 13 > pgo.out 2>&1
+	grep Results pgo.out
+
+	llvm-profdata merge -output=berserk.profdata *.profraw
+	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-instr-use=berserk.profdata" all
+
+	@rm -rf pgo pgo.out berserk.profdata *.profraw
 else
-	BENCH = ./$(EXE) bench 12 > /dev/null 2>&1
-	CLEAN = $(RM) -rf $(PGODIR)
+	@echo "PGO builds not supported for $(CC)"
 endif
 
-# Compilations
-BASIC   = $(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
-RELEASE = $(CC) $(RFLAGS) $(SRC) $(LIBS) -o $(EXE)
+all:
+	$(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
 
-# Targets
-basic: clone-networks
-	$(BASIC)
+download-network:
+	@if [ "$(EVALFILE)" = "$(MAIN_NETWORK)" ]; then \
+		echo "Using the current best network: $(EVALFILE)"; \
+		if test -f "$(EVALFILE)"; then \
+			echo "File already downloaded"; \
+		elif hash wget 2>/dev/null; then \
+			echo "Downloading $(EVALFILE) with wget"; wget -qO- https://berserk-networks.s3.amazonaws.com/$(EVALFILE) > $(EVALFILE); \
+		elif hash curl 2>/dev/null; then \
+			echo "Downloading $(EVALFILE) with curl"; curl -skL https://berserk-networks.s3.amazonaws.com/$(EVALFILE) > $(EVALFILE); \
+		fi; \
+		if test -f "$(EVALFILE)"; then \
+			if hash shasum 2>/dev/null; then \
+				if [ "$(EVALFILE)" = "berserk-"`shasum -a 256 $(EVALFILE) | cut -c1-12`".nn" ]; then \
+					echo "Downloaded network $(EVALFILE) and verified"; \
+				else \
+					echo "Downloaded network $(EVALFILE) failed validation"; \
+				fi; \
+			elif hash sha256sum 2>/dev/null; then \
+				if [ "$(EVALFILE)" = "berserk-"`sha256sum $(EVALFILE) | cut -c1-12`".nn" ]; then \
+					echo "Downloaded network $(EVALFILE) and verified"; \
+				else \
+					echo "Downloaded network $(EVALFILE) failed validation"; \
+				fi; \
+			else \
+				echo "Downloaded network $(EVALFILE), but unable to verify"; \
+			fi; \
+		else \
+			echo "Unable to downlaod network: $(EVALFILE)"; \
+		fi; \
+	elif test -f "$(EVALFILE)"; then \
+		echo "Using network: $(EVALFILE)"; \
+	else \
+		echo "Unknown network: $(EVALFILE)"; \
+	fi;
 
-pgo: clone-networks
-	$(BASIC) $(PGOGEN)
-	$(BENCH)
-	$(PGOMERGE)
-	$(BASIC) $(PGOUSE)
-	$(CLEAN)
-
-release: clone-networks
-	$(RELEASE)-$(VERSION)-x64$(EXT)             -march=core2
-	$(RELEASE)-$(VERSION)-x64-avx2$(EXT)        -march=core-avx2
-	$(RELEASE)-$(VERSION)-x64-avx2-pext$(EXT)   -march=core-avx2                                 -DUSE_PEXT
-	$(RELEASE)-$(VERSION)-x64-avx512$(EXT)      -march=core-avx2 -mavx512f -mavx512bw -mavx512dq
-	$(RELEASE)-$(VERSION)-x64-avx512-pext$(EXT) -march=core-avx2 -mavx512f -mavx512bw -mavx512dq -DUSE_PEXT
-
-clone-networks:
-ifeq ($(EVALFILE), $(MAIN_NETWORK))
-	git submodule update --init networks
-endif
+clean:
+	rm -f $(EXE)
