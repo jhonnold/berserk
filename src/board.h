@@ -81,13 +81,8 @@ INLINE int HasNonPawn(Board* board, const int color) {
   return !!(OccBB(color) ^ PieceBB(KING, color) ^ PieceBB(PAWN, color));
 }
 
-INLINE int MoveRequiresRefresh(int piece, int from, int to) {
-  if (PieceType(piece) != KING)
-    return 0;
-
-  if ((from & 4) != (to & 4))
-    return 1;
-  return KING_BUCKETS[from] != KING_BUCKETS[to];
+INLINE int MoveRequiresRefresh(int piece) {
+  return PieceType(piece) == KING;
 }
 
 INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
