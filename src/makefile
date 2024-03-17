@@ -5,7 +5,7 @@ SRC      = argparse.c attacks.c bench.c berserk.c bits.c board.c eval.c history.
 		   fengen/fengen.c
 CC       = clang
 VERSION  = 20240311
-MAIN_NETWORK = berserk-f354a9e4a116.nn
+MAIN_NETWORK = berserk-2d04c6269612.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
