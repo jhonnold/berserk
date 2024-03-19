@@ -955,7 +955,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
       // failed high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, 1, quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss, thread, move, 0, quiets, numQuiets, captures, numCaptures);
         break;
       }
     }

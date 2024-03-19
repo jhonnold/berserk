@@ -34,7 +34,7 @@ void UpdateHistories(SearchStack* ss,
   Board* board = &thread->board;
   int stm      = board->stm;
 
-  int16_t inc = HistoryBonus(depth);
+  int16_t inc = depth ? HistoryBonus(depth) : 1;
 
   if (!IsCap(bestMove)) {
     if (PromoPT(bestMove) != QUEEN) {
