@@ -49,7 +49,7 @@ int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / 2.1872 + 0.2487;
+      LMR[depth][moves] = log(depth) * log(moves) / 2.25 + 0.25;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -714,10 +714,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       // reduce these special quiets less
       if (killerOrCounter)
         R -= 2;
-
-      // move GAVE check
-      if (board->checkers)
-        R--;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
