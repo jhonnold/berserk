@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -105,7 +105,7 @@ void* ThreadInit(void* arg) {
   ThreadData* thread = calloc(1, sizeof(ThreadData));
   thread->idx        = i;
 
-#if defined(__linx__)
+#if defined(__linux__)
   const size_t alignment = MEGABYTE * 2;
 #else
   const size_t alignment = 4096;
@@ -199,7 +199,7 @@ void ThreadsInit() {
 INLINE void InitRootMove(RootMove* rm, Move move) {
   rm->move = move;
 
-  rm->previousScore = rm->score = -CHECKMATE;
+  rm->previousScore = rm->score = rm->avgScore = -CHECKMATE;
 
   rm->pv.moves[0] = move;
   rm->pv.count    = 1;

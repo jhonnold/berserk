@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -95,6 +95,7 @@ extern int o0;
 extern int o1;
 extern int o2;
 extern int o3;
+extern int o4;
 
 extern int p0;
 
@@ -107,6 +108,14 @@ extern int s0;
 extern int t0;
 
 extern int u0;
+extern int u1;
+
+extern int y9;
+
+extern int z0;
+extern int z1;
+extern int z2;
+extern int z3;
 
 float w0 = 0.3784;
 float w1 = 0.0570;
@@ -114,7 +123,7 @@ float w1 = 0.0570;
 float x0 = 0.7776;
 float x1 = 5.8320;
 
-int MOVE_OVERHEAD  = 6;
+int MOVE_OVERHEAD  = 50;
 int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
@@ -333,7 +342,7 @@ void PrintUCIOptions() {
   printf("option name Ponder type check default false\n");
   printf("option name UCI_ShowWDL type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
-  printf("option name MoveOverhead type spin default 6 min 0 max 10000\n");
+  printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
 
@@ -377,16 +386,23 @@ void PrintUCIOptions() {
   printf("option name o1 type string\n");
   printf("option name o2 type string\n");
   printf("option name o3 type string\n");
+  printf("option name o4 type string\n");
   printf("option name p0 type string\n");
   printf("option name q0 type string\n");
   printf("option name r0 type string\n");
   printf("option name s0 type string\n");
   printf("option name t0 type string\n");
   printf("option name u0 type string\n");
+  printf("option name u1 type string\n");
   printf("option name w0 type string\n");
   printf("option name w1 type string\n");
   printf("option name x0 type string\n");
   printf("option name x1 type string\n");
+  printf("option name y9 type string\n");
+  printf("option name z0 type string\n");
+  printf("option name z1 type string\n");
+  printf("option name z2 type string\n");
+  printf("option name z3 type string\n");
 
   printf("uciok\n");
 }
@@ -479,7 +495,6 @@ void UCILoop() {
       int depth = atoi(d);
       Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
-      PrintBB(board.easyCapture);
       PrintBB(board.threatened);
     } else if (!strncmp(in, "eval", 4)) {
       EvaluateTrace(&board);
@@ -606,16 +621,23 @@ void UCILoop() {
     IO(o1)
     IO(o2)
     IO(o3)
+    IO(o4)
     IO(p0)
     IO(q0)
     IO(r0)
     IO(s0)
     IO(t0)
     IO(u0)
+    IO(u1)
     FO(w0)
     FO(w1)
     FO(x0)
     FO(x1)
+    IO(y9)
+    IO(z0)
+    IO(z1)
+    IO(z2)
+    IO(z3)
 
     else printf("Unknown command: %s \n", in);
 

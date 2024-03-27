@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -46,6 +46,45 @@ INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
   return IsCap(move) ? GetCaptureHistory(thread, move) : GetQuietHistory(ss, thread, move);
 }
 
+INLINE void AddKillerMove(SearchStack* ss, Move move) {
+  if (ss->killers[0] != move) {
+    ss->killers[1] = ss->killers[0];
+    ss->killers[0] = move;
+  }
+}
+
+INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
+  thread->counters[Moving(parent)][To(parent)] = move;
+}
+
+extern int z0;
+extern int z1;
+extern int z2;
+extern int z3;
+
+INLINE int16_t HistoryBonus(int depth) {
+  return Min(z3, z0 * depth * depth + z1 * depth + z2);
+}
+
+INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
+  *entry += inc - *entry * abs(inc) / 16384;
+}
+
+INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
+  if ((ss - 1)->move)
+    AddHistoryHeuristic(&(*(ss - 1)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 2)->move)
+    AddHistoryHeuristic(&(*(ss - 2)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 4)->move)
+    AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
+  if ((ss - 6)->move)
+    AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
+}
+
+INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
+  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / PAWN_CORRECTION_GRAIN;
+}
+
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
@@ -54,5 +93,7 @@ void UpdateHistories(SearchStack* ss,
                      int nQ,
                      Move captures[],
                      int nC);
+
+void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread);
 
 #endif

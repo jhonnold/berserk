@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@ extern uint64_t ZOBRIST_SIDE_KEY;
 
 void InitZobristKeys();
 uint64_t Zobrist(Board* board);
+uint64_t PawnZobrist(Board* board);
 
 INLINE uint64_t KeyAfter(Board* board, const Move move) {
   if (!move)

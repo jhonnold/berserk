@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -54,11 +54,9 @@ Score Evaluate(Board* board, ThreadData* thread) {
 
   int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
 
-  // static contempt
-  score += thread->contempt[board->stm];
-
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
+  score += board->phase * thread->contempt[board->stm] / 64;
 
   return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, score));
 }

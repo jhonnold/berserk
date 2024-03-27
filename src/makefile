@@ -1,23 +1,34 @@
 # General
 EXE      = berserk
-SRC      = *.c nn/*.c pyrrhic/tbprobe.c
-CC       = gcc
-VERSION  = 20231129
-MAIN_NETWORK = berserk-9122d0e7ea7a.nn
+SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
+		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
+CC       = clang
+VERSION  = 20240324
+MAIN_NETWORK = berserk-d43206fe90e4.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
 # Flags
 STD    = -std=gnu11
 LIBS   = -pthread -lm
-WARN   = -Wall -Wextra -Wshadow -Werror
+WARN   = -Wall -Wextra -Wshadow
 
-FLAGS  = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
-CFLAGS = $(FLAGS) -m64 -mpopcnt -msse -msse2
+FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
+M64     = -m64 -mpopcnt
+MSSE2   = $(M64) -msse -msse2
+MSSSE3  = $(MSSE2) -mssse3
+MAVX2   = $(MSSSE3) -msse4.1 -mbmi -mfma -mavx2
+MAVX512 = $(MAVX2) -mavx512f -mavx512bw
 
 # Detecting windows
 ifeq ($(shell echo "test"), "test")
-	CFLAGS += -static
+	FLAGS += -static
+endif
+
+# Detecting Apple Silicon (ARM64)
+UNAME := $(shell uname -m)
+ifeq ($(UNAME), arm64)
+    ARCH = arm64
 endif
 
 # Setup arch
@@ -26,13 +37,19 @@ ifeq ($(ARCH), )
 endif
 
 ifeq ($(ARCH), native)
-	CFLAGS  = $(FLAGS) -march=native
+	CFLAGS = $(FLAGS) -march=native
+else ifeq ($(ARCH), arm64)
+	CFLAGS = $(FLAGS) -arch arm64
+else ifeq ($(findstring x86-64, $(ARCH)), x86-64)
+	CFLAGS = $(FLAGS) $(M64)
+else ifeq ($(findstring sse2, $(ARCH)), sse2)
+	CFLAGS = $(FLAGS) $(MSSE2)
 else ifeq ($(findstring ssse3, $(ARCH)), ssse3)
-	CFLAGS += -mssse3
+	CFLAGS = $(FLAGS) $(MSSSE3)
 else ifeq ($(findstring avx2, $(ARCH)), avx2)
-	CFLAGS += -mssse3 -msse4.1 -mbmi -mfma -mavx2
+	CFLAGS = $(FLAGS) $(MAVX2)
 else ifeq ($(findstring avx512, $(ARCH)), avx512)
-	CFLAGS += -mssse3 -msse4.1 -mbmi -mfma -mavx2 -mavx512f -mavx512bw
+	CFLAGS = $(FLAGS) $(MAVX512)
 endif
 
 ifeq ($(ARCH), native)
@@ -47,6 +64,9 @@ ifeq ($(ARCH), native)
 else ifeq ($(findstring -pext, $(ARCH)), -pext)
 	CFLAGS += -DUSE_PEXT -mbmi2
 endif
+
+openbench: download-network
+	$(MAKE) ARCH=avx2 all
 
 build: download-network
 	$(MAKE) ARCH=$(ARCH) all
@@ -112,3 +132,6 @@ download-network:
 	else \
 		echo "Unknown network: $(EVALFILE)"; \
 	fi;
+
+clean:
+	rm -f $(EXE)

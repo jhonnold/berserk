@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,8 +20,13 @@
 #include <stdlib.h>
 
 #include "types.h"
+#include "util.h"
 
 #define EVAL_UNKNOWN 2046
+
+INLINE int ClampEval(int eval) {
+  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
+}
 
 extern const int PHASE_VALUES[6];
 extern const int MAX_PHASE;

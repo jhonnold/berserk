@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -38,6 +38,10 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
+#define PAWN_CORRECTION_GRAIN 256
+#define PAWN_CORRECTION_SIZE  131072
+#define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
+
 typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
@@ -62,38 +66,43 @@ typedef struct {
 } AccumulatorKingState;
 
 typedef struct {
-  int capture;
   int castling;
   int ep;
   int fmr;
   int nullply;
   uint64_t zobrist;
+  uint64_t pawnZobrist;
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
-  BitBoard easyCapture;
+  BitBoard threatenedBy[6];
+  int capture;
 } BoardHistory;
 
 typedef struct {
-  int stm;      // side to move
-  int xstm;     // not side to move
-  int histPly;  // ply for historical state
-  int moveNo;   // game move number
-  int fmr;      // half move count for 50 move rule
-  int nullply;  // distance from last nullmove
+  // The below are in order of BoardHistory above for copies
   int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
-  int phase;    // efficiently updated phase for scaling
   int epSquare; // en passant square (a8 or 0 is not valid so that marks no
                 // active ep)
+  int fmr;      // half move count for 50 move rule
+  int nullply;  // distance from last nullmove
+
+  uint64_t zobrist;     // zobrist hash of the position
+  uint64_t pawnZobrist; // pawn zobrist hash of the position (pawns + stm)
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
 
   BitBoard threatened;  // opponent "threatening" these squares
-  BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0
+  BitBoard threatenedBy[6];
+
+  int stm;     // side to move
+  int xstm;    // not side to move
+  int histPly; // ply for historical state
+  int moveNo;  // game move number
+  int phase;   // efficiently updated phase for scaling
 
   uint64_t piecesCounts; // "material key" - pieces left on the board
-  uint64_t zobrist;      // zobrist hash of the position
 
   int squares[64];         // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
@@ -151,7 +160,7 @@ typedef struct {
 typedef struct {
   Move move;
   int seldepth;
-  int score, previousScore;
+  int score, previousScore, avgScore;
   uint64_t nodes;
   PV pv;
 } RootMove;
@@ -187,6 +196,8 @@ struct ThreadData {
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
+
+  int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;
@@ -226,8 +237,10 @@ enum {
   QS_PLAY_QUIET_CHECKS,
   // QSearch Evasions
   QS_EVASION_HASH_MOVE,
-  QS_GEN_EVASIONS,
-  QS_PLAY_EVASIONS,
+  QS_EVASION_GEN_NOISY,
+  QS_EVASION_PLAY_NOISY,
+  QS_EVASION_GEN_QUIET,
+  QS_EVASION_PLAY_QUIET,
   // ...
   NO_MORE_MOVES,
   PERFT_MOVES,

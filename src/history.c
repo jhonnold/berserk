@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,31 +23,12 @@
 #include "move.h"
 #include "util.h"
 
-INLINE void AddKillerMove(SearchStack* ss, Move move) {
-  if (ss->killers[0] != move) {
-    ss->killers[1] = ss->killers[0];
-    ss->killers[0] = move;
-  }
-}
+int y9 = 3;
 
-INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
-  thread->counters[Moving(parent)][To(parent)] = move;
-}
-
-INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
-  *entry += inc - *entry * abs(inc) / 16384;
-}
-
-INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
-  if ((ss - 1)->move)
-    AddHistoryHeuristic(&(*(ss - 1)->ch)[Moving(move)][To(move)], bonus);
-  if ((ss - 2)->move)
-    AddHistoryHeuristic(&(*(ss - 2)->ch)[Moving(move)][To(move)], bonus);
-  if ((ss - 4)->move)
-    AddHistoryHeuristic(&(*(ss - 4)->ch)[Moving(move)][To(move)], bonus);
-  if ((ss - 6)->move)
-    AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
-}
+int z0 = 4;
+int z1 = 120;
+int z2 = -120;
+int z3 = 1896;
 
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
@@ -60,7 +41,7 @@ void UpdateHistories(SearchStack* ss,
   Board* board = &thread->board;
   int stm      = board->stm;
 
-  int16_t inc = Min(1896, 4 * depth * depth + 120 * depth - 120);
+  int16_t inc = HistoryBonus(depth);
 
   if (!IsCap(bestMove)) {
     if (PromoPT(bestMove) != QUEEN) {
@@ -73,7 +54,7 @@ void UpdateHistories(SearchStack* ss,
     // Only increase the best move history when it
     // wasn't trivial. This idea was first thought of
     // by Alayan in Ethereal
-    if (nQ > 1 || depth > 3) {
+    if (nQ > 1 || depth > y9) {
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
@@ -111,4 +92,11 @@ void UpdateHistories(SearchStack* ss,
 
     AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);
   }
+}
+
+void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * PAWN_CORRECTION_GRAIN));
+  const int idx            = (board->pawnZobrist & PAWN_CORRECTION_MASK);
+
+  thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 255 + correction) / 256;
 }

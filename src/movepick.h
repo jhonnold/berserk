@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2023 Jay Honnold
+// Copyright (C) 2024 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,7 +25,8 @@
 enum {
   ST_QUIET,
   ST_CAPTURE,
-  ST_EVASION,
+  ST_EVASION_CAP,
+  ST_EVASION_QT,
   ST_MVV
 };
 
