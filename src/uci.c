@@ -54,8 +54,8 @@ SearchParams Limits;
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
-const double as[4] = {-5.83465749, 46.43599644, -58.49798392, 172.62328616};
-const double bs[4] = {-7.95320845, 48.50833438, -66.34647240, 56.29169197};
+const double as[4] = {-2.02923586, 16.87641200, -27.06230207, 182.53858835};
+const double bs[4] = {-6.15230497, 42.37548361, -80.19006222, 77.75994970};
 
 // win% as permilli given score and ply
 int WRModel(Score s, int ply) {
