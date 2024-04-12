@@ -27,7 +27,7 @@
 #include "transposition.h"
 #include "types.h"
 
-Move Best(ScoredMove* current, ScoredMove* end) {
+INLINE Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* orig = current;
   ScoredMove* max  = current;
 
@@ -42,36 +42,47 @@ Move Best(ScoredMove* current, ScoredMove* end) {
   return orig->move;
 }
 
-void ScoreMoves(MovePicker* picker, Board* board, const int type) {
+INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   ScoredMove* current = picker->current;
   ThreadData* thread  = picker->thread;
   SearchStack* ss     = picker->ss;
 
+  const BitBoard pawnThreats  = board->threatenedBy[PAWN];
+  const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
+  const BitBoard rookThreats  = minorThreats | board->threatenedBy[ROOK];
+  const BitBoard threats[3]   = {pawnThreats, minorThreats, rookThreats};
+
   while (current < picker->end) {
-    Move move = current->move;
+    const Move move    = current->move;
+    const int from     = From(move);
+    const int to       = To(move);
+    const int pc       = Moving(move);
+    const int pt       = PieceType(pc);
+    const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
 
-    if (type == ST_QUIET)
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
-                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
+    if (type == ST_QUIET || type == ST_EVASION_QT) {
+      current->score = (int) HH(board->stm, move, board->threatened) * 2 + //
+                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
+                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
+                       (int) (*(ss - 4)->ch)[pc][to] +                     //
+                       (int) (*(ss - 6)->ch)[pc][to];
 
-    else if (type == ST_CAPTURE)
+      if (pt != PAWN && pt != KING) {
+        const BitBoard danger = threats[Max(0, pt - BISHOP)];
+
+        if (GetBit(danger, from))
+          current->score += 16384;
+        if (GetBit(danger, to))
+          current->score -= 16384;
+      }
+    } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
-      current->score = 1e7 + SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])];
-
-    else if (type == ST_EVASION_QT)
-      current->score = (int) HH(thread->board.stm, move, thread->board.threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 2 +               //
-                       (int) (*(ss - 4)->ch)[Moving(move)][To(move)] +                   //
-                       (int) (*(ss - 6)->ch)[Moving(move)][To(move)];
+      current->score = 1e7 + SEE_VALUE[captured];
 
     else if (type == ST_MVV)
-      current->score = SEE_VALUE[IsEP(move) ? PAWN : PieceType(board->squares[To(move)])] + 2000 * IsPromo(move);
+      current->score = SEE_VALUE[captured] + 2000 * IsPromo(move);
 
     current++;
   }
@@ -93,19 +104,18 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PLAY_GOOD_NOISY;
       // fallthrough
     case PLAY_GOOD_NOISY:
-      if (picker->current != picker->end) {
+      while (picker->current != picker->end) {
         Move move = Best(picker->current, picker->end);
         int score = picker->current->score;
         picker->current++;
 
-        if (move == picker->hashMove) {
-          return NextMove(picker, board, skipQuiets);
-        } else if (!SEE(board, move, -score / 2)) {
-          *picker->endBad++ = *(picker->current - 1);
-          return NextMove(picker, board, skipQuiets);
-        } else {
+        if (move == picker->hashMove)
+          continue;
+
+        else if (SEE(board, move, -score / 2))
           return move;
-        }
+
+        *picker->endBad++ = *(picker->current - 1);
       }
 
       picker->phase = PLAY_KILLER_1;
@@ -137,15 +147,13 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PLAY_QUIETS;
       // fallthrough
     case PLAY_QUIETS:
-      if (picker->current != picker->end && !skipQuiets) {
+      while (picker->current != picker->end && !skipQuiets) {
         Move move = Best(picker->current++, picker->end);
 
-        if (move == picker->hashMove || //
-            move == picker->killer1 ||  //
-            move == picker->killer2 ||  //
-            move == picker->counter)
-          return NextMove(picker, board, skipQuiets);
-        else
+        if (move != picker->hashMove && //
+            move != picker->killer1 &&  //
+            move != picker->killer2 &&  //
+            move != picker->counter)
           return move;
       }
 
@@ -155,10 +163,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PLAY_BAD_NOISY;
       // fallthrough
     case PLAY_BAD_NOISY:
-      if (picker->current != picker->end) {
+      while (picker->current != picker->end) {
         Move move = (picker->current++)->move;
 
-        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
+        if (move != picker->hashMove)
+          return move;
       }
 
       picker->phase = -1;
@@ -174,13 +183,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = PC_PLAY_GOOD_NOISY;
       // fallthrough
     case PC_PLAY_GOOD_NOISY:
-      if (picker->current != picker->end) {
+      while (picker->current != picker->end) {
         Move move = Best(picker->current++, picker->end);
 
-        if (!SEE(board, move, picker->seeCutoff))
-          return NextMove(picker, board, skipQuiets);
-
-        return move;
+        if (SEE(board, move, picker->seeCutoff))
+          return move;
       }
 
       picker->phase = -1;
@@ -196,7 +203,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = QS_PLAY_NOISY_MOVES;
       // fallthrough
     case QS_PLAY_NOISY_MOVES:
-      if (picker->current != picker->end)
+      while (picker->current != picker->end)
         return Best(picker->current++, picker->end);
 
       if (!picker->genChecks) {
@@ -215,7 +222,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       // fallthrough
     case QS_PLAY_QUIET_CHECKS:
-      if (picker->current != picker->end)
+      while (picker->current != picker->end)
         return (picker->current++)->move;
 
       picker->phase = -1;
@@ -237,10 +244,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       // fallthrough
     case QS_EVASION_PLAY_NOISY:
-      if (picker->current != picker->end) {
+      while (picker->current != picker->end) {
         Move move = Best(picker->current++, picker->end);
 
-        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
+        if (move != picker->hashMove)
+          return move;
       }
 
       picker->phase = QS_EVASION_GEN_QUIET;
@@ -258,25 +266,24 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       // fallthrough
     case QS_EVASION_PLAY_QUIET:
-      if (picker->current != picker->end && !skipQuiets) {
+      while (picker->current != picker->end && !skipQuiets) {
         Move move = Best(picker->current++, picker->end);
 
-        return move != picker->hashMove ? move : NextMove(picker, board, skipQuiets);
+        if (move != picker->hashMove)
+          return move;
       }
 
       picker->phase = -1;
       return NULL_MOVE;
 
     case PERFT_MOVES:
-      if (picker->current != picker->end)
+      while (picker->current != picker->end)
         return (picker->current++)->move;
 
       picker->phase = -1;
       return NULL_MOVE;
     default: return NULL_MOVE;
   }
-
-  return NULL_MOVE;
 }
 
 char* PhaseName(MovePicker* picker) {

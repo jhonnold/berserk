@@ -73,7 +73,7 @@ typedef struct {
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
-  BitBoard easyCapture;
+  BitBoard threatenedBy[6];
   int capture;
 } BoardHistory;
 
@@ -92,7 +92,7 @@ typedef struct {
   BitBoard pinned;   // pinned pieces
 
   BitBoard threatened;  // opponent "threatening" these squares
-  BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0
+  BitBoard threatenedBy[6];
 
   int stm;     // side to move
   int xstm;    // not side to move
