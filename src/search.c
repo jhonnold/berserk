@@ -501,13 +501,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->killers[1] = NULL_MOVE;
   ss->de               = (ss - 1)->de;
 
-  // IIR by Ed Schroder
-  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
-  if (!(ss->skip || inCheck)) {
-    if ((isPV || cutnode) && (depth >= 4 || ttDepth + 4 < depth) && !hashMove)
-      depth--;
-  }
-
   MovePicker mp;
   if (!isPV && !inCheck) {
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
@@ -590,6 +583,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           return score;
       }
     }
+  }
+
+  // IIR by Ed Schroder
+  // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
+  if (!(ss->skip || inCheck)) {
+    if ((isPV || cutnode) && (depth >= 4 || ttDepth + 4 < depth) && !hashMove)
+      depth--;
   }
 
   int numQuiets = 0, numCaptures = 0;
