@@ -24,8 +24,8 @@ extern BitBoard PINNED_MOVES[64][64];
 
 extern BitBoard PAWN_ATTACKS[2][64];
 extern BitBoard KNIGHT_ATTACKS[64];
-extern BitBoard BISHOP_ATTACKS[64][512];
-extern BitBoard ROOK_ATTACKS[64][4096];
+extern BitBoard BISHOP_ATTACKS[64][513];
+extern BitBoard ROOK_ATTACKS[64][4097];
 extern BitBoard KING_ATTACKS[64];
 extern BitBoard ROOK_MASKS[64];
 extern BitBoard BISHOP_MASKS[64];
