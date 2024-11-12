@@ -89,6 +89,6 @@ void UpdateHistories(SearchStack* ss,
                      Move captures[],
                      int nC);
 
-void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread);
+void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 
 #endif
