@@ -520,7 +520,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       return (eval + beta) / 2;
 
     // Razoring
-    if (depth <= 5 && eval + 214 * depth <= alpha) {
+    int razorMargin = 214 * depth;
+    if ((ss - 1)->move && !IsCap((ss - 1)->move))
+      razorMargin += Max(-213, HH(board->xstm, (ss - 1)->move, (ss - 1)->threats) / 64);
+
+    if (depth <= 5 && eval + razorMargin <= alpha) {
       score = Quiesce(alpha, beta, 0, thread, ss);
       if (score <= alpha)
         return score;
@@ -536,6 +540,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
       ss->move = NULL_MOVE;
+      ss->threats = board->threatened;
       ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
       MakeNullMove(board);
 
@@ -574,6 +579,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         TTPrefetch(KeyAfter(board, move));
         ss->move = move;
+        ss->threats = board->threatened;
         ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
         MakeMove(move, board);
 
@@ -695,6 +701,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
+    ss->threats = board->threatened;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 
@@ -937,6 +944,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
+    ss->threats = board->threatened;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
 

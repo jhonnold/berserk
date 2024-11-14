@@ -135,6 +135,7 @@ typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
   Move move, skip;
+  BitBoard threats;
   Move killers[2];
 } SearchStack;
 
