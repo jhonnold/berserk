@@ -80,7 +80,7 @@ uint64_t PawnZobrist(Board* board) {
 uint64_t MajorZobrist(Board* board) {
   uint64_t hash = 0ULL;
 
-  for (int piece = WHITE_ROOK; piece <= BLACK_QUEEN; piece++) {
+  for (int piece = WHITE_ROOK; piece <= BLACK_KING; piece++) {
     BitBoard pcs = board->pieces[piece];
     while (pcs)
       hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];

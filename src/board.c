@@ -335,7 +335,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
   if (PieceType(piece) == PAWN)
     board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
-  else if (PieceType(piece) == ROOK || PieceType(piece) == QUEEN)
+  else if (PieceType(piece) >= ROOK)
     board->majorZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
   if (IsCas(move)) {
@@ -367,7 +367,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
     if (PieceType(captured) == PAWN)
       board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
-    else if (PieceType(captured) == ROOK || PieceType(captured) == QUEEN)
+    else if (PieceType(captured) >= ROOK)
       board->majorZobrist ^= ZOBRIST_PIECES[captured][capSq];
 
     board->piecesCounts -= PieceCount(captured);
@@ -403,7 +403,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];
-      if (PieceType(promoted) == ROOK || PieceType(promoted) == QUEEN)
+      if (PieceType(promoted) >= ROOK)
         board->majorZobrist ^= ZOBRIST_PIECES[promoted][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
       board->phase += PHASE_VALUES[PieceType(promoted)];
