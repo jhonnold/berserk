@@ -61,7 +61,7 @@ void InitPruningAndReductionTables() {
     LMP[1][depth] = 2.1885 + 0.9911 * depth * depth;
 
     STATIC_PRUNE[0][depth] = -15.2703 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -94.0617 * depth;        // capture cutoff
+    STATIC_PRUNE[1][depth] = -94.0617 * depth;         // capture cutoff
   }
 }
 
@@ -599,6 +599,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   InitNormalMovePicker(&mp, hashMove, thread, ss);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
+    TTPrefetch(KeyAfter(board, move));
+
     if (ss->skip == move)
       continue;
     if (isRoot && !ValidRootMove(thread, move))
@@ -693,7 +695,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       }
     }
 
-    TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
@@ -915,6 +916,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   int legalMoves = 0, skipQuiets = !inCheck;
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
+    TTPrefetch(KeyAfter(board, move));
+
     if (!IsLegal(move, board))
       continue;
 
@@ -935,7 +938,6 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     else if (IsCap(move) && numCaptures < 32)
       captures[numCaptures++] = move;
 
-    TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     MakeMove(move, board);
