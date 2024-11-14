@@ -25,9 +25,11 @@
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
+#define PH(pz, m)           (thread->ph[pz & 511][Moving(m)][To(m)])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
   return (int) HH(thread->board.stm, move, thread->board.threatened) + //
+         (int) PH(thread->board.pawnZobrist, move) +                   //
          (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +               //
          (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +               //
          (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
