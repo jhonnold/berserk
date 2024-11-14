@@ -65,7 +65,8 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
                        (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
                        (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
                        (int) (*(ss - 4)->ch)[pc][to] +                     //
-                       (int) (*(ss - 6)->ch)[pc][to];
+                       (int) (*(ss - 6)->ch)[pc][to] +                     //
+                       (int) PH(board->pawnZobrist, move);
 
       if (pt != PAWN && pt != KING) {
         const BitBoard danger = threats[Max(0, pt - BISHOP)];
