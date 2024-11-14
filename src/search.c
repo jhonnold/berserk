@@ -61,7 +61,7 @@ void InitPruningAndReductionTables() {
     LMP[1][depth] = 2.1885 + 0.9911 * depth * depth;
 
     STATIC_PRUNE[0][depth] = -15.2703 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -94.0617 * depth;        // capture cutoff
+    STATIC_PRUNE[1][depth] = -94.0617 * depth;         // capture cutoff
   }
 }
 
@@ -468,7 +468,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread) +
+                                        GetNonPawnCorrection(board, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -477,7 +478,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread) +
+                                        GetNonPawnCorrection(board, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -818,6 +820,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER))) {
     UpdatePawnCorrection(rawEval, bestScore, depth, board, thread);
+    UpdateNonPawnCorrection(rawEval, bestScore, depth, board, thread);
     UpdateContCorrection(rawEval, bestScore, depth, ss, thread);
   }
 
@@ -874,7 +877,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread) +
+                                        GetNonPawnCorrection(board, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -883,7 +887,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread) +
+                                        GetNonPawnCorrection(board, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);

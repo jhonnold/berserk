@@ -75,3 +75,18 @@ uint64_t PawnZobrist(Board* board) {
 
   return hash;
 }
+
+uint64_t NonPawnZobrist(Board* board, int color) {
+  uint64_t hash = 0ULL;
+
+  for (int piece = color + WHITE_KNIGHT; piece <= BLACK_KING; piece += 2) {
+    BitBoard pcs = board->pieces[piece];
+    while (pcs)
+      hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
+  }
+
+  if (board->stm)
+    hash ^= ZOBRIST_SIDE_KEY;
+
+  return hash;
+}

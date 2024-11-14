@@ -95,6 +95,18 @@ void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData
   thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * (256 - saveDepth) + correction * saveDepth) / 256;
 }
 
+void UpdateNonPawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+  const int wIdx           = (board->wNonPawnZobrist & NON_PAWN_CORRECTION_MASK);
+  const int bIdx           = (board->bNonPawnZobrist & NON_PAWN_CORRECTION_MASK);
+  const int saveDepth      = Min(16, depth);
+
+  thread->wNonPawnCorrection[wIdx] =
+    (thread->wNonPawnCorrection[wIdx] * (256 - saveDepth) + correction * saveDepth) / 256;
+  thread->bNonPawnCorrection[bIdx] =
+    (thread->bNonPawnCorrection[bIdx] * (256 - saveDepth) + correction * saveDepth) / 256;
+}
+
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss, ThreadData* thread) {
   const Move m1 = (ss - 1)->move;
   const Move m2 = (ss - 2)->move;
@@ -104,6 +116,6 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss, ThreadD
     const int saveDepth      = Min(16, depth);
 
     int16_t* contCorrection = &thread->contCorrection[Moving(m1)][To(m1)][Moving(m2)][To(m2)];
-    *contCorrection = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
+    *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
   }
 }
