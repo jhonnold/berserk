@@ -509,9 +509,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   MovePicker mp;
-  if (!isPV && !inCheck) {
-    const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
+  const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
 
+  if (!isPV && !inCheck) {
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 9 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
@@ -596,7 +596,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   Move quiets[64], captures[32];
 
   int legalMoves = 0, playedMoves = 0, skipQuiets = 0;
-  InitNormalMovePicker(&mp, hashMove, thread, ss);
+  if (!opponentHasEasyCapture)
+    InitNormalMovePicker(&mp, hashMove, thread, ss);
+  else
+    InitQSEvasionsPicker(&mp, hashMove, thread, ss);
 
   while ((move = NextMove(&mp, board, skipQuiets))) {
     if (ss->skip == move)
