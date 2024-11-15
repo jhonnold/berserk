@@ -61,7 +61,7 @@ void InitPruningAndReductionTables() {
     LMP[1][depth] = 2.1885 + 0.9911 * depth * depth;
 
     STATIC_PRUNE[0][depth] = -15.2703 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -94.0617 * depth;        // capture cutoff
+    STATIC_PRUNE[1][depth] = -94.0617 * depth;         // capture cutoff
   }
 }
 
@@ -430,8 +430,14 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // if the TT has a value that fits our position and has been searched to an
   // equal or greater depth, then we accept this score and prune
   if (!isPV && ttScore != UNKNOWN && ttDepth >= depth && (cutnode || ttScore <= alpha) &&
-      (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER)))
+      (ttBound & (ttScore >= beta ? BOUND_LOWER : BOUND_UPPER))) {
+    if (!inCheck && !IsCap(hashMove) && ttEval != EVAL_UNKNOWN && (ttBound & (ttScore >= ttEval ? BOUND_LOWER : BOUND_UPPER))) {
+      UpdatePawnCorrection(ttEval, ttScore, depth, board, thread);
+      UpdateContCorrection(ttEval, ttScore, depth, ss, thread);
+    }
+
     return ttScore;
+  }
 
   // tablebase - we do not do this at root
   if (!isRoot && !ss->skip) {
