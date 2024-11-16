@@ -511,11 +511,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
   if (!isPV && !inCheck) {
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
+    const int opponentDeclining = ss->staticEval + (ss - 1)->staticEval > 1;
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 9 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
-        eval - 70 * depth + 118 * (improving && !opponentHasEasyCapture) >= beta &&
+        eval - 70 * depth + 118 * (improving && !opponentHasEasyCapture) + 25 * opponentDeclining >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > 11800))
       return (eval + beta) / 2;
 
