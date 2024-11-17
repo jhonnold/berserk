@@ -749,12 +749,12 @@ int HasCycle(Board* board, int ply) {
       if (between & OccBB(BOTH))
         continue;
 
-      if (ply > i)
-        return 1;
-
       int pc = board->squares[From(move)] != NO_PIECE ? board->squares[From(move)] : board->squares[To(move)];
       if ((pc & 1) != board->stm)
         continue;
+
+      if (ply > i)
+        return 1;
 
       BoardHistory* prev2 = prev - 2;
       for (int j = i + 4; j <= distance; j += 2) {
