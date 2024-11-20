@@ -894,7 +894,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
     // stand pat
     if (eval >= beta)
-      return eval;
+      return (eval + beta) / 2;
 
     if (eval > alpha)
       alpha = eval;
