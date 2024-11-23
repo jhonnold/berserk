@@ -114,18 +114,21 @@ download-network:
 					echo "Downloaded network $(EVALFILE) and verified"; \
 				else \
 					echo "Downloaded network $(EVALFILE) failed validation"; \
+					exit 1; \
 				fi; \
 			elif hash sha256sum 2>/dev/null; then \
 				if [ "$(EVALFILE)" = "berserk-"`sha256sum $(EVALFILE) | cut -c1-12`".nn" ]; then \
 					echo "Downloaded network $(EVALFILE) and verified"; \
 				else \
 					echo "Downloaded network $(EVALFILE) failed validation"; \
+					exit 1; \
 				fi; \
 			else \
 				echo "Downloaded network $(EVALFILE), but unable to verify"; \
 			fi; \
 		else \
-			echo "Unable to downlaod network: $(EVALFILE)"; \
+			echo "Unable to download network: $(EVALFILE)"; \
+			exit 1; \
 		fi; \
 	elif test -f "$(EVALFILE)"; then \
 		echo "Using network: $(EVALFILE)"; \
