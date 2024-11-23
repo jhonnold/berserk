@@ -78,10 +78,6 @@ INLINE int CheckLimits(ThreadData* thread) {
          (Limits.nodes && NodesSearched() >= Limits.nodes);
 }
 
-INLINE int AdjustEvalOnFMR(Board* board, int eval) {
-  return (200 - board->fmr) * eval / 200;
-}
-
 INLINE int ThreadValue(ThreadData* thread, const int worstScore) {
   return (thread->rootMoves[0].score - worstScore) * thread->depth;
 }
@@ -470,17 +466,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         rawEval = Evaluate(board, thread);
       eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
       eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
     }
@@ -877,17 +867,11 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         rawEval = Evaluate(board, thread);
       eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
       eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
     }
