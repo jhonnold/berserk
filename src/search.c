@@ -61,7 +61,7 @@ void InitPruningAndReductionTables() {
     LMP[1][depth] = 2.1885 + 0.9911 * depth * depth;
 
     STATIC_PRUNE[0][depth] = -15.2703 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -94.0617 * depth;        // capture cutoff
+    STATIC_PRUNE[1][depth] = -94.0617 * depth;         // capture cutoff
   }
 }
 
@@ -511,7 +511,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
   if (!isPV && !inCheck) {
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
-    const int opponentDeclining = ss->staticEval + (ss - 1)->staticEval > 1;
+    const int opponentDeclining      = ss->staticEval + (ss - 1)->staticEval > 1;
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
@@ -728,6 +728,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       if (ttDepth >= depth)
+        R--;
+
+      if (ttScore != UNKNOWN && ttScore > alpha)
         R--;
 
       // prevent dropping into QS, extending, or reducing all extensions
