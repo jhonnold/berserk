@@ -25,7 +25,7 @@ extern int CONTEMPT;
 extern SearchParams Limits;
 
 // Normalization of a score to 50% WR at 100cp
-#define Normalize(s) ((s) / 1.54)
+#define Normalize(s) ((s) / 1.70)
 
 int WRModel(Score s, int ply);
 

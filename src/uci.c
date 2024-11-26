@@ -54,6 +54,8 @@ extern float d0;
 
 extern float e0;
 
+extern int e1;
+
 extern float f0;
 extern float f1;
 
@@ -71,6 +73,9 @@ extern int i0;
 extern int i1;
 extern int i2;
 extern int i3;
+extern int i4;
+
+extern int i9;
 
 extern int v0;
 extern int v1;
@@ -98,6 +103,14 @@ extern int o3;
 extern int o4;
 
 extern int p0;
+extern int p1;
+extern int p2;
+extern int p3;
+extern int p4;
+extern int p5;
+extern int p6;
+extern int p7;
+extern int p8;
 
 extern int q0;
 
@@ -117,11 +130,11 @@ extern int z1;
 extern int z2;
 extern int z3;
 
-float w0 = 0.3784;
-float w1 = 0.0570;
+float w0 = 0.4193;
+float w1 = 0.0575;
 
-float x0 = 0.7776;
-float x1 = 5.8320;
+float x0 = 0.9221;
+float x1 = 5.9280;
 
 int MOVE_OVERHEAD  = 50;
 int MULTI_PV       = 1;
@@ -136,8 +149,8 @@ SearchParams Limits;
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
-const double as[4] = {-5.83465749, 46.43599644, -58.49798392, 172.62328616};
-const double bs[4] = {-7.95320845, 48.50833438, -66.34647240, 56.29169197};
+const double as[4] = {-2.02923586, 16.87641200, -27.06230207, 182.53858835};
+const double bs[4] = {-6.15230497, 42.37548361, -80.19006222, 77.75994970};
 
 // win% as permilli given score and ply
 int WRModel(Score s, int ply) {
@@ -354,6 +367,7 @@ void PrintUCIOptions() {
   printf("option name c1 type string\n");
   printf("option name d0 type string\n");
   printf("option name e0 type string\n");
+  printf("option name e1 type string\n");
   printf("option name f0 type string\n");
   printf("option name f1 type string\n");
   printf("option name g0 type string\n");
@@ -368,6 +382,8 @@ void PrintUCIOptions() {
   printf("option name i1 type string\n");
   printf("option name i2 type string\n");
   printf("option name i3 type string\n");
+  printf("option name i4 type string\n");
+  printf("option name i9 type string\n");
   printf("option name v0 type string\n");
   printf("option name v1 type string\n");
   printf("option name k0 type string\n");
@@ -388,6 +404,14 @@ void PrintUCIOptions() {
   printf("option name o3 type string\n");
   printf("option name o4 type string\n");
   printf("option name p0 type string\n");
+  printf("option name p1 type string\n");
+  printf("option name p2 type string\n");
+  printf("option name p3 type string\n");
+  printf("option name p4 type string\n");
+  printf("option name p5 type string\n");
+  printf("option name p6 type string\n");
+  printf("option name p7 type string\n");
+  printf("option name p8 type string\n");
   printf("option name q0 type string\n");
   printf("option name r0 type string\n");
   printf("option name s0 type string\n");
@@ -589,6 +613,7 @@ void UCILoop() {
     FO(c1)
     FO(d0)
     FO(e0)
+    IO(e1)
     FO(f0)
     FO(f1)
     FO(g0)
@@ -603,6 +628,8 @@ void UCILoop() {
     IO(i1)
     IO(i2)
     IO(i3)
+    IO(i4)
+    IO(i9)
     IO(v0)
     IO(v1)
     IO(k0)
@@ -623,6 +650,14 @@ void UCILoop() {
     IO(o3)
     IO(o4)
     IO(p0)
+    IO(p1)
+    IO(p2)
+    IO(p3)
+    IO(p4)
+    IO(p5)
+    IO(p6)
+    IO(p7)
+    IO(p8)
     IO(q0)
     IO(r0)
     IO(s0)
@@ -639,7 +674,7 @@ void UCILoop() {
     IO(z2)
     IO(z3)
 
-    else printf("Unknown command: %s \n", in);
+    // else printf("Unknown command: %s \n", in);
 
     InitPruningAndReductionTables();
   }

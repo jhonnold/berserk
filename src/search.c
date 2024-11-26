@@ -41,74 +41,87 @@
 #include "util.h"
 #include "zobrist.h"
 
-float a0 = 2.1872;
-float a1 = 0.2487;
+float a0 = 2.0385;
+float a1 = 0.2429;
 
-float b0 = 1.2973;
-float b1 = 0.3772;
+float b0 = 1.3050;
+float b1 = 0.3503;
 
-float c0 = 2.7002;
-float c1 = 0.9448;
+float c0 = 2.1885;
+float c1 = 0.9911;
 
-float d0 = 14.9419;
+float d0 = 15.2703;
 
-float e0 = 103.9379;
+float e0 = 94.0617;
 
-float f0 = 1.3658;
-float f1 = 0.0482;
+int e1 = 200;
 
-float g0 = 0.0995;
-float g1 = 0.0286;
+float f0 = 1.3110;
+float f1 = 0.0533;
+
+float g0 = 0.1127;
+float g1 = 0.0262;
 float g2 = 0.0261;
-float g3 = 0.4843;
-float g4 = 1.4498;
+float g3 = 0.5028;
+float g4 = 1.6561;
 
-float h0 = 0.5464;
-float h1 = 2.1394;
-float h2 = 0.4393;
+float h0 = 0.5630;
+float h1 = 2.2669;
+float h2 = 0.4499;
 
-int i0 = 8;
-int i1 = 67;
-int i2 = 112;
-int i3 = 12525;
+int i0 = 9;
+int i1 = 70;
+int i2 = 118;
+int i3 = 11800;
+int i4 = 25;
 
-int v0 = 6;
-int v1 = 252;
+int i9 = 4;
+
+int v0 = 5;
+int v1 = 214;
 
 int k0 = 4;
 int k1 = 4;
-int k2 = 342;
+int k2 = 385;
 int k3 = 10;
 int k4 = 4;
 
-int l0 = 197;
-int l1 = 5;
+int l0 = 172;
+int l1 = 6;
 
-int m0 = 7;
-int m1 = 2658;
+int m0 = 5;
+int m1 = 2788;
 
 int n0 = 10;
-int n1 = 87;
+int n1 = 81;
 int n2 = 46;
 
 int o0 = 6;
 int o1 = 5;
-int o2 = 17;
+int o2 = 14;
 int o3 = 6;
-int o4 = 50;
+int o4 = 48;
 
-int p0 = 8;
+int p0 = 8192;
+int p1 = 1024;
+int p2 = 2048;
+int p3 = 1024;
+int p4 = 2048;
+int p5 = 1024;
+int p6 = 1024;
+int p7 = 1024;
+int p8 = 1024;
 
-int q0 = 76;
+int q0 = 69;
 
 int r0 = 11;
 
-int s0 = 78;
+int s0 = 77;
 
-int t0 = 60;
+int t0 = 63;
 
 int u0 = 9;
-int u1 = 16;
+int u1 = 17;
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
@@ -118,7 +131,7 @@ int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / a0 + a1;
+      LMR[depth][moves] = (log(depth) * log(moves) / a0 + a1) * 1024;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -537,7 +550,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -546,7 +559,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -573,18 +586,19 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
   if (!(ss->skip || inCheck)) {
-    if ((isPV || cutnode) && depth >= 4 && !hashMove)
+    if ((isPV || cutnode) && depth >= i9 && !hashMove)
       depth--;
   }
 
   MovePicker mp;
   if (!isPV && !inCheck) {
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
+    const int opponentDeclining = ss->staticEval + (ss - 1)->staticEval > 1;
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= i0 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
-        eval - i1 * depth + i2 * (improving && !opponentHasEasyCapture) >= beta &&
+        eval - i1 * depth + i2 * (improving && !opponentHasEasyCapture) + i4 * opponentDeclining >= beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > i3))
       return (eval + beta) / 2;
 
@@ -684,15 +698,15 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = GetHistory(ss, thread, move);
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= p0 * history / 65536;                         // adjust reduction based on historical score
-    R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+    R -= p0 * history / 65536;                      // adjust reduction based on historical score
+    R += p1 * (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
-        int lmrDepth = Max(1, depth - R);
+        int lmrDepth = Max(1, depth - R / 1024);
 
         if (!killerOrCounter && lmrDepth < m0 && history < -m1 * (depth - 1)) {
           skipQuiets = 1;
@@ -774,32 +788,32 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
       // increase reduction on non-pv
       if (!ttPv)
-        R += 2;
+        R += p2;
 
       // increase reduction if our eval is declining
       if (!improving)
-        R++;
+        R += p3;
 
       // reduce these special quiets less
       if (killerOrCounter)
-        R -= 2;
+        R -= p4;
 
       // move GAVE check
       if (board->checkers)
-        R--;
+        R -= p5;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
-        R += 1 + !IsCap(move);
+        R += p6 + p7 * !IsCap(move);
 
       if (ttDepth >= depth)
-        R--;
+        R -= p8;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(newDepth, Max(R, 1));
+      R = Min(newDepth, Max(R / 1024, 1));
 
       int lmrDepth = newDepth - R;
       score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
@@ -885,8 +899,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!ss->skip && !(isRoot && thread->multiPV > 0))
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
-  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER)))
-    UpdatePawnCorrection(rawEval, bestScore, board, thread);
+  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER))) {
+    UpdatePawnCorrection(rawEval, bestScore, depth, board, thread);
+    UpdateContCorrection(rawEval, bestScore, depth, ss, thread);
+  }
 
   return bestScore;
 }
@@ -941,7 +957,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -950,7 +966,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2);
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -1134,6 +1150,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
+  memset(&thread->contCorrection, 0, sizeof(thread->contCorrection));
 
   thread->board.accumulators = thread->accumulators;
   thread->previousScore      = UNKNOWN;
