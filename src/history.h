@@ -58,7 +58,7 @@ INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
 }
 
 INLINE int16_t HistoryBonus(int depth) {
-  return Min(1729, 4 * depth * depth + 164 * depth - 113);
+  return Min(1704, 4 * depth * depth + 181 * depth - 90);
 }
 
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
