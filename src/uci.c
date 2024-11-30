@@ -178,8 +178,8 @@ void ParseGo(char* in, Board* board) {
       if (movesToGo == -1) {
         int total = Max(1, time + 50 * inc - 50 * MOVE_OVERHEAD);
 
-        Limits.alloc = Min(time * 0.4059, total * 0.0607);
-        Limits.max   = Min(time * 0.9035 - MOVE_OVERHEAD, Limits.alloc * 6.4003) - 10;
+        Limits.alloc = Min(time * 0.4152, total * 0.0635);
+        Limits.max   = Min(time * 0.9219 - MOVE_OVERHEAD, Limits.alloc * 6.1983) - 10;
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
