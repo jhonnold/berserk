@@ -3,7 +3,7 @@ EXE      = berserk
 SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
 		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 20241113
+VERSION  = 20241119
 MAIN_NETWORK = berserk-d43206fe90e4.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
@@ -114,18 +114,21 @@ download-network:
 					echo "Downloaded network $(EVALFILE) and verified"; \
 				else \
 					echo "Downloaded network $(EVALFILE) failed validation"; \
+					exit 1; \
 				fi; \
 			elif hash sha256sum 2>/dev/null; then \
 				if [ "$(EVALFILE)" = "berserk-"`sha256sum $(EVALFILE) | cut -c1-12`".nn" ]; then \
 					echo "Downloaded network $(EVALFILE) and verified"; \
 				else \
 					echo "Downloaded network $(EVALFILE) failed validation"; \
+					exit 1; \
 				fi; \
 			else \
 				echo "Downloaded network $(EVALFILE), but unable to verify"; \
 			fi; \
 		else \
-			echo "Unable to downlaod network: $(EVALFILE)"; \
+			echo "Unable to download network: $(EVALFILE)"; \
+			exit 1; \
 		fi; \
 	elif test -f "$(EVALFILE)"; then \
 		echo "Using network: $(EVALFILE)"; \
