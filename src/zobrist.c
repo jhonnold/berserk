@@ -85,8 +85,5 @@ uint64_t NonPawnZobrist(Board* board, int color) {
       hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
   }
 
-  if (board->stm)
-    hash ^= ZOBRIST_SIDE_KEY;
-
   return hash;
 }

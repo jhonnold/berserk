@@ -468,8 +468,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread) +
-                                        GetNonPawnCorrection(board, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetEvalCorrection(board, ss, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -478,8 +477,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread) +
-                                        GetNonPawnCorrection(board, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetEvalCorrection(board, ss, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -878,8 +876,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread) +
-                                        GetNonPawnCorrection(board, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetEvalCorrection(board, ss, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -888,8 +885,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread) +
-                                        GetNonPawnCorrection(board, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetEvalCorrection(board, ss, thread));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
