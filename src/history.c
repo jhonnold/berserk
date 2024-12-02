@@ -47,7 +47,7 @@ void UpdateHistories(SearchStack* ss,
     // Only increase the best move history when it
     // wasn't trivial. This idea was first thought of
     // by Alayan in Ethereal
-    if (nQ > 1 || depth > 3) {
+    if (nQ > 1 || depth > 4) {
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
@@ -87,9 +87,23 @@ void UpdateHistories(SearchStack* ss,
   }
 }
 
-void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread) {
-  const int16_t correction = Min(30000, Max(-30000, (real - raw) * PAWN_CORRECTION_GRAIN));
+void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
   const int idx            = (board->pawnZobrist & PAWN_CORRECTION_MASK);
+  const int saveDepth      = Min(16, depth);
 
-  thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * 255 + correction) / 256;
+  thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * (256 - saveDepth) + correction * saveDepth) / 256;
+}
+
+void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss, ThreadData* thread) {
+  const Move m1 = (ss - 1)->move;
+  const Move m2 = (ss - 2)->move;
+
+  if (m1 && m2) {
+    const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+    const int saveDepth      = Min(16, depth);
+
+    int16_t* contCorrection = &thread->contCorrection[Moving(m1)][To(m1)][Moving(m2)][To(m2)];
+    *contCorrection = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
+  }
 }
