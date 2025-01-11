@@ -96,11 +96,9 @@ void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData
 }
 
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss, ThreadData* thread) {
-  if ((ss - 1)->move) {
-    const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
-    const int saveDepth      = Min(16, depth);
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+  const int saveDepth      = Min(16, depth);
 
-    int16_t* contCorrection = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
-  }
+  int16_t* contCorrection = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
+  *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
 }
