@@ -80,7 +80,7 @@ INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
   return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / CORRECTION_GRAIN;
 }
 
-INLINE int GetContCorrection(SearchStack* ss, ThreadData* thread) {
+INLINE int GetContCorrection(SearchStack* ss) {
   return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / CORRECTION_GRAIN;
 }
 
@@ -94,6 +94,6 @@ void UpdateHistories(SearchStack* ss,
                      int nC);
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
-void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss, ThreadData* thread);
+void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
 
 #endif
