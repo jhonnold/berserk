@@ -83,11 +83,11 @@ INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
 }
 
 INLINE int GetContCorrection(SearchStack* ss) {
-  int total = 0;
-  for (int i = 2; i < 2 + N_CONT_CORR_HISTS; i++)
-    total += (*(ss - i)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
+  int total = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
+  for (int i = 3; i < 2 + N_CONT_CORR_HISTS; i++)
+    total = (3 * total + (*(ss - i)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)]) / 4;
 
-  return total / N_CONT_CORR_HISTS / CORRECTION_GRAIN;
+  return total / CORRECTION_GRAIN;
 }
 
 void UpdateHistories(SearchStack* ss,
