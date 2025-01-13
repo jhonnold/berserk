@@ -23,6 +23,8 @@
 #include "types.h"
 #include "util.h"
 
+#define N_CONT_CORR_HISTS 2
+
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
 
@@ -81,7 +83,11 @@ INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
 }
 
 INLINE int GetContCorrection(SearchStack* ss) {
-  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / CORRECTION_GRAIN;
+  int total = 0;
+  for (int i = 2; i < 2 + N_CONT_CORR_HISTS; i++)
+    total += (*(ss - i)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
+
+  return total / N_CONT_CORR_HISTS / CORRECTION_GRAIN;
 }
 
 void UpdateHistories(SearchStack* ss,
