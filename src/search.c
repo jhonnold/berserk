@@ -377,6 +377,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int improving = 0;
   int eval      = ss->staticEval;
   int rawEval   = eval;
+  int contCorr  = 0;
+  int pawnCorr  = 0;
 
   Move bestMove = NULL_MOVE;
   Move hashMove = NULL_MOVE;
@@ -470,7 +472,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+
+      pawnCorr = GetPawnCorrection(board, thread), contCorr = GetContCorrection(ss);
+      eval = ss->staticEval = ClampEval(rawEval + pawnCorr / 2 + contCorr);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -479,7 +483,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+
+      pawnCorr = GetPawnCorrection(board, thread), contCorr = GetContCorrection(ss);
+      eval = ss->staticEval = ClampEval(rawEval + pawnCorr / 2 + contCorr);
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -733,6 +739,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R += 1 + !IsCap(move);
 
       if (ttDepth >= depth)
+        R--;
+
+      if (abs(contCorr) > 50)
         R--;
 
       // prevent dropping into QS, extending, or reducing all extensions
