@@ -101,6 +101,6 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
     const int saveDepth      = Min(16, depth);
 
     int16_t* contCorrection = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
+    *contCorrection         = (*contCorrection * (128 - saveDepth) + correction * saveDepth) / 128;
   }
 }
