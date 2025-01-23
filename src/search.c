@@ -979,6 +979,11 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   int bound = bestScore >= beta ? BOUND_LOWER : BOUND_UPPER;
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
+  if (!inCheck && !IsCap(bestMove) && depth >= -1 && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER))) {
+    UpdatePawnCorrection(rawEval, bestScore, depth, board, thread);
+    UpdateContCorrection(rawEval, bestScore, depth, ss);
+  }
+
   return bestScore;
 }
 
