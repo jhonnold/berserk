@@ -72,7 +72,7 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
 
         if (GetBit(danger, from))
           current->score += 16384;
-        if (GetBit(danger, to))
+        else if (GetBit(danger, to))
           current->score -= 16384;
       }
     } else if (type == ST_CAPTURE)
