@@ -377,6 +377,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   int improving = 0;
   int eval      = ss->staticEval;
   int rawEval   = eval;
+  int pawnCorr  = 0;
+  int contCorr  = 0;
 
   Move bestMove = NULL_MOVE;
   Move hashMove = NULL_MOVE;
@@ -470,19 +472,23 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+      pawnCorr = GetPawnCorrection(board, thread), contCorr =  GetContCorrection(ss);
+      eval = ss->staticEval = ClampEval(rawEval + pawnCorr / 2 + contCorr);
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
+      // correct eval on fmr if pawnCorr is dragging us to 0
+      if (abs(rawEval + pawnCorr) < abs(rawEval))
+        eval = AdjustEvalOnFMR(board, eval);
 
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+      pawnCorr = GetPawnCorrection(board, thread), contCorr =  GetContCorrection(ss);
+      eval = ss->staticEval = ClampEval(rawEval + pawnCorr / 2 + contCorr);
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
+      // correct eval on fmr if pawnCorr is dragging us to 0
+      if (abs(rawEval + pawnCorr) < abs(rawEval))
+        eval = AdjustEvalOnFMR(board, eval);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
     }
@@ -840,6 +846,8 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   int inCheck   = !!board->checkers;
   int eval      = ss->staticEval;
   int rawEval   = eval;
+  int pawnCorr  = 0;
+  int contCorr  = 0;
 
   Move hashMove = NULL_MOVE;
   Move bestMove = NULL_MOVE;
@@ -880,19 +888,23 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+      pawnCorr = GetPawnCorrection(board, thread), contCorr =  GetContCorrection(ss);
+      eval = ss->staticEval = ClampEval(rawEval + pawnCorr / 2 + contCorr);
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
+      // correct eval on fmr if pawnCorr is dragging us to 0
+      if (abs(rawEval + pawnCorr) < abs(rawEval))
+        eval = AdjustEvalOnFMR(board, eval);
 
       if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+      pawnCorr = GetPawnCorrection(board, thread), contCorr =  GetContCorrection(ss);
+      eval = ss->staticEval = ClampEval(rawEval + pawnCorr / 2 + contCorr);
 
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
+      // correct eval on fmr if pawnCorr is dragging us to 0
+      if (abs(rawEval + pawnCorr) < abs(rawEval))
+        eval = AdjustEvalOnFMR(board, eval);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
     }
