@@ -70,10 +70,10 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       if (pt != PAWN && pt != KING) {
         const BitBoard danger = threats[Max(0, pt - BISHOP)];
 
-        if (GetBit(danger, from))
-          current->score += 16384;
-        else if (GetBit(danger, to))
+        if (GetBit(danger, to))
           current->score -= 16384;
+        else if (GetBit(danger, from))
+          current->score += 16384;
       }
     } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
