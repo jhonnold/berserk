@@ -22,7 +22,7 @@
 #define SPARSE_CHUNK_SIZE 4
 
 int Predict(Board* board);
-int Propagate(Accumulator* accumulator, const int stm);
+int Propagate(Accumulator* accumulator, const int stm, const int lazy);
 
 void LoadDefaultNN();
 int LoadNetwork(char* path);

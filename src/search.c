@@ -216,8 +216,10 @@ void Search(ThreadData* thread) {
 
   thread->depth       = 0;
   board->accumulators = thread->accumulators; // exit jumps can cause this pointer to not be reset
-  ResetAccumulator(board->accumulators, board, WHITE);
-  ResetAccumulator(board->accumulators, board, BLACK);
+  ResetAccumulator(board->accumulators, board, WHITE, 0);
+  ResetAccumulator(board->accumulators, board, BLACK, 0);
+  ResetAccumulator(board->accumulators, board, WHITE, 1);
+  ResetAccumulator(board->accumulators, board, BLACK, 1);
   SetContempt(thread->contempt, board->stm);
 
   PV nullPv;
