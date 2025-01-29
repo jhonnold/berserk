@@ -643,7 +643,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       } else {
         int captureHistory = GetCaptureHistory(thread, move);
         int baseMargin = STATIC_PRUNE[1][depth];
-        int seeMargin = Max(Min(baseMargin - captureHistory / 64, -1), 2 * baseMargin);
+        int seeMargin = Max(Min(baseMargin - captureHistory / 32, -1), 2 * baseMargin);
 
         if (!SEE(board, move, seeMargin))
           continue;
