@@ -95,6 +95,14 @@ void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData
   thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * (256 - saveDepth) + correction * saveDepth) / 256;
 }
 
+void UpdateMajorCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+  const int idx            = (board->majorZobrist & MAJOR_CORRECTION_MASK);
+  const int saveDepth      = Min(16, depth);
+
+  thread->majorCorrection[idx] = (thread->majorCorrection[idx] * (256 - saveDepth) + correction * saveDepth) / 256;
+}
+
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
   if ((ss - 1)->move && (ss - 2)->move) {
     const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
