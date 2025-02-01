@@ -84,6 +84,20 @@ INLINE int GetContCorrection(SearchStack* ss) {
   return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / CORRECTION_GRAIN;
 }
 
+INLINE int GetNonPawnCorrection(Board* board, ThreadData* thread) {
+  return (thread->wNonPawnCorrection[board->stm][board->wNonPawnZobrist & NON_PAWN_CORRECTION_MASK] +
+          thread->bNonPawnCorrection[board->stm][board->bNonPawnZobrist & NON_PAWN_CORRECTION_MASK]) /
+         CORRECTION_GRAIN;
+}
+
+INLINE int GetEvalCorrection(Board* board, SearchStack* ss, ThreadData* thread) {
+  const int pawnCorrection = GetPawnCorrection(board, thread);
+  const int nonPawnCorrection = GetNonPawnCorrection(board, thread);
+  const int contCorrection = GetContCorrection(ss);
+
+  return (38 * pawnCorrection + 77 * nonPawnCorrection + 77 * contCorrection) / 128;
+}
+
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
@@ -95,5 +109,6 @@ void UpdateHistories(SearchStack* ss,
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
+void UpdateNonPawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 
 #endif

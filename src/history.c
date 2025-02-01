@@ -104,3 +104,16 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
     *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
   }
 }
+
+void UpdateNonPawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+  const int wIdx           = (board->wNonPawnZobrist & NON_PAWN_CORRECTION_MASK);
+  const int bIdx           = (board->bNonPawnZobrist & NON_PAWN_CORRECTION_MASK);
+  const int saveDepth      = Min(16, depth);
+
+  int16_t* wPawnCorr = &thread->wNonPawnCorrection[board->stm][wIdx];
+  int16_t* bPawnCorr = &thread->bNonPawnCorrection[board->stm][bIdx];
+
+  *wPawnCorr = (*wPawnCorr * (256 - saveDepth) + correction * saveDepth) / 256;
+  *bPawnCorr = (*bPawnCorr * (256 - saveDepth) + correction * saveDepth) / 256;
+}

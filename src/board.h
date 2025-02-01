@@ -24,13 +24,14 @@
 
 #define Piece(pc, c)   (((pc) << 1) + c)
 #define PieceType(pc)  ((pc) >> 1)
+#define PieceColor(pc) ((pc) & 0x1)
 #define PPieceBB(pc)   (board->pieces[pc])
 #define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
 #define OccBB(c)       (board->occupancies[c])
 
-#define File(sq)        ((sq) &7)
+#define File(sq)        ((sq) & 7)
 #define Rank(sq)        ((sq) >> 3)
-#define Sq(r, f)        ((r) *8 + (f))
+#define Sq(r, f)        ((r) * 8 + (f))
 #define Distance(a, b)  Max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
 #define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
 #define PieceCount(pc)  (1ull << (pc * 4))
