@@ -87,7 +87,7 @@ INLINE int GetContCorrection(SearchStack* ss) {
 INLINE int GetNonPawnCorrection(Board* board, ThreadData* thread) {
   return (thread->wNonPawnCorrection[board->stm][board->wNonPawnZobrist & NON_PAWN_CORRECTION_MASK] +
           thread->bNonPawnCorrection[board->stm][board->bNonPawnZobrist & NON_PAWN_CORRECTION_MASK]) /
-         CORRECTION_GRAIN;
+         CORRECTION_GRAIN / 2;
 }
 
 INLINE int GetEvalCorrection(Board* board, SearchStack* ss, ThreadData* thread) {
