@@ -25,6 +25,7 @@
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
+#define PH(z, m)            (thread->pawnh[z & 511][Moving(m)][To(m)])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
   return (int) HH(thread->board.stm, move, thread->board.threatened) + //
@@ -77,7 +78,7 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / CORRECTION_GRAIN;
+  return thread->pawnCorrection[board->stm][board->pawnZobrist & PAWN_CORRECTION_MASK] / CORRECTION_GRAIN;
 }
 
 INLINE int GetContCorrection(SearchStack* ss) {

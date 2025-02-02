@@ -40,8 +40,8 @@
 
 #define CORRECTION_GRAIN 256
 
-#define PAWN_CORRECTION_SIZE  131072
-#define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
+#define PAWN_CORRECTION_SIZE 65536
+#define PAWN_CORRECTION_MASK (PAWN_CORRECTION_SIZE - 1)
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -94,7 +94,7 @@ typedef struct {
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard threatened; // opponent "threatening" these squares
   BitBoard threatenedBy[6];
 
   int stm;     // side to move
@@ -198,8 +198,9 @@ struct ThreadData {
   int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
+  int16_t pawnh[512][12][64];    // pawn zob - piece - to
 
-  int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
+  int16_t pawnCorrection[2][PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
 
   int action, calls;
