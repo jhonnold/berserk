@@ -201,6 +201,7 @@ struct ThreadData {
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
+  int16_t castleCorrection[16];
 
   int action, calls;
   pthread_t nativeThread;

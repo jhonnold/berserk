@@ -104,3 +104,11 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
     *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
   }
 }
+
+void UpdateCastleCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+  const int saveDepth      = Min(16, depth);
+
+  thread->castleCorrection[board->castling] =
+    (thread->castleCorrection[board->castling] * (256 - saveDepth) + correction * saveDepth) / 256;
+}

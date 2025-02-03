@@ -77,11 +77,23 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / CORRECTION_GRAIN;
+  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
 }
 
 INLINE int GetContCorrection(SearchStack* ss) {
-  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / CORRECTION_GRAIN;
+  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
+}
+
+INLINE int GetCastleCorrection(Board* board, ThreadData* thread) {
+  return thread->castleCorrection[board->castling];
+}
+
+INLINE int GetEvalCorrection(Board* board, ThreadData* thread, SearchStack* ss) {
+  const int pawnCorrection   = GetPawnCorrection(board, thread);
+  const int contCorrection   = GetContCorrection(ss);
+  const int castleCorrection = GetCastleCorrection(board, thread);
+
+  return (64 * pawnCorrection + 128 * contCorrection + 64 * castleCorrection) / 128 / CORRECTION_GRAIN;
 }
 
 void UpdateHistories(SearchStack* ss,
@@ -95,5 +107,6 @@ void UpdateHistories(SearchStack* ss,
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
+void UpdateCastleCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 
 #endif
