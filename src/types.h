@@ -40,7 +40,7 @@
 
 #define CORRECTION_GRAIN 256
 
-#define PAWN_CORRECTION_SIZE  131072
+#define PAWN_CORRECTION_SIZE  65536
 #define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
 
 typedef int Score;
@@ -199,7 +199,7 @@ struct ThreadData {
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
-  int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
+  int16_t pawnCorrection[2][PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
 
   int action, calls;

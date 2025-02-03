@@ -332,7 +332,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->squares[to]   = piece;
 
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
-  if (PieceType(piece) == PAWN)
+  if (PieceType(piece) == PAWN || PieceType(piece) == KING)
     board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
   if (IsCas(move)) {
@@ -409,7 +409,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->xstm = board->stm;
   board->stm ^= 1;
   board->zobrist ^= ZOBRIST_SIDE_KEY;
-  board->pawnZobrist ^= ZOBRIST_SIDE_KEY;
 
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
@@ -493,7 +492,6 @@ void MakeNullMove(Board* board) {
   board->epSquare = 0;
 
   board->zobrist ^= ZOBRIST_SIDE_KEY;
-  board->pawnZobrist ^= ZOBRIST_SIDE_KEY;
 
   board->histPly++;
   board->stm = board->xstm;

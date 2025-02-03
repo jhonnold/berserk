@@ -62,16 +62,16 @@ uint64_t Zobrist(Board* board) {
 
 // Generate a Pawn Zobrist key for the current board state
 uint64_t PawnZobrist(Board* board) {
+  static const int pieces[4] = {WHITE_PAWN, BLACK_PAWN, WHITE_KING, BLACK_KING};
+
   uint64_t hash = 0ULL;
 
-  for (int piece = WHITE_PAWN; piece <= BLACK_PAWN; piece++) {
-    BitBoard pcs = board->pieces[piece];
+  for (int i = 0; i < 4; i++) {
+    const int piece = pieces[i];
+    BitBoard pcs    = board->pieces[piece];
     while (pcs)
       hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
   }
-
-  if (board->stm)
-    hash ^= ZOBRIST_SIDE_KEY;
 
   return hash;
 }
