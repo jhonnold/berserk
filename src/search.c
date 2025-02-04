@@ -501,7 +501,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   (ss + 1)->skip       = NULL_MOVE;
   (ss + 1)->killers[0] = NULL_MOVE;
   (ss + 1)->killers[1] = NULL_MOVE;
-  ss->de               = (ss - 1)->de;
 
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
@@ -678,12 +677,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          if (!isPV && score < sBeta - 48 && ss->de <= 6 && !IsCap(move)) {
+          if (!isPV && score < sBeta - 48 && !IsCap(move)) {
             extension = 3;
-            ss->de    = (ss - 1)->de + 1;
-          } else if (!isPV && score < sBeta - 14 && ss->de <= 6) {
+          } else if (!isPV && score < sBeta - 14) {
             extension = 2;
-            ss->de    = (ss - 1)->de + 1;
           } else {
             extension = 1;
           }
