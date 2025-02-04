@@ -104,3 +104,9 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
     *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
   }
 }
+
+void UpdatePlyCorrection(int raw, int real, SearchStack* ss) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+
+  ss->plyCorrection = (ss->plyCorrection * 255 + correction) / 256;
+}

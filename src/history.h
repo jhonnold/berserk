@@ -84,6 +84,10 @@ INLINE int GetContCorrection(SearchStack* ss) {
   return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / CORRECTION_GRAIN;
 }
 
+INLINE int GetPlyCorrection(SearchStack* ss) {
+  return ss->plyCorrection / CORRECTION_GRAIN;
+}
+
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
@@ -95,5 +99,6 @@ void UpdateHistories(SearchStack* ss,
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
+void UpdatePlyCorrection(int raw, int real, SearchStack* ss);
 
 #endif
