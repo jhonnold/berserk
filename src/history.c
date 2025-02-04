@@ -22,6 +22,7 @@
 #include "board.h"
 #include "move.h"
 #include "util.h"
+#include "zobrist.h"
 
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
@@ -49,7 +50,7 @@ void UpdateHistories(SearchStack* ss,
     // by Alayan in Ethereal
     if (nQ > 1 || depth > 4) {
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
-      AddHistoryHeuristic(&PH(board->pawnZobrist, bestMove), inc);
+      AddHistoryHeuristic(&PH(PKZobrist(board), bestMove), inc);
       UpdateCH(ss, bestMove, inc);
     }
   } else {
@@ -69,7 +70,7 @@ void UpdateHistories(SearchStack* ss,
         continue;
 
       AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
-      AddHistoryHeuristic(&PH(board->pawnZobrist, m), -inc);
+      AddHistoryHeuristic(&PH(PKZobrist(board), m), -inc);
       UpdateCH(ss, m, -inc);
     }
   }

@@ -17,6 +17,7 @@
 #ifndef ZOBRIST_H
 #define ZOBRIST_H
 
+#include "bits.h"
 #include "board.h"
 #include "move.h"
 #include "types.h"
@@ -45,6 +46,14 @@ INLINE uint64_t KeyAfter(Board* board, const Move move) {
     newKey ^= ZOBRIST_PIECES[board->squares[to]][to];
 
   return newKey;
+}
+
+// This method does not operate from scratch, it works
+// by using the existing pawnZobrist
+INLINE uint64_t PKZobrist(Board* board) {
+  return board->pawnZobrist ^                                         //
+         ZOBRIST_PIECES[WHITE_KING][LSB(board->pieces[WHITE_KING])] ^ //
+         ZOBRIST_PIECES[BLACK_KING][LSB(board->pieces[BLACK_KING])];
 }
 
 #endif
