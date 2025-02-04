@@ -909,6 +909,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     futility = bestScore + 63;
   }
 
+  (ss + 1)->killers[0] = NULL_MOVE;
+  (ss + 1)->killers[1] = NULL_MOVE;
+
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
