@@ -31,6 +31,7 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
     AccumulatorKingState* state = refreshTable + b;
 
     memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
+    state->occ = 0;
     memset(state->pcs, 0, sizeof(BitBoard) * 12);
   }
 }
@@ -40,20 +41,8 @@ AccumulatorKingState* MostEffectiveRefresh(AccumulatorKingState* start, Board* b
   size_t bestCost            = 32;
 
   for (size_t i = 0; i < N_REFRESH; i++) {
-    size_t cost                 = 0;
     AccumulatorKingState* state = start + i;
-
-    for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
-      BitBoard curr = board->pieces[pc];
-      BitBoard prev = state->pcs[pc];
-
-      BitBoard rem = prev & ~curr;
-      BitBoard add = curr & ~prev;
-
-      cost += BitCount(rem) + BitCount(add);
-      if (cost >= bestCost)
-        break;
-    }
+    size_t cost                 = BitCount(board->occupancies[BOTH] ^ state->occ);
 
     if (cost < bestCost)
       best = state, bestCost = cost;
@@ -93,6 +82,7 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
 
     state->pcs[pc] = curr;
   }
+  state->occ = board->occupancies[BOTH];
 
   ApplyDelta(state->values, state->values, delta);
 

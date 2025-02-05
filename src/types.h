@@ -65,6 +65,7 @@ typedef struct {
 
 typedef struct {
   acc_t values[N_HIDDEN] ALIGN;
+  BitBoard occ;
   BitBoard pcs[12];
 } AccumulatorKingState;
 
