@@ -26,6 +26,8 @@
 #define MAX_SEARCH_PLY 201 // effective max depth 250
 #define MAX_MOVES      128
 
+#define N_REFRESH 4
+
 #define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)

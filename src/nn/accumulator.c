@@ -27,12 +27,39 @@
 #include "../util.h"
 
 void ResetRefreshTable(AccumulatorKingState* refreshTable) {
-  for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
+  for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS * N_REFRESH; b++) {
     AccumulatorKingState* state = refreshTable + b;
 
     memcpy(state->values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
     memset(state->pcs, 0, sizeof(BitBoard) * 12);
   }
+}
+
+AccumulatorKingState* MostEffectiveRefresh(AccumulatorKingState* start, Board* board) {
+  AccumulatorKingState* best = start;
+  size_t bestCost            = 32;
+
+  for (size_t i = 0; i < N_REFRESH; i++) {
+    size_t cost                 = 0;
+    AccumulatorKingState* state = start + i;
+
+    for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+      BitBoard curr = board->pieces[pc];
+      BitBoard prev = state->pcs[pc];
+
+      BitBoard rem = prev & ~curr;
+      BitBoard add = curr & ~prev;
+
+      cost += BitCount(rem) + BitCount(add);
+      if (cost >= bestCost)
+        break;
+    }
+
+    if (cost < bestCost)
+      best = state, bestCost = cost;
+  }
+
+  return best;
 }
 
 // Refreshes an accumulator using a diff from the last known board state
@@ -42,10 +69,10 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
   delta->r = delta->a = 0;
 
   int kingSq     = LSB(PieceBB(KING, perspective));
-  int pBucket    = perspective == WHITE ? 0 : 2 * N_KING_BUCKETS;
-  int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
+  int pBucket    = perspective == WHITE ? 0 : 2 * N_KING_BUCKETS * N_REFRESH;
+  int kingBucket = (KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3)) * N_REFRESH;
 
-  AccumulatorKingState* state = &board->refreshTable[pBucket + kingBucket];
+  AccumulatorKingState* state = MostEffectiveRefresh(&board->refreshTable[pBucket + kingBucket], board);
 
   for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
     BitBoard curr = board->pieces[pc];

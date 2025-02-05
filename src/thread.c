@@ -114,7 +114,7 @@ void* ThreadInit(void* arg) {
   // Alloc all the necessary accumulators
   thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
   thread->refreshTable =
-    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
+    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS * N_REFRESH, alignment);
   ResetRefreshTable(thread->refreshTable);
 
   // Copy these onto the board for easier access within the engine
