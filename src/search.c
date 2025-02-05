@@ -827,6 +827,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER))) {
     UpdatePawnCorrection(rawEval, bestScore, depth, board, thread);
     UpdateContCorrection(rawEval, bestScore, depth, ss);
+    UpdateEasyCapsCorrection(rawEval, bestScore, depth, board, thread, ss);
   }
 
   return bestScore;
