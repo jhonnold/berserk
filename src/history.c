@@ -22,6 +22,7 @@
 #include "board.h"
 #include "move.h"
 #include "util.h"
+#include "zobrist.h"
 
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
@@ -102,5 +103,16 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
 
     int16_t* contCorrection = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
     *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
+  }
+}
+
+void UpdateEasyCapsCorrection(int raw, int real, int depth, Board* board, ThreadData* thread, SearchStack* ss) {
+  if (ss->easyCaps) {
+    const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+    const int idx            = (EasyCapsZobrist(board, ss->easyCaps) & EASY_CAPS_CORRECTION_MASK);
+    const int saveDepth      = Min(16, depth);
+
+    thread->easyCapsCorrection[idx] =
+      (thread->easyCapsCorrection[idx] * (256 - saveDepth) + correction * saveDepth) / 256;
   }
 }

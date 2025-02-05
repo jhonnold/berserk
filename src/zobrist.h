@@ -26,10 +26,12 @@ extern uint64_t ZOBRIST_PIECES[12][64];
 extern uint64_t ZOBRIST_EP_KEYS[64];
 extern uint64_t ZOBRIST_CASTLE_KEYS[16];
 extern uint64_t ZOBRIST_SIDE_KEY;
+extern uint64_t ZOBRIST_EASY_CAPS[12][64];
 
 void InitZobristKeys();
 uint64_t Zobrist(Board* board);
 uint64_t PawnZobrist(Board* board);
+uint64_t EasyCapsZobrist(Board* board, BitBoard easyCaps);
 
 INLINE uint64_t KeyAfter(Board* board, const Move move) {
   if (!move)

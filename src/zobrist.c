@@ -24,6 +24,7 @@ uint64_t ZOBRIST_PIECES[12][64];
 uint64_t ZOBRIST_EP_KEYS[64];
 uint64_t ZOBRIST_CASTLE_KEYS[16];
 uint64_t ZOBRIST_SIDE_KEY;
+uint64_t ZOBRIST_EASY_CAPS[12][64];
 
 void InitZobristKeys() {
   for (int i = 0; i < 12; i++)
@@ -37,6 +38,10 @@ void InitZobristKeys() {
     ZOBRIST_CASTLE_KEYS[i] = RandomUInt64();
 
   ZOBRIST_SIDE_KEY = RandomUInt64();
+
+  for (int i = 0; i < 12; i++)
+    for (int j = 0; j < 64; j++)
+      ZOBRIST_EASY_CAPS[i][j] = RandomUInt64();
 }
 
 // Generate a Zobrist key for the current board state
@@ -72,6 +77,19 @@ uint64_t PawnZobrist(Board* board) {
 
   if (board->stm)
     hash ^= ZOBRIST_SIDE_KEY;
+
+  return hash;
+}
+
+uint64_t EasyCapsZobrist(Board* board, BitBoard easyCaps) {
+  uint64_t hash = 0ULL;
+
+  while (easyCaps) {
+    const int sq = PopLSB(&easyCaps);
+    const int pc = board->squares[sq];
+
+    hash ^= ZOBRIST_EASY_CAPS[pc][sq];
+  }
 
   return hash;
 }

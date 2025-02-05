@@ -466,11 +466,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (inCheck) {
     rawEval = eval = ss->staticEval = EVAL_UNKNOWN;
   } else {
+    ss->easyCaps = OpponentsEasyCaptures(board);
+
     if (ttHit) {
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+      eval = ss->staticEval = ClampEval(rawEval + GetEvalCorrection(board, thread, ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -479,7 +481,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+      eval = ss->staticEval = ClampEval(rawEval + GetEvalCorrection(board, thread, ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -512,7 +514,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   MovePicker mp;
   if (!isPV && !inCheck) {
-    const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
+    const int opponentHasEasyCapture = !!ss->easyCaps;
     const int opponentDeclining      = ss->staticEval + (ss - 1)->staticEval > 1;
 
     // Reverse Futility Pruning
@@ -876,11 +878,13 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   if (inCheck) {
     rawEval = eval = ss->staticEval = EVAL_UNKNOWN;
   } else {
+    ss->easyCaps = OpponentsEasyCaptures(board);
+
     if (ttHit) {
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+      eval = ss->staticEval = ClampEval(rawEval + GetEvalCorrection(board, thread, ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -889,7 +893,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
+      eval = ss->staticEval = ClampEval(rawEval + GetEvalCorrection(board, thread, ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -1078,6 +1082,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
   memset(&thread->contCorrection, 0, sizeof(thread->contCorrection));
+  memset(&thread->easyCapsCorrection, 0, sizeof(thread->easyCapsCorrection));
 
   thread->board.accumulators = thread->accumulators;
   thread->previousScore      = UNKNOWN;

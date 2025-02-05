@@ -40,8 +40,11 @@
 
 #define CORRECTION_GRAIN 256
 
-#define PAWN_CORRECTION_SIZE  131072
-#define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
+#define PAWN_CORRECTION_SIZE 131072
+#define PAWN_CORRECTION_MASK (PAWN_CORRECTION_SIZE - 1)
+
+#define EASY_CAPS_CORRECTION_SIZE 131072
+#define EASY_CAPS_CORRECTION_MASK (EASY_CAPS_CORRECTION_SIZE - 1)
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -94,7 +97,7 @@ typedef struct {
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard threatened; // opponent "threatening" these squares
   BitBoard threatenedBy[6];
 
   int stm;     // side to move
@@ -133,6 +136,7 @@ typedef int16_t PieceTo[12][64];
 
 typedef struct {
   int ply, staticEval, de;
+  BitBoard easyCaps;
   PieceTo* ch;
   PieceTo* cont;
   Move move, skip;
@@ -201,6 +205,7 @@ struct ThreadData {
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
+  int16_t easyCapsCorrection[EASY_CAPS_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;

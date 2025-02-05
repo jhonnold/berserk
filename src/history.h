@@ -22,6 +22,7 @@
 #include "move.h"
 #include "types.h"
 #include "util.h"
+#include "zobrist.h"
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
@@ -77,11 +78,25 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / CORRECTION_GRAIN;
+  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
 }
 
 INLINE int GetContCorrection(SearchStack* ss) {
-  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / CORRECTION_GRAIN;
+  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
+}
+
+INLINE int GetEasyCapsCorrection(Board* board, ThreadData* thread, SearchStack* ss) {
+  uint64_t zobrist = EasyCapsZobrist(board, ss->easyCaps);
+
+  return thread->easyCapsCorrection[zobrist & EASY_CAPS_CORRECTION_MASK];
+}
+
+INLINE int GetEvalCorrection(Board* board, ThreadData* thread, SearchStack* ss) {
+  const int pawnCorr = GetPawnCorrection(board, thread);
+  const int contCorr = GetContCorrection(ss);
+  const int easyCapCorr = GetEasyCapsCorrection(board, thread, ss);
+
+  return (pawnCorr / 2 + contCorr + easyCapCorr / 2) / CORRECTION_GRAIN;
 }
 
 void UpdateHistories(SearchStack* ss,
@@ -95,5 +110,6 @@ void UpdateHistories(SearchStack* ss,
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
+void UpdateEasyCapsCorrection(int raw, int real, int depth, Board* board, ThreadData* thread, SearchStack* ss);
 
 #endif
