@@ -104,3 +104,12 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
     *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
   }
 }
+
+void UpdateThreatenedCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
+  const int idx            = (board->threatenedZobrist & THREATENED_CORRECTION_MASK);
+  const int saveDepth      = Min(16, depth);
+
+  thread->threatenedCorrection[idx] =
+    (thread->threatenedCorrection[idx] * (256 - saveDepth) + correction * saveDepth) / 256;
+}

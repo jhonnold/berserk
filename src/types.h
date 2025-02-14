@@ -40,8 +40,11 @@
 
 #define CORRECTION_GRAIN 256
 
-#define PAWN_CORRECTION_SIZE  131072
-#define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
+#define PAWN_CORRECTION_SIZE 131072
+#define PAWN_CORRECTION_MASK (PAWN_CORRECTION_SIZE - 1)
+
+#define THREATENED_CORRECTION_SIZE 131072
+#define THREATENED_CORRECTION_MASK (THREATENED_CORRECTION_SIZE - 1)
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -73,6 +76,7 @@ typedef struct {
   int nullply;
   uint64_t zobrist;
   uint64_t pawnZobrist;
+  uint64_t threatenedZobrist;
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
@@ -88,13 +92,14 @@ typedef struct {
   int fmr;      // half move count for 50 move rule
   int nullply;  // distance from last nullmove
 
-  uint64_t zobrist;     // zobrist hash of the position
-  uint64_t pawnZobrist; // pawn zobrist hash of the position (pawns + stm)
+  uint64_t zobrist;           // zobrist hash of the position
+  uint64_t pawnZobrist;       // pawn zobrist hash of the position (pawns + stm)
+  uint64_t threatenedZobrist; // threatenedBy Zobrist
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard threatened; // opponent "threatening" these squares
   BitBoard threatenedBy[6];
 
   int stm;     // side to move
@@ -201,6 +206,7 @@ struct ThreadData {
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
+  int16_t threatenedCorrection[THREATENED_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;

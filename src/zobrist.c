@@ -75,3 +75,17 @@ uint64_t PawnZobrist(Board* board) {
 
   return hash;
 }
+
+uint64_t ThreatenedZobrist(Board* board) {
+  uint64_t hash = 0ULL;
+
+  BitBoard threatened = board->threatened & OccBB(board->stm);
+  while (threatened) {
+    const int sq = PopLSB(&threatened);
+    const int pc = board->squares[sq];
+
+    hash ^= ZOBRIST_PIECES[pc][sq];
+  }
+
+  return hash;
+}

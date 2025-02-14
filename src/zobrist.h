@@ -30,6 +30,7 @@ extern uint64_t ZOBRIST_SIDE_KEY;
 void InitZobristKeys();
 uint64_t Zobrist(Board* board);
 uint64_t PawnZobrist(Board* board);
+uint64_t ThreatenedZobrist(Board* board);
 
 INLINE uint64_t KeyAfter(Board* board, const Move move) {
   if (!move)

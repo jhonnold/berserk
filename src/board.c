@@ -305,6 +305,8 @@ inline void SetThreats(Board* board) {
 
   board->threatenedBy[KING] = GetKingAttacks(LSB(PieceBB(KING, stm)));
   board->threatened |= board->threatenedBy[KING];
+
+  board->threatenedZobrist = ThreatenedZobrist(board);
 }
 
 void MakeMove(Move move, Board* board) {
