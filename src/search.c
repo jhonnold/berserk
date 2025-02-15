@@ -916,9 +916,11 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   Move quiets[64], captures[32];
 
   MovePicker mp;
-  if (!inCheck)
-    InitQSMovePicker(&mp, thread, depth >= -1);
-  else
+  if (!inCheck) {
+    const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
+
+    InitQSMovePicker(&mp, thread, depth >= -1 || opponentHasEasyCapture);
+  } else
     InitQSEvasionsPicker(&mp, hashMove, thread, ss);
 
   int legalMoves = 0, skipQuiets = !inCheck;
