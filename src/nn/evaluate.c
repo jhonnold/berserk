@@ -43,10 +43,16 @@ int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 int8_t L1_WEIGHTS[N_L1 * N_L2] ALIGN;
 int32_t L1_BIASES[N_L2] ALIGN;
 
-int32_t L2_WEIGHTS[N_L2 * N_L3] ALIGN;
+float L2_WEIGHTS_F[N_L2 * N_L3] ALIGN;
+float L2_BIASES_F[N_L3] ALIGN;
+
+float OUTPUT_WEIGHTS_F[N_L3 * N_OUTPUT] ALIGN;
+float OUTPUT_BIAS_F;
+
+int16_t L2_WEIGHTS[N_L2 * N_L3] ALIGN;
 int32_t L2_BIASES[N_L3] ALIGN;
 
-int32_t OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
+int16_t OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
 int32_t OUTPUT_BIAS;
 
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
@@ -280,7 +286,7 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
   return count;
 }
 
-INLINE void L1AffineReLU(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src) {
   const size_t OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t);
   const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
@@ -321,7 +327,7 @@ INLINE void L1AffineReLU(int32_t* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm256_max_epi32(_mm256_srai_epi32(regs[i], QUANT_BITS), _mm256_setzero_si256());
+    out[i] = _mm256_srai_epi32(regs[i], QUANT_BITS);
 }
 #elif defined(__SSE4_1__)
 INLINE void m128_add_dpbusd_epi32(__m128i* acc, __m128i a, __m128i b) {
@@ -506,8 +512,8 @@ INLINE __m128i m256_hadd_epi32x4(__m256i* regs) {
   return _mm_add_epi32(sum128lo, sum128hi);
 }
 
-INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(int32_t); // 8 integers per AVX2 register
+INLINE void L2Affine(int32_t* dest, int16_t* src) {
+  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(int16_t);
   const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
   const size_t OUT_CC     = 8;
   const size_t OUT_CHUNKS = N_L3 / OUT_CC;
@@ -525,13 +531,12 @@ INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
 
     for (size_t j = 0; j < IN_CHUNKS; j++)
       for (size_t k = 0; k < OUT_CC; k++)
-        regs[k] = _mm256_add_epi32(regs[k], _mm256_mullo_epi32(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
+        regs[k] = _mm256_add_epi32(regs[k], _mm256_madd_epi16(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
 
-    const __m128i s0      = m256_hadd_epi32x4(regs);
-    const __m128i s1      = m256_hadd_epi32x4(&regs[4]);
-    const __m256i sum     = _mm256_insertf128_si256(_mm256_castsi128_si256(s0), s1, 1);
-    const __m256i shifted = _mm256_srai_epi32(_mm256_add_epi32(sum, biases[i]), QUANT_BITS);
-    out[i]                = _mm256_max_epi32(shifted, _mm256_setzero_si256());
+    const __m128i s0  = m256_hadd_epi32x4(regs);
+    const __m128i s1  = m256_hadd_epi32x4(&regs[4]);
+    const __m256i sum = _mm256_insertf128_si256(_mm256_castsi128_si256(s0), s1, 1);
+    out[i]            = _mm256_srai_epi32(_mm256_add_epi32(sum, biases[i]), QUANT_BITS);
   }
 }
 #elif defined(__SSE4_1__)
@@ -569,15 +574,15 @@ INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
   }
 }
 #else
-INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
+INLINE void L2Affine(int32_t* dest, int16_t* src) {
   for (int i = 0; i < N_L3; i++) {
     const int offset = i * N_L2;
 
     dest[i] = L2_BIASES[i];
     for (int j = 0; j < N_L2; j++)
-      dest[i] += src[j] * L2_WEIGHTS[offset + j];
+      dest[i] += src[j] * L2_WEIGHTS_S[offset + j];
 
-    dest[i] = Max(0, dest[i] >> QUANT_BITS);
+    dest[i] = dest[i] >> QUANT_BITS;
   }
 }
 #endif
@@ -602,8 +607,8 @@ INLINE int32_t L3Transform(int32_t* src) {
   return _mm_cvtsi128_si32(a1) + OUTPUT_BIAS;
 }
 #elif defined(__AVX2__)
-INLINE int32_t L3Transform(int32_t* src) {
-  const size_t WIDTH  = sizeof(__m256i) / sizeof(int32_t);
+INLINE int32_t L3Transform(int16_t* src) {
+  const size_t WIDTH  = sizeof(__m256i) / sizeof(int16_t);
   const size_t CHUNKS = N_L3 / WIDTH;
 
   const __m256i* in      = (__m256i*) src;
@@ -611,7 +616,7 @@ INLINE int32_t L3Transform(int32_t* src) {
 
   __m256i a0 = _mm256_setzero_si256();
   for (size_t i = 0; i < CHUNKS; i++)
-    a0 = _mm256_add_epi32(a0, _mm256_mullo_epi32(in[i], weights[i]));
+    a0 = _mm256_add_epi32(a0, _mm256_madd_epi16(in[i], weights[i]));
 
   const __m128i a4 = _mm_add_epi32(_mm256_castsi256_si128(a0), _mm256_extracti128_si256(a0, 1));
   const __m128i a2 = _mm_add_epi32(a4, _mm_shuffle_epi32(a4, 0x4E));
@@ -637,25 +642,42 @@ INLINE int32_t L3Transform(int32_t* src) {
   return _mm_cvtsi128_si32(a1) + OUTPUT_BIAS;
 }
 #else
-INLINE int32_t L3Transform(int32_t* src) {
+INLINE int32_t L3Transform(int16_t* src) {
   int32_t result = OUTPUT_BIAS;
 
   for (int i = 0; i < N_L3; i++)
-    result += src[i] * OUTPUT_WEIGHTS[i];
+    result += src[i] * OUTPUT_WEIGHTS_S[i];
 
   return result;
 }
 #endif
 
+INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
+  const size_t IN_WIDTH = sizeof(__m256i) / sizeof(int32_t);
+  const size_t CHUNKS   = n / IN_WIDTH;
+
+  const __m256i* in = (__m256i*) src;
+  __m256i* out      = (__m256i*) dest;
+
+  for (size_t i = 0; i < CHUNKS / 2; i++) {
+    const __m256i a0 = _mm256_permute4x64_epi64(_mm256_packs_epi32(in[2 * i], in[2 * i + 1]), 0b11011000);
+    out[i] = _mm256_max_epi16(a0, _mm256_setzero_si256());
+  }
+}
+
 int Propagate(Accumulator* accumulator, const int stm) {
   int8_t x0[N_L1] ALIGN;
   int32_t x1[N_L2] ALIGN;
+  int16_t x1a[N_L2] ALIGN;
   int32_t x2[N_L3] ALIGN;
+  int16_t x2a[N_L3] ALIGN;
 
   InputReLU(x0, accumulator, stm);
-  L1AffineReLU(x1, x0);
-  L2AffineReLU(x2, x1);
-  return L3Transform(x2) >> QUANT_BITS;
+  L1Affine(x1, x0);
+  ReLU16(x1a, x1, N_L2);
+  L2Affine(x2, x1a);
+  ReLU16(x2a, x2, N_L3);
+  return L3Transform(x2a) >> QUANT_BITS;
 }
 
 int Predict(Board* board) {
@@ -669,10 +691,10 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(int16_t) * N_HIDDEN +              // input biases
                             sizeof(int8_t) * N_L1 * N_L2 +            // input biases
                             sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(int32_t) * N_L2 * N_L3 +           // input biases
-                            sizeof(int32_t) * N_L3 +                  // input biases
-                            sizeof(int32_t) * N_L3 +                  // output weights
-                            sizeof(int32_t);                          // output bias
+                            sizeof(float) * N_L2 * N_L3 +           // input biases
+                            sizeof(float) * N_L3 +                  // input biases
+                            sizeof(float) * N_L3 +                  // output weights
+                            sizeof(float);                          // output bias
 
 #if defined(__SSE4_1__)
 INLINE int WeightIdxScrambled(int idx) {
@@ -698,14 +720,22 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(L1_BIASES, &in[offset], N_L2 * sizeof(int32_t));
   offset += N_L2 * sizeof(int32_t);
 
-  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * sizeof(int32_t));
-  offset += N_L2 * N_L3 * sizeof(int32_t);
-  memcpy(L2_BIASES, &in[offset], N_L3 * sizeof(int32_t));
-  offset += N_L3 * sizeof(int32_t);
+  memcpy(L2_WEIGHTS_F, &in[offset], N_L2 * N_L3 * sizeof(float));
+  offset += N_L2 * N_L3 * sizeof(float);
+  memcpy(L2_BIASES_F, &in[offset], N_L3 * sizeof(float));
+  offset += N_L3 * sizeof(float);
 
-  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(int32_t));
-  offset += N_L3 * N_OUTPUT * sizeof(int32_t);
-  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
+  memcpy(OUTPUT_WEIGHTS_F, &in[offset], N_L3 * N_OUTPUT * sizeof(float));
+  offset += N_L3 * N_OUTPUT * sizeof(float);
+  memcpy(&OUTPUT_BIAS_F, &in[offset], sizeof(float));
+
+  for (size_t i = 0; i < N_L2 * N_L3; i++)
+    L2_WEIGHTS[i] = roundf(L2_WEIGHTS_F[i] * 32.0);
+  for (size_t i = 0; i < N_L3; i++)
+    L2_BIASES[i] = roundf(L2_BIASES_F[i]);
+  for (size_t i = 0; i < N_L3 * N_OUTPUT; i++)
+    OUTPUT_WEIGHTS[i] = roundf(OUTPUT_WEIGHTS_F[i] * 32.0);
+  OUTPUT_BIAS = roundf(OUTPUT_BIAS_F);
 
 #if defined(__SSE4_1__)
   // Shuffle the L1 weights for sparse matmul
