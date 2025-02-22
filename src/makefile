@@ -17,7 +17,8 @@ FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
 M64     = -m64 -mpopcnt
 MSSE2   = $(M64) -msse -msse2
 MSSSE3  = $(MSSE2) -mssse3
-MAVX2   = $(MSSSE3) -msse4.1 -mbmi -mfma -mavx2
+MSSE41  = $(MSSSE3) -msse4.1
+MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
 
 # Detecting windows
@@ -46,6 +47,8 @@ else ifeq ($(findstring sse2, $(ARCH)), sse2)
 	CFLAGS = $(FLAGS) $(MSSE2)
 else ifeq ($(findstring ssse3, $(ARCH)), ssse3)
 	CFLAGS = $(FLAGS) $(MSSSE3)
+else ifeq ($(findstring sse41, $(ARCH)), sse41)
+	CFLAGS = $(FLAGS) $(MSSE41)
 else ifeq ($(findstring avx2, $(ARCH)), avx2)
 	CFLAGS = $(FLAGS) $(MAVX2)
 else ifeq ($(findstring avx512, $(ARCH)), avx512)
