@@ -20,6 +20,7 @@ MSSSE3  = $(MSSE2) -mssse3
 MSSE41  = $(MSSSE3) -msse4.1
 MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
+ARM64   = -arch arm64
 
 # Detecting windows
 ifeq ($(shell echo "test"), "test")
@@ -40,7 +41,7 @@ endif
 ifeq ($(ARCH), native)
 	CFLAGS = $(FLAGS) -march=native
 else ifeq ($(ARCH), arm64)
-	CFLAGS = $(FLAGS) -arch arm64
+	CFLAGS = $(FLAGS) $(ARM64)
 else ifeq ($(findstring x86-64, $(ARCH)), x86-64)
 	CFLAGS = $(FLAGS) $(M64)
 else ifeq ($(findstring sse2, $(ARCH)), sse2)

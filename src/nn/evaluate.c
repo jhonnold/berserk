@@ -35,7 +35,7 @@
 
 INCBIN(Embed, EVALFILE);
 
-const int QUANT_BITS = 5;
+#define QUANT_BITS 5
 
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
@@ -59,7 +59,7 @@ uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
-INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m512i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
@@ -81,7 +81,7 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
 }
 #elif defined(__AVX2__)
 #include <immintrin.h>
-INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
@@ -103,7 +103,7 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
 }
 #elif defined(__SSE2__)
 #include <immintrin.h>
-INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
@@ -122,8 +122,29 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
     }
   }
 }
+#elif defined(__ARM_NEON__)
+#include <arm_neon.h>
+INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
+  const size_t WIDTH  = 8;
+  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const int views[2]  = {stm, !stm};
+
+  const int8x16_t zero = {0};
+
+  for (int v = 0; v < 2; v++) {
+    const int16x8_t* in = (int16x8_t*) acc->values[views[v]];
+    int8x16_t* out      = (int8x16_t*) &outputs[N_HIDDEN * v];
+
+    for (size_t i = 0; i < CHUNKS / 2; i++) {
+      int16x8_t s0 = vshrq_n_s16(in[2 * i + 0], QUANT_BITS);
+      int16x8_t s1 = vshrq_n_s16(in[2 * i + 1], QUANT_BITS);
+
+      out[i] = vmaxq_s8(vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1)), zero);
+    }
+  }
+}
 #else
-INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
   const int max      = 127 << 5;
 
@@ -132,7 +153,7 @@ INLINE void InputReLU(int8_t* outputs, Accumulator* acc, const int stm) {
     int8_t* out     = &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < N_HIDDEN; i++)
-      out[i] = Min(max, Max(0, in[i] >> QUANT_BITS));
+      out[i] = Min(max, Max(0, in[i])) >> QUANT_BITS;
   }
 }
 #endif
@@ -190,7 +211,7 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
   return count;
 }
 
-INLINE void L1AffineReLU(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src) {
   const size_t OUT_WIDTH  = sizeof(__m512i) / sizeof(int32_t);
   const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
@@ -231,7 +252,7 @@ INLINE void L1AffineReLU(int32_t* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm512_max_epi32(_mm512_srai_epi32(regs[i], QUANT_BITS), _mm512_setzero_si512());
+    out[i] = _mm512_srai_epi32(regs[i], QUANT_BITS);
 }
 #elif defined(__AVX2__)
 INLINE void m256_add_dpbusd_epi32(__m256i* acc, __m256i a, __m256i b) {
@@ -382,7 +403,7 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
   return count;
 }
 
-INLINE void L1AffineReLU(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src) {
   const size_t OUT_WIDTH  = sizeof(__m128i) / sizeof(int32_t);
   const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
@@ -423,10 +444,109 @@ INLINE void L1AffineReLU(int32_t* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm_max_epi32(_mm_srai_epi32(regs[i], QUANT_BITS), _mm_setzero_si128());
+    out[i] = _mm_srai_epi32(regs[i], QUANT_BITS);
+}
+#elif defined(__ARM_NEON__)
+INLINE void int8x16_add_dpbusd(int32x4_t* acc, int8x16_t a, int8x16_t b) {
+  int16x8_t p0 = vmull_s8(vget_low_s8(a), vget_low_s8(b));
+  int16x8_t p1 = vmull_high_s8(a, b);
+
+  *acc = vpadalq_s16(*acc, vpaddq_s16(p0, p1));
+}
+
+INLINE void int8x16_add_dpbusd_x2(int32x4_t* acc, int8x16_t a0, int8x16_t b0, int8x16_t a1, int8x16_t b1) {
+  int16x8_t p0 = vmull_s8(vget_low_s8(a0), vget_low_s8(b0));
+  int16x8_t p1 = vmull_high_s8(a0, b0);
+  int16x8_t p2 = vmull_s8(vget_low_s8(a1), vget_low_s8(b1));
+  int16x8_t p3 = vmull_high_s8(a1, b1);
+
+  *acc = vpadalq_s16(*acc, vaddq_s16(vpaddq_s16(p0, p1), vpaddq_s16(p2, p3)));
+}
+
+INLINE uint32_t NNZ(uint32x4_t chunk) {
+  static const uint32_t mask[4] = {1, 2, 4, 8};
+  return vaddvq_u32(vandq_u32(vtstq_u32(chunk, chunk), vld1q_u32(mask)));
+}
+
+INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks) {
+  const size_t IN_WIDTH      = 4;
+  const size_t CHUNK_SIZE    = 8;
+  const size_t NUM_CHUNKS    = chunks / CHUNK_SIZE;
+  const size_t IN_PER_CHUNK  = CHUNK_SIZE / IN_WIDTH;
+  const size_t OUT_PER_CHUNK = CHUNK_SIZE / 8;
+
+  const uint32x4_t* in = (uint32x4_t*) inputs;
+
+  size_t count = 0;
+
+  const uint16x8_t increment = vdupq_n_u16(8);
+  uint16x8_t base            = {0};
+
+  for (size_t i = 0; i < NUM_CHUNKS; i++) {
+    uint32_t nnz = 0;
+
+    for (size_t j = 0; j < IN_PER_CHUNK; j++) {
+      const uint32x4_t inputChunk = in[i * IN_PER_CHUNK + j];
+      nnz |= NNZ(inputChunk) << (j * IN_WIDTH);
+    }
+
+    for (size_t j = 0; j < OUT_PER_CHUNK; j++) {
+      const uint32_t lookup    = (nnz >> (j * 8)) & 0xFF;
+      const uint16x8_t offsets = vld1q_u16((uint16x8_t*) (&LOOKUP_INDICES[lookup]));
+      vst1q_u16((uint16x8_t*) (dest + count), vaddq_u16(base, offsets));
+      count += BitCount(lookup);
+      base = vaddq_u16(base, increment);
+    }
+  }
+
+  return count;
+}
+
+INLINE void L1Affine(int32_t* dest, int8_t* src) {
+  const size_t OUT_WIDTH  = 4;
+  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
+  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+
+  const int32_t* in32     = (int32_t*) src;
+  const int32x4_t* biases = (int32x4_t*) L1_BIASES;
+  int32x4_t* out          = (int32x4_t*) dest;
+
+  uint16_t nnz[NUM_CHUNKS];
+  size_t count = FindNNZ(nnz, in32, NUM_CHUNKS);
+
+  int32x4_t regs[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++)
+    regs[i] = biases[i];
+
+  size_t i = 0;
+  for (; i + 1 < count; i += 2) {
+    const uint16_t i0 = nnz[i + 0];
+    const uint16_t i1 = nnz[i + 1];
+
+    const int8x16_t f0 = vreinterpretq_s8_u32(vdupq_n_u32(in32[i0]));
+    const int8x16_t f1 = vreinterpretq_s8_u32(vdupq_n_u32(in32[i1]));
+
+    const int8x16_t* c0 = (int8x16_t*) &L1_WEIGHTS[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const int8x16_t* c1 = (int8x16_t*) &L1_WEIGHTS[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+
+    for (size_t j = 0; j < OUT_CC; j++)
+      int8x16_add_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
+  }
+
+  if (i < count) {
+    const uint16_t i0   = nnz[i];
+    const int8x16_t f0  = vreinterpretq_s8_u32(vdupq_n_u32(in32[i0]));
+    const int8x16_t* c0 = (int8x16_t*) &L1_WEIGHTS[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+
+    for (size_t j = 0; j < OUT_CC; j++)
+      int8x16_add_dpbusd(regs + j, f0, c0[j]);
+  }
+
+  for (i = 0; i < OUT_CC; i++)
+    out[i] = vshrq_n_s32(regs[i], QUANT_BITS);
 }
 #else
-INLINE void L1AffineReLU(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src) {
   for (size_t i = 0; i < N_L2; i++)
     dest[i] = L1_BIASES[i];
 
@@ -439,7 +559,7 @@ INLINE void L1AffineReLU(int32_t* dest, int8_t* src) {
   }
 
   for (size_t i = 0; i < N_L2; i++)
-    dest[i] = Max(0, dest[i] >> QUANT_BITS);
+    dest[i] = dest[i] >> QUANT_BITS;
 }
 #endif
 
@@ -573,6 +693,43 @@ INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
     out[i]                = _mm_max_epi32(shifted, _mm_setzero_si128());
   }
 }
+#elif defined(__ARM_NEON__)
+INLINE int32x4_t int32x4_hadd_x4(int32x4_t* regs) {
+  regs[0] = vpaddq_s32(regs[0], regs[1]);
+  regs[2] = vpaddq_s32(regs[2], regs[3]);
+
+  return vpaddq_s32(regs[0], regs[2]);
+}
+
+INLINE void L2Affine(int32_t* dest, int16_t* src) {
+  const size_t IN_WIDTH   = 8;
+  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
+  const size_t OUT_CC     = 4;
+  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+
+  const int16x8_t* in      = (int16x8_t*) src;
+  const int16x8_t* weights = (int16x8_t*) L2_WEIGHTS;
+  const int32x4_t* biases  = (int32x4_t*) L2_BIASES;
+  int32x4_t* out           = (int32x4_t*) dest;
+
+  int32x4_t regs[OUT_CC];
+
+  for (size_t i = 0; i < OUT_CHUNKS; i++) {
+    for (size_t k = 0; k < OUT_CC; k++)
+      regs[k] = (int32x4_t) {0};
+
+    for (size_t j = 0; j < IN_CHUNKS; j++) {
+      for (size_t k = 0; k < OUT_CC; k++) {
+        int32x4_t p0 = vmull_s16(vget_low_s16(in[j]), vget_low_s16(weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
+        int32x4_t p1 = vmull_high_s16(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]);
+        regs[k]      = vaddq_s32(regs[k], vpaddq_s32(p0, p1));
+      }
+    }
+
+    const int32x4_t sum = int32x4_hadd_x4(regs);
+    out[i]              = vshrq_n_s32(vaddq_s32(sum, biases[i]), QUANT_BITS);
+  }
+}
 #else
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
   for (int i = 0; i < N_L3; i++) {
@@ -580,7 +737,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
 
     dest[i] = L2_BIASES[i];
     for (int j = 0; j < N_L2; j++)
-      dest[i] += src[j] * L2_WEIGHTS_S[offset + j];
+      dest[i] += src[j] * L2_WEIGHTS[offset + j];
 
     dest[i] = dest[i] >> QUANT_BITS;
   }
@@ -641,17 +798,35 @@ INLINE int32_t L3Transform(int32_t* src) {
 
   return _mm_cvtsi128_si32(a1) + OUTPUT_BIAS;
 }
+#elif defined(__ARM_NEON__)
+INLINE int32_t L3Transform(int16_t* src) {
+  const size_t WIDTH  = 8;
+  const size_t CHUNKS = N_L3 / WIDTH;
+
+  const int16x8_t* in      = (int16x8_t*) src;
+  const int16x8_t* weights = (int16x8_t*) OUTPUT_WEIGHTS;
+
+  int32x4_t a0 = {0};
+  for (size_t i = 0; i < CHUNKS; i++) {
+    int32x4_t p0 = vmull_s16(vget_low_s16(in[i]), vget_low_s16(weights[i]));
+    int32x4_t p1 = vmull_high_s16(in[i], weights[i]);
+    a0           = vaddq_s32(a0, vpaddq_s32(p0, p1));
+  }
+
+  return vaddvq_s32(a0) + OUTPUT_BIAS;
+}
 #else
 INLINE int32_t L3Transform(int16_t* src) {
   int32_t result = OUTPUT_BIAS;
 
   for (int i = 0; i < N_L3; i++)
-    result += src[i] * OUTPUT_WEIGHTS_S[i];
+    result += src[i] * OUTPUT_WEIGHTS[i];
 
   return result;
 }
 #endif
 
+#if defined(__AVX2__)
 INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
   const size_t IN_WIDTH = sizeof(__m256i) / sizeof(int32_t);
   const size_t CHUNKS   = n / IN_WIDTH;
@@ -661,23 +836,42 @@ INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
 
   for (size_t i = 0; i < CHUNKS / 2; i++) {
     const __m256i a0 = _mm256_permute4x64_epi64(_mm256_packs_epi32(in[2 * i], in[2 * i + 1]), 0b11011000);
-    out[i] = _mm256_max_epi16(a0, _mm256_setzero_si256());
+    out[i]           = _mm256_max_epi16(a0, _mm256_setzero_si256());
   }
 }
+#elif defined(__ARM_NEON__)
+INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
+  const size_t IN_WIDTH = 4;
+  const size_t CHUNKS   = n / IN_WIDTH;
+
+  const int32x4_t* in = (int32x4_t*) src;
+  int16x8_t* out      = (int16x8_t*) dest;
+
+  const int16x8_t zero = {0};
+
+  for (size_t i = 0; i < CHUNKS / 2; i++) {
+    const int16x8_t a0 = vcombine_s16(vqmovn_s32(in[2 * i]), vqmovn_s32(in[2 * i + 1]));
+    out[i]             = vmaxq_s16(a0, zero);
+  }
+}
+#else
+INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
+  for (size_t i = 0; i < n; i++)
+    dest[i] = Max(0, src[i]);
+}
+#endif
 
 int Propagate(Accumulator* accumulator, const int stm) {
   int8_t x0[N_L1] ALIGN;
-  int32_t x1[N_L2] ALIGN;
-  int16_t x1a[N_L2] ALIGN;
-  int32_t x2[N_L3] ALIGN;
-  int16_t x2a[N_L3] ALIGN;
+  int32_t dest[N_L3] ALIGN; // assumes N_L3 > N_L2
+  int16_t act[N_L3] ALIGN;
 
-  InputReLU(x0, accumulator, stm);
-  L1Affine(x1, x0);
-  ReLU16(x1a, x1, N_L2);
-  L2Affine(x2, x1a);
-  ReLU16(x2a, x2, N_L3);
-  return L3Transform(x2a) >> QUANT_BITS;
+  InputCReLU8(x0, accumulator, stm);
+  L1Affine(dest, x0);
+  ReLU16(act, dest, N_L2);
+  L2Affine(dest, act);
+  ReLU16(act, dest, N_L3);
+  return L3Transform(act) >> QUANT_BITS;
 }
 
 int Predict(Board* board) {
@@ -691,12 +885,12 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(int16_t) * N_HIDDEN +              // input biases
                             sizeof(int8_t) * N_L1 * N_L2 +            // input biases
                             sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(float) * N_L2 * N_L3 +           // input biases
-                            sizeof(float) * N_L3 +                  // input biases
-                            sizeof(float) * N_L3 +                  // output weights
-                            sizeof(float);                          // output bias
+                            sizeof(float) * N_L2 * N_L3 +             // input biases
+                            sizeof(float) * N_L3 +                    // input biases
+                            sizeof(float) * N_L3 +                    // output weights
+                            sizeof(float);                            // output bias
 
-#if defined(__SSE4_1__)
+#if defined(__SSE4_1__) || defined(__ARM_NEON__)
 INLINE int WeightIdxScrambled(int idx) {
   return ((idx / SPARSE_CHUNK_SIZE) % (N_L1 / SPARSE_CHUNK_SIZE) * N_L2 * SPARSE_CHUNK_SIZE) +
          (idx / N_L1 * SPARSE_CHUNK_SIZE) + (idx % SPARSE_CHUNK_SIZE);
@@ -737,7 +931,7 @@ INLINE void CopyData(const unsigned char* in) {
     OUTPUT_WEIGHTS[i] = roundf(OUTPUT_WEIGHTS_F[i] * 32.0);
   OUTPUT_BIAS = roundf(OUTPUT_BIAS_F);
 
-#if defined(__SSE4_1__)
+#if defined(__SSE4_1__) || defined(__ARM_NEON__)
   // Shuffle the L1 weights for sparse matmul
   for (int i = 0; i < N_L1 * N_L2; i++)
     L1_WEIGHTS[WeightIdxScrambled(i)] = l1[i];
