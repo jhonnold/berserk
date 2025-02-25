@@ -15,9 +15,7 @@ WARN   = -Wall -Wextra -Wshadow
 
 FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
 M64     = -m64 -mpopcnt
-MSSE2   = $(M64) -msse -msse2
-MSSSE3  = $(MSSE2) -mssse3
-MSSE41  = $(MSSSE3) -msse4.1
+MSSE41  = $(M64) -msse -msse2 -mssse3 -msse4.1
 MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
 ARM64   = -arch arm64

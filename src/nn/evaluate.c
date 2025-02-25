@@ -490,8 +490,8 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
 
     for (size_t j = 0; j < OUT_PER_CHUNK; j++) {
       const uint32_t lookup    = (nnz >> (j * 8)) & 0xFF;
-      const uint16x8_t offsets = vld1q_u16((uint16x8_t*) (&LOOKUP_INDICES[lookup]));
-      vst1q_u16((uint16x8_t*) (dest + count), vaddq_u16(base, offsets));
+      const uint16x8_t offsets = vld1q_u16((uint16_t*) &LOOKUP_INDICES[lookup]);
+      vst1q_u16(dest + count, vaddq_u16(base, offsets));
       count += BitCount(lookup);
       base = vaddq_u16(base, increment);
     }
@@ -572,8 +572,8 @@ INLINE __m128i m512_hadd_epi32x4(__m512i* regs) {
   __m512i regs01 = _mm512_add_epi32(regs01l, regs01h);
   __m512i regs23 = _mm512_add_epi32(regs23l, regs23h);
 
-  __m512i regs0123l = _mm512_unpacklo_epi32(regs01, regs23);
-  __m512i regs0123h = _mm512_unpackhi_epi32(regs01, regs23);
+  __m512i regs0123l = _mm512_unpacklo_epi64(regs01, regs23);
+  __m512i regs0123h = _mm512_unpackhi_epi64(regs01, regs23);
 
   __m512i sum = _mm512_add_epi32(regs0123l, regs0123h);
 
