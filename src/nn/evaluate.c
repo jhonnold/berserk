@@ -101,14 +101,12 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
     }
   }
 }
-#elif defined(__SSE2__)
+#elif defined(__SSE4_1__)
 #include <immintrin.h>
 INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
-
-  const __m128i k0x80s = _mm_set1_epi8(-128);
 
   for (int v = 0; v < 2; v++) {
     const __m128i* in = (__m128i*) acc->values[views[v]];
@@ -118,7 +116,7 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
       __m128i s0 = _mm_srai_epi16(in[2 * i + 0], QUANT_BITS);
       __m128i s1 = _mm_srai_epi16(in[2 * i + 1], QUANT_BITS);
 
-      out[i] = _mm_subs_epi8(_mm_adds_epi8(_mm_packs_epi16(s0, s1), k0x80s), k0x80s);
+      out[i] = _mm_max_epi8(_mm_packs_epi16(s0, s1), _mm_setzero_si128());
     }
   }
 }
@@ -590,8 +588,8 @@ INLINE __m128i m512_hadd_epi32x4(__m512i* regs) {
   return _mm_add_epi32(sum128lo, sum128hi);
 }
 
-INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m512i) / sizeof(int32_t);
+INLINE void L2Affine(int32_t* dest, int16_t* src) {
+  const size_t IN_WIDTH   = sizeof(__m512i) / sizeof(int16_t);
   const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
   const size_t OUT_CC     = 8; // 16 is possible, but slower.
   const size_t OUT_CHUNKS = N_L3 / OUT_CC;
@@ -609,13 +607,12 @@ INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
 
     for (size_t j = 0; j < IN_CHUNKS; j++)
       for (size_t k = 0; k < OUT_CC; k++)
-        regs[k] = _mm512_add_epi32(regs[k], _mm512_mullo_epi32(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
+        regs[k] = _mm512_add_epi32(regs[k], _mm512_madd_epi16(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
 
-    const __m128i s0      = m512_hadd_epi32x4(regs);
-    const __m128i s1      = m512_hadd_epi32x4(&regs[4]);
-    const __m256i sum     = _mm256_insertf128_si256(_mm256_castsi128_si256(s0), s1, 1);
-    const __m256i shifted = _mm256_srai_epi32(_mm256_add_epi32(sum, biases[i]), QUANT_BITS);
-    out[i]                = _mm256_max_epi32(shifted, _mm256_setzero_si256());
+    const __m128i s0  = m512_hadd_epi32x4(regs);
+    const __m128i s1  = m512_hadd_epi32x4(&regs[4]);
+    const __m256i sum = _mm256_insertf128_si256(_mm256_castsi128_si256(s0), s1, 1);
+    out[i]            = _mm256_srai_epi32(_mm256_add_epi32(sum, biases[i]), QUANT_BITS);
   }
 }
 
@@ -667,8 +664,8 @@ INLINE __m128i m128_hadd_epi32x4(__m128i* regs) {
   return _mm_hadd_epi32(regs[0], regs[2]);
 }
 
-INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m128i) / sizeof(int32_t);
+INLINE void L2Affine(int32_t* dest, int16_t* src) {
+  const size_t IN_WIDTH   = sizeof(__m128i) / sizeof(int16_t);
   const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
   const size_t OUT_CC     = 4;
   const size_t OUT_CHUNKS = N_L3 / OUT_CC;
@@ -686,11 +683,10 @@ INLINE void L2AffineReLU(int32_t* dest, int32_t* src) {
 
     for (size_t j = 0; j < IN_CHUNKS; j++)
       for (size_t k = 0; k < OUT_CC; k++)
-        regs[k] = _mm_add_epi32(regs[k], _mm_mullo_epi32(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
+        regs[k] = _mm_add_epi32(regs[k], _mm_madd_epi16(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
 
-    const __m128i sum     = m128_hadd_epi32x4(regs);
-    const __m128i shifted = _mm_srai_epi32(_mm_add_epi32(sum, biases[i]), QUANT_BITS);
-    out[i]                = _mm_max_epi32(shifted, _mm_setzero_si128());
+    const __m128i sum = m128_hadd_epi32x4(regs);
+    out[i]            = _mm_srai_epi32(_mm_add_epi32(sum, biases[i]), QUANT_BITS);
   }
 }
 #elif defined(__ARM_NEON__)
@@ -745,8 +741,8 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
 #endif
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
-INLINE int32_t L3Transform(int32_t* src) {
-  const size_t WIDTH  = sizeof(__m512i) / sizeof(int32_t);
+INLINE int32_t L3Transform(int16_t* src) {
+  const size_t WIDTH  = sizeof(__m512i) / sizeof(int16_t);
   const size_t CHUNKS = N_L3 / WIDTH;
 
   const __m512i* in      = (__m512i*) src;
@@ -754,7 +750,7 @@ INLINE int32_t L3Transform(int32_t* src) {
 
   __m512i a0 = _mm512_setzero_si512();
   for (size_t i = 0; i < CHUNKS; i++)
-    a0 = _mm512_add_epi32(a0, _mm512_mullo_epi32(in[i], weights[i]));
+    a0 = _mm512_add_epi32(a0, _mm512_madd_epi16(in[i], weights[i]));
 
   const __m256i a8 = _mm256_add_epi32(_mm512_castsi512_si256(a0), _mm512_extracti64x4_epi64(a0, 1));
   const __m128i a4 = _mm_add_epi32(_mm256_castsi256_si128(a8), _mm256_extracti128_si256(a8, 1));
@@ -782,8 +778,8 @@ INLINE int32_t L3Transform(int16_t* src) {
   return _mm_cvtsi128_si32(a1) + OUTPUT_BIAS;
 }
 #elif defined(__SSE4_1__)
-INLINE int32_t L3Transform(int32_t* src) {
-  const size_t WIDTH  = sizeof(__m128i) / sizeof(int32_t);
+INLINE int32_t L3Transform(int16_t* src) {
+  const size_t WIDTH  = sizeof(__m128i) / sizeof(int16_t);
   const size_t CHUNKS = N_L3 / WIDTH;
 
   const __m128i* in      = (__m128i*) src;
@@ -791,7 +787,7 @@ INLINE int32_t L3Transform(int32_t* src) {
 
   __m128i a0 = _mm_setzero_si128();
   for (size_t i = 0; i < CHUNKS; i++)
-    a0 = _mm_add_epi32(a0, _mm_mullo_epi32(in[i], weights[i]));
+    a0 = _mm_add_epi32(a0, _mm_madd_epi16(in[i], weights[i]));
 
   const __m128i a2 = _mm_add_epi32(a0, _mm_shuffle_epi32(a0, 0x4E));
   const __m128i a1 = _mm_add_epi32(a2, _mm_shuffle_epi32(a2, 0xB1));
@@ -837,6 +833,19 @@ INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
   for (size_t i = 0; i < CHUNKS / 2; i++) {
     const __m256i a0 = _mm256_permute4x64_epi64(_mm256_packs_epi32(in[2 * i], in[2 * i + 1]), 0b11011000);
     out[i]           = _mm256_max_epi16(a0, _mm256_setzero_si256());
+  }
+}
+#elif defined(__SSE4_1__)
+INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
+  const size_t IN_WIDTH = sizeof(__m128i) / sizeof(int32_t);
+  const size_t CHUNKS   = n / IN_WIDTH;
+
+  const __m128i* in = (__m128i*) src;
+  __m128i* out      = (__m128i*) dest;
+
+  for (size_t i = 0; i < CHUNKS / 2; i++) {
+    const __m128i a0 = _mm_packs_epi32(in[2 * i], in[2 * i + 1]);
+    out[i]           = _mm_max_epi16(a0, _mm_setzero_si128());
   }
 }
 #elif defined(__ARM_NEON__)
