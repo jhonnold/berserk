@@ -348,6 +348,11 @@ void Search(ThreadData* thread) {
       if (bestScore >= TB_WIN_BOUND)
         nodeCountFactor = 0.5;
 
+      if (pctNodesNotBest < 0.001) {
+        scoreChangeFactor = 1;
+        stabilityFactor   = 0.75;
+      }
+
       if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
         if (Threads.ponder)
           Threads.stopOnPonderHit = 1;
