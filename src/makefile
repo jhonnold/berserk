@@ -3,8 +3,8 @@ EXE      = berserk
 SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
 		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 20250203
-MAIN_NETWORK = berserk-d43206fe90e4.nn
+VERSION  = 20250225
+MAIN_NETWORK = berserk-deb80bf0ba9d.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
@@ -15,10 +15,10 @@ WARN   = -Wall -Wextra -Wshadow
 
 FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
 M64     = -m64 -mpopcnt
-MSSE2   = $(M64) -msse -msse2
-MSSSE3  = $(MSSE2) -mssse3
-MAVX2   = $(MSSSE3) -msse4.1 -mbmi -mfma -mavx2
+MSSE41  = $(M64) -msse -msse2 -mssse3 -msse4.1
+MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
+ARM64   = -arch arm64
 
 # Detecting windows
 ifeq ($(shell echo "test"), "test")
@@ -39,13 +39,11 @@ endif
 ifeq ($(ARCH), native)
 	CFLAGS = $(FLAGS) -march=native
 else ifeq ($(ARCH), arm64)
-	CFLAGS = $(FLAGS) -arch arm64
+	CFLAGS = $(FLAGS) $(ARM64)
 else ifeq ($(findstring x86-64, $(ARCH)), x86-64)
 	CFLAGS = $(FLAGS) $(M64)
-else ifeq ($(findstring sse2, $(ARCH)), sse2)
-	CFLAGS = $(FLAGS) $(MSSE2)
-else ifeq ($(findstring ssse3, $(ARCH)), ssse3)
-	CFLAGS = $(FLAGS) $(MSSSE3)
+else ifeq ($(findstring sse41, $(ARCH)), sse41)
+	CFLAGS = $(FLAGS) $(MSSE41)
 else ifeq ($(findstring avx2, $(ARCH)), avx2)
 	CFLAGS = $(FLAGS) $(MAVX2)
 else ifeq ($(findstring avx512, $(ARCH)), avx512)
