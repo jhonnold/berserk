@@ -88,7 +88,7 @@ INLINE int GetEvalCorrection(Board* board, ThreadData* thread, SearchStack* ss) 
   const int pawnCorrection = GetPawnCorrection(board, thread);
   const int contCorrection = GetContCorrection(ss);
 
-  return (96 * pawnCorrection + 96 * contCorrection) / 16384;
+  return (40 * pawnCorrection + 152 * contCorrection) / 16384;
 }
 
 void UpdateHistories(SearchStack* ss,
