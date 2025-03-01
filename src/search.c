@@ -822,9 +822,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!ss->skip && !(isRoot && thread->multiPV > 0))
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
-  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER))) {
-    UpdatePawnCorrection(rawEval, bestScore, depth, board, thread);
-    UpdateContCorrection(rawEval, bestScore, depth, ss);
+  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= ss->staticEval ? BOUND_LOWER : BOUND_UPPER))) {
+    UpdatePawnCorrection(ss->staticEval, bestScore, depth, board, thread);
+    UpdateContCorrection(ss->staticEval, bestScore, depth, ss);
   }
 
   return bestScore;
