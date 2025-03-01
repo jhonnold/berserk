@@ -84,6 +84,13 @@ INLINE int GetContCorrection(SearchStack* ss) {
   return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / 128;
 }
 
+INLINE int GetEvalCorrection(Board* board, ThreadData* thread, SearchStack* ss) {
+  const int pawnCorrection = GetPawnCorrection(board, thread);
+  const int contCorrection = GetContCorrection(ss);
+
+  return (96 * pawnCorrection + 96 * contCorrection) / 16384;
+}
+
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
