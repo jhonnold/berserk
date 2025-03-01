@@ -77,11 +77,11 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 128;
+  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
 }
 
 INLINE int GetContCorrection(SearchStack* ss) {
-  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / 128;
+  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 }
 
 INLINE int GetEvalCorrection(Board* board, ThreadData* thread, SearchStack* ss) {
