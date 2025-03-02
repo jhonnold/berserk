@@ -57,3 +57,5 @@ berserk-popcnt
 dist
 
 *.log
+*.nn
+.idea/
