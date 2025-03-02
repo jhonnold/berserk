@@ -40,7 +40,7 @@ void Bench(int depth) {
   Limits.max     = INT_MAX;
   Limits.timeset = 0;
 
-  FILE* fin = fopen("/mnt/berserk/fens/20220401/berserk20220401.d9.1.fens", "r");
+  FILE* fin = fopen("sorter.fens", "r");
   char * line = NULL;
   size_t len = 0;
   ssize_t read;

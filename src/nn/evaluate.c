@@ -106,8 +106,6 @@ extern uint64_t activations[N_HIDDEN][N_HIDDEN];
 
 int Propagate(Accumulator* accumulator, const int stm) {
   uint8_t x0[N_L1] ALIGN;
-  float x1[N_L2] ALIGN;
-  float x2[N_L3] ALIGN;
 
   InputReLU(x0, accumulator, stm);
 
