@@ -133,13 +133,19 @@ void MainSearch() {
   int worstScore = UNKNOWN;
 
   for (int i = 0; i < Threads.count; i++) {
-    ThreadData* thread                         = Threads.threads[i];
+    ThreadData* thread = Threads.threads[i];
+    if (!thread->timeDone)
+      continue;
+
     worstScore                                 = Min(worstScore, thread->rootMoves[0].score);
     voteMap[FromTo(thread->rootMoves[0].move)] = 0;
   }
 
   for (int i = 0; i < Threads.count; i++) {
     ThreadData* thread = Threads.threads[i];
+    if (!thread->timeDone)
+      continue;
+
     voteMap[FromTo(thread->rootMoves[0].move)] += ThreadValue(thread, worstScore);
   }
 
@@ -148,7 +154,10 @@ void MainSearch() {
   Score bestVoteScore    = voteMap[FromTo(bestThread->rootMoves[0].move)];
 
   for (int i = 1; i < Threads.count; i++) {
-    ThreadData* curr    = Threads.threads[i];
+    ThreadData* curr = Threads.threads[i];
+    if (!curr->timeDone)
+      continue;
+
     Score currScore     = curr->rootMoves[0].score;
     Score currVoteScore = voteMap[FromTo(curr->rootMoves[0].move)];
 
@@ -182,7 +191,8 @@ void MainSearch() {
     Threads.threads[0] = bestThread;
   }
 
-  bestThread->previousScore = bestThread->rootMoves[0].score;
+  for (int i = 0; i < Threads.count; i++)
+    Threads.threads[i]->previousScore = bestThread->rootMoves[0].score;
 
   Move bestMove   = bestThread->rootMoves[0].move;
   Move ponderMove = NULL_MOVE;
@@ -242,11 +252,14 @@ void Search(ThreadData* thread) {
 #else
     if (setjmp(thread->exit)) {
 #endif
-      break;
+      return;
     }
 
-    if (Limits.depth && mainThread && thread->depth > Limits.depth)
-      break;
+    if (Limits.depth && mainThread && thread->depth > Limits.depth) {
+      thread->timeDone = 1;
+      if (mainThread)
+        return;
+    }
 
     for (int i = 0; i < thread->numRootMoves; i++)
       thread->rootMoves[i].previousScore = thread->rootMoves[i].score;
@@ -311,15 +324,15 @@ void Search(ThreadData* thread) {
         PrintUCI(thread, -CHECKMATE, CHECKMATE, board);
     }
 
-    if (!mainThread)
-      continue;
-
     Move bestMove = thread->rootMoves[0].move;
     int bestScore = thread->rootMoves[0].score;
 
     // Found mate?
-    if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate))
-      break;
+    if (Limits.mate && CHECKMATE - abs(bestScore) <= 2 * abs(Limits.mate)) {
+      thread->timeDone = 1;
+      if (mainThread)
+        return;
+    }
 
     // Time Management stuff
     long elapsed = GetTimeMS() - Limits.start;
@@ -349,10 +362,14 @@ void Search(ThreadData* thread) {
         nodeCountFactor = 0.5;
 
       if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
-        if (Threads.ponder)
-          Threads.stopOnPonderHit = 1;
-        else
-          break;
+        thread->timeDone = 1;
+
+        if (mainThread) {
+          if (Threads.ponder)
+            Threads.stopOnPonderHit = 1;
+          else
+            break;
+        }
       }
     }
 

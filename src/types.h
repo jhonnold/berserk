@@ -179,7 +179,7 @@ enum {
 typedef struct ThreadData ThreadData;
 
 struct ThreadData {
-  int idx, multiPV, depth, seldepth;
+  int idx, multiPV, depth, seldepth, timeDone;
   atomic_uint_fast64_t nodes, tbhits;
 
   int nmpMinPly, npmColor;
