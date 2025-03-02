@@ -43,6 +43,11 @@ ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board) {
                                AddQuietChecks(moves, board, BLACK);
 }
 
+ScoredMove* AddNonCheckAlmostPromotionMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddNonCheckAlmostPromotions(moves, board, WHITE) : //
+                               AddNonCheckAlmostPromotions(moves, board, BLACK);
+}
+
 ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
   return board->stm == WHITE ? AddLegalMoves(moves, board, WHITE) : //
                                AddLegalMoves(moves, board, BLACK);

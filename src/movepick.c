@@ -225,6 +225,25 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       while (picker->current != picker->end)
         return (picker->current++)->move;
 
+      if (!picker->genAlmostPromos) {
+        picker->phase = -1;
+        return NULL_MOVE;
+      }
+
+      picker->phase = QS_GEN_NON_CHECK_ALMOST_PROMOTIONS;
+
+      // fallthough
+    case QS_GEN_NON_CHECK_ALMOST_PROMOTIONS:
+      picker->current = picker->moves;
+      picker->end     = AddNonCheckAlmostPromotionMoves(picker->current, board);
+
+      picker->phase = QS_PLAY_NON_CHECK_ALMOST_PROMOTIONS;
+
+      // fallthrough
+    case QS_PLAY_NON_CHECK_ALMOST_PROMOTIONS:
+      while (picker->current != picker->end)
+        return (picker->current++)->move;
+
       picker->phase = -1;
       return NULL_MOVE;
 

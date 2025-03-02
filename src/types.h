@@ -238,6 +238,8 @@ enum {
   QS_PLAY_NOISY_MOVES,
   QS_GEN_QUIET_CHECKS,
   QS_PLAY_QUIET_CHECKS,
+  QS_GEN_NON_CHECK_ALMOST_PROMOTIONS,
+  QS_PLAY_NON_CHECK_ALMOST_PROMOTIONS,
   // QSearch Evasions
   QS_EVASION_HASH_MOVE,
   QS_EVASION_GEN_NOISY,
@@ -258,7 +260,7 @@ typedef struct {
   ThreadData* thread;
   SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
-  int seeCutoff, phase, genChecks;
+  int seeCutoff, phase, genChecks, genAlmostPromos;
 
   ScoredMove *current, *end, *endBad;
   ScoredMove moves[MAX_MOVES];
