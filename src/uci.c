@@ -41,7 +41,7 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-int MOVE_OVERHEAD  = 6;
+int MOVE_OVERHEAD  = 50;
 int MULTI_PV       = 1;
 int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
@@ -54,8 +54,8 @@ SearchParams Limits;
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
-const double as[4] = {-5.83465749, 46.43599644, -58.49798392, 172.62328616};
-const double bs[4] = {-7.95320845, 48.50833438, -66.34647240, 56.29169197};
+const double as[4] = {-2.02923586, 16.87641200, -27.06230207, 182.53858835};
+const double bs[4] = {-6.15230497, 42.37548361, -80.19006222, 77.75994970};
 
 // win% as permilli given score and ply
 int WRModel(Score s, int ply) {
@@ -178,8 +178,8 @@ void ParseGo(char* in, Board* board) {
       if (movesToGo == -1) {
         int total = Max(1, time + 50 * inc - 50 * MOVE_OVERHEAD);
 
-        Limits.alloc = Min(time * 0.3784, total * 0.0570);
-        Limits.max   = Min(time * 0.7776 - MOVE_OVERHEAD, Limits.alloc * 5.8320) - 10;
+        Limits.alloc = Min(time * 0.4193, total * 0.0575);
+        Limits.max   = Min(time * 0.9221 - MOVE_OVERHEAD, Limits.alloc * 5.9280) - 10;
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
@@ -260,7 +260,7 @@ void PrintUCIOptions() {
   printf("option name Ponder type check default false\n");
   printf("option name UCI_ShowWDL type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
-  printf("option name MoveOverhead type spin default 6 min 0 max 10000\n");
+  printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
   printf("uciok\n");
@@ -354,7 +354,6 @@ void UCILoop() {
       int depth = atoi(d);
       Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
-      PrintBB(board.easyCapture);
       PrintBB(board.threatened);
     } else if (!strncmp(in, "eval", 4)) {
       EvaluateTrace(&board);

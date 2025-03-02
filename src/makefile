@@ -1,23 +1,28 @@
 # General
 EXE      = berserk
-SRC      = *.c nn/*.c pyrrhic/tbprobe.c
-CC       = gcc
-VERSION  = 20240124
-MAIN_NETWORK = berserk-da85741a5582.nn
+SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
+		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
+CC       = clang
+VERSION  = 20250301
+MAIN_NETWORK = berserk-deb80bf0ba9d.nn
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
 # Flags
 STD    = -std=gnu11
 LIBS   = -pthread -lm
-WARN   = -Wall -Wextra -Wshadow -Werror
+WARN   = -Wall -Wextra -Wshadow
 
-FLAGS  = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
-CFLAGS = $(FLAGS) -m64 -mpopcnt -msse -msse2
+FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
+M64     = -m64 -mpopcnt
+MSSE41  = $(M64) -msse -msse2 -mssse3 -msse4.1
+MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
+MAVX512 = $(MAVX2) -mavx512f -mavx512bw
+ARM64   = -arch arm64
 
 # Detecting windows
 ifeq ($(shell echo "test"), "test")
-	CFLAGS += -static
+	FLAGS += -static
 endif
 
 # Detecting Apple Silicon (ARM64)
@@ -32,15 +37,17 @@ ifeq ($(ARCH), )
 endif
 
 ifeq ($(ARCH), native)
-	CFLAGS  = $(FLAGS) -march=native
+	CFLAGS = $(FLAGS) -march=native
 else ifeq ($(ARCH), arm64)
-	CFLAGS = $(FLAGS) -Wno-unused-function -arch arm64
-else ifeq ($(findstring ssse3, $(ARCH)), ssse3)
-	CFLAGS += -mssse3
+	CFLAGS = $(FLAGS) $(ARM64)
+else ifeq ($(findstring x86-64, $(ARCH)), x86-64)
+	CFLAGS = $(FLAGS) $(M64)
+else ifeq ($(findstring sse41, $(ARCH)), sse41)
+	CFLAGS = $(FLAGS) $(MSSE41)
 else ifeq ($(findstring avx2, $(ARCH)), avx2)
-	CFLAGS += -mssse3 -msse4.1 -mbmi -mfma -mavx2
+	CFLAGS = $(FLAGS) $(MAVX2)
 else ifeq ($(findstring avx512, $(ARCH)), avx512)
-	CFLAGS += -mssse3 -msse4.1 -mbmi -mfma -mavx2 -mavx512f -mavx512bw
+	CFLAGS = $(FLAGS) $(MAVX512)
 endif
 
 ifeq ($(ARCH), native)
@@ -105,18 +112,21 @@ download-network:
 					echo "Downloaded network $(EVALFILE) and verified"; \
 				else \
 					echo "Downloaded network $(EVALFILE) failed validation"; \
+					exit 1; \
 				fi; \
 			elif hash sha256sum 2>/dev/null; then \
 				if [ "$(EVALFILE)" = "berserk-"`sha256sum $(EVALFILE) | cut -c1-12`".nn" ]; then \
 					echo "Downloaded network $(EVALFILE) and verified"; \
 				else \
 					echo "Downloaded network $(EVALFILE) failed validation"; \
+					exit 1; \
 				fi; \
 			else \
 				echo "Downloaded network $(EVALFILE), but unable to verify"; \
 			fi; \
 		else \
-			echo "Unable to downlaod network: $(EVALFILE)"; \
+			echo "Unable to download network: $(EVALFILE)"; \
+			exit 1; \
 		fi; \
 	elif test -f "$(EVALFILE)"; then \
 		echo "Using network: $(EVALFILE)"; \

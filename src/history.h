@@ -58,7 +58,7 @@ INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
 }
 
 INLINE int16_t HistoryBonus(int depth) {
-  return Min(1896, 4 * depth * depth + 120 * depth - 120);
+  return Min(1729, 4 * depth * depth + 164 * depth - 113);
 }
 
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
@@ -77,7 +77,11 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / PAWN_CORRECTION_GRAIN;
+  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 128;
+}
+
+INLINE int GetContCorrection(SearchStack* ss) {
+  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / 128;
 }
 
 void UpdateHistories(SearchStack* ss,
@@ -89,6 +93,7 @@ void UpdateHistories(SearchStack* ss,
                      Move captures[],
                      int nC);
 
-void UpdatePawnCorrection(int raw, int real, Board* board, ThreadData* thread);
+void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
+void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
 
 #endif

@@ -41,7 +41,7 @@
 #define regi_sub   _mm256_sub_epi16
 #define regi_add   _mm256_add_epi16
 #define regi_store _mm256_store_si256
-#elif defined(__SSE2__)
+#elif defined(__SSE4_1__)
 #include <immintrin.h>
 #define UNROLL     128
 #define NUM_REGS   16
@@ -51,6 +51,15 @@
 #define regi_sub   _mm_sub_epi16
 #define regi_add   _mm_add_epi16
 #define regi_store _mm_store_si128
+#elif defined(__ARM_NEON__)
+#include <arm_neon.h>
+#define UNROLL           128
+#define NUM_REGS         16
+#define regi_t           int16x8_t
+#define regi_load(a)     vld1q_s16((int16_t*) (a))
+#define regi_sub(a, b)   vsubq_s16(a, b)
+#define regi_add(a, b)   vaddq_s16(a, b)
+#define regi_store(a, b) vst1q_s16((int16_t*) (a), b)
 #else
 #define UNROLL           16
 #define NUM_REGS         16

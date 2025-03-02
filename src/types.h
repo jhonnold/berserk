@@ -38,7 +38,8 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
-#define PAWN_CORRECTION_GRAIN 256
+#define CORRECTION_GRAIN 256
+
 #define PAWN_CORRECTION_SIZE  131072
 #define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
 
@@ -75,7 +76,7 @@ typedef struct {
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
-  BitBoard easyCapture;
+  BitBoard threatenedBy[6];
   int capture;
 } BoardHistory;
 
@@ -94,7 +95,7 @@ typedef struct {
   BitBoard pinned;   // pinned pieces
 
   BitBoard threatened;  // opponent "threatening" these squares
-  BitBoard easyCapture; // opponent capturing these is a guarantee SEE > 0
+  BitBoard threatenedBy[6];
 
   int stm;     // side to move
   int xstm;    // not side to move
@@ -133,6 +134,7 @@ typedef int16_t PieceTo[12][64];
 typedef struct {
   int ply, staticEval, de;
   PieceTo* ch;
+  PieceTo* cont;
   Move move, skip;
   Move killers[2];
 } SearchStack;
@@ -198,6 +200,7 @@ struct ThreadData {
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
+  int16_t contCorrection[12][64][12][64];
 
   int action, calls;
   pthread_t nativeThread;
