@@ -76,8 +76,7 @@ typedef struct {
   int nullply;
   uint64_t zobrist;
   uint64_t pawnZobrist;
-  uint64_t wNonPawnZobrist;
-  uint64_t bNonPawnZobrist;
+  uint64_t nonPawnZobrist[2];
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
@@ -95,8 +94,7 @@ typedef struct {
 
   uint64_t zobrist;     // zobrist hash of the position
   uint64_t pawnZobrist; // pawn zobrist hash of the position (pawns + stm)
-  uint64_t wNonPawnZobrist;
-  uint64_t bNonPawnZobrist;
+  uint64_t nonPawnZobrist[2];
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
@@ -207,8 +205,7 @@ struct ThreadData {
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
-  int16_t wNonPawnCorrection[2][NON_PAWN_CORRECTION_SIZE];
-  int16_t bNonPawnCorrection[2][NON_PAWN_CORRECTION_SIZE];
+  int16_t nonPawnCorrection[2][2][NON_PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
 
   int action, calls;

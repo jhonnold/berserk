@@ -163,10 +163,10 @@ void ParseFen(char* fen, Board* board) {
   SetSpecialPieces(board);
   SetThreats(board);
 
-  board->zobrist         = Zobrist(board);
-  board->pawnZobrist     = PawnZobrist(board);
-  board->wNonPawnZobrist = NonPawnZobrist(board, WHITE);
-  board->bNonPawnZobrist = NonPawnZobrist(board, BLACK);
+  board->zobrist               = Zobrist(board);
+  board->pawnZobrist           = PawnZobrist(board);
+  board->nonPawnZobrist[WHITE] = NonPawnZobrist(board, WHITE);
+  board->nonPawnZobrist[BLACK] = NonPawnZobrist(board, BLACK);
 }
 
 void BoardToFen(char* fen, Board* board) {
@@ -336,10 +336,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
   if (PieceType(piece) == PAWN)
     board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
-  else if (PieceColor(piece) == WHITE)
-    board->wNonPawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
   else
-    board->bNonPawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
+    board->nonPawnZobrist[PieceColor(piece)] ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
   if (IsCas(move)) {
     int rookFrom = board->cr[CASTLING_ROOK[to]];
@@ -357,10 +355,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->squares[rookTo] = rook;
 
     board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
-    if (PieceColor(rook) == WHITE)
-      board->wNonPawnZobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
-    else
-      board->bNonPawnZobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
+    board->nonPawnZobrist[PieceColor(rook)] ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
   } else if (IsCap(move)) {
     int capSq = IsEP(move) ? to - PawnDir(board->stm) : to;
     if (IsEP(move))
@@ -373,10 +368,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
     if (PieceType(captured) == PAWN)
       board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
-    else if (PieceColor(captured) == WHITE)
-      board->wNonPawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
     else
-      board->bNonPawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
+      board->nonPawnZobrist[PieceColor(captured)] ^= ZOBRIST_PIECES[captured][capSq];
 
     board->piecesCounts -= PieceCount(captured);
     board->phase -= PHASE_VALUES[PieceType(captured)];
@@ -411,10 +404,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];
-      if (PieceColor(promoted) == WHITE)
-        board->wNonPawnZobrist ^= ZOBRIST_PIECES[promoted][to];
-      else
-        board->bNonPawnZobrist ^= ZOBRIST_PIECES[promoted][to];
+      board->nonPawnZobrist[PieceColor(promoted)] ^= ZOBRIST_PIECES[promoted][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
       board->phase += PHASE_VALUES[PieceType(promoted)];
     }

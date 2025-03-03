@@ -88,32 +88,23 @@ void UpdateHistories(SearchStack* ss,
 }
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
-  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
-  const int idx            = (board->pawnZobrist & PAWN_CORRECTION_MASK);
-  const int saveDepth      = Min(16, depth);
-
-  thread->pawnCorrection[idx] = (thread->pawnCorrection[idx] * (256 - saveDepth) + correction * saveDepth) / 256;
+  const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+  int16_t* pawnCorrection = &thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
+  AddHistoryHeuristic(pawnCorrection, correction);
 }
 
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
   if ((ss - 1)->move && (ss - 2)->move) {
-    const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
-    const int saveDepth      = Min(16, depth);
-
+    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
     int16_t* contCorrection = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    *contCorrection         = (*contCorrection * (256 - saveDepth) + correction * saveDepth) / 256;
+    AddHistoryHeuristic(contCorrection, correction);
   }
 }
 
 void UpdateNonPawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
-  const int16_t correction = Min(30000, Max(-30000, (real - raw) * CORRECTION_GRAIN));
-  const int wIdx           = (board->wNonPawnZobrist & NON_PAWN_CORRECTION_MASK);
-  const int bIdx           = (board->bNonPawnZobrist & NON_PAWN_CORRECTION_MASK);
-  const int saveDepth      = Min(16, depth);
-
-  int16_t* wPawnCorr = &thread->wNonPawnCorrection[board->stm][wIdx];
-  int16_t* bPawnCorr = &thread->bNonPawnCorrection[board->stm][bIdx];
-
-  *wPawnCorr = (*wPawnCorr * (256 - saveDepth) + correction * saveDepth) / 256;
-  *bPawnCorr = (*bPawnCorr * (256 - saveDepth) + correction * saveDepth) / 256;
+  const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+  int16_t* wNonPawnCorrection = &thread->nonPawnCorrection[WHITE][board->stm][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK];
+  int16_t* bNonPawnCorrection = &thread->nonPawnCorrection[BLACK][board->stm][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
+  AddHistoryHeuristic(wNonPawnCorrection, correction);
+  AddHistoryHeuristic(bNonPawnCorrection, correction);
 }

@@ -77,25 +77,24 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / CORRECTION_GRAIN;
+  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
 }
 
 INLINE int GetContCorrection(SearchStack* ss) {
-  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] / CORRECTION_GRAIN;
+  return (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 }
 
 INLINE int GetNonPawnCorrection(Board* board, ThreadData* thread) {
-  return (thread->wNonPawnCorrection[board->stm][board->wNonPawnZobrist & NON_PAWN_CORRECTION_MASK] +
-          thread->bNonPawnCorrection[board->stm][board->bNonPawnZobrist & NON_PAWN_CORRECTION_MASK]) /
-         CORRECTION_GRAIN;
+  return thread->nonPawnCorrection[WHITE][board->stm][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK] +
+         thread->nonPawnCorrection[BLACK][board->stm][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
 }
 
 INLINE int GetEvalCorrection(Board* board, SearchStack* ss, ThreadData* thread) {
-  const int pawnCorrection = GetPawnCorrection(board, thread);
+  const int pawnCorrection    = GetPawnCorrection(board, thread);
   const int nonPawnCorrection = GetNonPawnCorrection(board, thread);
-  const int contCorrection = GetContCorrection(ss);
+  const int contCorrection    = GetContCorrection(ss);
 
-  return (48 * pawnCorrection + 48 * nonPawnCorrection + 96 * contCorrection) / 128;
+  return (64 * pawnCorrection + 64 * nonPawnCorrection + 128 * contCorrection) / 16384;
 }
 
 void UpdateHistories(SearchStack* ss,

@@ -822,10 +822,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!ss->skip && !(isRoot && thread->multiPV > 0))
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
-  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER))) {
-    UpdatePawnCorrection(rawEval, bestScore, depth, board, thread);
-    UpdateNonPawnCorrection(rawEval, bestScore, depth, board, thread);
-    UpdateContCorrection(rawEval, bestScore, depth, ss);
+  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= ss->staticEval ? BOUND_LOWER : BOUND_UPPER))) {
+    UpdatePawnCorrection(ss->staticEval, bestScore, depth, board, thread);
+    UpdateNonPawnCorrection(ss->staticEval, bestScore, depth, board, thread);
+    UpdateContCorrection(ss->staticEval, bestScore, depth, ss);
   }
 
   return bestScore;
@@ -909,6 +909,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
     futility = bestScore + 63;
   }
+
+  (ss + 1)->killers[0] = NULL_MOVE;
+  (ss + 1)->killers[1] = NULL_MOVE;
 
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
@@ -1076,8 +1079,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
   memset(&thread->contCorrection, 0, sizeof(thread->contCorrection));
-  memset(&thread->wNonPawnCorrection, 0, sizeof(thread->wNonPawnCorrection));
-  memset(&thread->bNonPawnCorrection, 0, sizeof(thread->bNonPawnCorrection));
+  memset(&thread->nonPawnCorrection, 0, sizeof(thread->nonPawnCorrection));
 
   thread->board.accumulators = thread->accumulators;
   thread->previousScore      = UNKNOWN;
