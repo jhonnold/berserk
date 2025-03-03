@@ -96,7 +96,7 @@ INLINE int GetEvalCorrection(Board* board, ThreadData* thread, SearchStack* ss) 
   const int contCorr = GetContCorrection(ss);
   const int easyCapCorr = GetEasyCapsCorrection(board, thread, ss);
 
-  return (pawnCorr / 2 + contCorr + easyCapCorr / 2) / CORRECTION_GRAIN;
+  return (64 * pawnCorr + 128 * contCorr + 64 * easyCapCorr) / 16384;
 }
 
 void UpdateHistories(SearchStack* ss,
