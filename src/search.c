@@ -61,7 +61,7 @@ void InitPruningAndReductionTables() {
     LMP[1][depth] = 2.1885 + 0.9911 * depth * depth;
 
     STATIC_PRUNE[0][depth] = -15.2703 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -94.0617 * depth;        // capture cutoff
+    STATIC_PRUNE[1][depth] = -94.0617 * depth;         // capture cutoff
   }
 }
 
@@ -231,8 +231,10 @@ void Search(ThreadData* thread) {
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
     (ss + i)->ply = i;
-  for (size_t i = 1; i <= searchOffset; i++)
-    (ss - i)->ch = &thread->ch[0][WHITE_PAWN][A1];
+  for (size_t i = 1; i <= searchOffset; i++) {
+    (ss - i)->ch   = &thread->ch[0][WHITE_PAWN][A1];
+    (ss - i)->cont = &thread->contCorrection[WHITE_PAWN][A1];
+  }
 
   while (++thread->depth < MAX_SEARCH_PLY) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -468,7 +470,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -477,7 +479,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -511,7 +513,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
   if (!isPV && !inCheck) {
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
-    const int opponentDeclining = ss->staticEval + (ss - 1)->staticEval > 1;
+    const int opponentDeclining      = ss->staticEval + (ss - 1)->staticEval > 1;
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
@@ -538,6 +540,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       TTPrefetch(KeyAfter(board, NULL_MOVE));
       ss->move = NULL_MOVE;
       ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
+      ss->cont = &thread->contCorrection[WHITE_PAWN][A1];
       MakeNullMove(board);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
@@ -576,6 +579,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         TTPrefetch(KeyAfter(board, move));
         ss->move = move;
         ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+        ss->cont = &thread->contCorrection[Moving(move)][To(move)];
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -697,6 +701,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->cont = &thread->contCorrection[Moving(move)][To(move)];
     MakeMove(move, board);
 
     // apply extensions
@@ -817,9 +822,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!ss->skip && !(isRoot && thread->multiPV > 0))
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
-  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= rawEval ? BOUND_LOWER : BOUND_UPPER))) {
-    UpdatePawnCorrection(rawEval, bestScore, depth, board, thread);
-    UpdateContCorrection(rawEval, bestScore, depth, ss, thread);
+  if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= ss->staticEval ? BOUND_LOWER : BOUND_UPPER))) {
+    UpdatePawnCorrection(ss->staticEval, bestScore, depth, board, thread);
+    UpdateContCorrection(ss->staticEval, bestScore, depth, ss);
   }
 
   return bestScore;
@@ -875,7 +880,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -884,7 +889,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss, thread));
+      eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -903,6 +908,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
     futility = bestScore + 63;
   }
+
+  (ss + 1)->killers[0] = NULL_MOVE;
+  (ss + 1)->killers[1] = NULL_MOVE;
 
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
@@ -939,6 +947,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     TTPrefetch(KeyAfter(board, move));
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+    ss->cont = &thread->contCorrection[Moving(move)][To(move)];
     MakeMove(move, board);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
