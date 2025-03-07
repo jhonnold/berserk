@@ -55,21 +55,27 @@ uint16_t LOOKUP_INDICES[256][8] ALIGN;
 #include <immintrin.h>
 INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m512i) / sizeof(acc_t);
-  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const size_t CHUNKS = N_HIDDEN / 2 / WIDTH;
   const int views[2]  = {stm, !stm};
 
+  const __m512i zero = _mm512_setzero_si512();
+  const __m512i max  = _mm512_set1_epi16(127);
+
   for (int v = 0; v < 2; v++) {
-    const __m512i* in = (__m512i*) acc->values[views[v]];
-    __m512i* out      = (__m512i*) &outputs[N_HIDDEN * v];
+    const __m512i* in0 = (__m512i*) &acc->values[views[v]][0];
+    const __m512i* in1 = (__m512i*) &acc->values[views[v]][N_HIDDEN / 2];
+    __m512i* out       = (__m512i*) &outputs[N_HIDDEN / 2 * v];
 
-    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], QUANT_BITS);
-      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], QUANT_BITS);
-      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], QUANT_BITS);
-      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], QUANT_BITS);
+    for (size_t i = 0; i < CHUNKS / 2; i++) {
+      __m512i s0a = _mm512_max_epi16(_mm512_min_epi16(in0[2 * i + 0], max), zero);
+      __m512i s0b = _mm512_max_epi16(_mm512_min_epi16(in0[2 * i + 1], max), zero);
+      __m512i s1a = _mm512_max_epi16(_mm512_min_epi16(in1[2 * i + 0], max), zero);
+      __m512i s1b = _mm512_max_epi16(_mm512_min_epi16(in1[2 * i + 1], max), zero);
 
-      out[i]     = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512());
-      out[i + 1] = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512());
+      __m512i sa = _mm512_mullo_epi16(s0a, s1a);
+      __m512i sb = _mm512_mullo_epi16(s0b, s1b);
+
+      out[i] = _mm512_packs_epi16(_mm512_srai_epi16(sa, 7), _mm512_srai_epi16(sb, 7));
     }
   }
 }
@@ -77,21 +83,27 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
 #include <immintrin.h>
 INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
-  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const size_t CHUNKS = N_HIDDEN / 2 / WIDTH;
   const int views[2]  = {stm, !stm};
 
+  const __m256i zero = _mm256_setzero_si256();
+  const __m256i max  = _mm256_set1_epi16(127);
+
   for (int v = 0; v < 2; v++) {
-    const __m256i* in = (__m256i*) acc->values[views[v]];
-    __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
+    const __m256i* in0 = (__m256i*) &acc->values[views[v]][0];
+    const __m256i* in1 = (__m256i*) &acc->values[views[v]][N_HIDDEN / 2];
+    __m256i* out       = (__m256i*) &outputs[N_HIDDEN / 2 * v];
 
-    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], QUANT_BITS);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], QUANT_BITS);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], QUANT_BITS);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], QUANT_BITS);
+    for (size_t i = 0; i < CHUNKS / 2; i++) {
+      __m256i s0a = _mm256_max_epi16(_mm256_min_epi16(in0[2 * i + 0], max), zero);
+      __m256i s0b = _mm256_max_epi16(_mm256_min_epi16(in0[2 * i + 1], max), zero);
+      __m256i s1a = _mm256_max_epi16(_mm256_min_epi16(in1[2 * i + 0], max), zero);
+      __m256i s1b = _mm256_max_epi16(_mm256_min_epi16(in1[2 * i + 1], max), zero);
 
-      out[i]     = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256());
-      out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256());
+      __m256i sa = _mm256_mullo_epi16(s0a, s1a);
+      __m256i sb = _mm256_mullo_epi16(s0b, s1b);
+
+      out[i] = _mm256_packs_epi16(_mm256_srai_epi16(sa, 7), _mm256_srai_epi16(sb, 7));
     }
   }
 }
@@ -99,18 +111,27 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
 #include <immintrin.h>
 INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
-  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const size_t CHUNKS = N_HIDDEN / 2 / WIDTH;
   const int views[2]  = {stm, !stm};
 
+  const __m128i zero = _mm_setzero_si128();
+  const __m128i max  = _mm_set1_epi16(127);
+
   for (int v = 0; v < 2; v++) {
-    const __m128i* in = (__m128i*) acc->values[views[v]];
-    __m128i* out      = (__m128i*) &outputs[N_HIDDEN * v];
+    const __m128i* in0 = (__m128i*) &acc->values[views[v]][0];
+    const __m128i* in1 = (__m128i*) &acc->values[views[v]][N_HIDDEN / 2];
+    __m128i* out       = (__m128i*) &outputs[N_HIDDEN / 2 * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i++) {
-      __m128i s0 = _mm_srai_epi16(in[2 * i + 0], QUANT_BITS);
-      __m128i s1 = _mm_srai_epi16(in[2 * i + 1], QUANT_BITS);
+      __m128i s0a = _mm_max_epi16(_mm_min_epi16(in0[2 * i + 0], max), zero);
+      __m128i s0b = _mm_max_epi16(_mm_min_epi16(in0[2 * i + 1], max), zero);
+      __m128i s1a = _mm_max_epi16(_mm_min_epi16(in1[2 * i + 0], max), zero);
+      __m128i s1b = _mm_max_epi16(_mm_min_epi16(in1[2 * i + 1], max), zero);
 
-      out[i] = _mm_max_epi8(_mm_packs_epi16(s0, s1), _mm_setzero_si128());
+      __m128i sa = _mm_mullo_epi16(s0a, s1a);
+      __m128i sb = _mm_mullo_epi16(s0b, s1b);
+
+      out[i] = _mm_packs_epi16(_mm_srai_epi16(sa, 7), _mm_srai_epi16(sb, 7));
     }
   }
 }
@@ -138,14 +159,17 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
 #else
 INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
-  const int max      = 127 << 5;
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
-    int8_t* out     = &outputs[N_HIDDEN * v];
+    int8_t* out     = &outputs[N_HIDDEN / 2 * v];
 
-    for (size_t i = 0; i < N_HIDDEN; i++)
-      out[i] = Min(max, Max(0, in[i])) >> QUANT_BITS;
+    for (size_t i = 0; i < N_HIDDEN / 2; i++) {
+      const int i0 = Max(Min(in[i], 127), 0);
+      const int i1 = Max(Min(in[i + N_HIDDEN / 2], 127), 0);
+
+      out[i] = (i0 * i1) / 128;
+    }
   }
 }
 #endif
@@ -833,10 +857,10 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(int16_t) * N_HIDDEN +              // input biases
                             sizeof(int8_t) * N_L1 * N_L2 +            // input biases
                             sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(int16_t) * N_L2 * N_L3 +             // input biases
-                            sizeof(int32_t) * N_L3 +                    // input biases
-                            sizeof(int16_t) * N_L3 +                    // output weights
-                            sizeof(int32_t);                            // output bias
+                            sizeof(int16_t) * N_L2 * N_L3 +           // input biases
+                            sizeof(int32_t) * N_L3 +                  // input biases
+                            sizeof(int16_t) * N_L3 +                  // output weights
+                            sizeof(int32_t);                          // output bias
 
 #if defined(__SSE4_1__) || defined(__ARM_NEON__)
 INLINE int WeightIdxScrambled(int idx) {
