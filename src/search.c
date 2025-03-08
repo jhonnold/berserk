@@ -230,10 +230,11 @@ void Search(ThreadData* thread) {
   SearchStack* ss = searchStack + searchOffset;
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
-    (ss + i)->ply = i;
+    (ss + i)->ply = i, (ss + i)->reduction = 0;
   for (size_t i = 1; i <= searchOffset; i++) {
-    (ss - i)->ch   = &thread->ch[0][WHITE_PAWN][A1];
-    (ss - i)->cont = &thread->contCorrection[WHITE_PAWN][A1];
+    (ss - i)->ch        = &thread->ch[0][WHITE_PAWN][A1];
+    (ss - i)->cont      = &thread->contCorrection[WHITE_PAWN][A1];
+    (ss - i)->reduction = 0;
   }
 
   while (++thread->depth < MAX_SEARCH_PLY) {
@@ -515,6 +516,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
     const int opponentDeclining      = ss->staticEval + (ss - 1)->staticEval > 1;
 
+    if ((ss - 1)->reduction >= 3 && !opponentDeclining)
+      depth++;
+
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 9 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
@@ -736,10 +740,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R--;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(newDepth, Max(R, 1));
+      R             = Min(newDepth, Max(R, 1));
+      ss->reduction = R;
 
       int lmrDepth = newDepth - R;
       score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
+
+      ss->reduction = 0;
 
       if (score > alpha && R > 1) {
         // Credit to Viz (and lonfom) for the following modification of the zws
