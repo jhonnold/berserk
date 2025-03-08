@@ -77,7 +77,7 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       }
 
       if (ss->ply < LP_HIST_MAX)
-        current->score += 4 * LPH(ss->ply, move);
+        current->score += (4 - ss->ply) * LPH(ss->ply, move);
     } else if (type == ST_CAPTURE)
       current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
 
