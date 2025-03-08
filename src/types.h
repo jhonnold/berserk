@@ -38,6 +38,8 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
+#define LP_HIST_MAX 4
+
 #define CORRECTION_GRAIN 256
 
 #define PAWN_CORRECTION_SIZE 131072
@@ -195,10 +197,11 @@ struct ThreadData {
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
 
-  Move counters[12][64];         // counter move butterfly table
-  int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
-  int16_t ch[2][12][64][12][64]; // continuation move history table
-  int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
+  Move counters[12][64];             // counter move butterfly table
+  int16_t hh[2][2][2][64 * 64];      // history heuristic butterfly table (stm / threatened)
+  int16_t ch[2][12][64][12][64];     // continuation move history table
+  int16_t caph[12][64][2][7];        // capture history (piece - to - defeneded - captured_type)
+  int16_t lph[LP_HIST_MAX][64 * 64]; // low ply history for move ordering improvement close to root
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];

@@ -51,6 +51,9 @@ void UpdateHistories(SearchStack* ss,
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
+
+    if (ss->ply < LP_HIST_MAX)
+      AddHistoryHeuristic(&LPH(ss->ply, bestMove), inc);
   } else {
     int piece    = Moving(bestMove);
     int to       = To(bestMove);
@@ -69,6 +72,9 @@ void UpdateHistories(SearchStack* ss,
 
       AddHistoryHeuristic(&HH(stm, m, board->threatened), -inc);
       UpdateCH(ss, m, -inc);
+
+      if (ss->ply < LP_HIST_MAX)
+        AddHistoryHeuristic(&LPH(ss->ply, m), -inc);
     }
   }
 

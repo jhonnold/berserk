@@ -229,6 +229,7 @@ void Search(ThreadData* thread) {
   SearchStack searchStack[MAX_SEARCH_PLY + searchOffset];
   SearchStack* ss = searchStack + searchOffset;
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
+  memset(thread->lph, 0, sizeof(thread->lph));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
     (ss + i)->ply = i, (ss + i)->reduction = 0;
   for (size_t i = 1; i <= searchOffset; i++) {
@@ -1082,6 +1083,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->counters, 0, sizeof(thread->counters));
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
+  memset(&thread->lph, 0, sizeof(thread->lph));
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
   memset(&thread->contCorrection, 0, sizeof(thread->contCorrection));
