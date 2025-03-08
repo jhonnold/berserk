@@ -519,7 +519,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if ((ss - 1)->reduction >= 3 && !opponentDeclining)
       depth++;
 
-    if ((ss - 1)->reduction >= 1 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 100)
+    if ((ss - 1)->reduction >= 1 && depth >= 2 && (ss - 1)->staticEval != EVAL_UNKNOWN && ss->staticEval + (ss - 1)->staticEval > 100)
       depth--;
 
     // Reverse Futility Pruning
