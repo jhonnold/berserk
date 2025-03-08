@@ -85,13 +85,8 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], QUANT_BITS);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], QUANT_BITS);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], QUANT_BITS);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], QUANT_BITS);
-
-      out[i]     = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256());
-      out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256());
+      out[i]     = _mm256_max_epi8(_mm256_packs_epi16(in[2 * i + 0], in[2 * i + 1]), _mm256_setzero_si256());
+      out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(in[2 * i + 2], in[2 * i + 3]), _mm256_setzero_si256());
     }
   }
 }
@@ -819,7 +814,7 @@ int Propagate(Accumulator* accumulator, const int stm) {
   ReLU16(act, dest, N_L2);
   L2Affine(dest, act);
   ReLU16(act, dest, N_L3);
-  return L3Transform(act) >> QUANT_BITS;
+  return L3Transform(act) >> 4;
 }
 
 int Predict(Board* board) {
@@ -833,10 +828,10 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(int16_t) * N_HIDDEN +              // input biases
                             sizeof(int8_t) * N_L1 * N_L2 +            // input biases
                             sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(int16_t) * N_L2 * N_L3 +             // input biases
-                            sizeof(int32_t) * N_L3 +                    // input biases
-                            sizeof(int16_t) * N_L3 +                    // output weights
-                            sizeof(int32_t);                            // output bias
+                            sizeof(int16_t) * N_L2 * N_L3 +           // input biases
+                            sizeof(int32_t) * N_L3 +                  // input biases
+                            sizeof(int16_t) * N_L3 +                  // output weights
+                            sizeof(int32_t);                          // output bias
 
 #if defined(__SSE4_1__) || defined(__ARM_NEON__)
 INLINE int WeightIdxScrambled(int idx) {
