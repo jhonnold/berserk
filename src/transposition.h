@@ -87,6 +87,10 @@ int TTFull();
 
 #define HASH_MAX ((int) (pow(2, 32) * sizeof(TTBucket) / MEGABYTE))
 
+INLINE int TTAge(TTEntry* e) {
+  return ((AGE_CYCLE + TT.age - e->agePvBound) & AGE_MASK);
+}
+
 INLINE Move TTMove(TTEntry* e) {
   // Lower 20 bits for move
   return (e->evalAndMove & 0xfffff);
