@@ -70,7 +70,6 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, BLACK);
 
   const int layer  = Max(0, (BitCount(OccBB(BOTH)) - 1) / 4 - 1);
-  const int layer2 = Max(0, (BitCount(OccBB(BOTH)) - 2) / 4 - 1);
 
   int base   = Propagate(board->accumulators, board->stm, layer);
   base       = board->stm == WHITE ? base : -base;
@@ -100,7 +99,7 @@ void EvaluateTrace(Board* board) {
         PopBit(OccBB(BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
-        int new = Propagate(board->accumulators, board->stm, layer2);
+        int new = Propagate(board->accumulators, board->stm, layer);
         new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 
@@ -134,6 +133,50 @@ void EvaluateTrace(Board* board) {
   }
 
   printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
+
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
+
+  printf("+-------+-------+\n");
+  printf("| Layer | Score |\n");
+  printf("+-------+-------+\n");
+
+  for (int l = 0; l < N_LAYERS; l++) {
+    printf("|   %d   |", l + 1);
+
+    int lScore     = Propagate(board->accumulators, board->stm, l);
+    lScore         = board->stm == WHITE ? lScore : -lScore;
+    int normalized = Normalize(lScore);
+    int v          = abs(normalized);
+
+    char buffer[6];
+    buffer[5] = '\0';
+    buffer[0] = lScore > 0 ? '+' : lScore < 0 ? '-' : ' ';
+    if (v >= 1000) {
+      buffer[1] = '0' + v / 1000;
+      v %= 1000;
+      buffer[2] = '0' + v / 100;
+      v %= 100;
+      buffer[3] = '.';
+      buffer[4] = '0' + v / 10;
+    } else {
+      buffer[1] = '0' + v / 100;
+      v %= 100;
+      buffer[2] = '.';
+      buffer[3] = '0' + v / 10;
+      v %= 10;
+      buffer[4] = '0' + v;
+    }
+
+    printf(" %s |", buffer);
+
+    if (l == layer)
+      printf(" <--- Used\n");
+    else
+      printf("\n");
+  }
+
+  printf("+-------+-------+\n\n");
 
   printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
