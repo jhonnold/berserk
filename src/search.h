@@ -30,7 +30,7 @@
 
 void InitPruningAndReductionTables();
 
-void StartSearch(Board* board, uint8_t ponder);
+void StartSearch(Board* board);
 void MainSearch();
 void Search(ThreadData* thread);
 int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);

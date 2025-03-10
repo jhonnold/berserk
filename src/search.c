@@ -70,9 +70,6 @@ INLINE int CheckLimits(ThreadData* thread) {
     return 0;
   thread->calls = Limits.hitrate;
 
-  if (Threads.ponder)
-    return 0;
-
   long elapsed = GetTimeMS() - Limits.start;
   return (Limits.timeset && elapsed >= Limits.max) || //
          (Limits.nodes && NodesSearched() >= Limits.nodes);
@@ -86,13 +83,11 @@ INLINE int ThreadValue(ThreadData* thread, const int worstScore) {
   return (thread->rootMoves[0].score - worstScore) * thread->depth;
 }
 
-void StartSearch(Board* board, uint8_t ponder) {
+void StartSearch(Board* board) {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
 
-  Threads.stopOnPonderHit = 0;
-  Threads.stop            = 0;
-  Threads.ponder          = ponder;
+  Threads.stop = 0;
 
   // Setup Threads
   SetupMainThread(board);
@@ -116,7 +111,7 @@ void MainSearch() {
   Search(mainThread);
 
   pthread_mutex_lock(&Threads.lock);
-  if (!Threads.stop && (Threads.ponder || Limits.infinite)) {
+  if (!Threads.stop && Limits.infinite) {
     Threads.sleeping = 1;
     pthread_mutex_unlock(&Threads.lock);
     ThreadWait(mainThread, &Threads.stop);
@@ -291,8 +286,6 @@ void Search(ThreadData* thread) {
           alpha = Max(alpha - delta, -CHECKMATE);
 
           searchDepth = thread->depth;
-          if (mainThread)
-            Threads.stopOnPonderHit = 0;
         } else if (score >= beta) {
           beta = Min(beta + delta, CHECKMATE);
 
@@ -326,7 +319,7 @@ void Search(ThreadData* thread) {
     long elapsed = GetTimeMS() - Limits.start;
 
     // Soft TM checks
-    if (Limits.timeset && thread->depth >= 5 && !Threads.stopOnPonderHit) {
+    if (Limits.timeset && thread->depth >= 5) {
       int sameBestMove       = bestMove == previousBestMove;                    // same move?
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.3110 - 0.0533 * searchStability;
@@ -349,12 +342,8 @@ void Search(ThreadData* thread) {
       if (bestScore >= TB_WIN_BOUND)
         nodeCountFactor = 0.5;
 
-      if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor) {
-        if (Threads.ponder)
-          Threads.stopOnPonderHit = 1;
-        else
+      if (elapsed > Limits.alloc * stabilityFactor * scoreChangeFactor * nodeCountFactor)
           break;
-      }
     }
 
     previousBestMove      = bestMove;

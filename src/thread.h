@@ -29,8 +29,8 @@ typedef struct {
   pthread_mutex_t mutex, lock;
   pthread_cond_t sleep;
 
-  uint8_t init, searching, sleeping, stopOnPonderHit;
-  atomic_uchar ponder, stop;
+  uint8_t init, searching, sleeping;
+  atomic_uchar stop;
 } ThreadPool;
 
 extern ThreadPool Threads;

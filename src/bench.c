@@ -58,7 +58,7 @@ void Bench(int depth) {
     SearchClear();
 
     Limits.start = GetTimeMS();
-    StartSearch(&board, 0);
+    StartSearch(&board);
     ThreadWaitUntilSleep(Threads.threads[0]);
     times[i] = GetTimeMS() - Limits.start;
 

@@ -43,7 +43,6 @@
 
 int MOVE_OVERHEAD  = 50;
 int MULTI_PV       = 1;
-int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
 int CONTEMPT       = 0;
 int SHOW_WDL       = 1;
@@ -96,7 +95,7 @@ void ParseGo(char* in, Board* board) {
   Limits.mate             = 0;
 
   char* ptrChar = in;
-  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0, ponder = 0, mate = 0;
+  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0, mate = 0;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
@@ -133,15 +132,6 @@ void ParseGo(char* in, Board* board) {
 
   if ((ptrChar = strstr(in, "nodes")))
     nodes = Max(1, atol(ptrChar + 6));
-
-  if ((ptrChar = strstr(in, "ponder"))) {
-    if (PONDER_ENABLED)
-      ponder = 1;
-    else {
-      printf("info string Enable option Ponder to use 'ponder'\n");
-      return;
-    }
-  }
 
   if ((ptrChar = strstr(in, "searchmoves"))) {
     Limits.searchMoves = 1;
@@ -211,7 +201,7 @@ void ParseGo(char* in, Board* board) {
     Limits.timeset,
     Limits.searchable.count);
 
-  StartSearch(board, ponder);
+  StartSearch(board);
 }
 
 // uci "position" command
@@ -257,7 +247,6 @@ void PrintUCIOptions() {
   printf("option name Threads type spin default 1 min 1 max 256\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
-  printf("option name Ponder type check default false\n");
   printf("option name UCI_ShowWDL type check default true\n");
   printf("option name UCI_Chess960 type check default false\n");
   printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
@@ -322,17 +311,6 @@ void UCILoop() {
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
-    } else if (!strncmp(in, "ponderhit", 9)) {
-      Threads.ponder = 0;
-      if (Threads.stopOnPonderHit)
-        Threads.stop = 1;
-      pthread_mutex_lock(&Threads.lock);
-      if (Threads.sleeping) {
-        Threads.stop = 1;
-        ThreadWake(Threads.threads[0], THREAD_RESUME);
-        Threads.sleeping = 0;
-      }
-      pthread_mutex_unlock(&Threads.lock);
     } else if (!strncmp(in, "board", 5)) {
       PrintBoard(&board);
     } else if (!strncmp(in, "cycle", 5)) {
@@ -394,12 +372,6 @@ void UCILoop() {
 
       MULTI_PV = Max(1, Min(256, n));
       printf("info string set MultiPV to value %d\n", MULTI_PV);
-    } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      PONDER_ENABLED = !strncmp(opt, "true", 4);
-      printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_ShowWDL value ", 33)) {
       char opt[6];
       sscanf(in, "%*s %*s %*s %*s %5s", opt);
