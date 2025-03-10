@@ -34,6 +34,7 @@
 #define N_L2       16
 #define N_L3       32
 #define N_OUTPUT   1
+#define N_LAYERS   7
 
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
