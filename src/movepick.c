@@ -61,11 +61,14 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
 
     if (type == ST_QUIET || type == ST_EVASION_QT) {
-      current->score = (int) HH(board->stm, move, board->threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
-                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
-                       (int) (*(ss - 4)->ch)[pc][to] +                     //
-                       (int) (*(ss - 6)->ch)[pc][to];
+      current->score = (int) HH(board->stm, move, board->threatened) * 2;
+
+      if (ss->ply > 1) {
+        current->score += (int) (*(ss - 1)->ch)[pc][to] * 2 + //
+                          (int) (*(ss - 2)->ch)[pc][to] * 2 + //
+                          (int) (*(ss - 4)->ch)[pc][to] +     //
+                          (int) (*(ss - 6)->ch)[pc][to];
+      }
 
       if (pt != PAWN && pt != KING) {
         const BitBoard danger = threats[Max(0, pt - BISHOP)];
