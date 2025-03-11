@@ -471,6 +471,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
+      else if (isPV)
+        UpdateAccumulators(board);
+
       eval = ss->staticEval = ClampEval(rawEval + GetPawnCorrection(board, thread) / 2 + GetContCorrection(ss));
 
       // correct eval on fmr
@@ -486,6 +489,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       eval = AdjustEvalOnFMR(board, eval);
 
       TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
+    } else {
+      UpdateAccumulators(board);
     }
 
     // Improving

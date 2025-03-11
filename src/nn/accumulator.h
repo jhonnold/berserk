@@ -214,4 +214,16 @@ int CanEfficientlyUpdate(Accumulator* live, const int view);
 void LoadDefaultNN();
 int LoadNetwork(char* path);
 
+INLINE void UpdateAccumulators(Board* board) {
+  Accumulator* acc = board->accumulators;
+  for (int c = WHITE; c <= BLACK; c++) {
+    if (!acc->correct[c]) {
+      if (CanEfficientlyUpdate(acc, c))
+        ApplyLazyUpdates(acc, board, c);
+      else
+        RefreshAccumulator(acc, board, c);
+    }
+  }
+}
+
 #endif

@@ -42,17 +42,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
   if (IsMaterialDraw(board))
     return 0;
 
-  Accumulator* acc = board->accumulators;
-  for (int c = WHITE; c <= BLACK; c++) {
-    if (!acc->correct[c]) {
-      if (CanEfficientlyUpdate(acc, c))
-        ApplyLazyUpdates(acc, board, c);
-      else
-        RefreshAccumulator(acc, board, c);
-    }
-  }
-
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  UpdateAccumulators(board);
+  int score = board->stm == WHITE ? Propagate(board->accumulators, WHITE) : Propagate(board->accumulators, BLACK);
 
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
