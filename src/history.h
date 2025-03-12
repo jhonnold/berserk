@@ -47,10 +47,7 @@ INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
 }
 
 INLINE void AddKillerMove(SearchStack* ss, Move move) {
-  if (ss->killers[0] != move) {
-    ss->killers[1] = ss->killers[0];
-    ss->killers[0] = move;
-  }
+  ss->killer = move;
 }
 
 INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {

@@ -137,7 +137,7 @@ typedef struct {
   PieceTo* ch;
   PieceTo* cont;
   Move move, skip;
-  Move killers[2];
+  Move killer;
 } SearchStack;
 
 typedef struct {
@@ -226,7 +226,6 @@ enum {
   GEN_NOISY_MOVES,
   PLAY_GOOD_NOISY,
   PLAY_KILLER_1,
-  PLAY_KILLER_2,
   PLAY_COUNTER,
   GEN_QUIET_MOVES,
   PLAY_QUIETS,
@@ -258,7 +257,7 @@ typedef struct {
 typedef struct {
   ThreadData* thread;
   SearchStack* ss;
-  Move hashMove, killer1, killer2, counter;
+  Move hashMove, killer, counter;
   int seeCutoff, phase, genChecks;
 
   ScoredMove *current, *end, *endBad;

@@ -34,8 +34,7 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
   picker->phase = HASH_MOVE;
 
   picker->hashMove = hashMove;
-  picker->killer1  = ss->killers[0];
-  picker->killer2  = ss->killers[1];
+  picker->killer   = ss->killer;
   if ((ss - 1)->move)
     picker->counter = thread->counters[Moving((ss - 1)->move)][To((ss - 1)->move)];
   else

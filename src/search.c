@@ -499,10 +499,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   }
 
   // reset moves to moves related to 1 additional ply
-  (ss + 1)->skip       = NULL_MOVE;
-  (ss + 1)->killers[0] = NULL_MOVE;
-  (ss + 1)->killers[1] = NULL_MOVE;
-  ss->de               = (ss - 1)->de;
+  (ss + 1)->skip   = NULL_MOVE;
+  (ss + 1)->killer = NULL_MOVE;
+  ss->de           = (ss - 1)->de;
 
   // IIR by Ed Schroder
   // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=64085e3396554f0fba414404445b3120
@@ -623,7 +622,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     legalMoves++;
 
     int extension       = 0;
-    int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
+    int killerOrCounter = move == mp.killer || move == mp.counter;
     int history         = GetHistory(ss, thread, move);
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
@@ -919,8 +918,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     futility = bestScore + 63;
   }
 
-  (ss + 1)->killers[0] = NULL_MOVE;
-  (ss + 1)->killers[1] = NULL_MOVE;
+  (ss + 1)->killer = NULL_MOVE;
 
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
