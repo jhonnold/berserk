@@ -494,13 +494,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
 
     // Improving
-    if (ss->ply >= 2) {
-      if (ss->ply >= 4 && (ss - 2)->staticEval == EVAL_UNKNOWN) {
-        improving = ss->staticEval > (ss - 4)->staticEval || (ss - 4)->staticEval == EVAL_UNKNOWN;
-      } else {
-        improving = ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == EVAL_UNKNOWN;
-      }
-    }
+    improving = ss->ply >= 2 && (ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == EVAL_UNKNOWN);
   }
 
   // reset moves to moves related to 1 additional ply
