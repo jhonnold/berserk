@@ -629,7 +629,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
-        int lmrDepth = Max(1, depth - R);
+        const int lmrDepth = Max(1, depth - R);
 
         if (!killerOrCounter && lmrDepth < 5 && history < -2788 * (depth - 1)) {
           skipQuiets = 1;
@@ -642,7 +642,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
           continue;
       } else {
-        if (!SEE(board, move, STATIC_PRUNE[1][depth]))
+        const int seeDepth = Max(1, depth - (history < -10000));
+
+        if (!SEE(board, move, STATIC_PRUNE[1][seeDepth]))
           continue;
       }
     }
