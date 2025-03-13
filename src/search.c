@@ -616,9 +616,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     legalMoves++;
 
-    int extension       = 0;
-    int killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
-    int history         = GetHistory(ss, thread, move);
+    int extension = 0;
+    int isKiller  = move == mp.killer1 || move == mp.killer2;
+    int history   = GetHistory(ss, thread, move);
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
     R -= history / 8192;                         // adjust reduction based on historical score
@@ -631,7 +631,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
         int lmrDepth = Max(1, depth - R);
 
-        if (!killerOrCounter && lmrDepth < 5 && history < -2788 * (depth - 1)) {
+        if (!isKiller && lmrDepth < 5 && history < -2788 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
@@ -719,7 +719,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R++;
 
       // reduce these special quiets less
-      if (killerOrCounter)
+      if (isKiller)
         R -= 2;
 
       // move GAVE check
@@ -1076,7 +1076,6 @@ int ValidRootMove(ThreadData* thread, Move move) {
 }
 
 void SearchClearThread(ThreadData* thread) {
-  memset(&thread->counters, 0, sizeof(thread->counters));
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));

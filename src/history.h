@@ -53,10 +53,6 @@ INLINE void AddKillerMove(SearchStack* ss, Move move) {
   }
 }
 
-INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
-  thread->counters[Moving(parent)][To(parent)] = move;
-}
-
 INLINE int16_t HistoryBonus(int depth) {
   return Min(1729, 4 * depth * depth + 164 * depth - 113);
 }

@@ -37,12 +37,8 @@ void UpdateHistories(SearchStack* ss,
   int16_t inc = HistoryBonus(depth);
 
   if (!IsCap(bestMove)) {
-    if (PromoPT(bestMove) != QUEEN) {
+    if (PromoPT(bestMove) != QUEEN)
       AddKillerMove(ss, bestMove);
-
-      if ((ss - 1)->move)
-        AddCounterMove(thread, bestMove, (ss - 1)->move);
-    }
 
     // Only increase the best move history when it
     // wasn't trivial. This idea was first thought of
