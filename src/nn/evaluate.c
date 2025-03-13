@@ -38,14 +38,14 @@ INCBIN(Embed, EVALFILE);
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 
-int8_t L1_WEIGHTS[N_L1 * N_L2] ALIGN;
-int32_t L1_BIASES[N_L2] ALIGN;
+int8_t L1_WEIGHTS[N_LAYERS][N_L1 * N_L2] ALIGN;
+int32_t L1_BIASES[N_LAYERS][N_L2] ALIGN;
 
-int16_t L2_WEIGHTS[N_L2 * N_L3] ALIGN;
-int32_t L2_BIASES[N_L3] ALIGN;
+int16_t L2_WEIGHTS[N_LAYERS][N_L2 * N_L3] ALIGN;
+int32_t L2_BIASES[N_LAYERS][N_L3] ALIGN;
 
-int16_t OUTPUT_WEIGHTS[N_L3 * N_OUTPUT] ALIGN;
-int32_t OUTPUT_BIAS;
+int16_t OUTPUT_WEIGHTS[N_LAYERS][N_L3 * N_OUTPUT] ALIGN;
+int32_t OUTPUT_BIAS[N_LAYERS] ALIGN;
 
 #if defined(__AVX2__)
 INLINE void InputReLU(uint8_t* outputs, Accumulator* acc, const int stm) {
@@ -127,14 +127,14 @@ int Predict(Board* board) {
   return board->stm == WHITE ? Propagate(board->accumulators, WHITE) : Propagate(board->accumulators, BLACK);
 }
 
-const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input weights
-                            sizeof(int16_t) * N_HIDDEN +              // input biases
-                            sizeof(int8_t) * N_L1 * N_L2 +            // input biases
-                            sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(int16_t) * N_L2 * N_L3 +           // input biases
-                            sizeof(int32_t) * N_L3 +                  // input biases
-                            sizeof(int16_t) * N_L3 +                  // output weights
-                            sizeof(int32_t);                          // output bias
+const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +  // input weights
+                            sizeof(int16_t) * N_HIDDEN +               // input biases
+                            sizeof(int8_t) * N_L1 * N_L2 * N_LAYERS +  // input biases
+                            sizeof(int32_t) * N_L2 * N_LAYERS +        // input biases
+                            sizeof(int16_t) * N_L2 * N_L3 * N_LAYERS + // input biases
+                            sizeof(int32_t) * N_L3 * N_LAYERS +        // input biases
+                            sizeof(int16_t) * N_L3 * N_LAYERS +        // output weights
+                            sizeof(int32_t) * N_LAYERS;                // output bias
 
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
@@ -144,19 +144,19 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(INPUT_BIASES, &in[offset], N_HIDDEN * sizeof(int16_t));
   offset += N_HIDDEN * sizeof(int16_t);
 
-  memcpy(L1_WEIGHTS, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
-  offset += N_L1 * N_L2 * sizeof(int8_t);
-  memcpy(L1_BIASES, &in[offset], N_L2 * sizeof(int32_t));
-  offset += N_L2 * sizeof(int32_t);
+  memcpy(L1_WEIGHTS, &in[offset], N_L1 * N_L2 * N_LAYERS * sizeof(int8_t));
+  offset += N_L1 * N_L2 * N_LAYERS * sizeof(int8_t);
+  memcpy(L1_BIASES, &in[offset], N_L2 * N_LAYERS * sizeof(int32_t));
+  offset += N_L2 * N_LAYERS * sizeof(int32_t);
 
-  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * sizeof(int16_t));
-  offset += N_L2 * N_L3 * sizeof(int16_t);
-  memcpy(L2_BIASES, &in[offset], N_L3 * sizeof(int32_t));
-  offset += N_L3 * sizeof(int32_t);
+  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * N_LAYERS * sizeof(int16_t));
+  offset += N_L2 * N_L3 * N_LAYERS * sizeof(int16_t);
+  memcpy(L2_BIASES, &in[offset], N_L3 * N_LAYERS * sizeof(int32_t));
+  offset += N_L3 * N_LAYERS * sizeof(int32_t);
 
-  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(int16_t));
-  offset += N_L3 * N_OUTPUT * sizeof(int16_t);
-  memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
+  memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * N_LAYERS * sizeof(int16_t));
+  offset += N_L3 * N_OUTPUT * N_LAYERS * sizeof(int16_t);
+  memcpy(OUTPUT_BIAS, &in[offset], N_LAYERS * sizeof(int32_t));
 
   // #if defined(__AVX2__)
   //   const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
@@ -302,27 +302,29 @@ void SortAndWrite(uint64_t activity[N_HIDDEN][N_HIDDEN]) {
     }
 
     // Swap the L1 weights
-    for (size_t w = 0; w < N_L2; w++) {
-      size_t i0   = w * N_L1 + i;
-      size_t max0 = w * N_L1 + max;
+    for (size_t l = 0; l < N_LAYERS; l++) {
+      for (size_t w = 0; w < N_L2; w++) {
+        size_t i0   = w * N_L1 + i;
+        size_t max0 = w * N_L1 + max;
 
-      SwapInt8(L1_WEIGHTS + i0, L1_WEIGHTS + max0);
+        SwapInt8(L1_WEIGHTS[l] + i0, L1_WEIGHTS[l] + max0);
 
-      size_t i1   = w * N_L1 + i + N_HIDDEN;
-      size_t max1 = w * N_L1 + max + N_HIDDEN;
+        size_t i1   = w * N_L1 + i + N_HIDDEN;
+        size_t max1 = w * N_L1 + max + N_HIDDEN;
 
-      SwapInt8(L1_WEIGHTS + i1, L1_WEIGHTS + max1);
+        SwapInt8(L1_WEIGHTS[l] + i1, L1_WEIGHTS[l] + max1);
+      }
     }
   }
 
   FILE* fout = fopen("newnet.net", "wb");
   fwrite(INPUT_WEIGHTS, sizeof(int16_t), N_FEATURES * N_HIDDEN, fout);
   fwrite(INPUT_BIASES, sizeof(int16_t), N_HIDDEN, fout);
-  fwrite(L1_WEIGHTS, sizeof(int8_t), N_L1 * N_L2, fout);
-  fwrite(L1_BIASES, sizeof(int32_t), N_L2, fout);
-  fwrite(L2_WEIGHTS, sizeof(int16_t), N_L2 * N_L3, fout);
-  fwrite(L2_BIASES, sizeof(int32_t), N_L3, fout);
-  fwrite(OUTPUT_WEIGHTS, sizeof(int16_t), N_L3 * N_OUTPUT, fout);
-  fwrite(&OUTPUT_BIAS, sizeof(int32_t), N_OUTPUT, fout);
+  fwrite(L1_WEIGHTS, sizeof(int8_t), N_L1 * N_L2 * N_LAYERS, fout);
+  fwrite(L1_BIASES, sizeof(int32_t), N_L2 * N_LAYERS, fout);
+  fwrite(L2_WEIGHTS, sizeof(int16_t), N_L2 * N_L3 * N_LAYERS, fout);
+  fwrite(L2_BIASES, sizeof(int32_t), N_L3 * N_LAYERS, fout);
+  fwrite(OUTPUT_WEIGHTS, sizeof(int16_t), N_L3 * N_OUTPUT * N_LAYERS, fout);
+  fwrite(OUTPUT_BIAS, sizeof(int32_t), N_OUTPUT * N_LAYERS, fout);
   fclose(fout);
 }
