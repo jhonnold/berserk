@@ -23,7 +23,7 @@
 #include "types.h"
 
 typedef struct {
-  ThreadData* threads[256];
+  ThreadData* threads[2048];
   int count;
 
   pthread_mutex_t mutex, lock;

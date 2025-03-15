@@ -29,7 +29,7 @@
 #define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-#define N_HIDDEN   1536
+#define N_HIDDEN   1024
 #define N_L1       (2 * N_HIDDEN)
 #define N_L2       16
 #define N_L3       32
@@ -38,9 +38,10 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
-#define PAWN_CORRECTION_GRAIN 256
-#define PAWN_CORRECTION_SIZE  131072
-#define PAWN_CORRECTION_MASK  (PAWN_CORRECTION_SIZE - 1)
+#define CORRECTION_GRAIN 256
+
+#define PAWN_CORRECTION_SIZE 131072
+#define PAWN_CORRECTION_MASK (PAWN_CORRECTION_SIZE - 1)
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -93,7 +94,7 @@ typedef struct {
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
 
-  BitBoard threatened;  // opponent "threatening" these squares
+  BitBoard threatened; // opponent "threatening" these squares
   BitBoard threatenedBy[6];
 
   int stm;     // side to move
@@ -132,7 +133,9 @@ typedef int16_t PieceTo[12][64];
 
 typedef struct {
   int ply, staticEval, de;
+  int reduction;
   PieceTo* ch;
+  PieceTo* cont;
   Move move, skip;
   Move killers[2];
 } SearchStack;
@@ -198,6 +201,7 @@ struct ThreadData {
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
+  int16_t contCorrection[12][64][12][64];
 
   int action, calls;
   pthread_t nativeThread;
