@@ -254,7 +254,7 @@ void PrintUCIOptions() {
   printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 16 min 2 max %d\n", HASH_MAX);
-  printf("option name Threads type spin default 1 min 1 max 256\n");
+  printf("option name Threads type spin default 1 min 1 max 2048\n");
   printf("option name SyzygyPath type string default <empty>\n");
   printf("option name MultiPV type spin default 1 min 1 max 256\n");
   printf("option name Ponder type check default false\n");
@@ -381,7 +381,7 @@ void UCILoop() {
              totalEntries);
     } else if (!strncmp(in, "setoption name Threads value ", 29)) {
       int n = GetOptionIntValue(in);
-      ThreadsSetNumber(Max(1, Min(256, n)));
+      ThreadsSetNumber(Max(1, Min(2048, n)));
       printf("info string set Threads to value %d\n", Threads.count);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
       int success = tb_init(in + 32);
