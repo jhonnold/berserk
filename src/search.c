@@ -230,10 +230,11 @@ void Search(ThreadData* thread) {
   SearchStack* ss = searchStack + searchOffset;
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
   for (size_t i = 0; i < MAX_SEARCH_PLY; i++)
-    (ss + i)->ply = i;
+    (ss + i)->ply = i, (ss + i)->reduction = 0;
   for (size_t i = 1; i <= searchOffset; i++) {
-    (ss - i)->ch   = &thread->ch[0][WHITE_PAWN][A1];
-    (ss - i)->cont = &thread->contCorrection[WHITE_PAWN][A1];
+    (ss - i)->ch        = &thread->ch[0][WHITE_PAWN][A1];
+    (ss - i)->cont      = &thread->contCorrection[WHITE_PAWN][A1];
+    (ss - i)->reduction = 0;
   }
 
   while (++thread->depth < MAX_SEARCH_PLY) {
@@ -488,13 +489,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
 
     // Improving
-    if (ss->ply >= 2) {
-      if (ss->ply >= 4 && (ss - 2)->staticEval == EVAL_UNKNOWN) {
-        improving = ss->staticEval > (ss - 4)->staticEval || (ss - 4)->staticEval == EVAL_UNKNOWN;
-      } else {
-        improving = ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == EVAL_UNKNOWN;
-      }
-    }
+    improving = ss->ply >= 2 && (ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == EVAL_UNKNOWN);
   }
 
   // reset moves to moves related to 1 additional ply
@@ -514,6 +509,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   if (!isPV && !inCheck) {
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
     const int opponentDeclining      = ss->staticEval + (ss - 1)->staticEval > 1;
+
+    if ((ss - 1)->reduction >= 3 && !opponentDeclining)
+      depth++;
+
+    if ((ss - 1)->reduction >= 1 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 100)
+      depth--;
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
@@ -736,10 +737,13 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         R--;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R = Min(newDepth, Max(R, 1));
+      R             = Min(newDepth, Max(R, 1));
+      ss->reduction = R;
 
       int lmrDepth = newDepth - R;
       score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
+
+      ss->reduction = 0;
 
       if (score > alpha && R > 1) {
         // Credit to Viz (and lonfom) for the following modification of the zws
