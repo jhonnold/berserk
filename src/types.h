@@ -259,7 +259,7 @@ typedef struct {
   ThreadData* thread;
   SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
-  int seeCutoff, phase, genChecks;
+  int phase, genChecks;
 
   ScoredMove *current, *end, *endBad;
   ScoredMove moves[MAX_MOVES];

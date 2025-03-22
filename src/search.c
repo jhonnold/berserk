@@ -572,7 +572,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // less than beta + margin, then we run a shallow search to look
     int probBeta = beta + 172;
     if (depth >= 6 && !ss->skip && abs(beta) < TB_WIN_BOUND && !(ttHit && ttDepth >= depth - 3 && ttScore < probBeta)) {
-      InitPCMovePicker(&mp, thread, probBeta > eval);
+      InitPCMovePicker(&mp, thread);
       while ((move = NextMove(&mp, board, 1))) {
         if (!IsLegal(move, board))
           continue;
