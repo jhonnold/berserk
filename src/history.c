@@ -101,4 +101,10 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
     int16_t* contCorrection  = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
     AddHistoryHeuristic(contCorrection, correction);
   }
+
+  if ((ss - 1)->move && (ss - 3)->move) {
+    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+    int16_t* contCorrection  = &(*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
+    AddHistoryHeuristic(contCorrection, correction);
+  }
 }
