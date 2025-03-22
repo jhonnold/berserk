@@ -709,7 +709,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int newDepth = depth + extension;
 
     // Late move reductions
-    if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
+    if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move) && history >= -8192)) {
       // increase reduction on non-pv
       if (!ttPv)
         R += 2;
