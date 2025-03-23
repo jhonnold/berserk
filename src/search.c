@@ -508,7 +508,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   MovePicker mp;
   if (!isPV && !inCheck) {
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
-    const int opponentDeclining      = ss->staticEval + (ss - 1)->staticEval > 1;
+    const int opponentDeclining      = ss->staticEval + (ss - 1)->staticEval > 0;
 
     if ((ss - 1)->reduction >= 3 && !opponentDeclining)
       depth++;
