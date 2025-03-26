@@ -643,7 +643,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           continue;
       } else {
         const int seeCapMargin = STATIC_PRUNE[1][depth];
-        const int seeAdjMargin = Min(Max(3 * history / 256, seeCapMargin - 1), -seeCapMargin + 1);
+        const int seeAdjMargin = Min(Max(history / 64, seeCapMargin - 1), -seeCapMargin + 1);
 
         if (!SEE(board, move, seeCapMargin - seeAdjMargin))
           continue;
