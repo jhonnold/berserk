@@ -808,7 +808,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, depth + (bestScore > beta + 77), quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss, thread, move, !IsCap(bestMove), depth + (bestScore > beta + 77), quiets, numQuiets, captures, numCaptures);
         break;
       }
     }
@@ -971,7 +971,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
       // failed high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, 1, quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss, thread, move, 0, 1, quiets, numQuiets, captures, numCaptures);
         break;
       }
     }

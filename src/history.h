@@ -89,6 +89,7 @@ INLINE int GetContCorrection(SearchStack* ss) {
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
+                     int updateQuiets,
                      int depth,
                      Move quiets[],
                      int nQ,

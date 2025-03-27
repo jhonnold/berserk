@@ -26,6 +26,7 @@
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
+                     int updateQuiets,
                      int depth,
                      Move quiets[],
                      int nQ,
@@ -36,7 +37,7 @@ void UpdateHistories(SearchStack* ss,
 
   int16_t inc = HistoryBonus(depth);
 
-  if (!IsCap(bestMove)) {
+  if (updateQuiets) {
     if (PromoPT(bestMove) != QUEEN) {
       AddKillerMove(ss, bestMove);
 
@@ -61,7 +62,7 @@ void UpdateHistories(SearchStack* ss,
   }
 
   // Update quiets
-  if (!IsCap(bestMove)) {
+  if (updateQuiets) {
     const int malus = Min(0, -inc + 32 * (nQ - 1));
 
     for (int i = 0; i < nQ; i++) {
