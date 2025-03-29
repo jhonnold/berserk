@@ -80,6 +80,10 @@ INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
   return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 128;
 }
 
+INLINE int GetKingAreaCorrection(Board* board, ThreadData* thread) {
+  return thread->kingAreaCorrection[board->kingRingZobrist & KING_AREA_CORRECTION_MASK] / 128;
+}
+
 INLINE int GetContCorrection(SearchStack* ss) {
   return ((*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] +
           3 * (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)]) /
@@ -96,6 +100,7 @@ void UpdateHistories(SearchStack* ss,
                      int nC);
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
+void UpdateKingAreaCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
 
 #endif

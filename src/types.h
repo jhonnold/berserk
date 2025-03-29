@@ -43,6 +43,9 @@
 #define PAWN_CORRECTION_SIZE 131072
 #define PAWN_CORRECTION_MASK (PAWN_CORRECTION_SIZE - 1)
 
+#define KING_AREA_CORRECTION_SIZE 131072
+#define KING_AREA_CORRECTION_MASK (KING_AREA_CORRECTION_SIZE - 1)
+
 typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
@@ -73,6 +76,7 @@ typedef struct {
   int nullply;
   uint64_t zobrist;
   uint64_t pawnZobrist;
+  uint64_t kingRingZobrist;
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
@@ -88,8 +92,9 @@ typedef struct {
   int fmr;      // half move count for 50 move rule
   int nullply;  // distance from last nullmove
 
-  uint64_t zobrist;     // zobrist hash of the position
-  uint64_t pawnZobrist; // pawn zobrist hash of the position (pawns + stm)
+  uint64_t zobrist;         // zobrist hash of the position
+  uint64_t pawnZobrist;     // pawn zobrist hash of the position (pawns + stm)
+  uint64_t kingRingZobrist; // king ring zobrist hash
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
@@ -202,6 +207,7 @@ struct ThreadData {
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
+  int16_t kingAreaCorrection[KING_AREA_CORRECTION_SIZE];
 
   int action, calls;
   pthread_t nativeThread;

@@ -162,6 +162,7 @@ void ParseFen(char* fen, Board* board) {
 
   SetSpecialPieces(board);
   SetThreats(board);
+  SetKingRingZobrist(board);
 
   board->zobrist     = Zobrist(board);
   board->pawnZobrist = PawnZobrist(board);
@@ -307,6 +308,42 @@ inline void SetThreats(Board* board) {
   board->threatened |= board->threatenedBy[KING];
 }
 
+inline void SetKingRingZobrist(Board* board) {
+  const int stm  = board->stm;
+  const int xstm = board->xstm;
+
+  const int kingFile = Max(1, Min(7, File(LSB(PieceBB(KING, stm)))));
+  const int kingRank = Max(1, Min(7, Rank(LSB(PieceBB(KING, stm)))));
+  const int adjKingSq = Sq(kingRank, kingFile);
+  const BitBoard kingArea = Bit(adjKingSq) | GetKingAttacks(adjKingSq);
+
+  board->kingRingZobrist = ZOBRIST_PIECES[Piece(KING, stm)][adjKingSq];
+
+  BitBoard pawnAttacks = board->threatenedBy[PAWN] & kingArea;
+  while (pawnAttacks)
+    board->kingRingZobrist ^= ZOBRIST_PIECES[Piece(PAWN, xstm)][PopLSB(&pawnAttacks)];
+
+  BitBoard knightAttacks = board->threatenedBy[KNIGHT] & kingArea;
+  while (knightAttacks)
+    board->kingRingZobrist ^= ZOBRIST_PIECES[Piece(KNIGHT, xstm)][PopLSB(&knightAttacks)];
+
+  BitBoard bishopAttacks = board->threatenedBy[BISHOP] & kingArea;
+  while (bishopAttacks)
+    board->kingRingZobrist ^= ZOBRIST_PIECES[Piece(BISHOP, xstm)][PopLSB(&bishopAttacks)];
+
+  BitBoard rookAttacks = board->threatenedBy[ROOK] & kingArea;
+  while (rookAttacks)
+    board->kingRingZobrist ^= ZOBRIST_PIECES[Piece(ROOK, xstm)][PopLSB(&rookAttacks)];
+
+  BitBoard queenAttacks = board->threatenedBy[QUEEN] & kingArea;
+  while (queenAttacks)
+    board->kingRingZobrist ^= ZOBRIST_PIECES[Piece(QUEEN, xstm)][PopLSB(&queenAttacks)];
+
+  BitBoard kingAttacks = board->threatenedBy[KING] & kingArea;
+  while (kingAttacks)
+    board->kingRingZobrist ^= ZOBRIST_PIECES[Piece(KING, xstm)][PopLSB(&kingAttacks)];
+}
+
 void MakeMove(Move move, Board* board) {
   MakeMoveUpdate(move, board, 1);
 }
@@ -415,6 +452,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   // this is because the new stm to move will be the one in check
   SetSpecialPieces(board);
   SetThreats(board);
+  SetKingRingZobrist(board);
 
   if (update) {
     board->accumulators->move     = move;
@@ -501,6 +539,7 @@ void MakeNullMove(Board* board) {
 
   SetSpecialPieces(board);
   SetThreats(board);
+  SetKingRingZobrist(board);
 }
 
 void UndoNullMove(Board* board) {

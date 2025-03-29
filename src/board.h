@@ -44,6 +44,7 @@ void PrintBoard(Board* board);
 
 void SetSpecialPieces(Board* board);
 void SetThreats(Board* board);
+void SetKingRingZobrist(Board* board);
 
 int DoesMoveCheck(Move move, Board* board);
 

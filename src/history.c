@@ -95,6 +95,12 @@ void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData
   AddHistoryHeuristic(pawnCorrection, correction);
 }
 
+void UpdateKingAreaCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+  const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+  int16_t* kingAreaCorrection  = &thread->kingAreaCorrection[board->kingRingZobrist & KING_AREA_CORRECTION_MASK];
+  AddHistoryHeuristic(kingAreaCorrection, correction);
+}
+
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
   if ((ss - 1)->move && (ss - 2)->move) {
     const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
