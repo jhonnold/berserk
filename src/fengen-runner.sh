@@ -3,15 +3,14 @@
 set -uex
 
 thread_count=$(($(nproc --all) - 1));
-host_name=$(hostname | tr "." "\n" | head -n 1)
 version=$(grep -Po '(?<=VERSION  = )[\d]+' makefile)
 network=$(grep -Po '(?<=MAIN_NETWORK = berserk-)[A-Za-z0-9]+(?=\.nn)' makefile)
-file_name="berserk$version.$network.$host_name.fens"
+file_name="berserk$version.$network.$2.fens"
 
 while true; do
   	./berserk --threads $thread_count \
   	          --total 1000000 \
-  	          --nodes 15000 \
+  	          --nodes 20000 \
   	          --depth 0 \
   	          --random-move-count 10 \
   	          --random-move-min 1 \
