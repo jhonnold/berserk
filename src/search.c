@@ -598,6 +598,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     }
   }
 
+  if (!ss->skip && abs(beta) < TB_WIN_BOUND && abs(ttScore) < TB_WIN_BOUND && (ttBound & BOUND_LOWER) &&
+      ttDepth >= depth - 3 && ttScore >= beta + 200)
+    return beta + 200;
+
   int numQuiets = 0, numCaptures = 0;
   Move quiets[64], captures[32];
 
