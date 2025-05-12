@@ -51,9 +51,10 @@ INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread, int thresho
   picker->seeCutoff = threshold;
 }
 
-INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, int genChecks) {
+INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, SearchStack* ss, int genChecks) {
   picker->phase     = QS_GEN_NOISY_MOVES;
   picker->thread    = thread;
+  picker->ss        = ss;
   picker->genChecks = genChecks;
 }
 
