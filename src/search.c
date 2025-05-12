@@ -525,6 +525,8 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Razoring
     if (depth <= 5 && eval + 214 * depth <= alpha) {
+      DecRlx(thread->nodes);
+
       score = Quiesce(alpha, beta, 0, thread, ss);
       if (score <= alpha)
         return score;
