@@ -22,6 +22,14 @@
 #include "types.h"
 #include "util.h"
 
+extern int p0;
+extern int p1;
+extern int p2;
+extern int p3;
+extern int p4;
+extern int p5;
+extern int p6;
+
 enum {
   ST_QUIET,
   ST_CAPTURE,

@@ -39,5 +39,12 @@ int ReadLine(char* in);
 void UCILoop();
 
 int GetOptionIntValue(char* in);
+float GetOptionFValue(char* in);
+
+#define IO(nz) else if (!strncmp(in, "setoption name " #nz " value ", 24)) { nz = GetOptionIntValue(in); }
+#define FO(nz) else if (!strncmp(in, "setoption name " #nz " value ", 24)) { nz = GetOptionFValue(in); }
+
+// #define IO(nz) printf(#nz ", int, %d, 0, %d, %f, 0.002\n", (nz), 2 * (nz), Max(0.5, (nz) / 10.0));
+// #define FO(nz) printf(#nz ", float, %f, 0, %f, %1f, 0.002\n", (nz), 2 * (nz), (nz) / 10.0);
 
 #endif

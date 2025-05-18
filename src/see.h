@@ -19,7 +19,12 @@
 
 #include "types.h"
 
-extern const int SEE_VALUE[7];
+extern int* SEE_VALUE[7];
+extern int o0;
+extern int o1;
+extern int o2;
+extern int o3;
+extern int o4;
 
 int SEE(Board* board, Move move, int threshold);
 

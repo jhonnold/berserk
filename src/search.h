@@ -45,4 +45,68 @@ int ValidRootMove(ThreadData* thread, Move move);
 void SearchClearThread(ThreadData* thread);
 void SearchClear();
 
+extern float a0;
+extern float a1;
+extern float a2;
+extern float a3;
+extern float a4;
+extern float a5;
+extern float a6;
+extern float a7;
+
+// ID
+extern int b0;
+extern int b1;
+
+// Node pruning
+// Prior reduction corrections
+extern int c0;
+extern int c1;
+extern int c2;
+
+// RFP
+extern int d0;
+extern int d1;
+extern int d2;
+extern int d3;
+extern int d4;
+
+// Razoring
+extern int e0;
+extern int e1;
+
+// NMP
+extern int f0;
+extern int f1;
+extern int f2;
+extern int f3;
+extern int f4;
+
+// Probcut
+extern int g0;
+extern int g1;
+
+// Move pruning
+extern int h0;
+extern int h1;
+extern int h2;
+extern int h3;
+extern int h4;
+extern int h5;
+
+// Extensions
+extern int i0;
+extern int i1;
+extern int i2;
+extern int i3;
+extern int i4;
+extern int i5;
+
+extern int j3;
+extern int j4;
+extern int j2;
+
+// QSearch
+extern int k0;
+
 #endif

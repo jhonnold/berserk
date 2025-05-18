@@ -27,6 +27,15 @@
 #include "transposition.h"
 #include "types.h"
 
+// Movepicker
+int p0 = 32;
+int p1 = 32;
+int p2 = 32;
+int p3 = 16;
+int p4 = 16;
+int p5 = 16384;
+int p6 = 16384;
+
 INLINE Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* orig = current;
   ScoredMove* max  = current;
@@ -61,28 +70,29 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
 
     if (type == ST_QUIET || type == ST_EVASION_QT) {
-      current->score = (int) HH(board->stm, move, board->threatened) * 2 + //
-                       (int) (*(ss - 1)->ch)[pc][to] * 2 +                 //
-                       (int) (*(ss - 2)->ch)[pc][to] * 2 +                 //
-                       (int) (*(ss - 4)->ch)[pc][to] +                     //
-                       (int) (*(ss - 6)->ch)[pc][to];
+      current->score = ((int) HH(board->stm, move, board->threatened) * p0 + //
+                        (int) (*(ss - 1)->ch)[pc][to] * p1 +                 //
+                        (int) (*(ss - 2)->ch)[pc][to] * p2 +                 //
+                        (int) (*(ss - 4)->ch)[pc][to] * p3 +                 //
+                        (int) (*(ss - 6)->ch)[pc][to] * p4) /
+                       16;
 
       if (pt != PAWN && pt != KING) {
         const BitBoard danger = threats[Max(0, pt - BISHOP)];
 
         if (GetBit(danger, from))
-          current->score += 16384;
+          current->score += p5;
         if (GetBit(danger, to))
-          current->score -= 16384;
+          current->score -= p6;
       }
     } else if (type == ST_CAPTURE)
-      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
+      current->score = GetCaptureHistory(picker->thread, move) / 16 + *SEE_VALUE[PieceType(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
-      current->score = 1e7 + SEE_VALUE[captured];
+      current->score = 1e7 + *SEE_VALUE[captured];
 
     else if (type == ST_MVV)
-      current->score = SEE_VALUE[captured] + 2000 * IsPromo(move);
+      current->score = *SEE_VALUE[captured] + 2000 * IsPromo(move);
 
     current++;
   }

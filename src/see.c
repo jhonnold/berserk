@@ -24,7 +24,17 @@
 #include "types.h"
 #include "util.h"
 
-const int SEE_VALUE[7] = {100, 422, 422, 642, 1015, 30000, 0};
+// SEE Values
+int o0 = 100;
+int o1 = 422;
+int o2 = 422;
+int o3 = 642;
+int o4 = 1015;
+// not adjusted
+int o5 = 30000;
+int o6 = 0;
+
+int* SEE_VALUE[7] = {&o0, &o1, &o2, &o3, &o4, &o5, &o6};
 
 // Static exchange evaluation using The Swap Algorithm -
 // https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
@@ -35,11 +45,11 @@ inline int SEE(Board* board, Move move, int threshold) {
   int from = From(move);
   int to   = To(move);
 
-  int v = SEE_VALUE[PieceType(board->squares[to])] - threshold;
+  int v = *SEE_VALUE[PieceType(board->squares[to])] - threshold;
   if (v < 0)
     return 0;
 
-  v = SEE_VALUE[PieceType(Moving(move))] - v;
+  v = *SEE_VALUE[PieceType(Moving(move))] - v;
   if (v <= 0)
     return 1;
 
@@ -63,30 +73,30 @@ inline int SEE(Board* board, Move move, int threshold) {
     result ^= 1;
 
     if ((leastAttacker = mine & PieceBB(PAWN, stm))) {
-      if ((v = SEE_VALUE[PAWN] - v) < result)
+      if ((v = *SEE_VALUE[PAWN] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
       attackers |= GetBishopAttacks(to, occ) & diag;
     } else if ((leastAttacker = mine & PieceBB(KNIGHT, stm))) {
-      if ((v = SEE_VALUE[KNIGHT] - v) < result)
+      if ((v = *SEE_VALUE[KNIGHT] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
     } else if ((leastAttacker = mine & PieceBB(BISHOP, stm))) {
-      if ((v = SEE_VALUE[BISHOP] - v) < result)
+      if ((v = *SEE_VALUE[BISHOP] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
       attackers |= GetBishopAttacks(to, occ) & diag;
     } else if ((leastAttacker = mine & PieceBB(ROOK, stm))) {
-      if ((v = SEE_VALUE[ROOK] - v) < result)
+      if ((v = *SEE_VALUE[ROOK] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
       attackers |= GetRookAttacks(to, occ) & straight;
     } else if ((leastAttacker = mine & PieceBB(QUEEN, stm))) {
-      if ((v = SEE_VALUE[QUEEN] - v) < result)
+      if ((v = *SEE_VALUE[QUEEN] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);

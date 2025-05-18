@@ -26,6 +26,7 @@
 #include "bench.h"
 #include "board.h"
 #include "eval.h"
+#include "history.h"
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
@@ -263,6 +264,103 @@ void PrintUCIOptions() {
   printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
+
+  printf("option name a0 type string\n");
+  printf("option name a1 type string\n");
+  printf("option name a2 type string\n");
+  printf("option name a3 type string\n");
+  printf("option name a4 type string\n");
+  printf("option name a5 type string\n");
+  printf("option name a6 type string\n");
+  printf("option name a7 type string\n");
+
+  // ID
+  printf("option name b0 type string\n");
+  printf("option name b1 type string\n");
+
+  // Node pruning
+  // Prior reduction corrections
+  printf("option name c0 type string\n");
+  printf("option name c1 type string\n");
+  printf("option name c2 type string\n");
+
+  // RFP
+  printf("option name d0 type string\n");
+  printf("option name d1 type string\n");
+  printf("option name d2 type string\n");
+  printf("option name d3 type string\n");
+  printf("option name d4 type string\n");
+
+  // Razoring
+  printf("option name e0 type string\n");
+  printf("option name e1 type string\n");
+
+  // NMP
+  printf("option name f0 type string\n");
+  printf("option name f1 type string\n");
+  printf("option name f2 type string\n");
+  printf("option name f3 type string\n");
+  printf("option name f4 type string\n");
+
+  // Probcut
+  printf("option name g0 type string\n");
+  printf("option name g1 type string\n");
+
+  // Move pruning
+  printf("option name h0 type string\n");
+  printf("option name h1 type string\n");
+  printf("option name h2 type string\n");
+  printf("option name h3 type string\n");
+  printf("option name h4 type string\n");
+  printf("option name h5 type string\n");
+
+  // Extensions
+  printf("option name i0 type string\n");
+  printf("option name i1 type string\n");
+  printf("option name i2 type string\n");
+  printf("option name i3 type string\n");
+  printf("option name i4 type string\n");
+  printf("option name i5 type string\n");
+
+  printf("option name j3 type string\n");
+  printf("option name j4 type string\n");
+  printf("option name j2 type string\n");
+
+  // QSearch
+  printf("option name k0 type string\n");
+
+  // History
+  printf("option name l0 type string\n");
+  printf("option name l1 type string\n");
+  printf("option name l2 type string\n");
+  printf("option name l3 type string\n");
+  printf("option name l4 type string\n");
+
+  printf("option name m0 type string\n");
+  printf("option name m1 type string\n");
+  printf("option name m2 type string\n");
+  printf("option name m3 type string\n");
+
+  printf("option name n0 type string\n");
+  printf("option name n1 type string\n");
+  printf("option name n2 type string\n");
+
+  // SEE
+  printf("option name o0 type string\n");
+  printf("option name o1 type string\n");
+  printf("option name o2 type string\n");
+  printf("option name o3 type string\n");
+  printf("option name o4 type string\n");
+
+  // Movepick
+  printf("option name p0 type string\n");
+  printf("option name p1 type string\n");
+  printf("option name p2 type string\n");
+  printf("option name p3 type string\n");
+  printf("option name p4 type string\n");
+  printf("option name p5 type string\n");
+  printf("option name p6 type string\n");
+
   printf("uciok\n");
 }
 
@@ -434,8 +532,104 @@ void UCILoop() {
 
       if (success)
         printf("info string set EvalFile to value %s\n", path);
-    } else
-      printf("Unknown command: %s \n", in);
+    }
+
+    FO(a0)
+    FO(a1)
+    FO(a2)
+    FO(a3)
+    FO(a4)
+    FO(a5)
+    FO(a6)
+    FO(a7)
+
+    IO(b0)
+    IO(b1)
+
+    // Node pruning
+    // Prior reduction corrections
+    IO(c0)
+    IO(c1)
+    IO(c2)
+
+    // RFP
+    IO(d0)
+    IO(d1)
+    IO(d2)
+    IO(d3)
+    IO(d4)
+
+    // Razoring
+    IO(e0)
+    IO(e1)
+
+    // NMP
+    IO(f0)
+    IO(f1)
+    IO(f2)
+    IO(f3)
+    IO(f4)
+
+    // Probcut
+    IO(g0)
+    IO(g1)
+
+    // Move pruning
+    IO(h0)
+    IO(h1)
+    IO(h2)
+    IO(h3)
+    IO(h4)
+    IO(h5)
+
+    // Extensions
+    IO(i0)
+    IO(i1)
+    IO(i2)
+    IO(i3)
+    IO(i4)
+    IO(i5)
+
+    IO(j3)
+    IO(j4)
+    IO(j2)
+
+    // QSearch
+    IO(k0)
+
+    // History
+    IO(l0)
+    IO(l1)
+    IO(l2)
+    IO(l3)
+    IO(l4)
+
+    IO(m0)
+    IO(m1)
+    IO(m2)
+    IO(m3)
+
+    IO(n0)
+    IO(n1)
+    IO(n2)
+
+    // See
+    IO(o0)
+    IO(o1)
+    IO(o2)
+    IO(o3)
+    IO(o4)
+
+    // Movepick
+    IO(p0)
+    IO(p1)
+    IO(p2)
+    IO(p3)
+    IO(p4)
+    IO(p5)
+    IO(p6)
+
+    InitPruningAndReductionTables();
   }
 
   if (Threads.searching)
@@ -448,6 +642,13 @@ void UCILoop() {
 int GetOptionIntValue(char* in) {
   int n;
   sscanf(in, "%*s %*s %*s %*s %d", &n);
+
+  return n;
+}
+
+float GetOptionFValue(char* in) {
+  float n;
+  sscanf(in, "%*s %*s %*s %*s %f", &n);
 
   return n;
 }
