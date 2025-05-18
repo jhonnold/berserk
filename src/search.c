@@ -48,8 +48,8 @@ float a2 = 1.3050;
 float a3 = 0.3503;
 float a4 = 2.1885;
 float a5 = 0.9911;
-float a6 = -15.2703;
-float a7 = -94.0617;
+float a6 = 15.2703;
+float a7 = 94.0617;
 
 // ID
 int b0 = 9;
@@ -125,8 +125,8 @@ void InitPruningAndReductionTables() {
     LMP[0][depth] = a2 + a3 * depth * depth;
     LMP[1][depth] = a4 + a5 * depth * depth;
 
-    STATIC_PRUNE[0][depth] = a6 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = a7 * depth;         // capture cutoff
+    STATIC_PRUNE[0][depth] = -a6 * depth * depth; // quiet move cutoff
+    STATIC_PRUNE[1][depth] = -a7 * depth;         // capture cutoff
   }
 }
 
