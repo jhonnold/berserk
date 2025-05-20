@@ -76,16 +76,6 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
     AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
 }
 
-INLINE int GetPawnCorrection(Board* board, ThreadData* thread) {
-  return thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK] / 128;
-}
-
-INLINE int GetContCorrection(SearchStack* ss) {
-  return ((*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)] +
-          3 * (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)]) /
-         512;
-}
-
 INLINE int GetCorrectionScore(Board* board, ThreadData* thread, SearchStack* ss) {
   const int pawn = thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
