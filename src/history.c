@@ -47,7 +47,7 @@ void UpdateHistories(SearchStack* ss,
     // Only increase the best move history when it
     // wasn't trivial. This idea was first thought of
     // by Alayan in Ethereal
-    if (nQ > 1 || depth > 4) {
+    if (nQ > 1 || depth > 5) {
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
@@ -62,7 +62,7 @@ void UpdateHistories(SearchStack* ss,
 
   // Update quiets
   if (!IsCap(bestMove)) {
-    const int malus = Min(0, -inc + 32 * (nQ - 1));
+    const int malus = Min(0, -inc + 33 * (nQ - 1));
 
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
