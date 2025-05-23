@@ -62,7 +62,7 @@ void UpdateHistories(SearchStack* ss,
 
   // Update quiets
   if (!IsCap(bestMove)) {
-    const int malus = Min(0, -inc + 33 * (nQ - 1));
+    const int malus = Min(0, -inc + 36 * (nQ - 1));
 
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
@@ -90,14 +90,14 @@ void UpdateHistories(SearchStack* ss,
 }
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
-  const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+  const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
   int16_t* pawnCorrection  = &thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
   AddHistoryHeuristic(pawnCorrection, correction);
 }
 
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
   if ((ss - 1)->move && (ss - 2)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+    const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
     int16_t* contCorrection  = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
     AddHistoryHeuristic(contCorrection, correction);
   }
