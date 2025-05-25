@@ -42,69 +42,69 @@
 #include "zobrist.h"
 
 // LMR/LMP/SEE_PRUNE
-float a0 = 2.0385;
-float a1 = 0.2429;
-float a2 = 1.3050;
-float a3 = 0.3503;
-float a4 = 2.1885;
-float a5 = 0.9911;
-float a6 = 15.2703;
-float a7 = 94.0617;
+float a0 = 2.1350;
+float a1 = 0.2319;
+float a2 = 1.4309;
+float a3 = 0.3339;
+float a4 = 1.7721;
+float a5 = 0.9801;
+float a6 = 13.7791;
+float a7 = 108.3466;
 
 // ID
-int b0 = 9;
-int b1 = 17;
+int b0 = 8;
+int b1 = 16;
 
 // Node pruning
 // Prior reduction corrections
 int c0 = 3;
 int c1 = 1;
-int c2 = 100;
+int c2 = 79;
 
 // RFP
-int d0 = 9;
-int d1 = 70;
-int d2 = 118;
+int d0 = 10;
+int d1 = 83;
+int d2 = 148;
 int d3 = 25;
-int d4 = 11800;
+int d4 = 10790;
 
 // Razoring
 int e0 = 5;
-int e1 = 214;
+int e1 = 146;
 
 // NMP
-int f0 = 4;
+int f0 = 5;
 int f1 = 4;
-int f2 = 385;
-int f3 = 10;
+int f2 = 367;
+int f3 = 9;
 int f4 = 4;
 
 // Probcut
-int g0 = 172;
+int g0 = 168;
 int g1 = 6;
 
 // Move pruning
 int h0 = 8;
-int h1 = 5;
-int h2 = 2788;
+int h1 = 4;
+int h2 = 2850;
 int h3 = 10;
-int h4 = 81;
-int h5 = 46;
+int h4 = 66;
+int h5 = 44;
 
 // Extensions
 int i0 = 6;
-int i1 = 5;
-int i2 = 48;
-int i3 = 6;
-int i4 = 14;
+int i1 = 6;
+int i2 = 43;
+int i3 = 7;
+int i4 = 12;
 int i5 = 6;
 
-int j3 = 69;
+int j3 = 61;
 int j4 = 11;
-int j2 = 77;
+int j2 = 75;
 
 // QSearch
-int k0 = 63;
+int k0 = 79;
 
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];

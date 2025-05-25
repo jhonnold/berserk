@@ -28,13 +28,13 @@
 #include "types.h"
 
 // Movepicker
-int p0 = 32;
-int p1 = 32;
-int p2 = 32;
-int p3 = 16;
-int p4 = 16;
-int p5 = 16384;
-int p6 = 16384;
+int p0 = 26;
+int p1 = 36;
+int p2 = 35;
+int p3 = 19;
+int p4 = 17;
+int p5 = 16863;
+int p6 = 13955;
 
 INLINE Move Best(ScoredMove* current, ScoredMove* end) {
   ScoredMove* orig = current;

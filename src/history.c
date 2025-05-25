@@ -24,22 +24,22 @@
 #include "util.h"
 
 // History
-int l0 = 4;
-int l1 = 32;
-int l2 = 4;
+int l0 = 5;
+int l1 = 36;
+int l2 = 3;
 int l3 = 4;
 int l4 = 4;
 
 // HistoryBonus
-int m0 = 1729;
+int m0 = 1708;
 int m1 = 4;
-int m2 = 164;
-int m3 = 113;
+int m2 = 191;
+int m3 = 118;
 
 // ContHistory scalars
-int n0 = 32;
-int n1 = 16;
-int n2 = 48;
+int n0 = 31;
+int n1 = 17;
+int n2 = 46;
 
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,

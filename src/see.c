@@ -25,11 +25,11 @@
 #include "util.h"
 
 // SEE Values
-int o0 = 100;
-int o1 = 422;
-int o2 = 422;
-int o3 = 642;
-int o4 = 1015;
+int o0 = 86;
+int o1 = 326;
+int o2 = 394;
+int o3 = 593;
+int o4 = 1047;
 // not adjusted
 int o5 = 30000;
 int o6 = 0;
