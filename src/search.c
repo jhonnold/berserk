@@ -49,7 +49,7 @@ int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / 2.0972 + 0.2327;
+      LMR[depth][moves] = log(depth) * log(moves) / 2.1350 + 0.2319;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -57,11 +57,11 @@ void InitPruningAndReductionTables() {
     // LMP has both a improving (more strict) and non-improving evalution
     // parameter for lmp. If the evaluation is getting better we want to check
     // more
-    LMP[0][depth] = 1.4162 + 0.3422 * depth * depth;
-    LMP[1][depth] = 1.9360 + 0.9673 * depth * depth;
+    LMP[0][depth] = 1.4309 + 0.3339 * depth * depth;
+    LMP[1][depth] = 1.7721 + 0.9801 * depth * depth;
 
-    STATIC_PRUNE[0][depth] = -13.2053 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -105.2612 * depth;         // capture cutoff
+    STATIC_PRUNE[0][depth] = -13.7791 * depth * depth; // quiet move cutoff
+    STATIC_PRUNE[1][depth] = -108.3466 * depth;         // capture cutoff
   }
 }
 
@@ -302,7 +302,7 @@ void Search(ThreadData* thread) {
           break;
 
         // delta x 1.25
-        delta += 17 * delta / 64;
+        delta += 16 * delta / 64;
       }
 
       SortRootMoves(thread, 0);
@@ -513,18 +513,18 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if ((ss - 1)->reduction >= 3 && !opponentDeclining)
       depth++;
 
-    if ((ss - 1)->reduction >= 2 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 81)
+    if ((ss - 1)->reduction >= 1 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 79)
       depth--;
 
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= 10 && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
-        eval - 81 * depth + 147 * (improving && !opponentHasEasyCapture) + 26 * opponentDeclining >= beta &&
-        (!hashMove || GetHistory(ss, thread, hashMove) > 11577))
+        eval - 83 * depth + 148 * (improving && !opponentHasEasyCapture) + 25 * opponentDeclining >= beta &&
+        (!hashMove || GetHistory(ss, thread, hashMove) > 10790))
       return (eval + beta) / 2;
 
     // Razoring
-    if (depth <= 4 && eval + 171 * depth <= alpha) {
+    if (depth <= 5 && eval + 146 * depth <= alpha) {
       DecRlx(thread->nodes);
 
       score = Quiesce(alpha, beta, 0, thread, ss);
@@ -538,7 +538,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // threats)
     if (depth >= 5 && (ss - 1)->move != NULL_MOVE && !ss->skip && !opponentHasEasyCapture && eval >= beta &&
         HasNonPawn(board, board->stm) && (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
-      int R = 4 + 366 * depth / 1024 + Min(9 * (eval - beta) / 1024, 4);
+      int R = 4 + 367 * depth / 1024 + Min(9 * (eval - beta) / 1024, 4);
 
       TTPrefetch(KeyAfter(board, NULL_MOVE));
       ss->move = NULL_MOVE;
@@ -572,7 +572,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Prob cut
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
-    int probBeta = beta + 167;
+    int probBeta = beta + 168;
     if (depth >= 6 && !ss->skip && abs(beta) < TB_WIN_BOUND && !(ttHit && ttDepth >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread, probBeta > eval);
       while ((move = NextMove(&mp, board, 1))) {
@@ -623,7 +623,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = GetHistory(ss, thread, move);
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= 7 * history / 65536;                         // adjust reduction based on historical score
+    R -= 8 * history / 65536;                         // adjust reduction based on historical score
     R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
@@ -633,12 +633,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
         int lmrDepth = Max(1, depth - R);
 
-        if (!killerOrCounter && lmrDepth < 4 && history < -2667 * (depth - 1)) {
+        if (!killerOrCounter && lmrDepth < 4 && history < -2850 * (depth - 1)) {
           skipQuiets = 1;
           continue;
         }
 
-        if (!inCheck && lmrDepth < 10 && eval + 63 + 42 * lmrDepth <= alpha)
+        if (!inCheck && lmrDepth < 10 && eval + 66 + 44 * lmrDepth <= alpha)
           skipQuiets = 1;
 
         if (!SEE(board, move, STATIC_PRUNE[0][lmrDepth]))
@@ -681,10 +681,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
-          if (!isPV && score < sBeta - 45 && ss->de <= 7 && !IsCap(move)) {
+          if (!isPV && score < sBeta - 43 && ss->de <= 7 && !IsCap(move)) {
             extension = 3;
             ss->de    = (ss - 1)->de + 1;
-          } else if (!isPV && score < sBeta - 13 && ss->de <= 6) {
+          } else if (!isPV && score < sBeta - 12 && ss->de <= 6) {
             extension = 2;
             ss->de    = (ss - 1)->de + 1;
           } else {
@@ -750,7 +750,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       if (score > alpha && R > 1) {
         // Credit to Viz (and lonfom) for the following modification of the zws
         // re-search depth. They can be found in SF as doDeeperSearch + doShallowerSearch
-        newDepth += (score > bestScore + 60);
+        newDepth += (score > bestScore + 61);
         newDepth -= (score < bestScore + newDepth);
 
         if (newDepth - 1 > lmrDepth)
@@ -805,7 +805,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         alpha    = score;
 
         if (alpha < beta && score > -TB_WIN_BOUND)
-          depth -= (depth >= 2 && depth <= 10);
+          depth -= (depth >= 2 && depth <= 11);
       }
 
       // we're failing high
@@ -912,7 +912,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
 
     bestScore = eval;
 
-    futility = bestScore + 74;
+    futility = bestScore + 79;
   }
 
   (ss + 1)->killers[0] = NULL_MOVE;

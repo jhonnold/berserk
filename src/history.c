@@ -97,7 +97,7 @@ void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData
 
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
   if ((ss - 1)->move && (ss - 2)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
+    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
     int16_t* contCorrection  = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
     AddHistoryHeuristic(contCorrection, correction);
   }
