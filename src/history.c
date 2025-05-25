@@ -47,7 +47,7 @@ void UpdateHistories(SearchStack* ss,
     // Only increase the best move history when it
     // wasn't trivial. This idea was first thought of
     // by Alayan in Ethereal
-    if (nQ > 1 || depth > 4) {
+    if (nQ > 1 || depth > 5) {
       AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
@@ -62,7 +62,7 @@ void UpdateHistories(SearchStack* ss,
 
   // Update quiets
   if (!IsCap(bestMove)) {
-    const int malus = Min(0, -inc + 32 * (nQ - 1));
+    const int malus = Min(0, -inc + 36 * (nQ - 1));
 
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
@@ -90,7 +90,7 @@ void UpdateHistories(SearchStack* ss,
 }
 
 void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
-  const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+  const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
   int16_t* pawnCorrection  = &thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
   AddHistoryHeuristic(pawnCorrection, correction);
 }
