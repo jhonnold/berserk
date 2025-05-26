@@ -62,7 +62,7 @@ void UpdateHistories(SearchStack* ss,
 
   // Update quiets
   if (!IsCap(bestMove)) {
-    const int malus = Min(0, -inc + 36 * (nQ - 1));
+    const int malus = Min(0, -inc + 38 * (nQ - 1));
 
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
@@ -103,7 +103,7 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
   }
 
   if ((ss - 1)->move && (ss - 3)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+    const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
     int16_t* contCorrection  = &(*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
     AddHistoryHeuristic(contCorrection, correction);
   }
