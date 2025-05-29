@@ -62,7 +62,7 @@ void UpdateHistories(SearchStack* ss,
 
   // Update quiets
   if (!IsCap(bestMove)) {
-    const int malus = Min(0, -inc + 38 * (nQ - 1));
+    const int malus = Min(0, -inc + 41 * (nQ - 1));
 
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];

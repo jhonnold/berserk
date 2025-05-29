@@ -58,7 +58,7 @@ INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
 }
 
 INLINE int16_t HistoryBonus(int depth) {
-  return Min(1598, 4 * depth * depth + 194 * depth - 110);
+  return Min(1650, 5 * depth * depth + 177 * depth - 105);
 }
 
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
@@ -81,7 +81,7 @@ INLINE int GetCorrectionScore(Board* board, ThreadData* thread, SearchStack* ss)
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
   const int cont2 = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
-  return (28 * pawn + 17 * cont1 + 45 * cont2) / 8192;
+  return (29 * pawn + 18 * cont1 + 54 * cont2) / 8192;
 }
 
 void UpdateHistories(SearchStack* ss,
