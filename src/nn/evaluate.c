@@ -819,7 +819,7 @@ int Propagate(Accumulator* accumulator, const int stm) {
   ReLU16(act, dest, N_L2);
   L2Affine(dest, act);
   ReLU16(act, dest, N_L3);
-  return L3Transform(act) >> QUANT_BITS;
+  return L3Transform(act) >> (QUANT_BITS + 7);
 }
 
 int Predict(Board* board) {
@@ -870,6 +870,10 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(int16_t));
   offset += N_L3 * N_OUTPUT * sizeof(int16_t);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
+
+  for (int i = 0; i < N_L3 * N_OUTPUT; i++)
+    OUTPUT_WEIGHTS[i] *= 128;
+  OUTPUT_BIAS *= 128;
 
 #if defined(__SSE4_1__) || defined(__ARM_NEON__)
   // Shuffle the L1 weights for sparse matmul

@@ -361,6 +361,41 @@ void PrintUCIOptions() {
   printf("option name p5 type string\n");
   printf("option name p6 type string\n");
 
+  // SPSA Final Layer
+  printf("option name fl0 type string\n");
+  printf("option name fl1 type string\n");
+  printf("option name fl2 type string\n");
+  printf("option name fl3 type string\n");
+  printf("option name fl4 type string\n");
+  printf("option name fl5 type string\n");
+  printf("option name fl6 type string\n");
+  printf("option name fl7 type string\n");
+  printf("option name fl8 type string\n");
+  printf("option name fl9 type string\n");
+  printf("option name fl10 type string\n");
+  printf("option name fl11 type string\n");
+  printf("option name fl12 type string\n");
+  printf("option name fl13 type string\n");
+  printf("option name fl14 type string\n");
+  printf("option name fl15 type string\n");
+  printf("option name fl16 type string\n");
+  printf("option name fl17 type string\n");
+  printf("option name fl18 type string\n");
+  printf("option name fl19 type string\n");
+  printf("option name fl20 type string\n");
+  printf("option name fl21 type string\n");
+  printf("option name fl22 type string\n");
+  printf("option name fl23 type string\n");
+  printf("option name fl24 type string\n");
+  printf("option name fl25 type string\n");
+  printf("option name fl26 type string\n");
+  printf("option name fl27 type string\n");
+  printf("option name fl28 type string\n");
+  printf("option name fl29 type string\n");
+  printf("option name fl30 type string\n");
+  printf("option name fl31 type string\n");
+  printf("option name fb0 type string\n");
+
   printf("uciok\n");
 }
 
@@ -628,6 +663,42 @@ void UCILoop() {
     IO(p4)
     IO(p5)
     IO(p6)
+
+    // SPSA Final Layer
+    FLO1(0)
+    FLO1(1)
+    FLO1(2)
+    FLO1(3)
+    FLO1(4)
+    FLO1(5)
+    FLO1(6)
+    FLO1(7)
+    FLO1(8)
+    FLO1(9)
+    FLO2(10)
+    FLO2(11)
+    FLO2(12)
+    FLO2(13)
+    FLO2(14)
+    FLO2(15)
+    FLO2(16)
+    FLO2(17)
+    FLO2(18)
+    FLO2(19)
+    FLO2(20)
+    FLO2(21)
+    FLO2(22)
+    FLO2(23)
+    FLO2(24)
+    FLO2(25)
+    FLO2(26)
+    FLO2(27)
+    FLO2(28)
+    FLO2(29)
+    FLO2(30)
+    FLO2(31)
+
+    FBO1(0)
 
     InitPruningAndReductionTables();
   }

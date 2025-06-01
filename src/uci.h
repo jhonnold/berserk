@@ -24,6 +24,9 @@ extern int CHESS_960;
 extern int CONTEMPT;
 extern SearchParams Limits;
 
+extern int16_t OUTPUT_WEIGHTS[N_L3 * N_OUTPUT];
+extern int32_t OUTPUT_BIAS;
+
 // Normalization of a score to 50% WR at 100cp
 #define Normalize(s) ((s) / 1.70)
 
@@ -43,8 +46,14 @@ float GetOptionFValue(char* in);
 
 #define IO(nz) else if (!strncmp(in, "setoption name " #nz " value ", 24)) { nz = GetOptionIntValue(in); }
 #define FO(nz) else if (!strncmp(in, "setoption name " #nz " value ", 24)) { nz = GetOptionFValue(in); }
+#define FLO1(nz) else if (!strncmp(in, "setoption name fl" #nz " value ", 25)) { OUTPUT_WEIGHTS[nz] = GetOptionIntValue(in); }
+#define FLO2(nz) else if (!strncmp(in, "setoption name fl" #nz " value ", 26)) { OUTPUT_WEIGHTS[nz] = GetOptionIntValue(in); }
+#define FBO1(nz) else if (!strncmp(in, "setoption name fb" #nz " value ", 25)) { OUTPUT_BIAS = GetOptionIntValue(in); }
 
 // #define IO(nz) printf(#nz ", int, %d, 0, %d, %f, 0.002\n", (nz), 2 * (nz), Max(0.5, (nz) / 10.0));
 // #define FO(nz) printf(#nz ", float, %f, 0, %f, %1f, 0.002\n", (nz), 2 * (nz), (nz) / 10.0);
+// #define FLO1(nz) printf("fl" #nz ", int, %d, -32768, 32767, 50, 0.002\n", OUTPUT_WEIGHTS[nz]);
+// #define FLO2(nz) printf("fl" #nz ", int, %d, -32768, 32767, 50, 0.002\n", OUTPUT_WEIGHTS[nz]);
+// #define FBO1(nz) printf("fb" #nz ", int, %d, -2147483648, 2147483647, 1000, 0.002\n", OUTPUT_BIAS);
 
 #endif
