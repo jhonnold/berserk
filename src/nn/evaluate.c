@@ -905,6 +905,22 @@ INLINE void CopyData(const unsigned char* in) {
   OUTPUT_WEIGHTS[31] = 607;
   OUTPUT_BIAS        = 24623;
 
+  // FILE* fin = fopen("newnet.nn", "wb");
+  // if (fin == NULL) {
+  //   return;
+  // }
+
+  // fwrite(INPUT_WEIGHTS, sizeof(int16_t), N_FEATURES * N_HIDDEN, fin);
+  // fwrite(INPUT_BIASES, sizeof(int16_t), N_HIDDEN, fin);
+  // fwrite(l1, sizeof(int8_t), N_L1 * N_L2, fin);
+  // fwrite(L1_BIASES, sizeof(int32_t), N_L2, fin);
+  // fwrite(L2_WEIGHTS, sizeof(int16_t), N_L2 * N_L3, fin);
+  // fwrite(L2_BIASES, sizeof(int32_t), N_L3, fin);
+  // fwrite(OUTPUT_WEIGHTS, sizeof(int16_t), N_L3 * N_OUTPUT, fin);
+  // fwrite(&OUTPUT_BIAS, sizeof(int32_t), 1, fin);
+
+  // fclose(fin);
+
 #if defined(__SSE4_1__) || defined(__ARM_NEON__)
   // Shuffle the L1 weights for sparse matmul
   for (int i = 0; i < N_L1 * N_L2; i++)
