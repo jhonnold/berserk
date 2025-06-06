@@ -35,7 +35,8 @@
 
 INCBIN(Embed, EVALFILE);
 
-#define QUANT_BITS 5
+#define QUANT1_BITS 5
+#define QUANT2_BITS 12
 
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
@@ -63,10 +64,10 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
     __m512i* out      = (__m512i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], QUANT_BITS);
-      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], QUANT_BITS);
-      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], QUANT_BITS);
-      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], QUANT_BITS);
+      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], QUANT1_BITS);
+      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], QUANT1_BITS);
+      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], QUANT1_BITS);
+      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], QUANT1_BITS);
 
       out[i]     = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512());
       out[i + 1] = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512());
@@ -85,10 +86,10 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], QUANT_BITS);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], QUANT_BITS);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], QUANT_BITS);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], QUANT_BITS);
+      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], QUANT1_BITS);
+      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], QUANT1_BITS);
+      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], QUANT1_BITS);
+      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], QUANT1_BITS);
 
       out[i]     = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256());
       out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256());
@@ -107,8 +108,8 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
     __m128i* out      = (__m128i*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i++) {
-      __m128i s0 = _mm_srai_epi16(in[2 * i + 0], QUANT_BITS);
-      __m128i s1 = _mm_srai_epi16(in[2 * i + 1], QUANT_BITS);
+      __m128i s0 = _mm_srai_epi16(in[2 * i + 0], QUANT1_BITS);
+      __m128i s1 = _mm_srai_epi16(in[2 * i + 1], QUANT1_BITS);
 
       out[i] = _mm_max_epi8(_mm_packs_epi16(s0, s1), _mm_setzero_si128());
     }
@@ -128,8 +129,8 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
     int8x16_t* out      = (int8x16_t*) &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < CHUNKS / 2; i++) {
-      int16x8_t s0 = vshrq_n_s16(in[2 * i + 0], QUANT_BITS);
-      int16x8_t s1 = vshrq_n_s16(in[2 * i + 1], QUANT_BITS);
+      int16x8_t s0 = vshrq_n_s16(in[2 * i + 0], QUANT1_BITS);
+      int16x8_t s1 = vshrq_n_s16(in[2 * i + 1], QUANT1_BITS);
 
       out[i] = vmaxq_s8(vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1)), zero);
     }
@@ -145,7 +146,7 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
     int8_t* out     = &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < N_HIDDEN; i++)
-      out[i] = Min(max, Max(0, in[i])) >> QUANT_BITS;
+      out[i] = Min(max, Max(0, in[i])) >> QUANT1_BITS;
   }
 }
 #endif
@@ -244,7 +245,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm512_srai_epi32(regs[i], QUANT_BITS);
+    out[i] = _mm512_srai_epi32(regs[i], QUANT1_BITS);
 }
 #elif defined(__AVX2__)
 INLINE void m256_add_dpbusd_epi32(__m256i* acc, __m256i a, __m256i b) {
@@ -340,7 +341,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm256_srai_epi32(regs[i], QUANT_BITS);
+    out[i] = _mm256_srai_epi32(regs[i], QUANT1_BITS);
 }
 #elif defined(__SSE4_1__)
 INLINE void m128_add_dpbusd_epi32(__m128i* acc, __m128i a, __m128i b) {
@@ -436,7 +437,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm_srai_epi32(regs[i], QUANT_BITS);
+    out[i] = _mm_srai_epi32(regs[i], QUANT1_BITS);
 }
 #elif defined(__ARM_NEON__)
 INLINE void int8x16_add_dpbusd(int32x4_t* acc, int8x16_t a, int8x16_t b) {
@@ -535,7 +536,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src) {
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = vshrq_n_s32(regs[i], QUANT_BITS);
+    out[i] = vshrq_n_s32(regs[i], QUANT1_BITS);
 }
 #else
 INLINE void L1Affine(int32_t* dest, int8_t* src) {
@@ -551,7 +552,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src) {
   }
 
   for (size_t i = 0; i < N_L2; i++)
-    dest[i] = dest[i] >> QUANT_BITS;
+    dest[i] = dest[i] >> QUANT1_BITS;
 }
 #endif
 
@@ -592,7 +593,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
     const __m128i s0  = m256_hadd_epi32x4(regs);
     const __m128i s1  = m256_hadd_epi32x4(&regs[4]);
     const __m256i sum = _mm256_insertf128_si256(_mm256_castsi128_si256(s0), s1, 1);
-    out[i]            = _mm256_srai_epi32(_mm256_add_epi32(sum, biases[i]), QUANT_BITS);
+    out[i]            = _mm256_srai_epi32(_mm256_add_epi32(sum, biases[i]), QUANT1_BITS);
   }
 }
 #elif defined(__SSE4_1__)
@@ -625,7 +626,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
         regs[k] = _mm_add_epi32(regs[k], _mm_madd_epi16(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
 
     const __m128i sum = m128_hadd_epi32x4(regs);
-    out[i]            = _mm_srai_epi32(_mm_add_epi32(sum, biases[i]), QUANT_BITS);
+    out[i]            = _mm_srai_epi32(_mm_add_epi32(sum, biases[i]), QUANT1_BITS);
   }
 }
 #elif defined(__ARM_NEON__)
@@ -662,7 +663,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
     }
 
     const int32x4_t sum = int32x4_hadd_x4(regs);
-    out[i]              = vshrq_n_s32(vaddq_s32(sum, biases[i]), QUANT_BITS);
+    out[i]              = vshrq_n_s32(vaddq_s32(sum, biases[i]), QUANT1_BITS);
   }
 }
 #else
@@ -674,7 +675,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
     for (int j = 0; j < N_L2; j++)
       dest[i] += src[j] * L2_WEIGHTS[offset + j];
 
-    dest[i] = dest[i] >> QUANT_BITS;
+    dest[i] = dest[i] >> QUANT1_BITS;
   }
 }
 #endif
@@ -819,7 +820,7 @@ int Propagate(Accumulator* accumulator, const int stm) {
   ReLU16(act, dest, N_L2);
   L2Affine(dest, act);
   ReLU16(act, dest, N_L3);
-  return L3Transform(act) >> QUANT_BITS;
+  return L3Transform(act) >> QUANT2_BITS;
 }
 
 int Predict(Board* board) {
