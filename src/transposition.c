@@ -153,6 +153,8 @@ TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move 
     tt->depth      = (uint8_t) (depth - DEPTH_OFFSET);
     tt->agePvBound = (uint8_t) (TT.age | (pv << 2) | bound);
     TTStoreEval(tt, eval);
+  } else if (TTDepth(tt) >= 5 && TTBound(tt) != BOUND_EXACT) {
+    tt->depth--;
   }
 }
 
