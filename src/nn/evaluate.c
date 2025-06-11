@@ -834,10 +834,10 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(int16_t) * N_HIDDEN +              // input biases
                             sizeof(int8_t) * N_L1 * N_L2 +            // input biases
                             sizeof(int32_t) * N_L2 +                  // input biases
-                            sizeof(int16_t) * N_L2 * N_L3 +             // input biases
-                            sizeof(int32_t) * N_L3 +                    // input biases
-                            sizeof(int16_t) * N_L3 +                    // output weights
-                            sizeof(int32_t);                            // output bias
+                            sizeof(int16_t) * N_L2 * N_L3 +           // input biases
+                            sizeof(int32_t) * N_L3 +                  // input biases
+                            sizeof(int16_t) * N_L3 +                  // output weights
+                            sizeof(int32_t);                          // output bias
 
 #if defined(__SSE4_1__) || defined(__ARM_NEON__)
 INLINE int WeightIdxScrambled(int idx) {
@@ -871,6 +871,40 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(OUTPUT_WEIGHTS, &in[offset], N_L3 * N_OUTPUT * sizeof(int16_t));
   offset += N_L3 * N_OUTPUT * sizeof(int16_t);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
+
+  OUTPUT_WEIGHTS[0]  = 435;
+  OUTPUT_WEIGHTS[1]  = 268;
+  OUTPUT_WEIGHTS[2]  = 653;
+  OUTPUT_WEIGHTS[3]  = 375;
+  OUTPUT_WEIGHTS[4]  = 676;
+  OUTPUT_WEIGHTS[5]  = -824;
+  OUTPUT_WEIGHTS[6]  = -856;
+  OUTPUT_WEIGHTS[7]  = -456;
+  OUTPUT_WEIGHTS[8]  = -724;
+  OUTPUT_WEIGHTS[9]  = -383;
+  OUTPUT_WEIGHTS[10] = 1005;
+  OUTPUT_WEIGHTS[11] = 412;
+  OUTPUT_WEIGHTS[12] = -379;
+  OUTPUT_WEIGHTS[13] = -521;
+  OUTPUT_WEIGHTS[14] = -357;
+  OUTPUT_WEIGHTS[15] = -724;
+  OUTPUT_WEIGHTS[16] = 457;
+  OUTPUT_WEIGHTS[17] = -572;
+  OUTPUT_WEIGHTS[18] = 573;
+  OUTPUT_WEIGHTS[19] = -373;
+  OUTPUT_WEIGHTS[20] = 705;
+  OUTPUT_WEIGHTS[21] = 588;
+  OUTPUT_WEIGHTS[22] = -539;
+  OUTPUT_WEIGHTS[23] = 704;
+  OUTPUT_WEIGHTS[24] = -514;
+  OUTPUT_WEIGHTS[25] = 560;
+  OUTPUT_WEIGHTS[26] = 720;
+  OUTPUT_WEIGHTS[27] = -201;
+  OUTPUT_WEIGHTS[28] = 1519;
+  OUTPUT_WEIGHTS[29] = -155;
+  OUTPUT_WEIGHTS[30] = -503;
+  OUTPUT_WEIGHTS[31] = 609;
+  OUTPUT_BIAS = 24897;
 
 #if defined(__SSE4_1__) || defined(__ARM_NEON__)
   // Shuffle the L1 weights for sparse matmul
