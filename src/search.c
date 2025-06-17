@@ -41,6 +41,20 @@
 #include "util.h"
 #include "zobrist.h"
 
+int a0 = 480;
+int a1 = 237;
+int a2 = 3072;
+int a3 = 1024;
+int a4 = 8192;
+int a5 = 1024;
+int a6 = 2048;
+int a7 = 1024;
+int a8 = 2048;
+int a9 = 1024;
+int b0 = 1024;
+int b1 = 1024;
+int b2 = 1024;
+
 // arrays to store these pruning cutoffs at specific depths
 int LMR[MAX_SEARCH_PLY][64];
 int LMP[2][MAX_SEARCH_PLY];
@@ -49,7 +63,7 @@ int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / 2.1350 + 0.2319;
+      LMR[depth][moves] = a0 * log(depth) * log(moves) + a1;
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -61,7 +75,7 @@ void InitPruningAndReductionTables() {
     LMP[1][depth] = 1.7721 + 0.9801 * depth * depth;
 
     STATIC_PRUNE[0][depth] = -13.7791 * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -108.3466 * depth;         // capture cutoff
+    STATIC_PRUNE[1][depth] = -108.3466 * depth;        // capture cutoff
   }
 }
 
@@ -510,10 +524,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     const int opponentHasEasyCapture = !!OpponentsEasyCaptures(board);
     const int opponentDeclining      = ss->staticEval + (ss - 1)->staticEval > 1;
 
-    if ((ss - 1)->reduction >= 3 && !opponentDeclining)
+    if ((ss - 1)->reduction >= a2 && !opponentDeclining)
       depth++;
 
-    if ((ss - 1)->reduction >= 1 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 79)
+    if ((ss - 1)->reduction >= a3 && depth >= 2 && ss->staticEval + (ss - 1)->staticEval > 79)
       depth--;
 
     // Reverse Futility Pruning
@@ -623,15 +637,15 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     int history         = GetHistory(ss, thread, move);
 
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= 8 * history / 65536;                         // adjust reduction based on historical score
-    R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+    R -= a4 * history / 65536;                        // adjust reduction based on historical score
+    R += a5 * (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
-        int lmrDepth = Max(1, depth - R);
+        int lmrDepth = Max(1, depth - R / 1024);
 
         if (!killerOrCounter && lmrDepth < 4 && history < -2850 * (depth - 1)) {
           skipQuiets = 1;
@@ -714,40 +728,40 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
       // increase reduction on non-pv
       if (!ttPv)
-        R += 2;
+        R += a6;
 
       // increase reduction if our eval is declining
       if (!improving)
-        R++;
+        R += a7;
 
       // reduce these special quiets less
       if (killerOrCounter)
-        R -= 2;
+        R -= a8;
 
       // move GAVE check
       if (board->checkers)
-        R--;
+        R -= a9;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
-        R += 1 + !IsCap(move);
+        R += b0 + b1 * !IsCap(move);
 
       if (ttDepth >= depth)
-        R--;
+        R -= b2;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R             = Min(newDepth, Max(R, 1));
+      int reduction = Min(newDepth, Max(R / 1024, 1));
       ss->reduction = R;
 
-      int lmrDepth = newDepth - R;
+      int lmrDepth = newDepth - reduction;
       score        = -Negamax(-alpha - 1, -alpha, lmrDepth, 1, thread, &childPv, ss + 1);
 
       ss->reduction = 0;
 
-      if (score > alpha && R > 1) {
+      if (score > alpha && reduction > 1) {
         // Credit to Viz (and lonfom) for the following modification of the zws
         // re-search depth. They can be found in SF as doDeeperSearch + doShallowerSearch
         newDepth += (score > bestScore + 61);

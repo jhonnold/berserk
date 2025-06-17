@@ -250,6 +250,20 @@ void ParsePosition(char* in, Board* board) {
   }
 }
 
+extern int a0;
+extern int a1;
+extern int a2;
+extern int a3;
+extern int a4;
+extern int a5;
+extern int a6;
+extern int a7;
+extern int a8;
+extern int a9;
+extern int b0;
+extern int b1;
+extern int b2;
+
 void PrintUCIOptions() {
   printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
@@ -263,6 +277,19 @@ void PrintUCIOptions() {
   printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
   printf("option name EvalFile type string default <empty>\n");
+  printf("option name a0 type string\n");
+  printf("option name a1 type string\n");
+  printf("option name a2 type string\n");
+  printf("option name a3 type string\n");
+  printf("option name a4 type string\n");
+  printf("option name a5 type string\n");
+  printf("option name a6 type string\n");
+  printf("option name a7 type string\n");
+  printf("option name a8 type string\n");
+  printf("option name a9 type string\n");
+  printf("option name b0 type string\n");
+  printf("option name b1 type string\n");
+  printf("option name b2 type string\n");
   printf("uciok\n");
 }
 
@@ -434,8 +461,23 @@ void UCILoop() {
 
       if (success)
         printf("info string set EvalFile to value %s\n", path);
-    } else
-      printf("Unknown command: %s \n", in);
+    }
+
+    IO(a0)
+    IO(a1)
+    IO(a2)
+    IO(a3)
+    IO(a4)
+    IO(a5)
+    IO(a6)
+    IO(a7)
+    IO(a8)
+    IO(a9)
+    IO(b0)
+    IO(b1)
+    IO(b2)
+
+    InitPruningAndReductionTables();
   }
 
   if (Threads.searching)
@@ -448,6 +490,13 @@ void UCILoop() {
 int GetOptionIntValue(char* in) {
   int n;
   sscanf(in, "%*s %*s %*s %*s %d", &n);
+
+  return n;
+}
+
+float GetOptionFValue(char* in) {
+  float n;
+  sscanf(in, "%*s %*s %*s %*s %f", &n);
 
   return n;
 }
