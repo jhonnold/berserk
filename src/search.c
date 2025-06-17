@@ -193,7 +193,7 @@ void MainSearch() {
     // We reload the startfen because jmp aborts don't guarantee a rolled back board
     ParseFen(startFen, board);
 
-    MakeMove(bestMove, board);
+    MakeMove(bestMove, board, 0);
     int ttHit = 0, ttScore, ttEval, ttDepth, ttBound, ttPv = 0;
     TTProbe(board->zobrist, 0, &ttHit, &ponderMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
 
@@ -397,7 +397,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // hot exit
     longjmp(thread->exit, 1);
 
-  IncRlx(thread->nodes);
   if (isPV && thread->seldepth < ss->ply + 1)
     thread->seldepth = ss->ply + 1;
 
@@ -525,8 +524,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Razoring
     if (depth <= 5 && eval + 146 * depth <= alpha) {
-      DecRlx(thread->nodes);
-
       score = Quiesce(alpha, beta, 0, thread, ss);
       if (score <= alpha)
         return score;
@@ -583,7 +580,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         ss->move = move;
         ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
         ss->cont = &thread->contCorrection[Moving(move)][To(move)];
-        MakeMove(move, board);
+        MakeMove(move, board, thread);
 
         // qsearch to quickly check
         score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
@@ -705,7 +702,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     ss->cont = &thread->contCorrection[Moving(move)][To(move)];
-    MakeMove(move, board);
+    MakeMove(move, board, thread);
 
     // apply extensions
     int newDepth = depth + extension;
@@ -855,8 +852,6 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     // hot exit
     longjmp(thread->exit, 1);
 
-  IncRlx(thread->nodes);
-
   // draw check
   if (IsDraw(board, ss->ply))
     return 0;
@@ -954,7 +949,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     ss->cont = &thread->contCorrection[Moving(move)][To(move)];
-    MakeMove(move, board);
+    MakeMove(move, board, thread);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
 

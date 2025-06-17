@@ -54,7 +54,7 @@ int IsFiftyMoveRule(Board* board);
 
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);
-void MakeMove(Move move, Board* board);
+void MakeMove(Move move, Board* board, ThreadData* thread);
 void MakeMoveUpdate(Move move, Board* board, int update);
 void UndoMove(Move move, Board* board);
 

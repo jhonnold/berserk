@@ -307,7 +307,8 @@ inline void SetThreats(Board* board) {
   board->threatened |= board->threatenedBy[KING];
 }
 
-void MakeMove(Move move, Board* board) {
+void MakeMove(Move move, Board* board, ThreadData* thread) {
+  IncRlx(thread->nodes);
   MakeMoveUpdate(move, board, 1);
 }
 
