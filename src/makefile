@@ -19,6 +19,7 @@ MSSE41  = $(M64) -msse -msse2 -mssse3 -msse4.1
 MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
 ARM64   = -arch arm64
+XCRUN   =
 
 # Detecting windows
 ifeq ($(shell echo "test"), "test")
@@ -29,6 +30,7 @@ endif
 UNAME := $(shell uname -m)
 ifeq ($(UNAME), arm64)
     ARCH = arm64
+    XCRUN = xcrun
 endif
 
 # Setup arch
@@ -85,7 +87,7 @@ else ifeq ($(findstring clang, $(CC)), clang)
 	./$(EXE) bench 13 > pgo.out 2>&1
 	grep Results pgo.out
 
-	llvm-profdata merge -output=berserk.profdata *.profraw
+	$(XCRUN) llvm-profdata merge -output=berserk.profdata *.profraw
 	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-instr-use=berserk.profdata" all
 
 	@rm -rf pgo pgo.out berserk.profdata *.profraw
