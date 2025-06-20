@@ -397,7 +397,6 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // hot exit
     longjmp(thread->exit, 1);
 
-  IncRlx(thread->nodes);
   if (isPV && thread->seldepth < ss->ply + 1)
     thread->seldepth = ss->ply + 1;
 
@@ -583,6 +582,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         ss->move = move;
         ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
         ss->cont = &thread->contCorrection[Moving(move)][To(move)];
+        IncRlx(thread->nodes);
         MakeMove(move, board);
 
         // qsearch to quickly check
@@ -705,6 +705,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     ss->cont = &thread->contCorrection[Moving(move)][To(move)];
+    IncRlx(thread->nodes);
     MakeMove(move, board);
 
     // apply extensions
@@ -855,8 +856,6 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     // hot exit
     longjmp(thread->exit, 1);
 
-  IncRlx(thread->nodes);
-
   // draw check
   if (IsDraw(board, ss->ply))
     return 0;
@@ -954,6 +953,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     ss->move = move;
     ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
     ss->cont = &thread->contCorrection[Moving(move)][To(move)];
+    IncRlx(thread->nodes);
     MakeMove(move, board);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
