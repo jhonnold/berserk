@@ -27,10 +27,11 @@
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return (int) HH(thread->board.stm, move, thread->board.threatened) + //
-         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +               //
-         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +               //
-         (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
+  return ((int) HH(thread->board.stm, move, thread->board.threatened) * 8 + //
+          (int) (*(ss - 1)->ch)[Moving(move)][To(move)] * 24 +              //
+          (int) (*(ss - 2)->ch)[Moving(move)][To(move)] * 24 +              //
+          (int) (*(ss - 4)->ch)[Moving(move)][To(move)] * 8) /
+         16;
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
@@ -77,7 +78,7 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 }
 
 INLINE int GetCorrectionScore(Board* board, ThreadData* thread, SearchStack* ss) {
-  const int pawn = thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
+  const int pawn  = thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
   const int cont2 = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
