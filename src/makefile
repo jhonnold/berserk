@@ -20,9 +20,17 @@ MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
 ARM64   = -arch arm64
 
+XCRUN   =
+
 # Detecting windows
 ifeq ($(shell echo "test"), "test")
 	FLAGS += -static
+endif
+
+# Detecting Mac
+KERNEL := $(shell uname -s)
+ifeq ($(KERNEL),Darwin)
+	XCRUN = xcrun
 endif
 
 # Detecting Apple Silicon (ARM64)
@@ -85,7 +93,7 @@ else ifeq ($(findstring clang, $(CC)), clang)
 	./$(EXE) bench 13 > pgo.out 2>&1
 	grep Results pgo.out
 
-	llvm-profdata merge -output=berserk.profdata *.profraw
+	$(XCRUN) llvm-profdata merge -output=berserk.profdata *.profraw
 	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-instr-use=berserk.profdata" all
 
 	@rm -rf pgo pgo.out berserk.profdata *.profraw
