@@ -13,8 +13,8 @@ A UCI chess engine written in C. Feel free to challenge me on [Lichess](https://
 Many websites use an [Elo rating system](https://en.wikipedia.org/wiki/Elo_rating_system) to present relative skill amongst engines.
 Below is a list of many chess engine lists throughout the web (*variance in Elo is due to different conditions for each list*)
 
-* [CCRL 40/15](https://ccrl.chessdom.com/ccrl/4040/) - **3514 4CPU, 3480 1CPU**
-* [CCRL 40/2](https://ccrl.chessdom.com/ccrl/404/) - **3667 1CPU**
+* [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) - **3514 4CPU, 3480 1CPU**
+* [CCRL 40/2](https://computerchess.org.uk/ccrl/404/) - **3667 1CPU**
 * [IpMan Chess](https://ipmanchess.yolasite.com/r9-7945hx.php) - **3547 1CPU**
 * [CEGT](http://www.cegt.net/40_4_Ratinglist/40_4_single/rangliste.html) - **3598 1CPU**
 * [SPCC](https://www.sp-cc.de/) - **3733 1CPU**
