@@ -24,7 +24,7 @@ else
 fi;
 
 cd berserk/src
-make build CC=$cc ARCH=native
+make pgo CC=$cc ARCH=native
 
 if test -f berserk; then
     echo "Compilation complete..."
