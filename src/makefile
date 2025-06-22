@@ -19,6 +19,7 @@ MSSE41  = $(M64) -msse -msse2 -mssse3 -msse4.1
 MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
 ARM64   = -arch arm64
+
 XCRUN   =
 
 # Detecting windows
@@ -26,11 +27,16 @@ ifeq ($(shell echo "test"), "test")
 	FLAGS += -static
 endif
 
+# Detecting Mac
+KERNEL := $(shell uname -s)
+ifeq ($(KERNEL),Darwin)
+	XCRUN = xcrun
+endif
+
 # Detecting Apple Silicon (ARM64)
 UNAME := $(shell uname -m)
 ifeq ($(UNAME), arm64)
     ARCH = arm64
-    XCRUN = xcrun
 endif
 
 # Setup arch
