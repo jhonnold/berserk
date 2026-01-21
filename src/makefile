@@ -4,7 +4,8 @@ SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c mo
 		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
 CC       = clang
 VERSION  = 20250622
-MAIN_NETWORK = berserk-9b84c340af7e.nn
+MAIN_NETWORK = berserk-d43206fe90e4.nn
+NETWORK_URL = https://github.com/jhonnold/berserk/releases/download/13/$(MAIN_NETWORK)
 EVALFILE = $(MAIN_NETWORK)
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
@@ -110,9 +111,9 @@ download-network:
 		if test -f "$(EVALFILE)"; then \
 			echo "File already downloaded"; \
 		elif hash wget 2>/dev/null; then \
-			echo "Downloading $(EVALFILE) with wget"; wget -qO- https://berserk-networks.s3.amazonaws.com/$(EVALFILE) > $(EVALFILE); \
+			echo "Downloading $(EVALFILE) with wget"; wget -qO- $(NETWORK_URL) > $(EVALFILE); \
 		elif hash curl 2>/dev/null; then \
-			echo "Downloading $(EVALFILE) with curl"; curl -skL https://berserk-networks.s3.amazonaws.com/$(EVALFILE) > $(EVALFILE); \
+			echo "Downloading $(EVALFILE) with curl"; curl -sL $(NETWORK_URL) > $(EVALFILE); \
 		fi; \
 		if test -f "$(EVALFILE)"; then \
 			if hash shasum 2>/dev/null; then \
