@@ -31,7 +31,7 @@
 #include "util.h"
 
 // Ethereal's bench set
-const int NUM_BENCH_POSITIONS = 50;
+#define NUM_BENCH_POSITIONS 50
 char* benchmarks[]            = {
 #include "files/bench.csv"
 };

@@ -205,9 +205,11 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
 }
 
 INLINE void L1Affine(int32_t* dest, int8_t* src) {
-  const size_t OUT_WIDTH  = sizeof(__m512i) / sizeof(int32_t);
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+  enum {
+    OUT_WIDTH  = sizeof(__m512i) / sizeof(int32_t),
+    NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE,
+    OUT_CC     = N_L2 / OUT_WIDTH
+  };
 
   const int32_t* in32   = (int32_t*) src;
   const __m512i* biases = (__m512i*) L1_BIASES;
@@ -301,9 +303,11 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
 }
 
 INLINE void L1Affine(int32_t* dest, int8_t* src) {
-  const size_t OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t);
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+  enum {
+    OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t),
+    NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE,
+    OUT_CC     = N_L2 / OUT_WIDTH
+  };
 
   const int32_t* in32   = (int32_t*) src;
   const __m256i* biases = (__m256i*) L1_BIASES;
@@ -397,9 +401,11 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
 }
 
 INLINE void L1Affine(int32_t* dest, int8_t* src) {
-  const size_t OUT_WIDTH  = sizeof(__m128i) / sizeof(int32_t);
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+  enum {
+    OUT_WIDTH  = sizeof(__m128i) / sizeof(int32_t),
+    NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE,
+    OUT_CC     = N_L2 / OUT_WIDTH
+  };
 
   const int32_t* in32   = (int32_t*) src;
   const __m128i* biases = (__m128i*) L1_BIASES;
@@ -496,9 +502,11 @@ INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks
 }
 
 INLINE void L1Affine(int32_t* dest, int8_t* src) {
-  const size_t OUT_WIDTH  = 4;
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+  enum {
+    OUT_WIDTH  = 4,
+    NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE,
+    OUT_CC     = N_L2 / OUT_WIDTH
+  };
 
   const int32_t* in32     = (int32_t*) src;
   const int32x4_t* biases = (int32x4_t*) L1_BIASES;
@@ -570,10 +578,12 @@ INLINE __m128i m256_hadd_epi32x4(__m256i* regs) {
 }
 
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(int16_t);
-  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
-  const size_t OUT_CC     = 8;
-  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+  enum {
+    IN_WIDTH   = sizeof(__m256i) / sizeof(int16_t),
+    IN_CHUNKS  = N_L2 / IN_WIDTH,
+    OUT_CC     = 8,
+    OUT_CHUNKS = N_L3 / OUT_CC
+  };
 
   const __m256i* in      = (__m256i*) src;
   const __m256i* weights = (__m256i*) L2_WEIGHTS;
@@ -605,10 +615,12 @@ INLINE __m128i m128_hadd_epi32x4(__m128i* regs) {
 }
 
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m128i) / sizeof(int16_t);
-  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
-  const size_t OUT_CC     = 4;
-  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+  enum {
+    IN_WIDTH   = sizeof(__m128i) / sizeof(int16_t),
+    IN_CHUNKS  = N_L2 / IN_WIDTH,
+    OUT_CC     = 4,
+    OUT_CHUNKS = N_L3 / OUT_CC
+  };
 
   const __m128i* in      = (__m128i*) src;
   const __m128i* weights = (__m128i*) L2_WEIGHTS;
@@ -638,10 +650,12 @@ INLINE int32x4_t int32x4_hadd_x4(int32x4_t* regs) {
 }
 
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
-  const size_t IN_WIDTH   = 8;
-  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
-  const size_t OUT_CC     = 4;
-  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+  enum {
+    IN_WIDTH   = 8,
+    IN_CHUNKS  = N_L2 / IN_WIDTH,
+    OUT_CC     = 4,
+    OUT_CHUNKS = N_L3 / OUT_CC
+  };
 
   const int16x8_t* in      = (int16x8_t*) src;
   const int16x8_t* weights = (int16x8_t*) L2_WEIGHTS;
