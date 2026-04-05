@@ -28,14 +28,15 @@
 #define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
 #define OccBB(c)       (board->occupancies[c])
 
+extern const int MIRROR[];
+extern Score PSQT[12][2][64];
+
 #define File(sq)        ((sq) &7)
 #define Rank(sq)        ((sq) >> 3)
 #define Sq(r, f)        ((r) *8 + (f))
 #define Distance(a, b)  Max(abs(Rank(a) - Rank(b)), abs(File(a) - File(b)))
 #define MDistance(a, b) (abs(Rank(a) - Rank(b)) + abs(File(a) - File(b)))
 #define PieceCount(pc)  (1ull << (pc * 4))
-
-extern const uint16_t KING_BUCKETS[64];
 
 void ClearBoard(Board* board);
 void ParseFen(char* fen, Board* board);
@@ -79,23 +80,6 @@ INLINE BitBoard OpponentsEasyCaptures(Board* board) {
 
 INLINE int HasNonPawn(Board* board, const int color) {
   return !!(OccBB(color) ^ PieceBB(KING, color) ^ PieceBB(PAWN, color));
-}
-
-INLINE int MoveRequiresRefresh(int piece, int from, int to) {
-  if (PieceType(piece) != KING)
-    return 0;
-
-  if ((from & 4) != (to & 4))
-    return 1;
-  return KING_BUCKETS[from] != KING_BUCKETS[to];
-}
-
-INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
-  int oP  = 6 * ((piece ^ view) & 0x1) + PieceType(piece);
-  int oK  = (7 * !(kingsq & 4)) ^ (56 * view) ^ kingsq;
-  int oSq = (7 * !(kingsq & 4)) ^ (56 * view) ^ sq;
-
-  return KING_BUCKETS[oK] * 12 * 64 + oP * 64 + oSq;
 }
 
 #endif

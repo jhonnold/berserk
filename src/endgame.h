@@ -14,35 +14,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef EVAL_H
-#define EVAL_H
-
-#include <stdlib.h>
+#ifndef ENDGAME_H
+#define ENDGAME_H
 
 #include "types.h"
-#include "util.h"
-#include "weights.h"
 
-#define EVAL_UNKNOWN 2046
+int Push(Board* board, int ss);
+int StaticMaterialScore(int side, Board* board);
+int EvaluateMaterialOnlyEndgame(Board* board);
+int EvaluateKXK(Board* board);
 
-INLINE int ClampEval(int eval) {
-  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
-}
-
-extern const int PHASE_VALUES[6];
-extern const int MAX_PHASE;
-extern const int MAX_SCALE;
-extern const int PHASE_MULTIPLIERS[5];
-
-extern const int STATIC_MATERIAL_VALUE[7];
-
-int IsOCB(Board* board);
-int Scale(Board* board, int ss);
-int GetPhase(Board* board);
-
-Score MaterialValue(Board* board, int side);
-void SetContempt(int* dest, int stm);
-Score Evaluate(Board* board, ThreadData* thread);
-void EvaluateTrace(Board* board);
+uint8_t GetKPKBit(uint32_t bit);
+uint32_t KPKIndex(int ssKing, int wsKing, int p, int stm);
+uint8_t KPKDraw(int ss, int ssKing, int wsKing, int p, int stm);
 
 #endif

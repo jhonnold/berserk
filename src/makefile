@@ -1,12 +1,10 @@
 # General
 EXE      = berserk
-SRC      = attacks.c bench.c berserk.c bits.c board.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
-		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
+SRC      = attacks.c bench.c berserk.c bits.c board.c endgame.c eval.c history.c move.c movegen.c movepick.c pawns.c perft.c random.c \
+		   search.c see.c tb.c thread.c transposition.c tuner/tune.c tuner/util.c uci.c util.c weights.c zobrist.c pyrrhic/tbprobe.c
 CC       = clang
 VERSION  = 20250622
-MAIN_NETWORK = berserk-9b84c340af7e.nn
-EVALFILE = $(MAIN_NETWORK)
-DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
+DEFS     = -DVERSION=\"$(VERSION)\" -DNDEBUG
 
 # Flags
 STD    = -std=gnu11
@@ -71,13 +69,13 @@ else ifeq ($(findstring -pext, $(ARCH)), -pext)
 	CFLAGS += -DUSE_PEXT -mbmi2
 endif
 
-openbench: download-network
+openbench:
 	$(MAKE) ARCH=avx2 pgo
 
-build: download-network
+build:
 	$(MAKE) ARCH=$(ARCH) all
 
-pgo: download-network
+pgo:
 ifeq ($(findstring gcc, $(CC)), gcc)
 	$(MAKE) ARCH=$(ARCH) PGOFLAGS="-fprofile-generate=pgo" all
 
@@ -103,44 +101,6 @@ endif
 
 all:
 	$(CC) $(CFLAGS) $(SRC) $(LIBS) -o $(EXE)
-
-download-network:
-	@if [ "$(EVALFILE)" = "$(MAIN_NETWORK)" ]; then \
-		echo "Using the current best network: $(EVALFILE)"; \
-		if test -f "$(EVALFILE)"; then \
-			echo "File already downloaded"; \
-		elif hash wget 2>/dev/null; then \
-			echo "Downloading $(EVALFILE) with wget"; wget -qO- https://berserk-networks.s3.amazonaws.com/$(EVALFILE) > $(EVALFILE); \
-		elif hash curl 2>/dev/null; then \
-			echo "Downloading $(EVALFILE) with curl"; curl -skL https://berserk-networks.s3.amazonaws.com/$(EVALFILE) > $(EVALFILE); \
-		fi; \
-		if test -f "$(EVALFILE)"; then \
-			if hash shasum 2>/dev/null; then \
-				if [ "$(EVALFILE)" = "berserk-"`shasum -a 256 $(EVALFILE) | cut -c1-12`".nn" ]; then \
-					echo "Downloaded network $(EVALFILE) and verified"; \
-				else \
-					echo "Downloaded network $(EVALFILE) failed validation"; \
-					exit 1; \
-				fi; \
-			elif hash sha256sum 2>/dev/null; then \
-				if [ "$(EVALFILE)" = "berserk-"`sha256sum $(EVALFILE) | cut -c1-12`".nn" ]; then \
-					echo "Downloaded network $(EVALFILE) and verified"; \
-				else \
-					echo "Downloaded network $(EVALFILE) failed validation"; \
-					exit 1; \
-				fi; \
-			else \
-				echo "Downloaded network $(EVALFILE), but unable to verify"; \
-			fi; \
-		else \
-			echo "Unable to download network: $(EVALFILE)"; \
-			exit 1; \
-		fi; \
-	elif test -f "$(EVALFILE)"; then \
-		echo "Using network: $(EVALFILE)"; \
-	else \
-		echo "Unknown network: $(EVALFILE)"; \
-	fi;
 
 clean:
 	rm -f $(EXE)

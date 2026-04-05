@@ -29,8 +29,6 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
-#include "nn/accumulator.h"
-#include "nn/evaluate.h"
 #include "perft.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
@@ -262,7 +260,6 @@ void PrintUCIOptions() {
   printf("option name UCI_Chess960 type check default false\n");
   printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
   printf("option name Contempt type spin default 0 min -100 max 100\n");
-  printf("option name EvalFile type string default <empty>\n");
   printf("uciok\n");
 }
 
@@ -421,19 +418,6 @@ void UCILoop() {
       MOVE_OVERHEAD = Min(10000, Max(0, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
       CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
-    } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
-      char* path  = in + 30;
-      int success = 0;
-
-      if (strncmp(path, "<empty>", 7))
-        success = LoadNetwork(path);
-      else {
-        LoadDefaultNN();
-        success = 1;
-      }
-
-      if (success)
-        printf("info string set EvalFile to value %s\n", path);
     } else
       printf("Unknown command: %s \n", in);
   }

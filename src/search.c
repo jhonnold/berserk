@@ -30,7 +30,6 @@
 #include "move.h"
 #include "movegen.h"
 #include "movepick.h"
-#include "nn/accumulator.h"
 #include "pyrrhic/tbprobe.h"
 #include "see.h"
 #include "tb.h"
@@ -214,10 +213,7 @@ void Search(ThreadData* thread) {
   Board* board   = &thread->board;
   int mainThread = !thread->idx;
 
-  thread->depth       = 0;
-  board->accumulators = thread->accumulators; // exit jumps can cause this pointer to not be reset
-  ResetAccumulator(board->accumulators, board, WHITE);
-  ResetAccumulator(board->accumulators, board, BLACK);
+  thread->depth = 0;
   SetContempt(thread->contempt, board->stm);
 
   PV nullPv;
@@ -1083,9 +1079,9 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
   memset(&thread->contCorrection, 0, sizeof(thread->contCorrection));
+  memset(thread->pawnHashTable, 0, sizeof(thread->pawnHashTable));
 
-  thread->board.accumulators = thread->accumulators;
-  thread->previousScore      = UNKNOWN;
+  thread->previousScore = UNKNOWN;
 }
 
 void SearchClear() {

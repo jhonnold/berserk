@@ -32,15 +32,6 @@
 #include "uci.h"
 #include "zobrist.h"
 
-const uint16_t KING_BUCKETS[64] = {15, 15, 14, 14, 14, 14, 15, 15, //
-                                   15, 15, 14, 14, 14, 14, 15, 15, //
-                                   13, 13, 12, 12, 12, 12, 13, 13, //
-                                   13, 13, 12, 12, 12, 12, 13, 13, //
-                                   11, 10, 9,  8,  8,  9,  10, 11, //
-                                   11, 10, 9,  8,  8,  9,  10, 11, //
-                                   7,  6,  5,  4,  4,  5,  6,  7,  //
-                                   3,  2,  1,  0,  0,  1,  2,  3};
-
 // reset the board to an empty state
 void ClearBoard(Board* board) {
   memset(board->pieces, 0, sizeof(board->pieces));
@@ -53,6 +44,7 @@ void ClearBoard(Board* board) {
   board->piecesCounts = 0ULL;
   board->zobrist      = 0ULL;
   board->pawnZobrist  = 0ULL;
+  board->mat          = 0;
 
   board->stm  = WHITE;
   board->xstm = BLACK;
@@ -165,6 +157,7 @@ void ParseFen(char* fen, Board* board) {
 
   board->zobrist     = Zobrist(board);
   board->pawnZobrist = PawnZobrist(board);
+  board->mat = MaterialValue(board, board->stm) - MaterialValue(board, board->xstm);
 }
 
 void BoardToFen(char* fen, Board* board) {
@@ -317,6 +310,9 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int piece    = Moving(move);
   int captured = IsEP(move) ? Piece(PAWN, board->xstm) : board->squares[to];
 
+  int startSameSideKing = (File(LSB(PieceBB(KING, board->xstm))) > 3) == (File(from) > 3);
+  int endSameSideKing   = (File(LSB(PieceBB(KING, board->xstm))) > 3) == (File(to) > 3);
+
   // store hard to recalculate values
   memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
   board->history[board->histPly].capture = captured;
@@ -330,6 +326,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   board->squares[from] = NO_PIECE;
   board->squares[to]   = piece;
+
+  board->mat += PSQT[piece][endSameSideKing][to] - PSQT[piece][startSameSideKing][from];
 
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
   if (PieceType(piece) == PAWN)
@@ -350,11 +348,16 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->squares[rookFrom] = NO_PIECE;
     board->squares[rookTo] = rook;
 
+    board->mat += PSQT[rook][endSameSideKing][rookTo] - PSQT[rook][endSameSideKing][rookFrom];
+
     board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
   } else if (IsCap(move)) {
     int capSq = IsEP(move) ? to - PawnDir(board->stm) : to;
     if (IsEP(move))
       board->squares[capSq] = NO_PIECE;
+
+    int endSameSideOurKing = (File(LSB(PieceBB(KING, board->stm))) > 3) == (File(capSq) > 3);
+    board->mat += PSQT[captured][endSameSideOurKing][capSq];
 
     FlipBit(board->pieces[captured], capSq);
     FlipBit(OccBB(board->xstm), capSq);
@@ -395,6 +398,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
       board->squares[to] = promoted;
 
+      board->mat += PSQT[promoted][endSameSideKing][to] - PSQT[piece][endSameSideKing][to];
+
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
@@ -403,6 +408,17 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->fmr = 0;
   }
+
+  // King moves change PSQT perspective for all pieces, recompute
+  if (PieceType(piece) == KING) {
+    OccBB(WHITE) = OccBB(BLACK) = OccBB(BOTH) = 0;
+    for (int i = WHITE_PAWN; i <= BLACK_KING; i++)
+      OccBB(i & 1) |= board->pieces[i];
+    OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
+    board->mat = MaterialValue(board, board->stm) - MaterialValue(board, board->xstm);
+  }
+
+  board->mat = -board->mat;
 
   board->histPly++;
   board->moveNo += (board->stm == BLACK);
@@ -416,13 +432,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetSpecialPieces(board);
   SetThreats(board);
 
-  if (update) {
-    board->accumulators->move     = move;
-    board->accumulators->captured = captured;
-
-    board->accumulators++;
-    board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
-  }
+  (void)update;
 }
 
 void UndoMove(Move move, Board* board) {
@@ -434,8 +444,6 @@ void UndoMove(Move move, Board* board) {
   board->xstm ^= 1;
   board->histPly--;
   board->moveNo -= (board->stm == BLACK);
-  board->accumulators--;
-
   // reload historical values
   memcpy(board, &board->history[board->histPly], offsetof(Board, stm));
 
@@ -491,6 +499,8 @@ void MakeNullMove(Board* board) {
   if (board->epSquare)
     board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];
   board->epSquare = 0;
+
+  board->mat = -board->mat;
 
   board->zobrist ^= ZOBRIST_SIDE_KEY;
   board->pawnZobrist ^= ZOBRIST_SIDE_KEY;

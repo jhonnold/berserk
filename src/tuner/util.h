@@ -14,35 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef EVAL_H
-#define EVAL_H
+#ifndef TUNE_UTIL_H
+#define TUNE_UTIL_H
 
-#include <stdlib.h>
-
-#include "types.h"
-#include "util.h"
-#include "weights.h"
-
-#define EVAL_UNKNOWN 2046
-
-INLINE int ClampEval(int eval) {
-  return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
-}
-
-extern const int PHASE_VALUES[6];
-extern const int MAX_PHASE;
-extern const int MAX_SCALE;
-extern const int PHASE_MULTIPLIERS[5];
-
-extern const int STATIC_MATERIAL_VALUE[7];
-
-int IsOCB(Board* board);
-int Scale(Board* board, int ss);
-int GetPhase(Board* board);
-
-Score MaterialValue(Board* board, int side);
-void SetContempt(int* dest, int stm);
-Score Evaluate(Board* board, ThreadData* thread);
-void EvaluateTrace(Board* board);
+float Sigmoid(float s, float k);
+float SigmoidPrime(float s, float k);
 
 #endif

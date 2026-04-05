@@ -26,18 +26,6 @@
 #define MAX_SEARCH_PLY 201 // effective max depth 250
 #define MAX_MOVES      128
 
-#define N_KING_BUCKETS 16
-
-#define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-#define N_HIDDEN   1024
-#define N_L1       (2 * N_HIDDEN)
-#define N_L2       16
-#define N_L3       32
-#define N_OUTPUT   1
-
-#define ALIGN_ON 64
-#define ALIGN    __attribute__((aligned(ALIGN_ON)))
-
 #define CORRECTION_GRAIN 256
 
 #define PAWN_CORRECTION_SIZE 131072
@@ -47,24 +35,33 @@ typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
 
-enum {
-  SUB = 0,
-  ADD = 1
-};
-
-typedef int16_t acc_t;
+typedef struct {
+  BitBoard passedPawns;
+  BitBoard openFiles;
+  int kingSq[2];
+  BitBoard kingArea[2];
+  BitBoard attacks[2][6];
+  BitBoard allAttacks[2];
+  BitBoard twoAttacks[2];
+  Score ksAttackWeight[2];
+  int ksAttackerCount[2];
+  BitBoard mobilitySquares[2];
+  BitBoard outposts[2];
+} EvalData;
 
 typedef struct {
-  uint8_t correct[2];
-  uint16_t captured;
-  Move move;
-  acc_t values[2][N_HIDDEN] ALIGN;
-} Accumulator;
+  Score s;
+  uint64_t hash;
+  BitBoard passedPawns;
+} PawnHashEntry;
 
-typedef struct {
-  acc_t values[N_HIDDEN] ALIGN;
-  BitBoard pcs[12];
-} AccumulatorKingState;
+#ifdef TUNE
+#define PAWN_TABLE_MASK (0x1)
+#define PAWN_TABLE_SIZE (1ULL << 1)
+#else
+#define PAWN_TABLE_MASK (0xFFFF)
+#define PAWN_TABLE_SIZE (1ULL << 16)
+#endif
 
 typedef struct {
   int castling;
@@ -73,6 +70,7 @@ typedef struct {
   int nullply;
   uint64_t zobrist;
   uint64_t pawnZobrist;
+  Score mat;
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
@@ -90,6 +88,8 @@ typedef struct {
 
   uint64_t zobrist;     // zobrist hash of the position
   uint64_t pawnZobrist; // pawn zobrist hash of the position (pawns + stm)
+
+  Score mat;           // incremental material + PSQT score
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
@@ -113,9 +113,6 @@ typedef struct {
   int castlingRights[64];
 
   BoardHistory history[MAX_SEARCH_PLY + 100];
-
-  Accumulator* accumulators;
-  AccumulatorKingState* refreshTable;
 } Board;
 
 typedef struct {
@@ -185,9 +182,6 @@ struct ThreadData {
 
   int nmpMinPly, npmColor;
 
-  Accumulator* accumulators;
-  AccumulatorKingState* refreshTable;
-
   Board board;
 
   int contempt[2];
@@ -202,6 +196,8 @@ struct ThreadData {
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
+
+  PawnHashEntry pawnHashTable[PAWN_TABLE_SIZE];
 
   int action, calls;
   pthread_t nativeThread;
@@ -377,5 +373,93 @@ enum {
   MG,
   EG
 };
+
+typedef struct {
+  int8_t pieces[5];
+  int8_t psqt[6][2][32];
+  int8_t bishopPair;
+
+  int8_t knightPostPsqt[12];
+  int8_t bishopPostPsqt[12];
+
+  int8_t knightMobilities[9];
+  int8_t bishopMobilities[14];
+  int8_t rookMobilities[15];
+  int8_t queenMobilities[28];
+  int8_t kingMobilities[9];
+
+  int8_t minorBehindPawn;
+  int8_t knightPostReachable;
+  int8_t bishopPostReachable;
+  int8_t bishopTrapped;
+  int8_t rookTrapped;
+  int8_t badBishopPawns;
+  int8_t dragonBishop;
+  int8_t rookOpenFileOffset;
+  int8_t rookOpenFile;
+  int8_t rookSemiOpen;
+  int8_t rookToOpen;
+  int8_t queenOppositeRook;
+  int8_t queenRookBattery;
+
+  int8_t defendedPawns;
+  int8_t doubledPawns;
+  int8_t isolatedPawns[4];
+  int8_t openIsolatedPawns;
+  int8_t backwardsPawns;
+  int8_t connectedPawn[4][8];
+  int8_t candidatePasser[8];
+  int8_t candidateEdgeDistance;
+
+  int8_t passedPawn[8];
+  int8_t passedPawnEdgeDistance;
+  int8_t passedPawnKingProximity;
+  int8_t passedPawnAdvance[5];
+  int8_t passedPawnEnemySliderBehind;
+  int8_t passedPawnSqRule;
+  int8_t passedPawnUnsupported;
+  int8_t passedPawnOutsideVKnight;
+
+  int8_t knightThreats[6];
+  int8_t bishopThreats[6];
+  int8_t rookThreats[6];
+  int8_t kingThreat;
+  int8_t pawnThreat;
+  int8_t pawnPushThreat;
+  int8_t pawnPushThreatPinned;
+  int8_t hangingThreat;
+  int8_t knightCheckQueen;
+  int8_t bishopCheckQueen;
+  int8_t rookCheckQueen;
+
+  int16_t space;
+
+  int16_t imbalance[5][5];
+
+  int8_t pawnShelter[4][8];
+  int8_t pawnStorm[4][8];
+  int8_t blockedPawnStorm[8];
+  int8_t castlingRights;
+
+  int8_t complexPawns;
+  int8_t complexPawnsBothSides;
+  int8_t complexOffset;
+
+  int ks;
+  int danger[2];
+  int8_t ksAttackerCount[2];
+  int8_t ksAttackerWeights[2][5];
+  int8_t ksWeakSqs[2];
+  int8_t ksPinned[2];
+  int8_t ksKnightCheck[2];
+  int8_t ksBishopCheck[2];
+  int8_t ksRookCheck[2];
+  int8_t ksQueenCheck[2];
+  int8_t ksUnsafeCheck[2];
+  int8_t ksEnemyQueen[2];
+  int8_t ksKnightDefense[2];
+
+  int8_t ss;
+} EvalCoeffs;
 
 #endif

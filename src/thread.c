@@ -23,7 +23,6 @@
 #include <string.h>
 
 #include "eval.h"
-#include "nn/accumulator.h"
 #include "search.h"
 #include "tb.h"
 #include "transposition.h"
@@ -105,21 +104,7 @@ void* ThreadInit(void* arg) {
   ThreadData* thread = calloc(1, sizeof(ThreadData));
   thread->idx        = i;
 
-#if defined(__linux__)
-  const size_t alignment = MEGABYTE * 2;
-#else
-  const size_t alignment = 4096;
-#endif
-
-  // Alloc all the necessary accumulators
-  thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
-  thread->refreshTable =
-    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
-  ResetRefreshTable(thread->refreshTable);
-
-  // Copy these onto the board for easier access within the engine
-  thread->board.accumulators = thread->accumulators;
-  thread->board.refreshTable = thread->refreshTable;
+  memset(thread->pawnHashTable, 0, sizeof(thread->pawnHashTable));
 
   pthread_mutex_init(&thread->mutex, NULL);
   pthread_cond_init(&thread->sleep, NULL);
@@ -161,9 +146,6 @@ void ThreadDestroy(ThreadData* thread) {
   pthread_join(thread->nativeThread, NULL);
   pthread_cond_destroy(&thread->sleep);
   pthread_mutex_destroy(&thread->mutex);
-
-  AlignedFree(thread->accumulators);
-  AlignedFree(thread->refreshTable);
 
   free(thread);
 }
@@ -214,7 +196,7 @@ void SetupMainThread(Board* board) {
   mainThread->tbhits     = 0;
   mainThread->nmpMinPly  = 0;
 
-  memcpy(&mainThread->board, board, offsetof(Board, accumulators));
+  memcpy(&mainThread->board, board, sizeof(Board));
 
   if (Limits.searchMoves) {
     for (int i = 0; i < Limits.searchable.count; i++)
@@ -250,7 +232,7 @@ void SetupOtherThreads(Board* board) {
 
     thread->numRootMoves = mainThread->numRootMoves;
 
-    memcpy(&thread->board, board, offsetof(Board, accumulators));
+    memcpy(&thread->board, board, sizeof(Board));
   }
 }
 

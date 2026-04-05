@@ -24,8 +24,7 @@ extern int CHESS_960;
 extern int CONTEMPT;
 extern SearchParams Limits;
 
-// Normalization of a score to 50% WR at 100cp
-#define Normalize(s) ((s) / 1.58)
+#define Normalize(s) (s)
 
 int WRModel(Score s, int ply);
 

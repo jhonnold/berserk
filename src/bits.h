@@ -42,6 +42,12 @@
 
 #define DARK_SQS 0x55AA55AA55AA55AAULL
 
+extern const BitBoard FILE_MASKS[8];
+extern const BitBoard RANK_MASKS[8];
+extern const BitBoard ADJACENT_FILE_MASKS[8];
+extern const BitBoard FORWARD_RANK_MASKS[2][8];
+extern const BitBoard CENTER_SQS;
+
 #define Bit(sq)                (1ULL << (sq))
 #define BitCount(bb)           (__builtin_popcountll(bb))
 #define SetBit(bb, sq)         ((bb) |= Bit(sq))
@@ -86,6 +92,9 @@ INLINE int PopLSB(BitBoard* bb) {
   *bb &= *bb - 1;
   return sq;
 }
+
+BitBoard Fill(BitBoard initial, int direction);
+BitBoard FileFill(BitBoard initial);
 
 INLINE void PrintBB(BitBoard bitboard) {
   for (int i = 0; i < 64; i++) {

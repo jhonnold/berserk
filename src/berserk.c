@@ -20,11 +20,11 @@
 #include "bench.h"
 #include "bits.h"
 #include "eval.h"
-#include "nn/evaluate.h"
 #include "random.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
+#include "tuner/tune.h"
 #include "types.h"
 #include "uci.h"
 #include "util.h"
@@ -34,12 +34,12 @@
 int main(int argc, char** argv) {
   SeedRandom(0);
 
+  InitPSQT();
   InitZobristKeys();
   InitPruningAndReductionTables();
   InitAttacks();
   InitCuckoo();
 
-  LoadDefaultNN();
   ThreadsInit();
   TTInit(16);
 
@@ -50,6 +50,10 @@ int main(int argc, char** argv) {
       depth = Max(1, atoi(argv[2]));
 
     Bench(depth);
+  } else if (argc > 1 && !strncmp(argv[1], "tune", 4)) {
+#ifdef TUNE
+    Tune();
+#endif
   } else {
     UCILoop();
   }
