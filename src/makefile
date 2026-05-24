@@ -3,7 +3,7 @@ EXE      = berserk
 SRC      = attacks.c bench.c berserk.c bits.c board.c endgame.c eval.c history.c move.c movegen.c movepick.c pawns.c perft.c random.c \
 		   search.c see.c tb.c thread.c transposition.c tuner/tune.c tuner/util.c uci.c util.c weights.c zobrist.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 4.7.0
+VERSION  = 20260524
 DEFS     = -DVERSION=\"$(VERSION)\" -DNDEBUG
 
 # Flags
