@@ -225,7 +225,7 @@ void Search(ThreadData* thread) {
   int searchStability   = 0;
   Move previousBestMove = NULL_MOVE;
 
-  const int searchOffset = 6;
+#define searchOffset 6
   SearchStack searchStack[MAX_SEARCH_PLY + searchOffset];
   SearchStack* ss = searchStack + searchOffset;
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
