@@ -105,7 +105,7 @@ typedef struct {
 
   uint64_t piecesCounts; // "material key" - pieces left on the board
 
-  int squares[64];         // piece per square
+  uint8_t squares[64];     // piece per square
   BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
   BitBoard pieces[12];     // individual piece data
 
