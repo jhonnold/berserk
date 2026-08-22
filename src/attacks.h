@@ -17,21 +17,37 @@
 #ifndef ATTACKS_H
 #define ATTACKS_H
 
+#ifdef USE_PEXT
+#include <immintrin.h>
+#endif
+
 #include "types.h"
+#include "util.h"
 
 extern BitBoard BETWEEN_SQS[64][64];
 extern BitBoard PINNED_MOVES[64][64];
 
 extern BitBoard PAWN_ATTACKS[2][64];
 extern BitBoard KNIGHT_ATTACKS[64];
-extern BitBoard BISHOP_ATTACKS[64][512];
-extern BitBoard ROOK_ATTACKS[64][4096];
 extern BitBoard KING_ATTACKS[64];
-extern BitBoard ROOK_MASKS[64];
-extern BitBoard BISHOP_MASKS[64];
 
-extern uint64_t ROOK_MAGICS[64];
-extern uint64_t BISHOP_MAGICS[64];
+// Slider attacks use "fancy" magics: every square owns a slice of a single
+// packed table sized to its own number of relevant occupancy bits. The mask,
+// magic, shift and table pointer live together so a lookup only touches one
+// cache line, and the bishop/rook descriptors for a square share that line.
+typedef struct {
+  BitBoard mask;
+  uint64_t magic;
+  const BitBoard* attacks;
+  uint64_t shift;
+} Magic;
+
+typedef struct {
+  Magic bishop;
+  Magic rook;
+} SquareMagics;
+
+extern SquareMagics MAGICS[64];
 
 void InitBetweenSquares();
 void InitPinnedMovementSquares();
@@ -63,11 +79,25 @@ BitBoard PinnedMoves(int p, int k);
 
 BitBoard GetPawnAttacks(int sq, int color);
 BitBoard GetKnightAttacks(int sq);
-BitBoard GetBishopAttacks(int sq, BitBoard occupancy);
-BitBoard GetRookAttacks(int sq, BitBoard occupancy);
 BitBoard GetQueenAttacks(int sq, BitBoard occupancy);
 BitBoard GetKingAttacks(int sq);
 BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type);
 BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ);
+
+INLINE BitBoard MagicAttacks(const Magic* m, BitBoard occupancy) {
+#ifndef USE_PEXT
+  return m->attacks[((occupancy & m->mask) * m->magic) >> m->shift];
+#else
+  return m->attacks[_pext_u64(occupancy, m->mask)];
+#endif
+}
+
+INLINE BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
+  return MagicAttacks(&MAGICS[sq].bishop, occupancy);
+}
+
+INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
+  return MagicAttacks(&MAGICS[sq].rook, occupancy);
+}
 
 #endif
