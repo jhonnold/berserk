@@ -52,12 +52,31 @@ int32_t OUTPUT_BIAS;
 
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
+// Every clipped-ReLU output byte is in [0, 127], so a 4-byte input chunk is
+// non-zero exactly when its int32 reinterpretation is > 0. That lets the
+// sparse-input index list be built in the same pass that produces the bytes,
+// instead of streaming all of L1 a second time.
+#ifdef __SSE4_1__
+#include <immintrin.h>
+INLINE size_t StoreNNZ(uint16_t* dest, size_t count, __m128i* base, const __m128i increment, const uint32_t lookup) {
+  const __m128i offsets = _mm_loadu_si128((__m128i*) (&LOOKUP_INDICES[lookup]));
+  _mm_storeu_si128((__m128i*) (dest + count), _mm_add_epi16(*base, offsets));
+  *base = _mm_add_epi16(*base, increment);
+  return count + BitCount(lookup);
+}
+#endif
+
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
-INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m512i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
+
+  const __m512i zero      = _mm512_setzero_si512();
+  const __m128i increment = _mm_set1_epi16(8);
+  __m128i base            = _mm_setzero_si128();
+  size_t count            = 0;
 
   for (int v = 0; v < 2; v++) {
     const __m512i* in = (__m512i*) acc->values[views[v]];
@@ -69,17 +88,35 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
       __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], QUANT1_BITS);
       __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], QUANT1_BITS);
 
-      out[i]     = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), _mm512_setzero_si512());
-      out[i + 1] = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), _mm512_setzero_si512());
+      const __m512i o0 = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), zero);
+      const __m512i o1 = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), zero);
+
+      out[i]     = o0;
+      out[i + 1] = o1;
+
+      const uint32_t m0 = _mm512_cmpgt_epi32_mask(o0, zero);
+      const uint32_t m1 = _mm512_cmpgt_epi32_mask(o1, zero);
+
+      count = StoreNNZ(nnz, count, &base, increment, m0 & 0xFF);
+      count = StoreNNZ(nnz, count, &base, increment, m0 >> 8);
+      count = StoreNNZ(nnz, count, &base, increment, m1 & 0xFF);
+      count = StoreNNZ(nnz, count, &base, increment, m1 >> 8);
     }
   }
+
+  return count;
 }
 #elif defined(__AVX2__)
 #include <immintrin.h>
-INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
+
+  const __m256i zero      = _mm256_setzero_si256();
+  const __m128i increment = _mm_set1_epi16(8);
+  __m128i base            = _mm_setzero_si128();
+  size_t count            = 0;
 
   for (int v = 0; v < 2; v++) {
     const __m256i* in = (__m256i*) acc->values[views[v]];
@@ -91,55 +128,107 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
       __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], QUANT1_BITS);
       __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], QUANT1_BITS);
 
-      out[i]     = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), _mm256_setzero_si256());
-      out[i + 1] = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), _mm256_setzero_si256());
+      const __m256i o0 = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), zero);
+      const __m256i o1 = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), zero);
+
+      out[i]     = o0;
+      out[i + 1] = o1;
+
+      count = StoreNNZ(nnz, count, &base, increment, _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(o0, zero))));
+      count = StoreNNZ(nnz, count, &base, increment, _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(o1, zero))));
     }
   }
+
+  return count;
 }
 #elif defined(__SSE4_1__)
 #include <immintrin.h>
-INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
+
+  const __m128i zero      = _mm_setzero_si128();
+  const __m128i increment = _mm_set1_epi16(8);
+  __m128i base            = _mm_setzero_si128();
+  size_t count            = 0;
 
   for (int v = 0; v < 2; v++) {
     const __m128i* in = (__m128i*) acc->values[views[v]];
     __m128i* out      = (__m128i*) &outputs[N_HIDDEN * v];
 
-    for (size_t i = 0; i < CHUNKS / 2; i++) {
+    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
       __m128i s0 = _mm_srai_epi16(in[2 * i + 0], QUANT1_BITS);
       __m128i s1 = _mm_srai_epi16(in[2 * i + 1], QUANT1_BITS);
+      __m128i s2 = _mm_srai_epi16(in[2 * i + 2], QUANT1_BITS);
+      __m128i s3 = _mm_srai_epi16(in[2 * i + 3], QUANT1_BITS);
 
-      out[i] = _mm_max_epi8(_mm_packs_epi16(s0, s1), _mm_setzero_si128());
+      const __m128i o0 = _mm_max_epi8(_mm_packs_epi16(s0, s1), zero);
+      const __m128i o1 = _mm_max_epi8(_mm_packs_epi16(s2, s3), zero);
+
+      out[i]     = o0;
+      out[i + 1] = o1;
+
+      const uint32_t m0 = _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(o0, zero)));
+      const uint32_t m1 = _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(o1, zero)));
+
+      count = StoreNNZ(nnz, count, &base, increment, m0 | (m1 << 4));
     }
   }
+
+  return count;
 }
 #elif defined(__ARM_NEON__)
 #include <arm_neon.h>
-INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = 8;
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
 
-  const int8x16_t zero = {0};
+  const int8x16_t zero       = {0};
+  const uint32_t lanes[4]    = {1, 2, 4, 8};
+  const uint16x8_t increment = vdupq_n_u16(8);
+  uint16x8_t base            = {0};
+  size_t count               = 0;
 
   for (int v = 0; v < 2; v++) {
     const int16x8_t* in = (int16x8_t*) acc->values[views[v]];
     int8x16_t* out      = (int8x16_t*) &outputs[N_HIDDEN * v];
 
-    for (size_t i = 0; i < CHUNKS / 2; i++) {
+    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
       int16x8_t s0 = vshrq_n_s16(in[2 * i + 0], QUANT1_BITS);
       int16x8_t s1 = vshrq_n_s16(in[2 * i + 1], QUANT1_BITS);
+      int16x8_t s2 = vshrq_n_s16(in[2 * i + 2], QUANT1_BITS);
+      int16x8_t s3 = vshrq_n_s16(in[2 * i + 3], QUANT1_BITS);
 
-      out[i] = vmaxq_s8(vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1)), zero);
+      const int8x16_t o0 = vmaxq_s8(vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1)), zero);
+      const int8x16_t o1 = vmaxq_s8(vcombine_s8(vqmovn_s16(s2), vqmovn_s16(s3)), zero);
+
+      out[i]     = o0;
+      out[i + 1] = o1;
+
+      const uint32x4_t c0 = vreinterpretq_u32_s8(o0);
+      const uint32x4_t c1 = vreinterpretq_u32_s8(o1);
+
+      const uint32_t m0 = vaddvq_u32(vandq_u32(vtstq_u32(c0, c0), vld1q_u32(lanes)));
+      const uint32_t m1 = vaddvq_u32(vandq_u32(vtstq_u32(c1, c1), vld1q_u32(lanes)));
+
+      const uint32_t lookup    = m0 | (m1 << 4);
+      const uint16x8_t offsets = vld1q_u16((uint16_t*) &LOOKUP_INDICES[lookup]);
+      vst1q_u16(nnz + count, vaddq_u16(base, offsets));
+      count += BitCount(lookup);
+      base = vaddq_u16(base, increment);
     }
   }
+
+  return count;
 }
 #else
-INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
+INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
   const int max      = 127 << 5;
+
+  (void) nnz; // the scalar L1 affine walks every input
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
@@ -148,6 +237,8 @@ INLINE void InputCReLU8(int8_t* outputs, Accumulator* acc, const int stm) {
     for (size_t i = 0; i < N_HIDDEN; i++)
       out[i] = Min(max, Max(0, in[i])) >> QUANT1_BITS;
   }
+
+  return 0;
 }
 #endif
 
@@ -166,55 +257,14 @@ INLINE void m512_add_dpbusd_epi32x2(__m512i* acc, __m512i a0, __m512i b0, __m512
   *acc = _mm512_add_epi32(*acc, p0);
 }
 
-INLINE uint32_t NNZ(__m512i chunk) {
-  return _mm512_cmpgt_epi32_mask(chunk, _mm512_setzero_si512());
-}
-
-INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks) {
-  const size_t IN_WIDTH      = sizeof(__m512i) / sizeof(int32_t);
-  const size_t CHUNK_SIZE    = 16;
-  const size_t NUM_CHUNKS    = chunks / CHUNK_SIZE;
-  const size_t IN_PER_CHUNK  = CHUNK_SIZE / IN_WIDTH;
-  const size_t OUT_PER_CHUNK = CHUNK_SIZE / 8;
-
-  const __m512i* in = (__m512i*) inputs;
-
-  size_t count = 0;
-
-  const __m128i increment = _mm_set1_epi16(8);
-  __m128i base            = _mm_setzero_si128();
-
-  for (size_t i = 0; i < NUM_CHUNKS; i++) {
-    uint32_t nnz = 0;
-
-    for (size_t j = 0; j < IN_PER_CHUNK; j++) {
-      const __m512i inputChunk = in[i * IN_PER_CHUNK + j];
-      nnz |= NNZ(inputChunk) << (j * IN_WIDTH);
-    }
-
-    for (size_t j = 0; j < OUT_PER_CHUNK; j++) {
-      const uint16_t lookup = (nnz >> (j * 8)) & 0xFF;
-      const __m128i offsets = _mm_loadu_si128((__m128i*) (&LOOKUP_INDICES[lookup]));
-      _mm_storeu_si128((__m128i*) (dest + count), _mm_add_epi16(base, offsets));
-      count += BitCount(lookup);
-      base = _mm_add_epi16(base, increment);
-    }
-  }
-
-  return count;
-}
-
-INLINE void L1Affine(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
   const size_t OUT_WIDTH  = sizeof(__m512i) / sizeof(int32_t);
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
 
   const int32_t* in32   = (int32_t*) src;
   const __m512i* biases = (__m512i*) L1_BIASES;
   __m512i* out          = (__m512i*) dest;
 
-  uint16_t nnz[NUM_CHUNKS];
-  size_t count = FindNNZ(nnz, in32, NUM_CHUNKS);
 
   __m512i regs[OUT_CC];
   for (size_t i = 0; i < OUT_CC; i++)
@@ -262,55 +312,14 @@ INLINE void m256_add_dpbusd_epi32x2(__m256i* acc, __m256i a0, __m256i b0, __m256
   *acc = _mm256_add_epi32(*acc, p0);
 }
 
-INLINE uint32_t NNZ(__m256i chunk) {
-  return _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(chunk, _mm256_setzero_si256())));
-}
-
-INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks) {
-  const size_t IN_WIDTH      = sizeof(__m256i) / sizeof(int32_t);
-  const size_t CHUNK_SIZE    = IN_WIDTH;
-  const size_t NUM_CHUNKS    = chunks / CHUNK_SIZE;
-  const size_t IN_PER_CHUNK  = CHUNK_SIZE / IN_WIDTH;
-  const size_t OUT_PER_CHUNK = CHUNK_SIZE / 8;
-
-  const __m256i* in = (__m256i*) inputs;
-
-  size_t count = 0;
-
-  const __m128i increment = _mm_set1_epi16(8);
-  __m128i base            = _mm_setzero_si128();
-
-  for (size_t i = 0; i < NUM_CHUNKS; i++) {
-    uint32_t nnz = 0;
-
-    for (size_t j = 0; j < IN_PER_CHUNK; j++) {
-      const __m256i inputChunk = in[i * IN_PER_CHUNK + j];
-      nnz |= NNZ(inputChunk) << (j * IN_WIDTH);
-    }
-
-    for (size_t j = 0; j < OUT_PER_CHUNK; j++) {
-      const uint16_t lookup = (nnz >> (j * 8)) & 0xFF;
-      const __m128i offsets = _mm_loadu_si128((__m128i*) (&LOOKUP_INDICES[lookup]));
-      _mm_storeu_si128((__m128i*) (dest + count), _mm_add_epi16(base, offsets));
-      count += BitCount(lookup);
-      base = _mm_add_epi16(base, increment);
-    }
-  }
-
-  return count;
-}
-
-INLINE void L1Affine(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
   const size_t OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t);
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
 
   const int32_t* in32   = (int32_t*) src;
   const __m256i* biases = (__m256i*) L1_BIASES;
   __m256i* out          = (__m256i*) dest;
 
-  uint16_t nnz[NUM_CHUNKS];
-  size_t count = FindNNZ(nnz, in32, NUM_CHUNKS);
 
   __m256i regs[OUT_CC];
   for (size_t i = 0; i < OUT_CC; i++)
@@ -358,55 +367,14 @@ INLINE void m128_add_dpbusd_epi32x2(__m128i* acc, __m128i a0, __m128i b0, __m128
   *acc = _mm_add_epi32(*acc, p0);
 }
 
-INLINE uint32_t NNZ(__m128i chunk) {
-  return _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(chunk, _mm_setzero_si128())));
-}
-
-INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks) {
-  const size_t IN_WIDTH      = sizeof(__m128i) / sizeof(int32_t);
-  const size_t CHUNK_SIZE    = 8;
-  const size_t NUM_CHUNKS    = chunks / CHUNK_SIZE;
-  const size_t IN_PER_CHUNK  = CHUNK_SIZE / IN_WIDTH;
-  const size_t OUT_PER_CHUNK = CHUNK_SIZE / 8;
-
-  const __m128i* in = (__m128i*) inputs;
-
-  size_t count = 0;
-
-  const __m128i increment = _mm_set1_epi16(8);
-  __m128i base            = _mm_setzero_si128();
-
-  for (size_t i = 0; i < NUM_CHUNKS; i++) {
-    uint32_t nnz = 0;
-
-    for (size_t j = 0; j < IN_PER_CHUNK; j++) {
-      const __m128i inputChunk = in[i * IN_PER_CHUNK + j];
-      nnz |= NNZ(inputChunk) << (j * IN_WIDTH);
-    }
-
-    for (size_t j = 0; j < OUT_PER_CHUNK; j++) {
-      const uint16_t lookup = (nnz >> (j * 8)) & 0xFF;
-      const __m128i offsets = _mm_loadu_si128((__m128i*) (&LOOKUP_INDICES[lookup]));
-      _mm_storeu_si128((__m128i*) (dest + count), _mm_add_epi16(base, offsets));
-      count += BitCount(lookup);
-      base = _mm_add_epi16(base, increment);
-    }
-  }
-
-  return count;
-}
-
-INLINE void L1Affine(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
   const size_t OUT_WIDTH  = sizeof(__m128i) / sizeof(int32_t);
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
 
   const int32_t* in32   = (int32_t*) src;
   const __m128i* biases = (__m128i*) L1_BIASES;
   __m128i* out          = (__m128i*) dest;
 
-  uint16_t nnz[NUM_CHUNKS];
-  size_t count = FindNNZ(nnz, in32, NUM_CHUNKS);
 
   __m128i regs[OUT_CC];
   for (size_t i = 0; i < OUT_CC; i++)
@@ -456,56 +424,14 @@ INLINE void int8x16_add_dpbusd_x2(int32x4_t* acc, int8x16_t a0, int8x16_t b0, in
   *acc = vpadalq_s16(*acc, vaddq_s16(vpaddq_s16(p0, p1), vpaddq_s16(p2, p3)));
 }
 
-INLINE uint32_t NNZ(uint32x4_t chunk) {
-  static const uint32_t mask[4] = {1, 2, 4, 8};
-  return vaddvq_u32(vandq_u32(vtstq_u32(chunk, chunk), vld1q_u32(mask)));
-}
-
-INLINE size_t FindNNZ(uint16_t* dest, const int32_t* inputs, const size_t chunks) {
-  const size_t IN_WIDTH      = 4;
-  const size_t CHUNK_SIZE    = 8;
-  const size_t NUM_CHUNKS    = chunks / CHUNK_SIZE;
-  const size_t IN_PER_CHUNK  = CHUNK_SIZE / IN_WIDTH;
-  const size_t OUT_PER_CHUNK = CHUNK_SIZE / 8;
-
-  const uint32x4_t* in = (uint32x4_t*) inputs;
-
-  size_t count = 0;
-
-  const uint16x8_t increment = vdupq_n_u16(8);
-  uint16x8_t base            = {0};
-
-  for (size_t i = 0; i < NUM_CHUNKS; i++) {
-    uint32_t nnz = 0;
-
-    for (size_t j = 0; j < IN_PER_CHUNK; j++) {
-      const uint32x4_t inputChunk = in[i * IN_PER_CHUNK + j];
-      nnz |= NNZ(inputChunk) << (j * IN_WIDTH);
-    }
-
-    for (size_t j = 0; j < OUT_PER_CHUNK; j++) {
-      const uint32_t lookup    = (nnz >> (j * 8)) & 0xFF;
-      const uint16x8_t offsets = vld1q_u16((uint16_t*) &LOOKUP_INDICES[lookup]);
-      vst1q_u16(dest + count, vaddq_u16(base, offsets));
-      count += BitCount(lookup);
-      base = vaddq_u16(base, increment);
-    }
-  }
-
-  return count;
-}
-
-INLINE void L1Affine(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
   const size_t OUT_WIDTH  = 4;
-  const size_t NUM_CHUNKS = N_L1 / SPARSE_CHUNK_SIZE;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
 
   const int32_t* in32     = (int32_t*) src;
   const int32x4_t* biases = (int32x4_t*) L1_BIASES;
   int32x4_t* out          = (int32x4_t*) dest;
 
-  uint16_t nnz[NUM_CHUNKS];
-  size_t count = FindNNZ(nnz, in32, NUM_CHUNKS);
 
   int32x4_t regs[OUT_CC];
   for (size_t i = 0; i < OUT_CC; i++)
@@ -539,7 +465,10 @@ INLINE void L1Affine(int32_t* dest, int8_t* src) {
     out[i] = vshrq_n_s32(regs[i], QUANT1_BITS);
 }
 #else
-INLINE void L1Affine(int32_t* dest, int8_t* src) {
+INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
+  (void) nnz;
+  (void) count;
+
   for (size_t i = 0; i < N_L2; i++)
     dest[i] = L1_BIASES[i];
 
@@ -812,11 +741,13 @@ INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
 
 int Propagate(Accumulator* accumulator, const int stm) {
   int8_t x0[N_L1] ALIGN;
+  // StoreNNZ always writes a full 8 entry group, so leave room for the tail.
+  uint16_t nnz[N_L1 / SPARSE_CHUNK_SIZE + 8] ALIGN;
   int32_t dest[N_L3] ALIGN; // assumes N_L3 > N_L2
   int16_t act[N_L3] ALIGN;
 
-  InputCReLU8(x0, accumulator, stm);
-  L1Affine(dest, x0);
+  const size_t count = InputCReLU8(x0, nnz, accumulator, stm);
+  L1Affine(dest, x0, nnz, count);
   ReLU16(act, dest, N_L2);
   L2Affine(dest, act);
   ReLU16(act, dest, N_L3);
