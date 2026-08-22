@@ -254,10 +254,29 @@ INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int colo
   return moves;
 }
 
-ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board);
-ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board);
+INLINE ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_CAPTURE, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, GT_CAPTURE, BLACK);
+}
+
+INLINE ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_QUIET, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, GT_QUIET, BLACK);
+}
+
+INLINE ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_LEGAL, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, GT_LEGAL, BLACK);
+}
+
+INLINE ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddQuietChecks(moves, board, WHITE) : //
+                               AddQuietChecks(moves, board, BLACK);
+}
+
+INLINE ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddLegalMoves(moves, board, WHITE) : //
+                               AddLegalMoves(moves, board, BLACK);
+}
 
 #endif

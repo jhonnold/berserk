@@ -71,24 +71,6 @@ INLINE uint64_t TTIdx(uint64_t hash) {
 INLINE void TTPrefetch(uint64_t hash) {
   __builtin_prefetch(&TT.buckets[TTIdx(hash)]);
 }
-TTEntry* TTProbe(uint64_t hash,
-                 int ply,
-                 int* hit,
-                 Move* hashMove,
-                 int* ttScore,
-                 int* ttEval,
-                 int* ttDepth,
-                 int* ttBound,
-                 int* pv);
-void TTPut(TTEntry* tt,
-           uint64_t hash,
-           int depth,
-           int16_t score,
-           uint8_t bound,
-           Move move,
-           int ply,
-           int16_t eval,
-           int pv);
 int TTFull();
 
 #define HASH_MAX ((int) (pow(2, 40) * sizeof(TTBucket) / MEGABYTE))
@@ -135,6 +117,66 @@ INLINE int TTBound(TTEntry* e) {
 
 INLINE int TTPV(TTEntry* e) {
   return e->agePvBound & PV_MASK; // 3rd to bottom bit
+}
+
+
+INLINE TTEntry* TTProbe(uint64_t hash,
+                        int ply,
+                        int* hit,
+                        Move* hashMove,
+                        int* ttScore,
+                        int* ttEval,
+                        int* ttDepth,
+                        int* ttBound,
+                        int* pv) {
+  TTEntry* const bucket    = TT.buckets[TTIdx(hash)].entries;
+  const uint16_t shortHash = (uint16_t) hash;
+
+  for (int i = 0; i < BUCKET_SIZE; i++) {
+    if (bucket[i].hash == shortHash || !bucket[i].depth) {
+      *hit = !!bucket[i].depth;
+
+      if (*hit) {
+        *hashMove = TTMove(&bucket[i]);
+        *ttEval   = TTEval(&bucket[i]);
+        *ttScore  = TTScore(&bucket[i], ply);
+        *ttDepth  = TTDepth(&bucket[i]);
+        *ttBound  = TTBound(&bucket[i]);
+        *pv       = *pv || TTPV(&bucket[i]);
+      }
+
+      return &bucket[i];
+    }
+  }
+
+  *hit = 0;
+
+  TTEntry* replace = bucket;
+  for (int i = 1; i < BUCKET_SIZE; i++)
+    if (replace->depth - TTAge(replace) / 2 > bucket[i].depth - TTAge(bucket + i) / 2)
+      replace = &bucket[i];
+
+  return replace;
+}
+
+INLINE void TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
+  uint16_t shortHash = (uint16_t) hash;
+
+  if (score >= TB_WIN_BOUND)
+    score += ply;
+  else if (score <= -TB_WIN_BOUND)
+    score -= ply;
+
+  if (move || shortHash != tt->hash)
+    TTStoreMove(tt, move);
+
+  if ((bound == BOUND_EXACT) || shortHash != tt->hash || depth + 4 > TTDepth(tt) || TTAge(tt)) {
+    tt->hash       = shortHash;
+    tt->score      = score;
+    tt->depth      = (uint8_t) (depth - DEPTH_OFFSET);
+    tt->agePvBound = (uint8_t) (TT.age | (pv << 2) | bound);
+    TTStoreEval(tt, eval);
+  }
 }
 
 #endif
