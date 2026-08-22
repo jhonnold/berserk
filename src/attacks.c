@@ -33,6 +33,8 @@
 // https://www.youtube.com/channel/UCB9-prLkPwgvlKKqDgXhsMQ/videos
 // OTF is abbr for On The Fly
 
+#ifndef USE_DUAL_HQ
+
 const int BISHOP_RELEVANT_BITS[64] = {6, 5, 5, 5, 5, 5, 5, 6, //
                                       5, 5, 5, 5, 5, 5, 5, 5, //
                                       5, 5, 7, 7, 7, 7, 5, 5, //
@@ -51,12 +53,16 @@ const int ROOK_RELEVANT_BITS[64] = {12, 11, 11, 11, 11, 11, 11, 12, //
                                     11, 10, 10, 10, 10, 10, 10, 11, //
                                     12, 11, 11, 11, 11, 11, 11, 12};
 
+#endif
+
 BitBoard BETWEEN_SQS[64][64];
 BitBoard PINNED_MOVES[64][64];
 
 BitBoard PAWN_ATTACKS[2][64];
 BitBoard KNIGHT_ATTACKS[64];
 BitBoard KING_ATTACKS[64];
+
+#ifndef USE_DUAL_HQ
 
 // Sum of (1 << relevant bits) over all 64 squares for each slider.
 #define BISHOP_TABLE_SIZE 5248
@@ -88,6 +94,8 @@ static const uint64_t BISHOP_MAGIC_NUMBERS[64] = {
     0x0800421011082208ULL, 0x8000804842102000ULL, 0x0400050088040015ULL, 0x0001020084043004ULL, 0x02250c4010410040ULL, 0x200c910210010000ULL, 0x0a12029004108000ULL, 0x8028c84284014009ULL,
     0x00053c0200a2e000ULL, 0x1060102401080822ULL, 0x800404420082210dULL, 0x0100708002050412ULL, 0x1100404240105100ULL, 0x08202120081042c0ULL, 0x0600204801082480ULL, 0x0a02a00202021220ULL,
 };
+
+#endif
 
 void InitBetweenSquares() {
   int i;
@@ -253,6 +261,8 @@ void InitKingAttacks() {
     KING_ATTACKS[i] = GetGeneratedKingAttacks(i);
 }
 
+#ifndef USE_DUAL_HQ
+
 BitBoard GetBishopMask(int sq) {
   BitBoard attacks = 0;
 
@@ -275,6 +285,8 @@ void InitBishopMasks() {
   for (int i = 0; i < 64; i++)
     MAGICS[i].bishop.mask = GetBishopMask(i);
 }
+
+#endif
 
 BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
@@ -309,6 +321,8 @@ BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
   return attacks;
 }
 
+#ifndef USE_DUAL_HQ
+
 BitBoard GetRookMask(int sq) {
   BitBoard attacks = 0;
 
@@ -331,6 +345,8 @@ void InitRookMasks() {
   for (int i = 0; i < 64; i++)
     MAGICS[i].rook.mask = GetRookMask(i);
 }
+
+#endif
 
 BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
@@ -364,6 +380,8 @@ BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
 
   return attacks;
 }
+
+#ifndef USE_DUAL_HQ
 
 BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
   BitBoard occupany = 0;
@@ -481,6 +499,53 @@ void InitRookAttacks() {
   }
 }
 
+#endif
+
+#ifdef USE_DUAL_HQ
+
+DualMagic DUAL_MAGICS[64] ALIGN;
+
+// Rook attacks along a rank, indexed by the rook's file and the six inner bits
+// of the rank's occupancy. The two edge squares never change the attack set,
+// so they are left out of the index.
+static uint8_t RANK_ATTACKS[8][64] ALIGN;
+
+// Every square of the ray leaving sq, out to the edge of the board. Unlike a
+// magic mask this keeps the edge squares, which hyperbola quintessence needs.
+static BitBoard RayMask(int sq, int dr, int df) {
+  BitBoard mask = 0;
+
+  for (int r = Rank(sq) + dr, f = File(sq) + df; r >= 0 && r <= 7 && f >= 0 && f <= 7; r += dr, f += df)
+    mask |= 1ULL << (r * 8 + f);
+
+  return mask;
+}
+
+void InitDualMagics() {
+  for (int f = 0; f < 8; f++)
+    for (int occ = 0; occ < 64; occ++)
+      RANK_ATTACKS[f][occ] = (uint8_t) GetRookAttacksOTF(f, (BitBoard) occ << 1);
+
+  for (int sq = 0; sq < 64; sq++) {
+    DualMagic* m = &DUAL_MAGICS[sq];
+
+    m->maskFile     = RayMask(sq, 1, 0) | RayMask(sq, -1, 0);
+    m->maskDiag     = RayMask(sq, 1, 1) | RayMask(sq, -1, -1);
+    m->maskNone     = 0;
+    m->maskAntiDiag = RayMask(sq, 1, -1) | RayMask(sq, -1, 1);
+
+    // The subtrahends that carry a borrow along the ray, in board order and in
+    // the byte reversed order the high lanes see.
+    m->r  = (1ULL << sq) * 2;
+    m->rr = (1ULL << (63 - sq)) * 2;
+
+    m->rankAttacks = RANK_ATTACKS[File(sq)];
+    m->shift       = 8 * Rank(sq);
+  }
+}
+
+#endif
+
 void InitAttacks() {
   InitBetweenSquares();
   InitPinnedMovementSquares();
@@ -489,6 +554,9 @@ void InitAttacks() {
   InitKnightAttacks();
   InitKingAttacks();
 
+#ifdef USE_DUAL_HQ
+  InitDualMagics();
+#else
   InitBishopMasks();
   InitRookMasks();
 
@@ -499,6 +567,7 @@ void InitAttacks() {
 
   InitBishopAttacks();
   InitRookAttacks();
+#endif
 }
 
 inline BitBoard GetPawnAttacks(int sq, int color) {
