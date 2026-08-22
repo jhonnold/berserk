@@ -710,7 +710,7 @@ INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
 }
 #endif
 
-int Propagate(Accumulator* accumulator, const int stm) {
+INLINE int PropagateView(Accumulator* accumulator, const int stm) {
   int8_t x0[N_L1] ALIGN;
   // StoreNNZ always writes a full 8 entry group, so leave room for the tail.
   uint16_t nnz[N_L1 / SPARSE_CHUNK_SIZE + 8] ALIGN;
@@ -723,6 +723,12 @@ int Propagate(Accumulator* accumulator, const int stm) {
   L2Affine(dest, act);
   ReLU16(act, dest, N_L3);
   return L3Transform(act) >> QUANT2_BITS;
+}
+
+// Both call sites pass a literal side, so specialising on it lets the pair of
+// perspective indices fold away instead of being read back from a local array.
+int Propagate(Accumulator* accumulator, const int stm) {
+  return stm == WHITE ? PropagateView(accumulator, WHITE) : PropagateView(accumulator, BLACK);
 }
 
 int Predict(Board* board) {
