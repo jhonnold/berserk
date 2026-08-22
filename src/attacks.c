@@ -17,9 +17,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#ifdef USE_PEXT
-#include <immintrin.h>
-#endif
 
 #include "attacks.h"
 #include "bits.h"
@@ -458,11 +455,7 @@ void InitBishopAttacks() {
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, m->mask);
 
-#ifndef USE_PEXT
       table[(occupancy * m->magic) >> m->shift] = GetBishopAttacksOTF(sq, occupancy);
-#else
-      table[_pext_u64(occupancy, m->mask)] = GetBishopAttacksOTF(sq, occupancy);
-#endif
     }
 
     table += n;
@@ -483,11 +476,7 @@ void InitRookAttacks() {
     for (int i = 0; i < n; i++) {
       BitBoard occupancy = SetPieceLayoutOccupancy(i, bits, m->mask);
 
-#ifndef USE_PEXT
       table[(occupancy * m->magic) >> m->shift] = GetRookAttacksOTF(sq, occupancy);
-#else
-      table[_pext_u64(occupancy, m->mask)] = GetRookAttacksOTF(sq, occupancy);
-#endif
     }
 
     table += n;
@@ -563,10 +552,8 @@ void InitAttacks() {
   InitBishopMasks();
   InitRookMasks();
 
-#ifndef USE_PEXT
   InitBishopMagics();
   InitRookMagics();
-#endif
 
   InitBishopAttacks();
   InitRookAttacks();

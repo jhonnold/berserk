@@ -12,7 +12,7 @@ cd "$(dirname "$0")/../src"
 
 CC=x86_64-w64-mingw32-gcc-posix
 VER=14
-ARCHES="x86-64 sse41 avx2 avx2-pext avx512-pext"
+ARCHES="x86-64 sse41 avx2 avx512"
 
 for arch in $ARCHES; do
   make clean

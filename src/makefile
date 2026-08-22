@@ -59,19 +59,6 @@ else ifeq ($(findstring avx512, $(ARCH)), avx512)
 	CFLAGS = $(FLAGS) $(MAVX512)
 endif
 
-ifeq ($(ARCH), native)
-	PROPS = $(shell echo | $(CC) -march=native -E -dM -)
-	ifneq ($(findstring __BMI2__, $(PROPS)),)
-		ifeq ($(findstring __znver1, $(PROPS)),)
-			ifeq ($(findstring __znver2, $(PROPS)),)
-				CFLAGS += -DUSE_PEXT
-			endif
-		endif
-	endif
-else ifeq ($(findstring -pext, $(ARCH)), -pext)
-	CFLAGS += -DUSE_PEXT -mbmi2
-endif
-
 openbench: download-network
 	$(MAKE) ARCH=avx2 pgo
 

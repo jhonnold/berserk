@@ -21,11 +21,11 @@
 // reading a magic table, so it needs no lookup memory beyond a per square
 // descriptor. It only pays off with the 256 bit shuffles, so it is limited to
 // AVX2, and PEXT builds keep their existing table lookup.
-#if defined(__AVX2__) && !defined(USE_PEXT)
+#if defined(__AVX2__)
 #define USE_DUAL_HQ
 #endif
 
-#if defined(USE_PEXT) || defined(USE_DUAL_HQ)
+#ifdef USE_DUAL_HQ
 #include <immintrin.h>
 #endif
 
@@ -155,11 +155,7 @@ INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
 #else
 
 INLINE BitBoard MagicAttacks(const Magic* m, BitBoard occupancy) {
-#ifndef USE_PEXT
   return m->attacks[((occupancy & m->mask) * m->magic) >> m->shift];
-#else
-  return m->attacks[_pext_u64(occupancy, m->mask)];
-#endif
 }
 
 INLINE BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
