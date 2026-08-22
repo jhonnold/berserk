@@ -67,7 +67,10 @@ void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) 
     state->pcs[pc] = curr;
   }
 
-  ApplyDelta(state->values, state->values, delta);
+  // ApplyDelta reads and writes the full 1024 element state even when nothing
+  // changed in this bucket, so skip the pass outright when the diff is empty.
+  if (delta->r || delta->a)
+    ApplyDelta(state->values, state->values, delta);
 
   // Copy in state
   memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
