@@ -485,115 +485,86 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
 }
 #endif
 
+// The L2 weights are stored transposed into (input pair, output block) order,
+// so a broadcast input pair accumulates straight into the output lanes. That
+// removes the horizontal reduction the row-major layout needed.
 #if defined(__AVX2__)
-INLINE __m128i m256_hadd_epi32x4(__m256i* regs) {
-  regs[0] = _mm256_hadd_epi32(regs[0], regs[1]);
-  regs[2] = _mm256_hadd_epi32(regs[2], regs[3]);
-
-  regs[0] = _mm256_hadd_epi32(regs[0], regs[2]);
-
-  __m128i sum128lo = _mm256_castsi256_si128(regs[0]);
-  __m128i sum128hi = _mm256_extractf128_si256(regs[0], 1);
-
-  return _mm_add_epi32(sum128lo, sum128hi);
-}
-
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m256i) / sizeof(int16_t);
-  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
-  const size_t OUT_CC     = 8;
-  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+  const size_t OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t);
+  const size_t OUT_CHUNKS = N_L3 / OUT_WIDTH;
+  const size_t IN_PAIRS   = N_L2 / 2;
 
-  const __m256i* in      = (__m256i*) src;
+  const int32_t* in      = (int32_t*) src;
   const __m256i* weights = (__m256i*) L2_WEIGHTS;
   const __m256i* biases  = (__m256i*) L2_BIASES;
   __m256i* out           = (__m256i*) dest;
 
-  __m256i regs[OUT_CC];
+  __m256i regs[OUT_CHUNKS];
+  for (size_t i = 0; i < OUT_CHUNKS; i++)
+    regs[i] = biases[i];
 
-  for (size_t i = 0; i < OUT_CHUNKS; i++) {
-    for (size_t k = 0; k < OUT_CC; k++)
-      regs[k] = _mm256_setzero_si256();
+  for (size_t j = 0; j < IN_PAIRS; j++) {
+    const __m256i f = _mm256_set1_epi32(in[j]);
 
-    for (size_t j = 0; j < IN_CHUNKS; j++)
-      for (size_t k = 0; k < OUT_CC; k++)
-        regs[k] = _mm256_add_epi32(regs[k], _mm256_madd_epi16(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
-
-    const __m128i s0  = m256_hadd_epi32x4(regs);
-    const __m128i s1  = m256_hadd_epi32x4(&regs[4]);
-    const __m256i sum = _mm256_insertf128_si256(_mm256_castsi128_si256(s0), s1, 1);
-    out[i]            = _mm256_srai_epi32(_mm256_add_epi32(sum, biases[i]), QUANT1_BITS);
+    for (size_t i = 0; i < OUT_CHUNKS; i++)
+      regs[i] = _mm256_add_epi32(regs[i], _mm256_madd_epi16(f, weights[j * OUT_CHUNKS + i]));
   }
+
+  for (size_t i = 0; i < OUT_CHUNKS; i++)
+    out[i] = _mm256_srai_epi32(regs[i], QUANT1_BITS);
 }
 #elif defined(__SSE4_1__)
-INLINE __m128i m128_hadd_epi32x4(__m128i* regs) {
-  regs[0] = _mm_hadd_epi32(regs[0], regs[1]);
-  regs[2] = _mm_hadd_epi32(regs[2], regs[3]);
-
-  return _mm_hadd_epi32(regs[0], regs[2]);
-}
-
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
-  const size_t IN_WIDTH   = sizeof(__m128i) / sizeof(int16_t);
-  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
-  const size_t OUT_CC     = 4;
-  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+  const size_t OUT_WIDTH  = sizeof(__m128i) / sizeof(int32_t);
+  const size_t OUT_CHUNKS = N_L3 / OUT_WIDTH;
+  const size_t IN_PAIRS   = N_L2 / 2;
 
-  const __m128i* in      = (__m128i*) src;
+  const int32_t* in      = (int32_t*) src;
   const __m128i* weights = (__m128i*) L2_WEIGHTS;
   const __m128i* biases  = (__m128i*) L2_BIASES;
   __m128i* out           = (__m128i*) dest;
 
-  __m128i regs[OUT_CC];
+  __m128i regs[OUT_CHUNKS];
+  for (size_t i = 0; i < OUT_CHUNKS; i++)
+    regs[i] = biases[i];
 
-  for (size_t i = 0; i < OUT_CHUNKS; i++) {
-    for (size_t k = 0; k < OUT_CC; k++)
-      regs[k] = _mm_setzero_si128();
+  for (size_t j = 0; j < IN_PAIRS; j++) {
+    const __m128i f = _mm_set1_epi32(in[j]);
 
-    for (size_t j = 0; j < IN_CHUNKS; j++)
-      for (size_t k = 0; k < OUT_CC; k++)
-        regs[k] = _mm_add_epi32(regs[k], _mm_madd_epi16(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
-
-    const __m128i sum = m128_hadd_epi32x4(regs);
-    out[i]            = _mm_srai_epi32(_mm_add_epi32(sum, biases[i]), QUANT1_BITS);
+    for (size_t i = 0; i < OUT_CHUNKS; i++)
+      regs[i] = _mm_add_epi32(regs[i], _mm_madd_epi16(f, weights[j * OUT_CHUNKS + i]));
   }
+
+  for (size_t i = 0; i < OUT_CHUNKS; i++)
+    out[i] = _mm_srai_epi32(regs[i], QUANT1_BITS);
 }
 #elif defined(__ARM_NEON__)
-INLINE int32x4_t int32x4_hadd_x4(int32x4_t* regs) {
-  regs[0] = vpaddq_s32(regs[0], regs[1]);
-  regs[2] = vpaddq_s32(regs[2], regs[3]);
-
-  return vpaddq_s32(regs[0], regs[2]);
-}
-
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
-  const size_t IN_WIDTH   = 8;
-  const size_t IN_CHUNKS  = N_L2 / IN_WIDTH;
-  const size_t OUT_CC     = 4;
-  const size_t OUT_CHUNKS = N_L3 / OUT_CC;
+  const size_t OUT_WIDTH  = 4;
+  const size_t OUT_CHUNKS = N_L3 / OUT_WIDTH;
+  const size_t IN_PAIRS   = N_L2 / 2;
 
-  const int16x8_t* in      = (int16x8_t*) src;
+  const int32_t* in        = (int32_t*) src;
   const int16x8_t* weights = (int16x8_t*) L2_WEIGHTS;
   const int32x4_t* biases  = (int32x4_t*) L2_BIASES;
   int32x4_t* out           = (int32x4_t*) dest;
 
-  int32x4_t regs[OUT_CC];
+  int32x4_t regs[OUT_CHUNKS];
+  for (size_t i = 0; i < OUT_CHUNKS; i++)
+    regs[i] = biases[i];
 
-  for (size_t i = 0; i < OUT_CHUNKS; i++) {
-    for (size_t k = 0; k < OUT_CC; k++)
-      regs[k] = (int32x4_t) {0};
+  for (size_t j = 0; j < IN_PAIRS; j++) {
+    const int16x8_t f = vreinterpretq_s16_s32(vdupq_n_s32(in[j]));
 
-    for (size_t j = 0; j < IN_CHUNKS; j++) {
-      for (size_t k = 0; k < OUT_CC; k++) {
-        int32x4_t p0 = vmull_s16(vget_low_s16(in[j]), vget_low_s16(weights[j + IN_CHUNKS * (OUT_CC * i + k)]));
-        int32x4_t p1 = vmull_high_s16(in[j], weights[j + IN_CHUNKS * (OUT_CC * i + k)]);
-        regs[k]      = vaddq_s32(regs[k], vpaddq_s32(p0, p1));
-      }
+    for (size_t i = 0; i < OUT_CHUNKS; i++) {
+      int32x4_t p0 = vmull_s16(vget_low_s16(f), vget_low_s16(weights[j * OUT_CHUNKS + i]));
+      int32x4_t p1 = vmull_high_s16(f, weights[j * OUT_CHUNKS + i]);
+      regs[i]      = vaddq_s32(regs[i], vpaddq_s32(p0, p1));
     }
-
-    const int32x4_t sum = int32x4_hadd_x4(regs);
-    out[i]              = vshrq_n_s32(vaddq_s32(sum, biases[i]), QUANT1_BITS);
   }
+
+  for (size_t i = 0; i < OUT_CHUNKS; i++)
+    out[i] = vshrq_n_s32(regs[i], QUANT1_BITS);
 }
 #else
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
@@ -775,6 +746,23 @@ INLINE int WeightIdxScrambled(int idx) {
   return ((idx / SPARSE_CHUNK_SIZE) % (N_L1 / SPARSE_CHUNK_SIZE) * N_L2 * SPARSE_CHUNK_SIZE) +
          (idx / N_L1 * SPARSE_CHUNK_SIZE) + (idx % SPARSE_CHUNK_SIZE);
 }
+
+// Outputs held per vector by L2Affine.
+#if defined(__AVX2__)
+#define L2_OUT_WIDTH 8
+#else
+#define L2_OUT_WIDTH 4
+#endif
+
+// Row major [output][input] becomes [input pair][output block][output][pair].
+INLINE int L2WeightIdxScrambled(int idx) {
+  const int o = idx / N_L2;
+  const int k = idx % N_L2;
+
+  const int outChunks = N_L3 / L2_OUT_WIDTH;
+
+  return ((k / 2) * outChunks + o / L2_OUT_WIDTH) * (2 * L2_OUT_WIDTH) + (o % L2_OUT_WIDTH) * 2 + (k % 2);
+}
 #endif
 
 INLINE void CopyData(const unsigned char* in) {
@@ -794,8 +782,16 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(L1_BIASES, &in[offset], N_L2 * sizeof(int32_t));
   offset += N_L2 * sizeof(int32_t);
 
-  memcpy(L2_WEIGHTS, &in[offset], N_L2 * N_L3 * sizeof(int16_t));
+  int16_t l2[N_L2 * N_L3];
+  memcpy(l2, &in[offset], N_L2 * N_L3 * sizeof(int16_t));
   offset += N_L2 * N_L3 * sizeof(int16_t);
+
+#if defined(__SSE4_1__) || defined(__ARM_NEON__)
+  for (int i = 0; i < N_L2 * N_L3; i++)
+    L2_WEIGHTS[L2WeightIdxScrambled(i)] = l2[i];
+#else
+  memcpy(L2_WEIGHTS, l2, N_L2 * N_L3 * sizeof(int16_t));
+#endif
   memcpy(L2_BIASES, &in[offset], N_L3 * sizeof(int32_t));
   offset += N_L3 * sizeof(int32_t);
 
