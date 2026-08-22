@@ -42,15 +42,50 @@ void ParseFen(char* fen, Board* board);
 void BoardToFen(char* fen, Board* board);
 void PrintBoard(Board* board);
 
-void SetSpecialPieces(Board* board);
-void SetThreats(Board* board);
 
 int DoesMoveCheck(Move move, Board* board);
 
-int IsDraw(Board* board, int ply);
-int IsRepetition(Board* board, int ply);
-int IsMaterialDraw(Board* board);
 int IsFiftyMoveRule(Board* board);
+
+INLINE int IsRepetition(Board* board, int ply) {
+  int reps = 0, distance = Min(board->fmr, board->nullply);
+
+  // Check as far back as the last non-reversible move
+  for (int i = board->histPly - 4; i >= 0 && i >= board->histPly - distance; i -= 2) {
+    if (board->history[i].zobrist == board->zobrist) {
+      if (i > board->histPly - ply) // within our search tree
+        return 1;
+
+      reps++;
+      if (reps == 2) // 3-fold before+including root
+        return 1;
+    }
+  }
+
+  return 0;
+}
+
+INLINE int IsMaterialDraw(Board* board) {
+  switch (board->piecesCounts) {
+    case 0x0:      // Kk
+    case 0x100:    // KNk
+    case 0x200:    // KNNk
+    case 0x1000:   // Kkn
+    case 0x2000:   // Kknn
+    case 0x1100:   // KNkn
+    case 0x10000:  // KBk
+    case 0x100000: // Kkb
+    case 0x11000:  // KBkn
+    case 0x100100: // KNkb
+    case 0x110000: // KBkb
+      return 1;
+    default: return 0;
+  }
+}
+
+INLINE int IsDraw(Board* board, int ply) {
+  return IsRepetition(board, ply) || IsMaterialDraw(board) || IsFiftyMoveRule(board);
+}
 
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);

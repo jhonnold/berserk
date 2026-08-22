@@ -66,6 +66,71 @@ void ClearBoard(Board* board) {
   board->phase    = 0;
 }
 
+// these must be recalculated every move for faster move legality purposes
+INLINE void SetSpecialPieces(Board* board) {
+  const int stm  = board->stm;
+  const int xstm = board->xstm;
+
+  int kingSq = LSB(PieceBB(KING, stm));
+
+  board->pinned   = 0;
+  board->checkers = (GetKnightAttacks(kingSq) & PieceBB(KNIGHT, xstm)) | // knight and
+                    (GetPawnAttacks(kingSq, stm) & PieceBB(PAWN, xstm)); // pawns are easy
+
+  BitBoard sliders = ((PieceBB(BISHOP, xstm) | PieceBB(QUEEN, xstm)) & BISHOP_RAYS[kingSq]) |
+                     ((PieceBB(ROOK, xstm) | PieceBB(QUEEN, xstm)) & ROOK_RAYS[kingSq]);
+  while (sliders) {
+    int sq = PopLSB(&sliders);
+
+    BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(BOTH);
+    if (!blockers)
+      SetBit(board->checkers, sq);
+    else if (BitCount(blockers) == 1)
+      board->pinned |= (blockers & OccBB(stm));
+  }
+}
+
+INLINE void SetThreats(Board* board) {
+  // Invert these to be confusing.
+  const int stm  = board->xstm;
+  const int xstm = board->stm;
+
+  // Take the enemy king off for through threats.
+  BitBoard occ = OccBB(BOTH) ^ PieceBB(KING, xstm);
+
+  BitBoard pawnAttacks      = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
+                                             ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
+  board->threatenedBy[PAWN] = pawnAttacks;
+  board->threatened         = board->threatenedBy[PAWN];
+
+  board->threatenedBy[KNIGHT] = 0;
+  BitBoard knights            = PieceBB(KNIGHT, stm);
+  while (knights)
+    board->threatenedBy[KNIGHT] |= GetKnightAttacks(PopLSB(&knights));
+  board->threatened |= board->threatenedBy[KNIGHT];
+
+  board->threatenedBy[BISHOP] = 0;
+  BitBoard bishops            = PieceBB(BISHOP, stm);
+  while (bishops)
+    board->threatenedBy[BISHOP] |= GetBishopAttacks(PopLSB(&bishops), occ);
+  board->threatened |= board->threatenedBy[BISHOP];
+
+  board->threatenedBy[ROOK] = 0;
+  BitBoard rooks            = PieceBB(ROOK, stm);
+  while (rooks)
+    board->threatenedBy[ROOK] |= GetRookAttacks(PopLSB(&rooks), occ);
+  board->threatened |= board->threatenedBy[ROOK];
+
+  board->threatenedBy[QUEEN] = 0;
+  BitBoard queens            = PieceBB(QUEEN, stm);
+  while (queens)
+    board->threatenedBy[QUEEN] |= GetQueenAttacks(PopLSB(&queens), occ);
+  board->threatened |= board->threatenedBy[QUEEN];
+
+  board->threatenedBy[KING] = GetKingAttacks(LSB(PieceBB(KING, stm)));
+  board->threatened |= board->threatenedBy[KING];
+}
+
 void ParseFen(char* fen, Board* board) {
   ClearBoard(board);
 
@@ -242,70 +307,6 @@ void PrintBoard(Board* board) {
 }
 
 // Special pieces are those giving check, and those that are pinned
-// these must be recalculated every move for faster move legality purposes
-inline void SetSpecialPieces(Board* board) {
-  const int stm  = board->stm;
-  const int xstm = board->xstm;
-
-  int kingSq = LSB(PieceBB(KING, stm));
-
-  board->pinned   = 0;
-  board->checkers = (GetKnightAttacks(kingSq) & PieceBB(KNIGHT, xstm)) | // knight and
-                    (GetPawnAttacks(kingSq, stm) & PieceBB(PAWN, xstm)); // pawns are easy
-
-  BitBoard sliders = ((PieceBB(BISHOP, xstm) | PieceBB(QUEEN, xstm)) & GetBishopAttacks(kingSq, 0)) |
-                     ((PieceBB(ROOK, xstm) | PieceBB(QUEEN, xstm)) & GetRookAttacks(kingSq, 0));
-  while (sliders) {
-    int sq = PopLSB(&sliders);
-
-    BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(BOTH);
-    if (!blockers)
-      SetBit(board->checkers, sq);
-    else if (BitCount(blockers) == 1)
-      board->pinned |= (blockers & OccBB(stm));
-  }
-}
-
-inline void SetThreats(Board* board) {
-  // Invert these to be confusing.
-  const int stm  = board->xstm;
-  const int xstm = board->stm;
-
-  // Take the enemy king off for through threats.
-  BitBoard occ = OccBB(BOTH) ^ PieceBB(KING, xstm);
-
-  BitBoard pawnAttacks      = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
-                                             ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
-  board->threatenedBy[PAWN] = pawnAttacks;
-  board->threatened         = board->threatenedBy[PAWN];
-
-  board->threatenedBy[KNIGHT] = 0;
-  BitBoard knights            = PieceBB(KNIGHT, stm);
-  while (knights)
-    board->threatenedBy[KNIGHT] |= GetKnightAttacks(PopLSB(&knights));
-  board->threatened |= board->threatenedBy[KNIGHT];
-
-  board->threatenedBy[BISHOP] = 0;
-  BitBoard bishops            = PieceBB(BISHOP, stm);
-  while (bishops)
-    board->threatenedBy[BISHOP] |= GetBishopAttacks(PopLSB(&bishops), occ);
-  board->threatened |= board->threatenedBy[BISHOP];
-
-  board->threatenedBy[ROOK] = 0;
-  BitBoard rooks            = PieceBB(ROOK, stm);
-  while (rooks)
-    board->threatenedBy[ROOK] |= GetRookAttacks(PopLSB(&rooks), occ);
-  board->threatened |= board->threatenedBy[ROOK];
-
-  board->threatenedBy[QUEEN] = 0;
-  BitBoard queens            = PieceBB(QUEEN, stm);
-  while (queens)
-    board->threatenedBy[QUEEN] |= GetQueenAttacks(PopLSB(&queens), occ);
-  board->threatened |= board->threatenedBy[QUEEN];
-
-  board->threatenedBy[KING] = GetKingAttacks(LSB(PieceBB(KING, stm)));
-  board->threatened |= board->threatenedBy[KING];
-}
 
 void MakeMove(Move move, Board* board) {
   MakeMoveUpdate(move, board, 1);
@@ -512,46 +513,6 @@ void UndoNullMove(Board* board) {
   memcpy(board, &board->history[board->histPly], offsetof(Board, stm));
 }
 
-inline int IsDraw(Board* board, int ply) {
-  return IsRepetition(board, ply) || IsMaterialDraw(board) || IsFiftyMoveRule(board);
-}
-
-inline int IsRepetition(Board* board, int ply) {
-  int reps = 0, distance = Min(board->fmr, board->nullply);
-
-  // Check as far back as the last non-reversible move
-  for (int i = board->histPly - 4; i >= 0 && i >= board->histPly - distance; i -= 2) {
-    if (board->history[i].zobrist == board->zobrist) {
-      if (i > board->histPly - ply) // within our search tree
-        return 1;
-
-      reps++;
-      if (reps == 2) // 3-fold before+including root
-        return 1;
-    }
-  }
-
-  return 0;
-}
-
-inline int IsMaterialDraw(Board* board) {
-  switch (board->piecesCounts) {
-    case 0x0:      // Kk
-    case 0x100:    // KNk
-    case 0x200:    // KNNk
-    case 0x1000:   // Kkn
-    case 0x2000:   // Kknn
-    case 0x1100:   // KNkn
-    case 0x10000:  // KBk
-    case 0x100000: // Kkb
-    case 0x11000:  // KBkn
-    case 0x100100: // KNkb
-    case 0x110000: // KBkb
-      return 1;
-    default: return 0;
-  }
-}
-
 inline int IsFiftyMoveRule(Board* board) {
   if (board->fmr > 99) {
     if (board->checkers) {
@@ -677,11 +638,11 @@ int IsLegal(Move move, Board* board) {
 uint64_t cuckoo[8192];
 Move cuckooMove[8192];
 
-inline uint64_t Hash1(uint64_t hash) {
+INLINE uint64_t Hash1(uint64_t hash) {
   return hash & 0x1fff;
 }
 
-inline uint64_t Hash2(uint64_t hash) {
+INLINE uint64_t Hash2(uint64_t hash) {
   return (hash >> 16) & 0x1fff;
 }
 

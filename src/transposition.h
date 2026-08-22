@@ -64,7 +64,13 @@ void TTFree();
 void TTClearPart(int idx);
 void TTClear();
 void TTUpdate();
-void TTPrefetch(uint64_t hash);
+INLINE uint64_t TTIdx(uint64_t hash) {
+  return ((unsigned __int128) hash * (unsigned __int128) TT.count) >> 64;
+}
+
+INLINE void TTPrefetch(uint64_t hash) {
+  __builtin_prefetch(&TT.buckets[TTIdx(hash)]);
+}
 TTEntry* TTProbe(uint64_t hash,
                  int ply,
                  int* hit,

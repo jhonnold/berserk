@@ -62,6 +62,9 @@ BitBoard PAWN_ATTACKS[2][64];
 BitBoard KNIGHT_ATTACKS[64];
 BitBoard KING_ATTACKS[64];
 
+BitBoard BISHOP_RAYS[64];
+BitBoard ROOK_RAYS[64];
+
 #ifndef USE_DUAL_HQ
 
 // Sum of (1 << relevant bits) over all 64 squares for each slider.
@@ -175,14 +178,6 @@ void InitPinnedMovementSquares() {
       }
     }
   }
-}
-
-inline BitBoard BetweenSquares(int from, int to) {
-  return BETWEEN_SQS[from][to];
-}
-
-inline BitBoard PinnedMoves(int p, int k) {
-  return PINNED_MOVES[p][k];
 }
 
 BitBoard GetGeneratedPawnAttacks(int sq, int color) {
@@ -546,6 +541,13 @@ void InitDualMagics() {
 
 #endif
 
+void InitSliderRays() {
+  for (int sq = 0; sq < 64; sq++) {
+    BISHOP_RAYS[sq] = GetBishopAttacksOTF(sq, 0);
+    ROOK_RAYS[sq]   = GetRookAttacksOTF(sq, 0);
+  }
+}
+
 void InitAttacks() {
   InitBetweenSquares();
   InitPinnedMovementSquares();
@@ -553,6 +555,7 @@ void InitAttacks() {
   InitPawnAttacks();
   InitKnightAttacks();
   InitKingAttacks();
+  InitSliderRays();
 
 #ifdef USE_DUAL_HQ
   InitDualMagics();
@@ -570,42 +573,4 @@ void InitAttacks() {
 #endif
 }
 
-inline BitBoard GetPawnAttacks(int sq, int color) {
-  return PAWN_ATTACKS[color][sq];
-}
-
-inline BitBoard GetKnightAttacks(int sq) {
-  return KNIGHT_ATTACKS[sq];
-}
-
-inline BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
-  return GetBishopAttacks(sq, occupancy) | GetRookAttacks(sq, occupancy);
-}
-
-inline BitBoard GetKingAttacks(int sq) {
-  return KING_ATTACKS[sq];
-}
-
-inline BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
-  switch (type) {
-    case KNIGHT: return GetKnightAttacks(sq);
-    case BISHOP: return GetBishopAttacks(sq, occupancy);
-    case ROOK: return GetRookAttacks(sq, occupancy);
-    case QUEEN: return GetQueenAttacks(sq, occupancy);
-    case KING: return GetKingAttacks(sq);
-  }
-
-  return 0;
-}
-
-// get a bitboard of ALL pieces attacking a given square
-inline BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
-  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) |                            // White and Black Pawn atx
-         (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |                            //
-         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |    // Knights
-         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |          // Kings
-         (GetBishopAttacks(sq, occ) & (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | // Bishop + Queen
-                                       PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) | //
-         (GetRookAttacks(sq, occ) & (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) |       // Rook + Queen
-                                     PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
-}
+

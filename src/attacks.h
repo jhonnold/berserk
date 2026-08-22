@@ -29,6 +29,7 @@
 #include <immintrin.h>
 #endif
 
+#include "board.h"
 #include "types.h"
 #include "util.h"
 
@@ -38,6 +39,12 @@ extern BitBoard PINNED_MOVES[64][64];
 extern BitBoard PAWN_ATTACKS[2][64];
 extern BitBoard KNIGHT_ATTACKS[64];
 extern BitBoard KING_ATTACKS[64];
+
+// Slider attacks on an empty board. Deriving these through the normal slider
+// path costs a full hyperbola computation for an occupancy that is known to be
+// zero, so the two rays are just tabulated.
+extern BitBoard BISHOP_RAYS[64];
+extern BitBoard ROOK_RAYS[64];
 
 #ifdef USE_DUAL_HQ
 
@@ -88,6 +95,7 @@ void initPawnSpans();
 void InitPawnAttacks();
 void InitKnightAttacks();
 void InitKingAttacks();
+void InitSliderRays();
 #ifndef USE_DUAL_HQ
 void InitBishopMasks();
 void InitBishopMagics();
@@ -111,15 +119,6 @@ BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks);
 uint64_t FindMagicNumber(int sq, int n, int bishop);
 #endif
 
-BitBoard BetweenSquares(int from, int to);
-BitBoard PinnedMoves(int p, int k);
-
-BitBoard GetPawnAttacks(int sq, int color);
-BitBoard GetKnightAttacks(int sq);
-BitBoard GetQueenAttacks(int sq, BitBoard occupancy);
-BitBoard GetKingAttacks(int sq);
-BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type);
-BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ);
 
 #ifdef USE_DUAL_HQ
 
@@ -172,5 +171,54 @@ INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
 }
 
 #endif
+
+
+INLINE BitBoard BetweenSquares(int from, int to) {
+  return BETWEEN_SQS[from][to];
+}
+
+INLINE BitBoard PinnedMoves(int p, int k) {
+  return PINNED_MOVES[p][k];
+}
+
+INLINE BitBoard GetPawnAttacks(int sq, int color) {
+  return PAWN_ATTACKS[color][sq];
+}
+
+INLINE BitBoard GetKnightAttacks(int sq) {
+  return KNIGHT_ATTACKS[sq];
+}
+
+INLINE BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
+  return GetBishopAttacks(sq, occupancy) | GetRookAttacks(sq, occupancy);
+}
+
+INLINE BitBoard GetKingAttacks(int sq) {
+  return KING_ATTACKS[sq];
+}
+
+INLINE BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
+  switch (type) {
+    case KNIGHT: return GetKnightAttacks(sq);
+    case BISHOP: return GetBishopAttacks(sq, occupancy);
+    case ROOK: return GetRookAttacks(sq, occupancy);
+    case QUEEN: return GetQueenAttacks(sq, occupancy);
+    case KING: return GetKingAttacks(sq);
+  }
+
+  return 0;
+}
+
+// get a bitboard of ALL pieces attacking a given square
+INLINE BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
+  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) |                            // White and Black Pawn atx
+         (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |                            //
+         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |    // Knights
+         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |          // Kings
+         (GetBishopAttacks(sq, occ) & (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | // Bishop + Queen
+                                       PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) | //
+         (GetRookAttacks(sq, occ) & (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) |       // Rook + Queen
+                                     PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
+}
 
 #endif
