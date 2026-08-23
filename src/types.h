@@ -20,7 +20,6 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <pthread.h>
-#include <setjmp.h>
 #include <stdatomic.h>
 
 #define MAX_SEARCH_PLY 201 // effective max depth 250
@@ -207,7 +206,6 @@ struct ThreadData {
   pthread_t nativeThread;
   pthread_mutex_t mutex;
   pthread_cond_t sleep;
-  jmp_buf exit;
 };
 
 typedef struct {

@@ -74,8 +74,13 @@ INLINE int CheckLimits(ThreadData* thread) {
     return 0;
 
   long elapsed = GetTimeMS() - Limits.start;
-  return (Limits.timeset && elapsed >= Limits.max) || //
-         (Limits.nodes && NodesSearched() >= Limits.nodes);
+  if ((Limits.timeset && elapsed >= Limits.max) || //
+      (Limits.nodes && NodesSearched() >= Limits.nodes)) {
+    Threads.stop = 1;
+    return 1;
+  }
+
+  return 0;
 }
 
 INLINE int AdjustEvalOnFMR(Board* board, int eval) {
@@ -105,9 +110,6 @@ void StartSearch(Board* board, uint8_t ponder) {
 void MainSearch() {
   ThreadData* mainThread = Threads.threads[0];
   Board* board           = &mainThread->board;
-
-  char startFen[128];
-  BoardToFen(startFen, board);
 
   TTUpdate();
 
@@ -190,9 +192,6 @@ void MainSearch() {
     ponderMove = bestThread->rootMoves[0].pv.moves[1];
   else {
     // Pull ponder move from the TT if PV doesn't have one.
-    // We reload the startfen because jmp aborts don't guarantee a rolled back board
-    ParseFen(startFen, board);
-
     MakeMove(bestMove, board);
     int ttHit = 0, ttScore, ttEval, ttDepth, ttBound, ttPv = 0;
     TTProbe(board->zobrist, 0, &ttHit, &ponderMove, &ttScore, &ttEval, &ttDepth, &ttBound, &ttPv);
@@ -214,8 +213,7 @@ void Search(ThreadData* thread) {
   Board* board   = &thread->board;
   int mainThread = !thread->idx;
 
-  thread->depth       = 0;
-  board->accumulators = thread->accumulators; // exit jumps can cause this pointer to not be reset
+  thread->depth = 0;
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
   SetContempt(thread->contempt, board->stm);
@@ -238,14 +236,6 @@ void Search(ThreadData* thread) {
   }
 
   while (++thread->depth < MAX_SEARCH_PLY) {
-#if defined(_WIN32) || defined(_WIN64)
-    if (_setjmp(thread->exit, NULL)) {
-#else
-    if (setjmp(thread->exit)) {
-#endif
-      break;
-    }
-
     if (Limits.depth && mainThread && thread->depth > Limits.depth)
       break;
 
@@ -279,6 +269,10 @@ void Search(ThreadData* thread) {
         // search!
         score = Negamax(alpha, beta, Max(1, searchDepth), 0, thread, &nullPv, ss);
 
+        // the score cannot be trusted, leave the root moves as the last completed iteration
+        if (LoadRlx(Threads.stop))
+          break;
+
         SortRootMoves(thread, thread->multiPV);
 
         if (mainThread && (score <= alpha || score >= beta) && Limits.multiPV == 1 &&
@@ -305,12 +299,18 @@ void Search(ThreadData* thread) {
         delta += 16 * delta / 64;
       }
 
+      if (LoadRlx(Threads.stop))
+        break;
+
       SortRootMoves(thread, 0);
 
       // Print if final multipv or time elapsed
       if (mainThread && (thread->multiPV + 1 == Limits.multiPV || GetTimeMS() - Limits.start >= 2500))
         PrintUCI(thread, -CHECKMATE, CHECKMATE, board);
     }
+
+    if (LoadRlx(Threads.stop))
+      break;
 
     if (!mainThread)
       continue;
@@ -394,8 +394,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     return Quiesce(alpha, beta, 0, thread, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
-    // hot exit
-    longjmp(thread->exit, 1);
+    return 0;
 
   if (isPV && thread->seldepth < ss->ply + 1)
     thread->seldepth = ss->ply + 1;
@@ -525,6 +524,10 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     // Razoring
     if (depth <= 5 && eval + 146 * depth <= alpha) {
       score = Quiesce(alpha, beta, 0, thread, ss);
+
+      if (LoadRlx(Threads.stop))
+        return 0;
+
       if (score <= alpha)
         return score;
     }
@@ -548,6 +551,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
       UndoNullMove(board);
 
+      if (LoadRlx(Threads.stop))
+        return 0;
+
       if (score >= beta) {
         if (score >= TB_WIN_BOUND)
           score = beta;
@@ -561,6 +567,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         Score verify = Negamax(beta - 1, beta, depth - R, 0, thread, pv, ss);
 
         thread->nmpMinPly = 0;
+
+        if (LoadRlx(Threads.stop))
+          return 0;
 
         if (verify >= beta)
           return score;
@@ -592,6 +601,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
           score = -Negamax(-probBeta, -probBeta + 1, depth - 4, !cutnode, thread, pv, ss + 1);
 
         UndoMove(move, board);
+
+        if (LoadRlx(Threads.stop))
+          return 0;
 
         if (score >= probBeta)
           return score;
@@ -677,6 +689,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         ss->skip = move;
         score    = Negamax(sBeta - 1, sBeta, sDepth, cutnode, thread, pv, ss);
         ss->skip = NULL_MOVE;
+
+        if (LoadRlx(Threads.stop))
+          return 0;
 
         // no score failed above sBeta, so this is singular
         if (score < sBeta) {
@@ -768,6 +783,11 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     UndoMove(move, board);
 
+    // if a stop occurred the score cannot be trusted, so return immediately without
+    // updating the best move, pv, root moves, histories or tt
+    if (LoadRlx(Threads.stop))
+      return 0;
+
     if (isRoot) {
       RootMove* rm = thread->rootMoves;
       for (int i = 1; i < thread->numRootMoves; i++)
@@ -852,8 +872,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   Move move     = NULL_MOVE;
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
-    // hot exit
-    longjmp(thread->exit, 1);
+    return 0;
 
   // draw check
   if (IsDraw(board, ss->ply))
@@ -958,6 +977,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
 
     UndoMove(move, board);
+
+    if (LoadRlx(Threads.stop))
+      return 0;
 
     if (score > -TB_WIN_BOUND)
       skipQuiets = 1;
