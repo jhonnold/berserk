@@ -23,15 +23,22 @@ ARM64   = -arch arm64
 
 XCRUN   =
 
+STACK   = 8388608
+
 # Detecting windows
 ifeq ($(shell echo "test"), "test")
-	FLAGS += -static
+	FLAGS += -static -Wl,--stack,$(STACK)
 endif
 
 # Detecting Mac
 KERNEL := $(shell uname -s)
 ifeq ($(KERNEL),Darwin)
 	XCRUN = xcrun
+endif
+
+# musl (alpine) defaults stacks to 128KB, which the search overflows
+ifeq ($(KERNEL),Linux)
+	LIBS += -Wl,-z,stack-size=$(STACK)
 endif
 
 # Detecting Apple Silicon (ARM64)
