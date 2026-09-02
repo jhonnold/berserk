@@ -140,9 +140,15 @@ void* ThreadInit(void* arg) {
 void ThreadCreate(int i) {
   pthread_t thread;
 
+  // Don't trust the platform default (musl gives 128KB)
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  pthread_attr_setstacksize(&attr, 8 * MEGABYTE);
+
   Threads.init = 1;
   pthread_mutex_lock(&Threads.mutex);
-  pthread_create(&thread, NULL, ThreadInit, (void*) (intptr_t) i);
+  pthread_create(&thread, &attr, ThreadInit, (void*) (intptr_t) i);
+  pthread_attr_destroy(&attr);
 
   while (Threads.init)
     pthread_cond_wait(&Threads.sleep, &Threads.mutex);

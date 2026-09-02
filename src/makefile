@@ -3,7 +3,7 @@ EXE      = berserk
 SRC      = attacks.c bench.c berserk.c bits.c board.c datagen.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
 		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 20260829b
+VERSION  = 20260902
 MAIN_NETWORK = berserk-9b84c340af7e.nn
 EVALFILE = $(MAIN_NETWORK)
 NETWORK_BASE = https://github.com/jhonnold/berserk-networks/releases/download/networks
@@ -23,15 +23,22 @@ ARM64   = -arch arm64
 
 XCRUN   =
 
+STACK   = 8388608
+
 # Detecting windows
 ifeq ($(shell echo "test"), "test")
-	FLAGS += -static
+	FLAGS += -static -Wl,--stack,$(STACK)
 endif
 
 # Detecting Mac
 KERNEL := $(shell uname -s)
 ifeq ($(KERNEL),Darwin)
 	XCRUN = xcrun
+endif
+
+# musl (alpine) defaults stacks to 128KB, which the search overflows
+ifeq ($(KERNEL),Linux)
+	LIBS += -Wl,-z,stack-size=$(STACK)
 endif
 
 # Detecting Apple Silicon (ARM64)
