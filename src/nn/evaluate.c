@@ -178,7 +178,7 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
 
   return count;
 }
-#elif defined(__ARM_NEON__)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 #include <arm_neon.h>
 INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = 8;
@@ -407,7 +407,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
   for (i = 0; i < OUT_CC; i++)
     out[i] = _mm_srai_epi32(regs[i], QUANT1_BITS);
 }
-#elif defined(__ARM_NEON__)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE void int8x16_add_dpbusd(int32x4_t* acc, int8x16_t a, int8x16_t b) {
   int16x8_t p0 = vmull_s8(vget_low_s8(a), vget_low_s8(b));
   int16x8_t p1 = vmull_high_s8(a, b);
@@ -538,7 +538,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
   for (size_t i = 0; i < OUT_CHUNKS; i++)
     out[i] = _mm_srai_epi32(regs[i], QUANT1_BITS);
 }
-#elif defined(__ARM_NEON__)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
   const size_t OUT_WIDTH  = 4;
   const size_t OUT_CHUNKS = N_L3 / OUT_WIDTH;
@@ -634,7 +634,7 @@ INLINE int32_t L3Transform(int16_t* src) {
 
   return _mm_cvtsi128_si32(a1) + OUTPUT_BIAS;
 }
-#elif defined(__ARM_NEON__)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE int32_t L3Transform(int16_t* src) {
   const size_t WIDTH  = 8;
   const size_t CHUNKS = N_L3 / WIDTH;
@@ -688,7 +688,7 @@ INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
     out[i]           = _mm_max_epi16(a0, _mm_setzero_si128());
   }
 }
-#elif defined(__ARM_NEON__)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
   const size_t IN_WIDTH = 4;
   const size_t CHUNKS   = n / IN_WIDTH;
@@ -747,7 +747,7 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN + // input w
                             sizeof(int16_t) * N_L3 +                    // output weights
                             sizeof(int32_t);                            // output bias
 
-#if defined(__SSE4_1__) || defined(__ARM_NEON__)
+#if defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE int WeightIdxScrambled(int idx) {
   return ((idx / SPARSE_CHUNK_SIZE) % (N_L1 / SPARSE_CHUNK_SIZE) * N_L2 * SPARSE_CHUNK_SIZE) +
          (idx / N_L1 * SPARSE_CHUNK_SIZE) + (idx % SPARSE_CHUNK_SIZE);
@@ -792,7 +792,7 @@ INLINE void CopyData(const unsigned char* in) {
   memcpy(l2, &in[offset], N_L2 * N_L3 * sizeof(int16_t));
   offset += N_L2 * N_L3 * sizeof(int16_t);
 
-#if defined(__SSE4_1__) || defined(__ARM_NEON__)
+#if defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
   for (int i = 0; i < N_L2 * N_L3; i++)
     L2_WEIGHTS[L2WeightIdxScrambled(i)] = l2[i];
 #else
@@ -805,7 +805,7 @@ INLINE void CopyData(const unsigned char* in) {
   offset += N_L3 * N_OUTPUT * sizeof(int16_t);
   memcpy(&OUTPUT_BIAS, &in[offset], sizeof(int32_t));
 
-#if defined(__SSE4_1__) || defined(__ARM_NEON__)
+#if defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
   // Shuffle the L1 weights for sparse matmul
   for (int i = 0; i < N_L1 * N_L2; i++)
     L1_WEIGHTS[WeightIdxScrambled(i)] = l1[i];

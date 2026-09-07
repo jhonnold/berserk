@@ -53,7 +53,7 @@
 #define regi_sub   _mm_sub_epi16
 #define regi_add   _mm_add_epi16
 #define regi_store _mm_store_si128
-#elif defined(__ARM_NEON__)
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 #include <arm_neon.h>
 #define UNROLL           128
 #define NUM_REGS         16
