@@ -35,7 +35,13 @@
 
 INCBIN(Embed, EVALFILE);
 
-#define QUANT1_BITS 5
+// QA = 255: the feature transformer's activation is a uint8 spanning the byte's
+// whole range, so the accumulator needs no shift and the CReLU clip is the byte
+// itself. Each later stage rescales by its own shift -- they were one shared
+// constant when every stage happened to want 5.
+#define FT_MAX      255
+#define L1_SHIFT    6
+#define L2_SHIFT    5
 #define QUANT2_BITS 12
 
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
@@ -52,12 +58,15 @@ int32_t OUTPUT_BIAS;
 
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
-// Every clipped-ReLU output byte is in [0, 127], so a 4-byte input chunk is
-// non-zero exactly when its int32 reinterpretation is > 0. That lets the
-// sparse-input index list be built in the same pass that produces the bytes,
-// instead of streaming all of L1 a second time.
+// The sparse-input index list is built in the same pass that produces the
+// activation bytes, instead of streaming all of L1 a second time.
+//
+// The test has to be "this 4-byte chunk is non-zero", not "> 0": a CReLU output
+// byte now reaches 255, so a chunk whose high byte is >= 128 reads as a negative
+// int32 and a signed greater-than would drop a live input.
 #ifdef __SSE4_1__
 #include <immintrin.h>
+
 INLINE size_t StoreNNZ(uint16_t* dest, size_t count, __m128i* base, const __m128i increment, const uint32_t lookup) {
   const __m128i offsets = _mm_loadu_si128((__m128i*) (&LOOKUP_INDICES[lookup]));
   _mm_storeu_si128((__m128i*) (dest + count), _mm_add_epi16(*base, offsets));
@@ -68,12 +77,11 @@ INLINE size_t StoreNNZ(uint16_t* dest, size_t count, __m128i* base, const __m128
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
-INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m512i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
 
-  const __m512i zero      = _mm512_setzero_si512();
   const __m128i increment = _mm_set1_epi16(8);
   __m128i base            = _mm_setzero_si128();
   size_t count            = 0;
@@ -82,20 +90,17 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
     const __m512i* in = (__m512i*) acc->values[views[v]];
     __m512i* out      = (__m512i*) &outputs[N_HIDDEN * v];
 
+    // packus saturates int16 into unsigned bytes, which is the CReLU: it clamps
+    // below at 0 and above at 255 in one instruction, with no shift to undo.
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m512i s0 = _mm512_srai_epi16(in[2 * i + 0], QUANT1_BITS);
-      __m512i s1 = _mm512_srai_epi16(in[2 * i + 1], QUANT1_BITS);
-      __m512i s2 = _mm512_srai_epi16(in[2 * i + 2], QUANT1_BITS);
-      __m512i s3 = _mm512_srai_epi16(in[2 * i + 3], QUANT1_BITS);
-
-      const __m512i o0 = _mm512_max_epi8(_mm512_packs_epi16(s0, s1), zero);
-      const __m512i o1 = _mm512_max_epi8(_mm512_packs_epi16(s2, s3), zero);
+      const __m512i o0 = _mm512_packus_epi16(in[2 * i + 0], in[2 * i + 1]);
+      const __m512i o1 = _mm512_packus_epi16(in[2 * i + 2], in[2 * i + 3]);
 
       out[i]     = o0;
       out[i + 1] = o1;
 
-      const uint32_t m0 = _mm512_cmpgt_epi32_mask(o0, zero);
-      const uint32_t m1 = _mm512_cmpgt_epi32_mask(o1, zero);
+      const uint32_t m0 = _mm512_test_epi32_mask(o0, o0);
+      const uint32_t m1 = _mm512_test_epi32_mask(o1, o1);
 
       count = StoreNNZ(nnz, count, &base, increment, m0 & 0xFF);
       count = StoreNNZ(nnz, count, &base, increment, m0 >> 8);
@@ -108,12 +113,17 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
 }
 #elif defined(__AVX2__)
 #include <immintrin.h>
-INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+
+INLINE uint32_t NonZeroMask256(__m256i v) {
+  const __m256i eq = _mm256_cmpeq_epi32(v, _mm256_setzero_si256());
+  return (~(uint32_t) _mm256_movemask_ps(_mm256_castsi256_ps(eq))) & 0xFF;
+}
+
+INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
 
-  const __m256i zero      = _mm256_setzero_si256();
   const __m128i increment = _mm_set1_epi16(8);
   __m128i base            = _mm_setzero_si128();
   size_t count            = 0;
@@ -122,20 +132,17 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
     const __m256i* in = (__m256i*) acc->values[views[v]];
     __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
 
+    // packus saturates int16 into unsigned bytes, which is the CReLU: it clamps
+    // below at 0 and above at 255 in one instruction, with no shift to undo.
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m256i s0 = _mm256_srai_epi16(in[2 * i + 0], QUANT1_BITS);
-      __m256i s1 = _mm256_srai_epi16(in[2 * i + 1], QUANT1_BITS);
-      __m256i s2 = _mm256_srai_epi16(in[2 * i + 2], QUANT1_BITS);
-      __m256i s3 = _mm256_srai_epi16(in[2 * i + 3], QUANT1_BITS);
-
-      const __m256i o0 = _mm256_max_epi8(_mm256_packs_epi16(s0, s1), zero);
-      const __m256i o1 = _mm256_max_epi8(_mm256_packs_epi16(s2, s3), zero);
+      const __m256i o0 = _mm256_packus_epi16(in[2 * i + 0], in[2 * i + 1]);
+      const __m256i o1 = _mm256_packus_epi16(in[2 * i + 2], in[2 * i + 3]);
 
       out[i]     = o0;
       out[i + 1] = o1;
 
-      count = StoreNNZ(nnz, count, &base, increment, _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(o0, zero))));
-      count = StoreNNZ(nnz, count, &base, increment, _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(o1, zero))));
+      count = StoreNNZ(nnz, count, &base, increment, NonZeroMask256(o0));
+      count = StoreNNZ(nnz, count, &base, increment, NonZeroMask256(o1));
     }
   }
 
@@ -143,12 +150,17 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
 }
 #elif defined(__SSE4_1__)
 #include <immintrin.h>
-INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+
+INLINE uint32_t NonZeroMask128(__m128i v) {
+  const __m128i eq = _mm_cmpeq_epi32(v, _mm_setzero_si128());
+  return (~(uint32_t) _mm_movemask_ps(_mm_castsi128_ps(eq))) & 0xF;
+}
+
+INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
 
-  const __m128i zero      = _mm_setzero_si128();
   const __m128i increment = _mm_set1_epi16(8);
   __m128i base            = _mm_setzero_si128();
   size_t count            = 0;
@@ -157,20 +169,17 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
     const __m128i* in = (__m128i*) acc->values[views[v]];
     __m128i* out      = (__m128i*) &outputs[N_HIDDEN * v];
 
+    // packus saturates int16 into unsigned bytes, which is the CReLU: it clamps
+    // below at 0 and above at 255 in one instruction, with no shift to undo.
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      __m128i s0 = _mm_srai_epi16(in[2 * i + 0], QUANT1_BITS);
-      __m128i s1 = _mm_srai_epi16(in[2 * i + 1], QUANT1_BITS);
-      __m128i s2 = _mm_srai_epi16(in[2 * i + 2], QUANT1_BITS);
-      __m128i s3 = _mm_srai_epi16(in[2 * i + 3], QUANT1_BITS);
-
-      const __m128i o0 = _mm_max_epi8(_mm_packs_epi16(s0, s1), zero);
-      const __m128i o1 = _mm_max_epi8(_mm_packs_epi16(s2, s3), zero);
+      const __m128i o0 = _mm_packus_epi16(in[2 * i + 0], in[2 * i + 1]);
+      const __m128i o1 = _mm_packus_epi16(in[2 * i + 2], in[2 * i + 3]);
 
       out[i]     = o0;
       out[i + 1] = o1;
 
-      const uint32_t m0 = _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(o0, zero)));
-      const uint32_t m1 = _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(o1, zero)));
+      const uint32_t m0 = NonZeroMask128(o0);
+      const uint32_t m1 = NonZeroMask128(o1);
 
       count = StoreNNZ(nnz, count, &base, increment, m0 | (m1 << 4));
     }
@@ -180,12 +189,11 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
 }
 #elif defined(__ARM_NEON__)
 #include <arm_neon.h>
-INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = 8;
   const size_t CHUNKS = N_HIDDEN / WIDTH;
   const int views[2]  = {stm, !stm};
 
-  const int8x16_t zero       = {0};
   const uint32_t lanes[4]    = {1, 2, 4, 8};
   const uint16x8_t increment = vdupq_n_u16(8);
   uint16x8_t base            = {0};
@@ -193,22 +201,19 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
 
   for (int v = 0; v < 2; v++) {
     const int16x8_t* in = (int16x8_t*) acc->values[views[v]];
-    int8x16_t* out      = (int8x16_t*) &outputs[N_HIDDEN * v];
+    uint8x16_t* out     = (uint8x16_t*) &outputs[N_HIDDEN * v];
 
+    // vqmovun saturates int16 into unsigned bytes, which is the CReLU: it clamps
+    // below at 0 and above at 255 in one instruction, with no shift to undo.
     for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      int16x8_t s0 = vshrq_n_s16(in[2 * i + 0], QUANT1_BITS);
-      int16x8_t s1 = vshrq_n_s16(in[2 * i + 1], QUANT1_BITS);
-      int16x8_t s2 = vshrq_n_s16(in[2 * i + 2], QUANT1_BITS);
-      int16x8_t s3 = vshrq_n_s16(in[2 * i + 3], QUANT1_BITS);
-
-      const int8x16_t o0 = vmaxq_s8(vcombine_s8(vqmovn_s16(s0), vqmovn_s16(s1)), zero);
-      const int8x16_t o1 = vmaxq_s8(vcombine_s8(vqmovn_s16(s2), vqmovn_s16(s3)), zero);
+      const uint8x16_t o0 = vcombine_u8(vqmovun_s16(in[2 * i + 0]), vqmovun_s16(in[2 * i + 1]));
+      const uint8x16_t o1 = vcombine_u8(vqmovun_s16(in[2 * i + 2]), vqmovun_s16(in[2 * i + 3]));
 
       out[i]     = o0;
       out[i + 1] = o1;
 
-      const uint32x4_t c0 = vreinterpretq_u32_s8(o0);
-      const uint32x4_t c1 = vreinterpretq_u32_s8(o1);
+      const uint32x4_t c0 = vreinterpretq_u32_u8(o0);
+      const uint32x4_t c1 = vreinterpretq_u32_u8(o1);
 
       const uint32_t m0 = vaddvq_u32(vandq_u32(vtstq_u32(c0, c0), vld1q_u32(lanes)));
       const uint32_t m1 = vaddvq_u32(vandq_u32(vtstq_u32(c1, c1), vld1q_u32(lanes)));
@@ -224,18 +229,17 @@ INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, cons
   return count;
 }
 #else
-INLINE size_t InputCReLU8(int8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
-  const int max      = 127 << 5;
 
   (void) nnz; // the scalar L1 affine walks every input
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
-    int8_t* out     = &outputs[N_HIDDEN * v];
+    uint8_t* out    = &outputs[N_HIDDEN * v];
 
     for (size_t i = 0; i < N_HIDDEN; i++)
-      out[i] = Min(max, Max(0, in[i])) >> QUANT1_BITS;
+      out[i] = Min(FT_MAX, Max(0, in[i]));
   }
 
   return 0;
@@ -257,7 +261,7 @@ INLINE void m512_add_dpbusd_epi32x2(__m512i* acc, __m512i a0, __m512i b0, __m512
   *acc = _mm512_add_epi32(*acc, p0);
 }
 
-INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count) {
   const size_t OUT_WIDTH  = sizeof(__m512i) / sizeof(int32_t);
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
 
@@ -295,7 +299,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm512_srai_epi32(regs[i], QUANT1_BITS);
+    out[i] = _mm512_srai_epi32(regs[i], L1_SHIFT);
 }
 #elif defined(__AVX2__)
 INLINE void m256_add_dpbusd_epi32(__m256i* acc, __m256i a, __m256i b) {
@@ -312,7 +316,7 @@ INLINE void m256_add_dpbusd_epi32x2(__m256i* acc, __m256i a0, __m256i b0, __m256
   *acc = _mm256_add_epi32(*acc, p0);
 }
 
-INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count) {
   const size_t OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t);
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
 
@@ -350,7 +354,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm256_srai_epi32(regs[i], QUANT1_BITS);
+    out[i] = _mm256_srai_epi32(regs[i], L1_SHIFT);
 }
 #elif defined(__SSE4_1__)
 INLINE void m128_add_dpbusd_epi32(__m128i* acc, __m128i a, __m128i b) {
@@ -367,7 +371,7 @@ INLINE void m128_add_dpbusd_epi32x2(__m128i* acc, __m128i a0, __m128i b0, __m128
   *acc = _mm_add_epi32(*acc, p0);
 }
 
-INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count) {
   const size_t OUT_WIDTH  = sizeof(__m128i) / sizeof(int32_t);
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
 
@@ -405,26 +409,27 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = _mm_srai_epi32(regs[i], QUANT1_BITS);
+    out[i] = _mm_srai_epi32(regs[i], L1_SHIFT);
 }
 #elif defined(__ARM_NEON__)
-INLINE void int8x16_add_dpbusd(int32x4_t* acc, int8x16_t a, int8x16_t b) {
-  int16x8_t p0 = vmull_s8(vget_low_s8(a), vget_low_s8(b));
-  int16x8_t p1 = vmull_high_s8(a, b);
+// The activations are unsigned and reach 255, so the s8 x s8 widening multiply
+// the signed byte range allowed would read half of them as negative. Widen to
+// int16 first: a product still fits (255 * 127 = 32385) but the pairwise sums do
+// not, so they accumulate in int32. Lane grouping matches the old form -- four
+// consecutive products per output lane, which is SPARSE_CHUNK_SIZE.
+INLINE void int8x16_add_dpbusd(int32x4_t* acc, uint8x16_t a, int8x16_t b) {
+  const int16x8_t p0 = vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(a))), vmovl_s8(vget_low_s8(b)));
+  const int16x8_t p1 = vmulq_s16(vreinterpretq_s16_u16(vmovl_high_u8(a)), vmovl_high_s8(b));
 
-  *acc = vpadalq_s16(*acc, vpaddq_s16(p0, p1));
+  *acc = vaddq_s32(*acc, vpaddq_s32(vpaddlq_s16(p0), vpaddlq_s16(p1)));
 }
 
-INLINE void int8x16_add_dpbusd_x2(int32x4_t* acc, int8x16_t a0, int8x16_t b0, int8x16_t a1, int8x16_t b1) {
-  int16x8_t p0 = vmull_s8(vget_low_s8(a0), vget_low_s8(b0));
-  int16x8_t p1 = vmull_high_s8(a0, b0);
-  int16x8_t p2 = vmull_s8(vget_low_s8(a1), vget_low_s8(b1));
-  int16x8_t p3 = vmull_high_s8(a1, b1);
-
-  *acc = vpadalq_s16(*acc, vaddq_s16(vpaddq_s16(p0, p1), vpaddq_s16(p2, p3)));
+INLINE void int8x16_add_dpbusd_x2(int32x4_t* acc, uint8x16_t a0, int8x16_t b0, uint8x16_t a1, int8x16_t b1) {
+  int8x16_add_dpbusd(acc, a0, b0);
+  int8x16_add_dpbusd(acc, a1, b1);
 }
 
-INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count) {
   const size_t OUT_WIDTH  = 4;
   const size_t OUT_CC     = N_L2 / OUT_WIDTH;
 
@@ -442,8 +447,8 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
     const uint16_t i0 = nnz[i + 0];
     const uint16_t i1 = nnz[i + 1];
 
-    const int8x16_t f0 = vreinterpretq_s8_u32(vdupq_n_u32(in32[i0]));
-    const int8x16_t f1 = vreinterpretq_s8_u32(vdupq_n_u32(in32[i1]));
+    const uint8x16_t f0 = vreinterpretq_u8_u32(vdupq_n_u32(in32[i0]));
+    const uint8x16_t f1 = vreinterpretq_u8_u32(vdupq_n_u32(in32[i1]));
 
     const int8x16_t* c0 = (int8x16_t*) &L1_WEIGHTS[i0 * N_L2 * SPARSE_CHUNK_SIZE];
     const int8x16_t* c1 = (int8x16_t*) &L1_WEIGHTS[i1 * N_L2 * SPARSE_CHUNK_SIZE];
@@ -454,7 +459,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
 
   if (i < count) {
     const uint16_t i0   = nnz[i];
-    const int8x16_t f0  = vreinterpretq_s8_u32(vdupq_n_u32(in32[i0]));
+    const uint8x16_t f0 = vreinterpretq_u8_u32(vdupq_n_u32(in32[i0]));
     const int8x16_t* c0 = (int8x16_t*) &L1_WEIGHTS[i0 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++)
@@ -462,10 +467,10 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = vshrq_n_s32(regs[i], QUANT1_BITS);
+    out[i] = vshrq_n_s32(regs[i], L1_SHIFT);
 }
 #else
-INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size_t count) {
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count) {
   (void) nnz;
   (void) count;
 
@@ -481,7 +486,7 @@ INLINE void L1Affine(int32_t* dest, int8_t* src, const uint16_t* nnz, const size
   }
 
   for (size_t i = 0; i < N_L2; i++)
-    dest[i] = dest[i] >> QUANT1_BITS;
+    dest[i] = dest[i] >> L1_SHIFT;
 }
 #endif
 
@@ -511,7 +516,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
   }
 
   for (size_t i = 0; i < OUT_CHUNKS; i++)
-    out[i] = _mm256_srai_epi32(regs[i], QUANT1_BITS);
+    out[i] = _mm256_srai_epi32(regs[i], L2_SHIFT);
 }
 #elif defined(__SSE4_1__)
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
@@ -536,7 +541,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
   }
 
   for (size_t i = 0; i < OUT_CHUNKS; i++)
-    out[i] = _mm_srai_epi32(regs[i], QUANT1_BITS);
+    out[i] = _mm_srai_epi32(regs[i], L2_SHIFT);
 }
 #elif defined(__ARM_NEON__)
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
@@ -564,7 +569,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
   }
 
   for (size_t i = 0; i < OUT_CHUNKS; i++)
-    out[i] = vshrq_n_s32(regs[i], QUANT1_BITS);
+    out[i] = vshrq_n_s32(regs[i], L2_SHIFT);
 }
 #else
 INLINE void L2Affine(int32_t* dest, int16_t* src) {
@@ -575,7 +580,7 @@ INLINE void L2Affine(int32_t* dest, int16_t* src) {
     for (int j = 0; j < N_L2; j++)
       dest[i] += src[j] * L2_WEIGHTS[offset + j];
 
-    dest[i] = dest[i] >> QUANT1_BITS;
+    dest[i] = dest[i] >> L2_SHIFT;
   }
 }
 #endif
@@ -711,7 +716,7 @@ INLINE void ReLU16(int16_t* dest, int32_t* src, const size_t n) {
 #endif
 
 INLINE int PropagateView(Accumulator* accumulator, const int stm) {
-  int8_t x0[N_L1] ALIGN;
+  uint8_t x0[N_L1] ALIGN;
   // StoreNNZ always writes a full 8 entry group, so leave room for the tail.
   uint16_t nnz[N_L1 / SPARSE_CHUNK_SIZE + 8] ALIGN;
   int32_t dest[N_L3] ALIGN; // assumes N_L3 > N_L2
