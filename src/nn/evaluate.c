@@ -36,10 +36,22 @@
 INCBIN(Embed, EVALFILE);
 
 // QA = 255: the feature transformer's activation is a uint8 spanning the byte's
-// whole range, so the accumulator needs no shift and the CReLU clip is the byte
-// itself. Each later stage rescales by its own shift -- they were one shared
-// constant when every stage happened to want 5.
+// whole range, and the CReLU clip is the byte itself. Each later stage rescales
+// by its own shift -- they were one shared constant when every stage happened to
+// want 5.
+//
+// The transformer's two halves are then multiplied together, PlentyChess's
+// pairwise scheme (`src/nnue.cpp`, `INPUT_SHIFT`): unit i of the output is
+// `crelu(acc[i]) * crelu(acc[i + N_HIDDEN / 2]) >> FT_SHIFT`, so N_HIDDEN units
+// per perspective become N_HIDDEN / 2 and L1 takes N_HIDDEN inputs, not two.
+//
+// FT_SHIFT is 9 and not 8 because the product has to come back into a byte with
+// room to spare: 255 * 255 >> 9 is 127, and L1Affine emulates `dpbusd` with
+// `maddubs`, which sums two uint8 x int8 products into a *saturating* int16.
+// At 127 that step is 127 * 127 * 2 = 32,258 and cannot saturate; at 255 it
+// could.
 #define FT_MAX      255
+#define FT_SHIFT    9
 #define L1_SHIFT    6
 #define L2_SHIFT    5
 #define QUANT2_BITS 12
@@ -77,10 +89,13 @@ INLINE size_t StoreNNZ(uint16_t* dest, size_t count, __m128i* base, const __m128
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
-INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m512i) / sizeof(acc_t);
-  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const size_t HALF   = N_HIDDEN / 2 / WIDTH;
   const int views[2]  = {stm, !stm};
+
+  const __m512i zero = _mm512_setzero_si512();
+  const __m512i cap  = _mm512_set1_epi16(FT_MAX);
 
   const __m128i increment = _mm_set1_epi16(8);
   __m128i base            = _mm_setzero_si128();
@@ -88,24 +103,25 @@ INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, con
 
   for (int v = 0; v < 2; v++) {
     const __m512i* in = (__m512i*) acc->values[views[v]];
-    __m512i* out      = (__m512i*) &outputs[N_HIDDEN * v];
+    __m512i* out      = (__m512i*) &outputs[(N_HIDDEN / 2) * v];
 
-    // packus saturates int16 into unsigned bytes, which is the CReLU: it clamps
-    // below at 0 and above at 255 in one instruction, with no shift to undo.
-    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      const __m512i o0 = _mm512_packus_epi16(in[2 * i + 0], in[2 * i + 1]);
-      const __m512i o1 = _mm512_packus_epi16(in[2 * i + 2], in[2 * i + 3]);
+    for (size_t i = 0; i < HALF; i += 2) {
+      const __m512i a0 = _mm512_min_epi16(_mm512_max_epi16(in[i + 0], zero), cap);
+      const __m512i b0 = _mm512_min_epi16(in[i + 0 + HALF], cap);
+      const __m512i a1 = _mm512_min_epi16(_mm512_max_epi16(in[i + 1], zero), cap);
+      const __m512i b1 = _mm512_min_epi16(in[i + 1 + HALF], cap);
 
-      out[i]     = o0;
-      out[i + 1] = o1;
+      const __m512i p0 = _mm512_mulhi_epi16(_mm512_slli_epi16(a0, 16 - FT_SHIFT), b0);
+      const __m512i p1 = _mm512_mulhi_epi16(_mm512_slli_epi16(a1, 16 - FT_SHIFT), b1);
+
+      const __m512i o0 = _mm512_packus_epi16(p0, p1);
+
+      out[i / 2] = o0;
 
       const uint32_t m0 = _mm512_test_epi32_mask(o0, o0);
-      const uint32_t m1 = _mm512_test_epi32_mask(o1, o1);
 
       count = StoreNNZ(nnz, count, &base, increment, m0 & 0xFF);
       count = StoreNNZ(nnz, count, &base, increment, m0 >> 8);
-      count = StoreNNZ(nnz, count, &base, increment, m1 & 0xFF);
-      count = StoreNNZ(nnz, count, &base, increment, m1 >> 8);
     }
   }
 
@@ -119,10 +135,13 @@ INLINE uint32_t NonZeroMask256(__m256i v) {
   return (~(uint32_t) _mm256_movemask_ps(_mm256_castsi256_ps(eq))) & 0xFF;
 }
 
-INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
-  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const size_t HALF   = N_HIDDEN / 2 / WIDTH;
   const int views[2]  = {stm, !stm};
+
+  const __m256i zero = _mm256_setzero_si256();
+  const __m256i cap  = _mm256_set1_epi16(FT_MAX);
 
   const __m128i increment = _mm_set1_epi16(8);
   __m128i base            = _mm_setzero_si128();
@@ -130,19 +149,22 @@ INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, con
 
   for (int v = 0; v < 2; v++) {
     const __m256i* in = (__m256i*) acc->values[views[v]];
-    __m256i* out      = (__m256i*) &outputs[N_HIDDEN * v];
+    __m256i* out      = (__m256i*) &outputs[(N_HIDDEN / 2) * v];
 
-    // packus saturates int16 into unsigned bytes, which is the CReLU: it clamps
-    // below at 0 and above at 255 in one instruction, with no shift to undo.
-    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      const __m256i o0 = _mm256_packus_epi16(in[2 * i + 0], in[2 * i + 1]);
-      const __m256i o1 = _mm256_packus_epi16(in[2 * i + 2], in[2 * i + 3]);
+    for (size_t i = 0; i < HALF; i += 2) {
+      const __m256i a0 = _mm256_min_epi16(_mm256_max_epi16(in[i + 0], zero), cap);
+      const __m256i b0 = _mm256_min_epi16(in[i + 0 + HALF], cap);
+      const __m256i a1 = _mm256_min_epi16(_mm256_max_epi16(in[i + 1], zero), cap);
+      const __m256i b1 = _mm256_min_epi16(in[i + 1 + HALF], cap);
 
-      out[i]     = o0;
-      out[i + 1] = o1;
+      const __m256i p0 = _mm256_mulhi_epi16(_mm256_slli_epi16(a0, 16 - FT_SHIFT), b0);
+      const __m256i p1 = _mm256_mulhi_epi16(_mm256_slli_epi16(a1, 16 - FT_SHIFT), b1);
+
+      const __m256i o0 = _mm256_packus_epi16(p0, p1);
+
+      out[i / 2] = o0;
 
       count = StoreNNZ(nnz, count, &base, increment, NonZeroMask256(o0));
-      count = StoreNNZ(nnz, count, &base, increment, NonZeroMask256(o1));
     }
   }
 
@@ -156,10 +178,20 @@ INLINE uint32_t NonZeroMask128(__m128i v) {
   return (~(uint32_t) _mm_movemask_ps(_mm_castsi128_ps(eq))) & 0xF;
 }
 
-INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE __m128i PairwiseProduct128(__m128i a, __m128i b, __m128i zero, __m128i cap) {
+  const __m128i lo = _mm_min_epi16(_mm_max_epi16(a, zero), cap);
+  const __m128i hi = _mm_min_epi16(b, cap);
+
+  return _mm_mulhi_epi16(_mm_slli_epi16(lo, 16 - FT_SHIFT), hi);
+}
+
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
-  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const size_t HALF   = N_HIDDEN / 2 / WIDTH;
   const int views[2]  = {stm, !stm};
+
+  const __m128i zero = _mm_setzero_si128();
+  const __m128i cap  = _mm_set1_epi16(FT_MAX);
 
   const __m128i increment = _mm_set1_epi16(8);
   __m128i base            = _mm_setzero_si128();
@@ -167,16 +199,21 @@ INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, con
 
   for (int v = 0; v < 2; v++) {
     const __m128i* in = (__m128i*) acc->values[views[v]];
-    __m128i* out      = (__m128i*) &outputs[N_HIDDEN * v];
+    __m128i* out      = (__m128i*) &outputs[(N_HIDDEN / 2) * v];
 
-    // packus saturates int16 into unsigned bytes, which is the CReLU: it clamps
-    // below at 0 and above at 255 in one instruction, with no shift to undo.
-    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      const __m128i o0 = _mm_packus_epi16(in[2 * i + 0], in[2 * i + 1]);
-      const __m128i o1 = _mm_packus_epi16(in[2 * i + 2], in[2 * i + 3]);
+    // Four accumulator vectors a time, because StoreNNZ wants a byte of mask and
+    // one 16-byte output vector only yields four int32 lanes.
+    for (size_t i = 0; i < HALF; i += 4) {
+      const __m128i p0 = PairwiseProduct128(in[i + 0], in[i + 0 + HALF], zero, cap);
+      const __m128i p1 = PairwiseProduct128(in[i + 1], in[i + 1 + HALF], zero, cap);
+      const __m128i p2 = PairwiseProduct128(in[i + 2], in[i + 2 + HALF], zero, cap);
+      const __m128i p3 = PairwiseProduct128(in[i + 3], in[i + 3 + HALF], zero, cap);
 
-      out[i]     = o0;
-      out[i + 1] = o1;
+      const __m128i o0 = _mm_packus_epi16(p0, p1);
+      const __m128i o1 = _mm_packus_epi16(p2, p3);
+
+      out[i / 2 + 0] = o0;
+      out[i / 2 + 1] = o1;
 
       const uint32_t m0 = NonZeroMask128(o0);
       const uint32_t m1 = NonZeroMask128(o1);
@@ -189,10 +226,27 @@ INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, con
 }
 #elif defined(__ARM_NEON__)
 #include <arm_neon.h>
-INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+
+// NEON has no mulhi, so the product is widened to int32 and shifted back down.
+// vshrn_n_s32 is an arithmetic shift, so a negative product floors exactly as
+// mulhi does on x86, and vqmovun_s16 below clamps it to zero.
+INLINE int16x8_t PairwiseProductNeon(int16x8_t a, int16x8_t b, int16x8_t zero, int16x8_t cap) {
+  const int16x8_t lo = vminq_s16(vmaxq_s16(a, zero), cap);
+  const int16x8_t hi = vminq_s16(b, cap);
+
+  const int32x4_t p0 = vmull_s16(vget_low_s16(lo), vget_low_s16(hi));
+  const int32x4_t p1 = vmull_high_s16(lo, hi);
+
+  return vcombine_s16(vshrn_n_s32(p0, FT_SHIFT), vshrn_n_s32(p1, FT_SHIFT));
+}
+
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const size_t WIDTH  = 8;
-  const size_t CHUNKS = N_HIDDEN / WIDTH;
+  const size_t HALF   = N_HIDDEN / 2 / WIDTH;
   const int views[2]  = {stm, !stm};
+
+  const int16x8_t zero = vdupq_n_s16(0);
+  const int16x8_t cap  = vdupq_n_s16(FT_MAX);
 
   const uint32_t lanes[4]    = {1, 2, 4, 8};
   const uint16x8_t increment = vdupq_n_u16(8);
@@ -201,16 +255,19 @@ INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, con
 
   for (int v = 0; v < 2; v++) {
     const int16x8_t* in = (int16x8_t*) acc->values[views[v]];
-    uint8x16_t* out     = (uint8x16_t*) &outputs[N_HIDDEN * v];
+    uint8x16_t* out     = (uint8x16_t*) &outputs[(N_HIDDEN / 2) * v];
 
-    // vqmovun saturates int16 into unsigned bytes, which is the CReLU: it clamps
-    // below at 0 and above at 255 in one instruction, with no shift to undo.
-    for (size_t i = 0; i < CHUNKS / 2; i += 2) {
-      const uint8x16_t o0 = vcombine_u8(vqmovun_s16(in[2 * i + 0]), vqmovun_s16(in[2 * i + 1]));
-      const uint8x16_t o1 = vcombine_u8(vqmovun_s16(in[2 * i + 2]), vqmovun_s16(in[2 * i + 3]));
+    for (size_t i = 0; i < HALF; i += 4) {
+      const int16x8_t p0 = PairwiseProductNeon(in[i + 0], in[i + 0 + HALF], zero, cap);
+      const int16x8_t p1 = PairwiseProductNeon(in[i + 1], in[i + 1 + HALF], zero, cap);
+      const int16x8_t p2 = PairwiseProductNeon(in[i + 2], in[i + 2 + HALF], zero, cap);
+      const int16x8_t p3 = PairwiseProductNeon(in[i + 3], in[i + 3 + HALF], zero, cap);
 
-      out[i]     = o0;
-      out[i + 1] = o1;
+      const uint8x16_t o0 = vcombine_u8(vqmovun_s16(p0), vqmovun_s16(p1));
+      const uint8x16_t o1 = vcombine_u8(vqmovun_s16(p2), vqmovun_s16(p3));
+
+      out[i / 2 + 0] = o0;
+      out[i / 2 + 1] = o1;
 
       const uint32x4_t c0 = vreinterpretq_u32_u8(o0);
       const uint32x4_t c1 = vreinterpretq_u32_u8(o1);
@@ -229,17 +286,21 @@ INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, con
   return count;
 }
 #else
-INLINE size_t InputCReLU8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
 
   (void) nnz; // the scalar L1 affine walks every input
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
-    uint8_t* out    = &outputs[N_HIDDEN * v];
+    uint8_t* out    = &outputs[(N_HIDDEN / 2) * v];
 
-    for (size_t i = 0; i < N_HIDDEN; i++)
-      out[i] = Min(FT_MAX, Max(0, in[i]));
+    for (size_t i = 0; i < N_HIDDEN / 2; i++) {
+      const int lo = Min(FT_MAX, Max(0, in[i]));
+      const int hi = Min(FT_MAX, (int) in[i + N_HIDDEN / 2]);
+
+      out[i] = Min(FT_MAX, Max(0, (lo * hi) >> FT_SHIFT));
+    }
   }
 
   return 0;
@@ -722,7 +783,7 @@ INLINE int PropagateView(Accumulator* accumulator, const int stm) {
   int32_t dest[N_L3] ALIGN; // assumes N_L3 > N_L2
   int16_t act[N_L3] ALIGN;
 
-  const size_t count = InputCReLU8(x0, nnz, accumulator, stm);
+  const size_t count = InputPairwise8(x0, nnz, accumulator, stm);
   L1Affine(dest, x0, nnz, count);
   ReLU16(act, dest, N_L2);
   L2Affine(dest, act);
