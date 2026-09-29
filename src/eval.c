@@ -52,7 +52,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  const int bucket = OutputBucket(board);
+  int score        = board->stm == WHITE ? Propagate(acc, WHITE, bucket) : Propagate(acc, BLACK, bucket);
 
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
@@ -68,7 +69,7 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base   = Propagate(board->accumulators, board->stm);
+  int base   = Propagate(board->accumulators, board->stm, OutputBucket(board));
   base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
@@ -96,7 +97,7 @@ void EvaluateTrace(Board* board) {
         PopBit(OccBB(BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
-        int new = Propagate(board->accumulators, board->stm);
+        int new = Propagate(board->accumulators, board->stm, OutputBucket(board));
         new     = board->stm == WHITE ? new : -new;
         SetBit(OccBB(BOTH), sq);
 
