@@ -53,7 +53,7 @@ INCBIN(Embed, EVALFILE);
 //
 // Everything after L1 is float: L1's int32 sums are dequantised by L1_NORM and
 // doubled into clamp(x, 0, 1) beside min(x^2, 1), a float L2 applies SCReLU, and
-// L3 reads L2's output beside L1's activation. L1, L2 and L3 each hold one block
+// L3 reads L2's output alone. L1, L2 and L3 each hold one block
 // of weights per material-count output bucket, chosen by OutputBucket.
 //
 // The float layers run in one fixed order, one multiply and then one add, and
@@ -68,7 +68,7 @@ INCBIN(Embed, EVALFILE);
 #define L1_NORM ((float) (1 << FT_SHIFT) / (float) (FT_MAX * FT_MAX * 64))
 
 #define N_L1_ACT (2 * N_L2)        // clamp(x, 0, 1) beside min(x^2, 1)
-#define N_L3_IN  (N_L3 + N_L1_ACT) // L2's output beside L1's activation
+#define N_L3_IN  N_L3              // L2's output alone
 #define L3_LANES 8                 // partial sums L3 keeps before its fixed tree
 
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
@@ -591,19 +591,14 @@ INLINE void L2Affine(float* restrict dest, const float* restrict src, const floa
   }
 }
 
-// Lane k sums inputs k, k + 8, k + 16, ... of L2's output followed by L1's; the
-// eight lanes then fold (k + 4), (k + 2), (k + 1) before the bias is added.
-INLINE float L3Transform(const float* restrict l2, const float* restrict l1, const float* restrict weights,
-                         const float bias) {
+// Lane k sums inputs k, k + 8, k + 16, ... of L2's output; the eight lanes then
+// fold (k + 4), (k + 2), (k + 1) before the bias is added.
+INLINE float L3Transform(const float* restrict l2, const float* restrict weights, const float bias) {
   float lanes[L3_LANES] = {0};
 
-  for (size_t g = 0; g < N_L3; g += L3_LANES)
+  for (size_t g = 0; g < N_L3_IN; g += L3_LANES)
     for (size_t k = 0; k < L3_LANES; k++)
       lanes[k] = lanes[k] + l2[g + k] * weights[g + k];
-
-  for (size_t g = 0; g < N_L1_ACT; g += L3_LANES)
-    for (size_t k = 0; k < L3_LANES; k++)
-      lanes[k] = lanes[k] + l1[g + k] * weights[N_L3 + g + k];
 
   float s4[4], s2[2];
   for (size_t k = 0; k < 4; k++)
@@ -627,7 +622,7 @@ INLINE int PropagateView(Accumulator* accumulator, const int stm, const int buck
   L1Activate(l1, sums, L1_BIASES[bucket]);
   L2Affine(l2, l1, L2_WEIGHTS[bucket], L2_BIASES[bucket]);
 
-  return (int) (L3Transform(l2, l1, L3_WEIGHTS[bucket], L3_BIASES[bucket]) * EVAL_SCALE);
+  return (int) (L3Transform(l2, L3_WEIGHTS[bucket], L3_BIASES[bucket]) * EVAL_SCALE);
 }
 
 // bullet's MaterialCount<8>: (pieces - 2) / 4, kings counted, so bucket 0 is two
