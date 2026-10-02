@@ -52,7 +52,7 @@ INCBIN(Embed, EVALFILE);
 // could.
 //
 // Everything after L1 is float: L1's int32 sums are dequantised by L1_NORM and
-// doubled into clamp(x, 0, 1) beside min(x^2, 1), a float L2 applies SCReLU, and
+// clipped by clamp(x, 0, 1), a float L2 applies SCReLU, and
 // L3 reads L2's output alone. L1, L2 and L3 each hold one block
 // of weights per material-count output bucket, chosen by OutputBucket.
 //
@@ -67,7 +67,7 @@ INCBIN(Embed, EVALFILE);
 // L1's inputs sit at 255 * 255 / 512 and its weights at 64.
 #define L1_NORM ((float) (1 << FT_SHIFT) / (float) (FT_MAX * FT_MAX * 64))
 
-#define N_L1_ACT (2 * N_L2)        // clamp(x, 0, 1) beside min(x^2, 1)
+#define N_L1_ACT N_L2              // clamp(x, 0, 1)
 #define N_L3_IN  N_L3              // L2's output alone
 #define L3_LANES 8                 // partial sums L3 keeps before its fixed tree
 
@@ -564,14 +564,12 @@ INLINE float Clamp01(const float x) {
   return x < 0.0f ? 0.0f : x > 1.0f ? 1.0f : x;
 }
 
-// L1's int32 sums back to floats, and the dual activation.
+// L1's int32 sums back to floats, clipped.
 INLINE void L1Activate(float* restrict dest, const int32_t* restrict src, const float* restrict biases) {
   for (size_t i = 0; i < N_L2; i++) {
-    const float x  = (float) src[i] * L1_NORM + biases[i];
-    const float sq = x * x;
+    const float x = (float) src[i] * L1_NORM + biases[i];
 
-    dest[i]        = Clamp01(x);
-    dest[i + N_L2] = sq < 1.0f ? sq : 1.0f;
+    dest[i] = Clamp01(x);
   }
 }
 
