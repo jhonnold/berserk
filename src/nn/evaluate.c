@@ -69,6 +69,8 @@ uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 #ifdef __SSE4_1__
 #include <immintrin.h>
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+#include <arm_neon.h>
 #endif
 
 #if defined(__SSE4_1__) && !(defined(__AVX512F__) && defined(__AVX512BW__))
@@ -226,29 +228,29 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   return count;
 }
-#elif defined(__ARM_NEON__)
-#include <arm_neon.h>
-INLINE int16x8_t PairwiseProductNeon(int16x8_t a, int16x8_t b, int16x8_t zero, int16x8_t cap) {
-  const int16x8_t lo = vminq_s16(vmaxq_s16(a, zero), cap);
-  const int16x8_t hi = vminq_s16(b, cap);
-
-  const int32x4_t p0 = vmull_s16(vget_low_s16(lo), vget_low_s16(hi));
-  const int32x4_t p1 = vmull_high_s16(lo, hi);
-
-  return vcombine_s16(vshrn_n_s32(p0, FT_SHIFT), vshrn_n_s32(p1, FT_SHIFT));
-}
-
-INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
-  const size_t WIDTH = 8;
-  const size_t HALF  = N_HIDDEN / 2 / WIDTH;
-  const int views[2] = {stm, !stm};
-
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+INLINE uint8x16_t u8x16_pairwise_s16(int16x8_t a0, int16x8_t a1, int16x8_t b0, int16x8_t b1) {
   const int16x8_t zero = vdupq_n_s16(0);
   const int16x8_t cap  = vdupq_n_s16(FT_MAX);
 
-  const uint32_t lanes[4]    = {1, 2, 4, 8};
+  // vqdmulh doubles the product, so shift one less than the x86 mulhi path
+  a0 = vshlq_n_s16(vminq_s16(vmaxq_s16(a0, zero), cap), 15 - FT_SHIFT);
+  a1 = vshlq_n_s16(vminq_s16(vmaxq_s16(a1, zero), cap), 15 - FT_SHIFT);
+  b0 = vminq_s16(b0, cap);
+  b1 = vminq_s16(b1, cap);
+
+  return vcombine_u8(vqmovun_s16(vqdmulhq_s16(a0, b0)), vqmovun_s16(vqdmulhq_s16(a1, b1)));
+}
+
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+  const size_t WIDTH = sizeof(int16x8_t) / sizeof(acc_t);
+  const size_t HALF  = N_HIDDEN / 2 / WIDTH;
+  const int views[2] = {stm, !stm};
+
+  const uint16_t lanes[8]    = {1, 2, 4, 8, 16, 32, 64, 128};
+  const uint16x8_t bits      = vld1q_u16(lanes);
   const uint16x8_t increment = vdupq_n_u16(8);
-  uint16x8_t base            = {0};
+  uint16x8_t base            = vdupq_n_u16(0);
   size_t count               = 0;
 
   for (int v = 0; v < 2; v++) {
@@ -256,25 +258,18 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
     uint8x16_t* out     = (uint8x16_t*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const int16x8_t p0 = PairwiseProductNeon(in[i + 0], in[i + 0 + HALF], zero, cap);
-      const int16x8_t p1 = PairwiseProductNeon(in[i + 1], in[i + 1 + HALF], zero, cap);
-      const int16x8_t p2 = PairwiseProductNeon(in[i + 2], in[i + 2 + HALF], zero, cap);
-      const int16x8_t p3 = PairwiseProductNeon(in[i + 3], in[i + 3 + HALF], zero, cap);
-
-      const uint8x16_t o0 = vcombine_u8(vqmovun_s16(p0), vqmovun_s16(p1));
-      const uint8x16_t o1 = vcombine_u8(vqmovun_s16(p2), vqmovun_s16(p3));
+      const uint8x16_t o0 = u8x16_pairwise_s16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const uint8x16_t o1 = u8x16_pairwise_s16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
 
       const uint32x4_t c0 = vreinterpretq_u32_u8(o0);
       const uint32x4_t c1 = vreinterpretq_u32_u8(o1);
+      const uint16x8_t nz = vcombine_u16(vmovn_u32(vtstq_u32(c0, c0)), vmovn_u32(vtstq_u32(c1, c1)));
 
-      const uint32_t m0 = vaddvq_u32(vandq_u32(vtstq_u32(c0, c0), vld1q_u32(lanes)));
-      const uint32_t m1 = vaddvq_u32(vandq_u32(vtstq_u32(c1, c1), vld1q_u32(lanes)));
-
-      const uint32_t lookup    = m0 | (m1 << 4);
-      const uint16x8_t offsets = vld1q_u16((uint16_t*) &LOOKUP_INDICES[lookup]);
+      const uint32_t lookup    = vaddvq_u16(vandq_u16(nz, bits));
+      const uint16x8_t offsets = vld1q_u16(LOOKUP_INDICES[lookup]);
       vst1q_u16(nnz + count, vaddq_u16(base, offsets));
       count += BitCount(lookup);
       base = vaddq_u16(base, increment);
@@ -506,48 +501,72 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
   for (i = 0; i < OUT_CC; i++)
     out[i] = regs[i];
 }
-#elif defined(__ARM_NEON__)
-INLINE void int8x16_add_dpbusd(int32x4_t* acc, uint8x16_t a, int8x16_t b) {
-  const int16x8_t p0 = vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(a))), vmovl_s8(vget_low_s8(b)));
-  const int16x8_t p1 = vmulq_s16(vreinterpretq_s16_u16(vmovl_high_u8(a)), vmovl_high_s8(b));
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+// Every uint8 activation is capped at 127, so the signed dot product is exact.
+INLINE void int8x16_add_dpbusd(int32x4_t* acc, int8x16_t a, int8x16_t b) {
+#if defined(__ARM_FEATURE_DOTPROD)
+  *acc = vdotq_s32(*acc, a, b);
+#else
+  const int16x8_t p0 = vmull_s8(vget_low_s8(a), vget_low_s8(b));
+  const int16x8_t p1 = vmull_high_s8(a, b);
 
-  *acc = vaddq_s32(*acc, vpaddq_s32(vpaddlq_s16(p0), vpaddlq_s16(p1)));
+  *acc = vpadalq_s16(*acc, vpaddq_s16(p0, p1));
+#endif
 }
 
-INLINE void int8x16_add_dpbusd_x2(int32x4_t* acc, uint8x16_t a0, int8x16_t b0, uint8x16_t a1, int8x16_t b1) {
-  int8x16_add_dpbusd(acc, a0, b0);
-  int8x16_add_dpbusd(acc, a1, b1);
+INLINE void int8x16_add_dpbusd_x2(int32x4_t* acc, int8x16_t a0, int8x16_t b0, int8x16_t a1, int8x16_t b1) {
+#if defined(__ARM_FEATURE_DOTPROD)
+  *acc = vdotq_s32(vdotq_s32(*acc, a0, b0), a1, b1);
+#else
+  const int16x8_t p0 = vmull_s8(vget_low_s8(a0), vget_low_s8(b0));
+  const int16x8_t p1 = vmull_high_s8(a0, b0);
+  const int16x8_t p2 = vmull_s8(vget_low_s8(a1), vget_low_s8(b1));
+  const int16x8_t p3 = vmull_high_s8(a1, b1);
+
+  *acc = vpadalq_s16(vpadalq_s16(*acc, vpaddq_s16(p0, p1)), vpaddq_s16(p2, p3));
+#endif
 }
 
-INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights) {
-  const size_t OUT_WIDTH = 4;
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
+                     const int32_t* biases) {
+  const size_t OUT_WIDTH = sizeof(int32x4_t) / sizeof(int32_t);
   const size_t OUT_CC    = N_L2 / OUT_WIDTH;
 
   const int32_t* in32 = (int32_t*) src;
   int32x4_t* out      = (int32x4_t*) dest;
 
-  int32x4_t regs[OUT_CC];
-  for (size_t i = 0; i < OUT_CC; i++)
-    regs[i] = vdupq_n_s32(0);
+  int32x4_t regs[OUT_CC], alts[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++) {
+    regs[i] = vld1q_s32(biases + i * OUT_WIDTH);
+    alts[i] = vdupq_n_s32(0);
+  }
 
   size_t i = 0;
-  for (; i + 1 < count; i += 2) {
+  for (; i + 3 < count; i += 4) {
     const uint16_t i0 = nnz[i + 0];
     const uint16_t i1 = nnz[i + 1];
+    const uint16_t i2 = nnz[i + 2];
+    const uint16_t i3 = nnz[i + 3];
 
-    const uint8x16_t f0 = vreinterpretq_u8_u32(vdupq_n_u32(in32[i0]));
-    const uint8x16_t f1 = vreinterpretq_u8_u32(vdupq_n_u32(in32[i1]));
+    const int8x16_t f0 = vreinterpretq_s8_s32(vld1q_dup_s32(&in32[i0]));
+    const int8x16_t f1 = vreinterpretq_s8_s32(vld1q_dup_s32(&in32[i1]));
+    const int8x16_t f2 = vreinterpretq_s8_s32(vld1q_dup_s32(&in32[i2]));
+    const int8x16_t f3 = vreinterpretq_s8_s32(vld1q_dup_s32(&in32[i3]));
 
     const int8x16_t* c0 = (int8x16_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
     const int8x16_t* c1 = (int8x16_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const int8x16_t* c2 = (int8x16_t*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
+    const int8x16_t* c3 = (int8x16_t*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
 
-    for (size_t j = 0; j < OUT_CC; j++)
+    for (size_t j = 0; j < OUT_CC; j++) {
       int8x16_add_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
+      int8x16_add_dpbusd_x2(alts + j, f2, c2[j], f3, c3[j]);
+    }
   }
 
-  if (i < count) {
+  for (; i < count; i++) {
     const uint16_t i0   = nnz[i];
-    const uint8x16_t f0 = vreinterpretq_u8_u32(vdupq_n_u32(in32[i0]));
+    const int8x16_t f0  = vreinterpretq_s8_s32(vld1q_dup_s32(&in32[i0]));
     const int8x16_t* c0 = (int8x16_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++)
@@ -555,7 +574,7 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = regs[i];
+    out[i] = vaddq_s32(regs[i], alts[i]);
 }
 #else
 INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
@@ -592,6 +611,23 @@ INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
     const __m128i s0 = _mm_srli_epi16(_mm_mulhi_epi16(a0, a0), 3);
     const __m128i s1 = _mm_srli_epi16(_mm_mulhi_epi16(a1, a1), 3);
     outS[i]          = _mm_packs_epi16(s0, s1);
+  }
+}
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
+  const int32x4_t* in = (int32x4_t*) src;
+  int8x16_t* outC     = (int8x16_t*) clamped;
+  int8x16_t* outS     = (int8x16_t*) squared;
+
+  for (size_t i = 0; i < N_L2 / 16; i++) {
+    const int16x8_t a0 = vcombine_s16(vqmovn_s32(in[4 * i + 0]), vqmovn_s32(in[4 * i + 1]));
+    const int16x8_t a1 = vcombine_s16(vqmovn_s32(in[4 * i + 2]), vqmovn_s32(in[4 * i + 3]));
+
+    const int8x16_t c = vcombine_s8(vqshrn_n_s16(a0, 6), vqshrn_n_s16(a1, 6));
+    outC[i]           = vmaxq_s8(c, vdupq_n_s8(0));
+
+    // vqdmulh is (2 * a * a) >> 16, one more shift recovers the x86 mulhi >> 3
+    outS[i] = vcombine_s8(vqshrn_n_s16(vqdmulhq_s16(a0, a0), 4), vqshrn_n_s16(vqdmulhq_s16(a1, a1), 4));
   }
 }
 #else
@@ -695,6 +731,32 @@ INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const i
   for (size_t i = 0; i < OUT_CC; i++)
     out[i] = regs[i];
 }
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
+  const size_t OUT_WIDTH = sizeof(int32x4_t) / sizeof(int32_t);
+  const size_t OUT_CC    = N_L3 / OUT_WIDTH;
+
+  const int32_t* in32 = (int32_t*) src;
+  const int8x16_t* w  = (int8x16_t*) weights;
+  int32x4_t* out      = (int32x4_t*) dest;
+
+  int32x4_t regs[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++)
+    regs[i] = vld1q_s32(biases + i * OUT_WIDTH);
+
+  for (size_t j = 0; j < N_L2_CHUNKS; j += 2) {
+    const int8x16_t f0  = vreinterpretq_s8_s32(vld1q_dup_s32(&in32[j + 0]));
+    const int8x16_t f1  = vreinterpretq_s8_s32(vld1q_dup_s32(&in32[j + 1]));
+    const int8x16_t* c0 = w + (j + 0) * OUT_CC;
+    const int8x16_t* c1 = w + (j + 1) * OUT_CC;
+
+    for (size_t i = 0; i < OUT_CC; i++)
+      int8x16_add_dpbusd_x2(regs + i, f0, c0[i], f1, c1[i]);
+  }
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    out[i] = regs[i];
+}
 #else
 INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
   for (size_t o = 0; o < N_L3; o++)
@@ -720,6 +782,20 @@ INLINE void L2Activate(uint8_t* dest, int32_t* src) {
     const __m128i s0 = _mm_srli_epi16(_mm_mulhi_epi16(a0, a0), 3);
     const __m128i s1 = _mm_srli_epi16(_mm_mulhi_epi16(a1, a1), 3);
     out[i]           = _mm_packs_epi16(s0, s1);
+  }
+}
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+INLINE void L2Activate(uint8_t* dest, int32_t* src) {
+  const int32x4_t* in = (int32x4_t*) src;
+  int8x16_t* out      = (int8x16_t*) dest;
+
+  for (size_t i = 0; i < N_L3 / 16; i++) {
+    int16x8_t a0 = vcombine_s16(vqmovn_s32(in[4 * i + 0]), vqmovn_s32(in[4 * i + 1]));
+    int16x8_t a1 = vcombine_s16(vqmovn_s32(in[4 * i + 2]), vqmovn_s32(in[4 * i + 3]));
+    a0           = vmaxq_s16(a0, vdupq_n_s16(0));
+    a1           = vmaxq_s16(a1, vdupq_n_s16(0));
+
+    out[i] = vcombine_s8(vqshrn_n_s16(vqdmulhq_s16(a0, a0), 4), vqshrn_n_s16(vqdmulhq_s16(a1, a1), 4));
   }
 }
 #else
@@ -771,6 +847,17 @@ INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
   m128_add_dpbusd_epi32x2(&a0, in[2], w[2], in[3], w[3]);
 
   return m128_reduce_add_epi32(a0);
+}
+#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
+INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
+  const int8x16_t* in = (int8x16_t*) src;
+  const int8x16_t* w  = (int8x16_t*) weights;
+
+  int32x4_t a0 = vdupq_n_s32(0);
+  int8x16_add_dpbusd_x2(&a0, in[0], w[0], in[1], w[1]);
+  int8x16_add_dpbusd_x2(&a0, in[2], w[2], in[3], w[3]);
+
+  return vaddvq_s32(a0);
 }
 #else
 INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
@@ -826,7 +913,7 @@ const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +           
                             sizeof(float) * N_OUTPUT_BUCKETS * N_L3_IN +         // L3 weights
                             sizeof(float) * N_OUTPUT_BUCKETS;                    // L3 biases
 
-#if defined(__SSE4_1__) || defined(__ARM_NEON__)
+#if defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE int WeightIdxScrambled(int idx) {
   return ((idx / SPARSE_CHUNK_SIZE) % (N_L1 / SPARSE_CHUNK_SIZE) * N_L2 * SPARSE_CHUNK_SIZE) +
          (idx / N_L1 * SPARSE_CHUNK_SIZE) + (idx % SPARSE_CHUNK_SIZE);
@@ -879,7 +966,7 @@ INLINE void CopyData(const unsigned char* in) {
     memcpy(l1, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
     offset += N_L1 * N_L2 * sizeof(int8_t);
 
-#if defined(__SSE4_1__) || defined(__ARM_NEON__)
+#if defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
     // Shuffle the L1 weights for sparse matmul
     for (int i = 0; i < N_L1 * N_L2; i++)
       L1_WEIGHTS[b][WeightIdxScrambled(i)] = l1[i];
