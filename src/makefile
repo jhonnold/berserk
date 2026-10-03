@@ -14,9 +14,7 @@ STD    = -std=gnu11
 LIBS   = -pthread -lm
 WARN   = -Wall -Wextra -Wshadow
 
-# -ffp-contract=off: the network's float layers must not be fused into FMAs, or
-# their result would depend on the ISA. See nn/evaluate.c.
-FLAGS   = $(STD) $(WARN) -g -O3 -flto -ffp-contract=off $(PGOFLAGS) $(DEFS)
+FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
 M64     = -m64 -mpopcnt
 MSSE41  = $(M64) -msse -msse2 -mssse3 -msse4.1
 MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
