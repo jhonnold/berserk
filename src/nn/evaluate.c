@@ -39,7 +39,7 @@ INCBIN(Embed, EVALFILE);
 #define EVAL_SCALE 160
 
 #define N_L1_ACT    (2 * N_L2)
-#define N_L3_IN     (N_L3 + N_L1_ACT)
+#define N_L3_IN     N_L3
 #define N_L2_CHUNKS (N_L1_ACT / 4)
 
 #define HEAD_ONE (127 * 64)
@@ -798,8 +798,11 @@ INLINE void L2Activate(uint8_t* dest, int32_t* src) {
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
+  const __m512i in = _mm512_zextsi256_si512(*(__m256i*) src);
+  const __m512i w  = _mm512_zextsi256_si512(*(__m256i*) weights);
+
   __m512i a0 = _mm512_setzero_si512();
-  m512_add_dpbusd_epi32(&a0, *(__m512i*) src, *(__m512i*) weights);
+  m512_add_dpbusd_epi32(&a0, in, w);
 
   return _mm512_reduce_add_epi32(a0);
 }
@@ -817,7 +820,7 @@ INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
   const __m256i* w  = (__m256i*) weights;
 
   __m256i a0 = _mm256_setzero_si256();
-  m256_add_dpbusd_epi32x2(&a0, in[0], w[0], in[1], w[1]);
+  m256_add_dpbusd_epi32(&a0, in[0], w[0]);
 
   return m256_reduce_add_epi32(a0);
 }
@@ -835,7 +838,6 @@ INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
 
   __m128i a0 = _mm_setzero_si128();
   m128_add_dpbusd_epi32x2(&a0, in[0], w[0], in[1], w[1]);
-  m128_add_dpbusd_epi32x2(&a0, in[2], w[2], in[3], w[3]);
 
   return m128_reduce_add_epi32(a0);
 }
@@ -866,15 +868,16 @@ INLINE int PropagateView(Accumulator* accumulator, const int stm, const int buck
   // The index list is written in whole groups of up to 32, so leave room for the tail.
   uint16_t nnz[N_L1 / SPARSE_CHUNK_SIZE + 32] ALIGN;
   int32_t dest[N_L3] ALIGN;
-  uint8_t act[N_L3_IN] ALIGN;
+  uint8_t act1[N_L1_ACT] ALIGN;
+  uint8_t act2[N_L3] ALIGN;
 
   const size_t count = InputPairwise8(x0, nnz, accumulator, stm);
   L1Affine(dest, x0, nnz, count, L1_WEIGHTS[bucket], L1_BIASES[bucket]);
-  L1Activate(act + N_L3, act + N_L3 + N_L2, dest);
-  L2Affine(dest, act + N_L3, L2_WEIGHTS[bucket], L2_BIASES[bucket]);
-  L2Activate(act, dest);
+  L1Activate(act1, act1 + N_L2, dest);
+  L2Affine(dest, act1, L2_WEIGHTS[bucket], L2_BIASES[bucket]);
+  L2Activate(act2, dest);
 
-  const int32_t out = L3Transform(act, L3_WEIGHTS[bucket]) + L3_BIASES[bucket];
+  const int32_t out = L3Transform(act2, L3_WEIGHTS[bucket]) + L3_BIASES[bucket];
   return (int) ((int64_t) out * EVAL_SCALE / HEAD_ONE);
 }
 
