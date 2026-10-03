@@ -19,6 +19,7 @@ M64     = -m64 -mpopcnt
 MSSE41  = $(M64) -msse -msse2 -mssse3 -msse4.1
 MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
+MVNNI   = $(MAVX512) -mavx512vl -mavx512vnni -mavx512vbmi2
 ARM64   = -arch arm64
 
 XCRUN   =
@@ -62,6 +63,8 @@ else ifeq ($(findstring sse41, $(ARCH)), sse41)
 	CFLAGS = $(FLAGS) $(MSSE41)
 else ifeq ($(findstring avx2, $(ARCH)), avx2)
 	CFLAGS = $(FLAGS) $(MAVX2)
+else ifeq ($(findstring avx512vnni, $(ARCH)), avx512vnni)
+	CFLAGS = $(FLAGS) $(MVNNI)
 else ifeq ($(findstring avx512, $(ARCH)), avx512)
 	CFLAGS = $(FLAGS) $(MAVX512)
 endif

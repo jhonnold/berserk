@@ -35,41 +35,17 @@
 
 INCBIN(Embed, EVALFILE);
 
-// QA = 255: the feature transformer's activation is a uint8 spanning the byte's
-// whole range, and the CReLU clip is the byte itself. Each later stage rescales
-// by its own shift -- they were one shared constant when every stage happened to
-// want 5.
-//
-// The transformer's two halves are then multiplied together pairwise: unit i of
-// the output is `crelu(acc[i]) * crelu(acc[i + N_HIDDEN / 2]) >> FT_SHIFT`, so
-// N_HIDDEN units per perspective become N_HIDDEN / 2 and L1 takes N_HIDDEN
-// inputs, not two.
-//
-// FT_SHIFT is 9 and not 8 because the product has to come back into a byte with
-// room to spare: 255 * 255 >> 9 is 127, and L1Affine emulates `dpbusd` with
-// `maddubs`, which sums two uint8 x int8 products into a *saturating* int16.
-// At 127 that step is 127 * 127 * 2 = 32,258 and cannot saturate; at 255 it
-// could.
-//
-// Everything after L1 is float: L1's int32 sums are dequantised by L1_NORM and
-// doubled into clamp(x, 0, 1) beside min(x^2, 1), a float L2 applies SCReLU, and
-// L3 reads L2's output beside L1's activation. L1, L2 and L3 each hold one block
-// of weights per material-count output bucket, chosen by OutputBucket.
-//
-// The float layers run in one fixed order, one multiply and then one add, and
-// the makefile builds with -ffp-contract=off so no compiler fuses the two. That
-// makes the eval bit-identical on every ISA and to the trainer's `net.rs`, which
-// is what lets the featdump gates demand zero mismatches.
 #define FT_MAX     255
 #define FT_SHIFT   9
-#define EVAL_SCALE 160.0f
+#define EVAL_SCALE 160
 
-// L1's inputs sit at 255 * 255 / 512 and its weights at 64.
-#define L1_NORM ((float) (1 << FT_SHIFT) / (float) (FT_MAX * FT_MAX * 64))
+#define N_L1_ACT    (2 * N_L2)
+#define N_L3_IN     (N_L3 + N_L1_ACT)
+#define N_L2_CHUNKS (N_L1_ACT / 4)
 
-#define N_L1_ACT (2 * N_L2)        // clamp(x, 0, 1) beside min(x^2, 1)
-#define N_L3_IN  (N_L3 + N_L1_ACT) // L2's output beside L1's activation
-#define L3_LANES 8                 // partial sums L3 keeps before its fixed tree
+#define HEAD_ONE     (127 * 64)
+#define HEAD_W_SCALE 64.0f
+#define HEAD_SQR_ONE ((float) HEAD_ONE * (float) HEAD_ONE / (float) (1 << 19))
 
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
@@ -77,24 +53,25 @@ int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 int8_t L1_WEIGHTS[N_OUTPUT_BUCKETS][N_L1 * N_L2] ALIGN;
 float L1_BIASES[N_OUTPUT_BUCKETS][N_L2] ALIGN;
 
-// [bucket][input][output], so L2 runs across its outputs one input at a time.
-float L2_WEIGHTS[N_OUTPUT_BUCKETS][N_L1_ACT * N_L3] ALIGN;
+float L2_WEIGHTS[N_OUTPUT_BUCKETS][N_L3 * N_L1_ACT] ALIGN;
 float L2_BIASES[N_OUTPUT_BUCKETS][N_L3] ALIGN;
 
 float L3_WEIGHTS[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
 float L3_BIASES[N_OUTPUT_BUCKETS];
 
+int32_t L1_BIASES_Q[N_OUTPUT_BUCKETS][N_L2] ALIGN;
+int8_t L2_WEIGHTS_Q[N_OUTPUT_BUCKETS][N_L2_CHUNKS * N_L3 * 4] ALIGN;
+int32_t L2_BIASES_Q[N_OUTPUT_BUCKETS][N_L3] ALIGN;
+int8_t L3_WEIGHTS_Q[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
+int32_t L3_BIASES_Q[N_OUTPUT_BUCKETS];
+
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
-// The sparse-input index list is built in the same pass that produces the
-// activation bytes, instead of streaming all of L1 a second time.
-//
-// The test has to be "this 4-byte chunk is non-zero", not "> 0": a CReLU output
-// byte now reaches 255, so a chunk whose high byte is >= 128 reads as a negative
-// int32 and a signed greater-than would drop a live input.
 #ifdef __SSE4_1__
 #include <immintrin.h>
+#endif
 
+#if defined(__SSE4_1__) && !(defined(__AVX512F__) && defined(__AVX512BW__))
 INLINE size_t StoreNNZ(uint16_t* dest, size_t count, __m128i* base, const __m128i increment, const uint32_t lookup) {
   const __m128i offsets = _mm_loadu_si128((__m128i*) (&LOOKUP_INDICES[lookup]));
   _mm_storeu_si128((__m128i*) (dest + count), _mm_add_epi16(*base, offsets));
@@ -104,61 +81,86 @@ INLINE size_t StoreNNZ(uint16_t* dest, size_t count, __m128i* base, const __m128
 #endif
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
-#include <immintrin.h>
-INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
-  const size_t WIDTH  = sizeof(__m512i) / sizeof(acc_t);
-  const size_t HALF   = N_HIDDEN / 2 / WIDTH;
-  const int views[2]  = {stm, !stm};
-
+INLINE __m512i m512_pairwise_epi16(__m512i a0, __m512i a1, __m512i b0, __m512i b1) {
   const __m512i zero = _mm512_setzero_si512();
   const __m512i cap  = _mm512_set1_epi16(FT_MAX);
 
-  const __m128i increment = _mm_set1_epi16(8);
-  __m128i base            = _mm_setzero_si128();
-  size_t count            = 0;
+  a0 = _mm512_slli_epi16(_mm512_min_epi16(_mm512_max_epi16(a0, zero), cap), 16 - FT_SHIFT);
+  a1 = _mm512_slli_epi16(_mm512_min_epi16(_mm512_max_epi16(a1, zero), cap), 16 - FT_SHIFT);
+  b0 = _mm512_min_epi16(b0, cap);
+  b1 = _mm512_min_epi16(b1, cap);
+
+  return _mm512_packus_epi16(_mm512_mulhi_epi16(a0, b0), _mm512_mulhi_epi16(a1, b1));
+}
+
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+  const size_t WIDTH = sizeof(__m512i) / sizeof(acc_t);
+  const size_t HALF  = N_HIDDEN / 2 / WIDTH;
+  const int views[2] = {stm, !stm};
+
+  const __m512i zero = _mm512_setzero_si512();
+#if defined(__AVX512VBMI2__)
+  const __m512i increment = _mm512_set1_epi16(32);
+  __m512i base            = _mm512_set_epi16(31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, //
+                                             15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+#else
+  const __m512i increment = _mm512_set1_epi32(16);
+  __m512i base            = _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+#endif
+  size_t count = 0;
 
   for (int v = 0; v < 2; v++) {
     const __m512i* in = (__m512i*) acc->values[views[v]];
     __m512i* out      = (__m512i*) &outputs[(N_HIDDEN / 2) * v];
 
-    for (size_t i = 0; i < HALF; i += 2) {
-      const __m512i a0 = _mm512_min_epi16(_mm512_max_epi16(in[i + 0], zero), cap);
-      const __m512i b0 = _mm512_min_epi16(in[i + 0 + HALF], cap);
-      const __m512i a1 = _mm512_min_epi16(_mm512_max_epi16(in[i + 1], zero), cap);
-      const __m512i b1 = _mm512_min_epi16(in[i + 1 + HALF], cap);
+    for (size_t i = 0; i < HALF; i += 4) {
+      const __m512i o0 = m512_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const __m512i o1 = m512_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
-      const __m512i p0 = _mm512_mulhi_epi16(_mm512_slli_epi16(a0, 16 - FT_SHIFT), b0);
-      const __m512i p1 = _mm512_mulhi_epi16(_mm512_slli_epi16(a1, 16 - FT_SHIFT), b1);
+      out[i / 2 + 0] = o0;
+      out[i / 2 + 1] = o1;
 
-      const __m512i o0 = _mm512_packus_epi16(p0, p1);
+      const uint32_t m0 = _mm512_cmpgt_epi32_mask(o0, zero);
+      const uint32_t m1 = _mm512_cmpgt_epi32_mask(o1, zero);
 
-      out[i / 2] = o0;
+#if defined(__AVX512VBMI2__)
+      const uint32_t m = m0 | (m1 << 16);
+      _mm512_storeu_si512((__m512i*) (nnz + count), _mm512_maskz_compress_epi16(m, base));
+      count += BitCount(m);
+      base = _mm512_add_epi16(base, increment);
+#else
+      _mm256_storeu_si256((__m256i*) (nnz + count), _mm512_cvtepi32_epi16(_mm512_maskz_compress_epi32(m0, base)));
+      count += BitCount(m0);
+      base = _mm512_add_epi32(base, increment);
 
-      const uint32_t m0 = _mm512_test_epi32_mask(o0, o0);
-
-      count = StoreNNZ(nnz, count, &base, increment, m0 & 0xFF);
-      count = StoreNNZ(nnz, count, &base, increment, m0 >> 8);
+      _mm256_storeu_si256((__m256i*) (nnz + count), _mm512_cvtepi32_epi16(_mm512_maskz_compress_epi32(m1, base)));
+      count += BitCount(m1);
+      base = _mm512_add_epi32(base, increment);
+#endif
     }
   }
 
   return count;
 }
 #elif defined(__AVX2__)
-#include <immintrin.h>
-
-INLINE uint32_t NonZeroMask256(__m256i v) {
-  const __m256i eq = _mm256_cmpeq_epi32(v, _mm256_setzero_si256());
-  return (~(uint32_t) _mm256_movemask_ps(_mm256_castsi256_ps(eq))) & 0xFF;
-}
-
-INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
-  const size_t WIDTH  = sizeof(__m256i) / sizeof(acc_t);
-  const size_t HALF   = N_HIDDEN / 2 / WIDTH;
-  const int views[2]  = {stm, !stm};
-
+INLINE __m256i m256_pairwise_epi16(__m256i a0, __m256i a1, __m256i b0, __m256i b1) {
   const __m256i zero = _mm256_setzero_si256();
   const __m256i cap  = _mm256_set1_epi16(FT_MAX);
 
+  a0 = _mm256_slli_epi16(_mm256_min_epi16(_mm256_max_epi16(a0, zero), cap), 16 - FT_SHIFT);
+  a1 = _mm256_slli_epi16(_mm256_min_epi16(_mm256_max_epi16(a1, zero), cap), 16 - FT_SHIFT);
+  b0 = _mm256_min_epi16(b0, cap);
+  b1 = _mm256_min_epi16(b1, cap);
+
+  return _mm256_packus_epi16(_mm256_mulhi_epi16(a0, b0), _mm256_mulhi_epi16(a1, b1));
+}
+
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+  const size_t WIDTH = sizeof(__m256i) / sizeof(acc_t);
+  const size_t HALF  = N_HIDDEN / 2 / WIDTH;
+  const int views[2] = {stm, !stm};
+
+  const __m256i zero      = _mm256_setzero_si256();
   const __m128i increment = _mm_set1_epi16(8);
   __m128i base            = _mm_setzero_si128();
   size_t count            = 0;
@@ -167,48 +169,39 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
     const __m256i* in = (__m256i*) acc->values[views[v]];
     __m256i* out      = (__m256i*) &outputs[(N_HIDDEN / 2) * v];
 
-    for (size_t i = 0; i < HALF; i += 2) {
-      const __m256i a0 = _mm256_min_epi16(_mm256_max_epi16(in[i + 0], zero), cap);
-      const __m256i b0 = _mm256_min_epi16(in[i + 0 + HALF], cap);
-      const __m256i a1 = _mm256_min_epi16(_mm256_max_epi16(in[i + 1], zero), cap);
-      const __m256i b1 = _mm256_min_epi16(in[i + 1 + HALF], cap);
+    for (size_t i = 0; i < HALF; i += 4) {
+      const __m256i o0 = m256_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const __m256i o1 = m256_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
-      const __m256i p0 = _mm256_mulhi_epi16(_mm256_slli_epi16(a0, 16 - FT_SHIFT), b0);
-      const __m256i p1 = _mm256_mulhi_epi16(_mm256_slli_epi16(a1, 16 - FT_SHIFT), b1);
+      out[i / 2 + 0] = o0;
+      out[i / 2 + 1] = o1;
 
-      const __m256i o0 = _mm256_packus_epi16(p0, p1);
-
-      out[i / 2] = o0;
-
-      count = StoreNNZ(nnz, count, &base, increment, NonZeroMask256(o0));
+      count = StoreNNZ(nnz, count, &base, increment, _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(o0, zero))));
+      count = StoreNNZ(nnz, count, &base, increment, _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpgt_epi32(o1, zero))));
     }
   }
 
   return count;
 }
 #elif defined(__SSE4_1__)
-#include <immintrin.h>
-
-INLINE uint32_t NonZeroMask128(__m128i v) {
-  const __m128i eq = _mm_cmpeq_epi32(v, _mm_setzero_si128());
-  return (~(uint32_t) _mm_movemask_ps(_mm_castsi128_ps(eq))) & 0xF;
-}
-
-INLINE __m128i PairwiseProduct128(__m128i a, __m128i b, __m128i zero, __m128i cap) {
-  const __m128i lo = _mm_min_epi16(_mm_max_epi16(a, zero), cap);
-  const __m128i hi = _mm_min_epi16(b, cap);
-
-  return _mm_mulhi_epi16(_mm_slli_epi16(lo, 16 - FT_SHIFT), hi);
-}
-
-INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
-  const size_t WIDTH  = sizeof(__m128i) / sizeof(acc_t);
-  const size_t HALF   = N_HIDDEN / 2 / WIDTH;
-  const int views[2]  = {stm, !stm};
-
+INLINE __m128i m128_pairwise_epi16(__m128i a0, __m128i a1, __m128i b0, __m128i b1) {
   const __m128i zero = _mm_setzero_si128();
   const __m128i cap  = _mm_set1_epi16(FT_MAX);
 
+  a0 = _mm_slli_epi16(_mm_min_epi16(_mm_max_epi16(a0, zero), cap), 16 - FT_SHIFT);
+  a1 = _mm_slli_epi16(_mm_min_epi16(_mm_max_epi16(a1, zero), cap), 16 - FT_SHIFT);
+  b0 = _mm_min_epi16(b0, cap);
+  b1 = _mm_min_epi16(b1, cap);
+
+  return _mm_packus_epi16(_mm_mulhi_epi16(a0, b0), _mm_mulhi_epi16(a1, b1));
+}
+
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+  const size_t WIDTH = sizeof(__m128i) / sizeof(acc_t);
+  const size_t HALF  = N_HIDDEN / 2 / WIDTH;
+  const int views[2] = {stm, !stm};
+
+  const __m128i zero      = _mm_setzero_si128();
   const __m128i increment = _mm_set1_epi16(8);
   __m128i base            = _mm_setzero_si128();
   size_t count            = 0;
@@ -217,22 +210,15 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
     const __m128i* in = (__m128i*) acc->values[views[v]];
     __m128i* out      = (__m128i*) &outputs[(N_HIDDEN / 2) * v];
 
-    // Four accumulator vectors a time, because StoreNNZ wants a byte of mask and
-    // one 16-byte output vector only yields four int32 lanes.
     for (size_t i = 0; i < HALF; i += 4) {
-      const __m128i p0 = PairwiseProduct128(in[i + 0], in[i + 0 + HALF], zero, cap);
-      const __m128i p1 = PairwiseProduct128(in[i + 1], in[i + 1 + HALF], zero, cap);
-      const __m128i p2 = PairwiseProduct128(in[i + 2], in[i + 2 + HALF], zero, cap);
-      const __m128i p3 = PairwiseProduct128(in[i + 3], in[i + 3 + HALF], zero, cap);
-
-      const __m128i o0 = _mm_packus_epi16(p0, p1);
-      const __m128i o1 = _mm_packus_epi16(p2, p3);
+      const __m128i o0 = m128_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const __m128i o1 = m128_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
 
-      const uint32_t m0 = NonZeroMask128(o0);
-      const uint32_t m1 = NonZeroMask128(o1);
+      const uint32_t m0 = _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(o0, zero)));
+      const uint32_t m1 = _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(o1, zero)));
 
       count = StoreNNZ(nnz, count, &base, increment, m0 | (m1 << 4));
     }
@@ -242,10 +228,6 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 }
 #elif defined(__ARM_NEON__)
 #include <arm_neon.h>
-
-// NEON has no mulhi, so the product is widened to int32 and shifted back down.
-// vshrn_n_s32 is an arithmetic shift, so a negative product floors exactly as
-// mulhi does on x86, and vqmovun_s16 below clamps it to zero.
 INLINE int16x8_t PairwiseProductNeon(int16x8_t a, int16x8_t b, int16x8_t zero, int16x8_t cap) {
   const int16x8_t lo = vminq_s16(vmaxq_s16(a, zero), cap);
   const int16x8_t hi = vminq_s16(b, cap);
@@ -257,9 +239,9 @@ INLINE int16x8_t PairwiseProductNeon(int16x8_t a, int16x8_t b, int16x8_t zero, i
 }
 
 INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
-  const size_t WIDTH  = 8;
-  const size_t HALF   = N_HIDDEN / 2 / WIDTH;
-  const int views[2]  = {stm, !stm};
+  const size_t WIDTH = 8;
+  const size_t HALF  = N_HIDDEN / 2 / WIDTH;
+  const int views[2] = {stm, !stm};
 
   const int16x8_t zero = vdupq_n_s16(0);
   const int16x8_t cap  = vdupq_n_s16(FT_MAX);
@@ -305,7 +287,7 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
   const int views[2] = {stm, !stm};
 
-  (void) nnz; // the scalar L1 affine walks every input
+  (void) nnz;
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
@@ -325,46 +307,66 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 INLINE void m512_add_dpbusd_epi32(__m512i* acc, __m512i a, __m512i b) {
+#if defined(__AVX512VNNI__)
+  *acc = _mm512_dpbusd_epi32(*acc, a, b);
+#else
   __m512i p0 = _mm512_maddubs_epi16(a, b);
   p0         = _mm512_madd_epi16(p0, _mm512_set1_epi16(1));
   *acc       = _mm512_add_epi32(*acc, p0);
+#endif
 }
 
 INLINE void m512_add_dpbusd_epi32x2(__m512i* acc, __m512i a0, __m512i b0, __m512i a1, __m512i b1) {
+#if defined(__AVX512VNNI__)
+  *acc = _mm512_dpbusd_epi32(_mm512_dpbusd_epi32(*acc, a0, b0), a1, b1);
+#else
   __m512i p0 = _mm512_maddubs_epi16(a0, b0);
   __m512i p1 = _mm512_maddubs_epi16(a1, b1);
 
   p0   = _mm512_madd_epi16(_mm512_add_epi16(p0, p1), _mm512_set1_epi16(1));
   *acc = _mm512_add_epi32(*acc, p0);
+#endif
 }
 
-INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights) {
-  const size_t OUT_WIDTH  = sizeof(__m512i) / sizeof(int32_t);
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
+                     const int32_t* biases) {
+  const size_t OUT_WIDTH = sizeof(__m512i) / sizeof(int32_t);
+  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
 
-  const int32_t* in32   = (int32_t*) src;
-  __m512i* out          = (__m512i*) dest;
+  const int32_t* in32 = (int32_t*) src;
+  const __m512i* bias = (__m512i*) biases;
+  __m512i* out        = (__m512i*) dest;
 
-  __m512i regs[OUT_CC];
-  for (size_t i = 0; i < OUT_CC; i++)
-    regs[i] = _mm512_setzero_si512();
+  __m512i regs[OUT_CC], alts[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++) {
+    regs[i] = bias[i];
+    alts[i] = _mm512_setzero_si512();
+  }
 
   size_t i = 0;
-  for (; i + 1 < count; i += 2) {
+  for (; i + 3 < count; i += 4) {
     const uint16_t i0 = nnz[i + 0];
     const uint16_t i1 = nnz[i + 1];
+    const uint16_t i2 = nnz[i + 2];
+    const uint16_t i3 = nnz[i + 3];
 
     const __m512i f0 = _mm512_set1_epi32(in32[i0]);
     const __m512i f1 = _mm512_set1_epi32(in32[i1]);
+    const __m512i f2 = _mm512_set1_epi32(in32[i2]);
+    const __m512i f3 = _mm512_set1_epi32(in32[i3]);
 
     const __m512i* c0 = (__m512i*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
     const __m512i* c1 = (__m512i*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const __m512i* c2 = (__m512i*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
+    const __m512i* c3 = (__m512i*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
 
-    for (size_t j = 0; j < OUT_CC; j++)
+    for (size_t j = 0; j < OUT_CC; j++) {
       m512_add_dpbusd_epi32x2(regs + j, f0, c0[j], f1, c1[j]);
+      m512_add_dpbusd_epi32x2(alts + j, f2, c2[j], f3, c3[j]);
+    }
   }
 
-  if (i < count) {
+  for (; i < count; i++) {
     const uint16_t i0 = nnz[i];
     const __m512i f0  = _mm512_set1_epi32(in32[i0]);
     const __m512i* c0 = (__m512i*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
@@ -374,50 +376,70 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = regs[i];
+    out[i] = _mm512_add_epi32(regs[i], alts[i]);
 }
 #elif defined(__AVX2__)
 INLINE void m256_add_dpbusd_epi32(__m256i* acc, __m256i a, __m256i b) {
+#if defined(__AVXVNNI__)
+  *acc = _mm256_dpbusd_avx_epi32(*acc, a, b);
+#else
   __m256i p0 = _mm256_maddubs_epi16(a, b);
   p0         = _mm256_madd_epi16(p0, _mm256_set1_epi16(1));
   *acc       = _mm256_add_epi32(*acc, p0);
+#endif
 }
 
 INLINE void m256_add_dpbusd_epi32x2(__m256i* acc, __m256i a0, __m256i b0, __m256i a1, __m256i b1) {
+#if defined(__AVXVNNI__)
+  *acc = _mm256_dpbusd_avx_epi32(_mm256_dpbusd_avx_epi32(*acc, a0, b0), a1, b1);
+#else
   __m256i p0 = _mm256_maddubs_epi16(a0, b0);
   __m256i p1 = _mm256_maddubs_epi16(a1, b1);
 
   p0   = _mm256_madd_epi16(_mm256_add_epi16(p0, p1), _mm256_set1_epi16(1));
   *acc = _mm256_add_epi32(*acc, p0);
+#endif
 }
 
-INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights) {
-  const size_t OUT_WIDTH  = sizeof(__m256i) / sizeof(int32_t);
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
+                     const int32_t* biases) {
+  const size_t OUT_WIDTH = sizeof(__m256i) / sizeof(int32_t);
+  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
 
-  const int32_t* in32   = (int32_t*) src;
-  __m256i* out          = (__m256i*) dest;
+  const int32_t* in32 = (int32_t*) src;
+  const __m256i* bias = (__m256i*) biases;
+  __m256i* out        = (__m256i*) dest;
 
-  __m256i regs[OUT_CC];
-  for (size_t i = 0; i < OUT_CC; i++)
-    regs[i] = _mm256_setzero_si256();
+  __m256i regs[OUT_CC], alts[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++) {
+    regs[i] = bias[i];
+    alts[i] = _mm256_setzero_si256();
+  }
 
   size_t i = 0;
-  for (; i + 1 < count; i += 2) {
+  for (; i + 3 < count; i += 4) {
     const uint16_t i0 = nnz[i + 0];
     const uint16_t i1 = nnz[i + 1];
+    const uint16_t i2 = nnz[i + 2];
+    const uint16_t i3 = nnz[i + 3];
 
     const __m256i f0 = _mm256_set1_epi32(in32[i0]);
     const __m256i f1 = _mm256_set1_epi32(in32[i1]);
+    const __m256i f2 = _mm256_set1_epi32(in32[i2]);
+    const __m256i f3 = _mm256_set1_epi32(in32[i3]);
 
     const __m256i* c0 = (__m256i*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
     const __m256i* c1 = (__m256i*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const __m256i* c2 = (__m256i*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
+    const __m256i* c3 = (__m256i*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
 
-    for (size_t j = 0; j < OUT_CC; j++)
+    for (size_t j = 0; j < OUT_CC; j++) {
       m256_add_dpbusd_epi32x2(regs + j, f0, c0[j], f1, c1[j]);
+      m256_add_dpbusd_epi32x2(alts + j, f2, c2[j], f3, c3[j]);
+    }
   }
 
-  if (i < count) {
+  for (; i < count; i++) {
     const uint16_t i0 = nnz[i];
     const __m256i f0  = _mm256_set1_epi32(in32[i0]);
     const __m256i* c0 = (__m256i*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
@@ -427,7 +449,7 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
   }
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = regs[i];
+    out[i] = _mm256_add_epi32(regs[i], alts[i]);
 }
 #elif defined(__SSE4_1__)
 INLINE void m128_add_dpbusd_epi32(__m128i* acc, __m128i a, __m128i b) {
@@ -444,16 +466,18 @@ INLINE void m128_add_dpbusd_epi32x2(__m128i* acc, __m128i a0, __m128i b0, __m128
   *acc = _mm_add_epi32(*acc, p0);
 }
 
-INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights) {
-  const size_t OUT_WIDTH  = sizeof(__m128i) / sizeof(int32_t);
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
+                     const int32_t* biases) {
+  const size_t OUT_WIDTH = sizeof(__m128i) / sizeof(int32_t);
+  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
 
-  const int32_t* in32   = (int32_t*) src;
-  __m128i* out          = (__m128i*) dest;
+  const int32_t* in32 = (int32_t*) src;
+  const __m128i* bias = (__m128i*) biases;
+  __m128i* out        = (__m128i*) dest;
 
   __m128i regs[OUT_CC];
   for (size_t i = 0; i < OUT_CC; i++)
-    regs[i] = _mm_setzero_si128();
+    regs[i] = bias[i];
 
   size_t i = 0;
   for (; i + 1 < count; i += 2) {
@@ -483,11 +507,6 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
     out[i] = regs[i];
 }
 #elif defined(__ARM_NEON__)
-// The activations are unsigned and reach 255, so the s8 x s8 widening multiply
-// the signed byte range allowed would read half of them as negative. Widen to
-// int16 first: a product still fits (255 * 127 = 32385) but the pairwise sums do
-// not, so they accumulate in int32. Lane grouping matches the old form -- four
-// consecutive products per output lane, which is SPARSE_CHUNK_SIZE.
 INLINE void int8x16_add_dpbusd(int32x4_t* acc, uint8x16_t a, int8x16_t b) {
   const int16x8_t p0 = vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(a))), vmovl_s8(vget_low_s8(b)));
   const int16x8_t p1 = vmulq_s16(vreinterpretq_s16_u16(vmovl_high_u8(a)), vmovl_high_s8(b));
@@ -501,11 +520,11 @@ INLINE void int8x16_add_dpbusd_x2(int32x4_t* acc, uint8x16_t a0, int8x16_t b0, u
 }
 
 INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights) {
-  const size_t OUT_WIDTH  = 4;
-  const size_t OUT_CC     = N_L2 / OUT_WIDTH;
+  const size_t OUT_WIDTH = 4;
+  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
 
-  const int32_t* in32     = (int32_t*) src;
-  int32x4_t* out          = (int32x4_t*) dest;
+  const int32_t* in32 = (int32_t*) src;
+  int32x4_t* out      = (int32x4_t*) dest;
 
   int32x4_t regs[OUT_CC];
   for (size_t i = 0; i < OUT_CC; i++)
@@ -539,12 +558,13 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
     out[i] = regs[i];
 }
 #else
-INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights) {
+INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
+                     const int32_t* biases) {
   (void) nnz;
   (void) count;
 
   for (size_t i = 0; i < N_L2; i++)
-    dest[i] = 0;
+    dest[i] = biases[i];
 
   for (size_t i = 0; i < N_L1; i++) {
     if (!src[i])
@@ -556,82 +576,230 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
 }
 #endif
 
-// The float half. Each loop below is written in the one order `net.rs` uses, so
-// vectorising it across outputs or lanes -- which reorders nothing -- is the only
-// thing a compiler may do to it.
+#if defined(__SSE4_1__)
+INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
+  const __m128i* in = (__m128i*) src;
+  __m128i* outC     = (__m128i*) clamped;
+  __m128i* outS     = (__m128i*) squared;
 
-INLINE float Clamp01(const float x) {
-  return x < 0.0f ? 0.0f : x > 1.0f ? 1.0f : x;
-}
+  for (size_t i = 0; i < N_L2 / 16; i++) {
+    const __m128i a0 = _mm_packs_epi32(in[4 * i + 0], in[4 * i + 1]);
+    const __m128i a1 = _mm_packs_epi32(in[4 * i + 2], in[4 * i + 3]);
 
-// L1's int32 sums back to floats, and the dual activation.
-INLINE void L1Activate(float* restrict dest, const int32_t* restrict src, const float* restrict biases) {
-  for (size_t i = 0; i < N_L2; i++) {
-    const float x  = (float) src[i] * L1_NORM + biases[i];
-    const float sq = x * x;
+    const __m128i c = _mm_packs_epi16(_mm_srai_epi16(a0, 6), _mm_srai_epi16(a1, 6));
+    outC[i]         = _mm_max_epi8(c, _mm_setzero_si128());
 
-    dest[i]        = Clamp01(x);
-    dest[i + N_L2] = sq < 1.0f ? sq : 1.0f;
+    const __m128i s0 = _mm_srli_epi16(_mm_mulhi_epi16(a0, a0), 3);
+    const __m128i s1 = _mm_srli_epi16(_mm_mulhi_epi16(a1, a1), 3);
+    outS[i]          = _mm_packs_epi16(s0, s1);
   }
 }
+#else
+INLINE int32_t Sat16(const int32_t x) {
+  return x < -32768 ? -32768 : x > 32767 ? 32767 : x;
+}
 
-// Every output accumulates its inputs in order 0..N_L1_ACT, starting from its bias.
-INLINE void L2Affine(float* restrict dest, const float* restrict src, const float* restrict weights,
-                     const float* restrict biases) {
-  for (size_t j = 0; j < N_L3; j++)
-    dest[j] = biases[j];
+INLINE uint8_t SquareQ(const int32_t x) {
+  const int32_t s = Sat16(x);
+  const int32_t q = ((s * s) >> 16) >> 3;
+  return q > 127 ? 127 : q;
+}
+
+INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
+  for (size_t i = 0; i < N_L2; i++) {
+    const int32_t c = src[i] >> 6;
+    clamped[i]      = c < 0 ? 0 : c > 127 ? 127 : c;
+    squared[i]      = SquareQ(src[i]);
+  }
+}
+#endif
+
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
+  const size_t OUT_WIDTH = sizeof(__m512i) / sizeof(int32_t);
+  const size_t OUT_CC    = N_L3 / OUT_WIDTH;
+
+  const int32_t* in32 = (int32_t*) src;
+  const __m512i* w    = (__m512i*) weights;
+  const __m512i* bias = (__m512i*) biases;
+  __m512i* out        = (__m512i*) dest;
+
+  __m512i regs[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++)
+    regs[i] = bias[i];
+
+  for (size_t j = 0; j < N_L2_CHUNKS; j += 2) {
+    const __m512i f0  = _mm512_set1_epi32(in32[j + 0]);
+    const __m512i f1  = _mm512_set1_epi32(in32[j + 1]);
+    const __m512i* c0 = w + (j + 0) * OUT_CC;
+    const __m512i* c1 = w + (j + 1) * OUT_CC;
+
+    for (size_t i = 0; i < OUT_CC; i++)
+      m512_add_dpbusd_epi32x2(regs + i, f0, c0[i], f1, c1[i]);
+  }
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    out[i] = regs[i];
+}
+#elif defined(__AVX2__)
+INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
+  const size_t OUT_WIDTH = sizeof(__m256i) / sizeof(int32_t);
+  const size_t OUT_CC    = N_L3 / OUT_WIDTH;
+
+  const int32_t* in32 = (int32_t*) src;
+  const __m256i* w    = (__m256i*) weights;
+  const __m256i* bias = (__m256i*) biases;
+  __m256i* out        = (__m256i*) dest;
+
+  __m256i regs[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++)
+    regs[i] = bias[i];
+
+  for (size_t j = 0; j < N_L2_CHUNKS; j += 2) {
+    const __m256i f0  = _mm256_set1_epi32(in32[j + 0]);
+    const __m256i f1  = _mm256_set1_epi32(in32[j + 1]);
+    const __m256i* c0 = w + (j + 0) * OUT_CC;
+    const __m256i* c1 = w + (j + 1) * OUT_CC;
+
+    for (size_t i = 0; i < OUT_CC; i++)
+      m256_add_dpbusd_epi32x2(regs + i, f0, c0[i], f1, c1[i]);
+  }
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    out[i] = regs[i];
+}
+#elif defined(__SSE4_1__)
+INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
+  const size_t OUT_WIDTH = sizeof(__m128i) / sizeof(int32_t);
+  const size_t OUT_CC    = N_L3 / OUT_WIDTH;
+
+  const int32_t* in32 = (int32_t*) src;
+  const __m128i* w    = (__m128i*) weights;
+  const __m128i* bias = (__m128i*) biases;
+  __m128i* out        = (__m128i*) dest;
+
+  __m128i regs[OUT_CC];
+  for (size_t i = 0; i < OUT_CC; i++)
+    regs[i] = bias[i];
+
+  for (size_t j = 0; j < N_L2_CHUNKS; j += 2) {
+    const __m128i f0  = _mm_set1_epi32(in32[j + 0]);
+    const __m128i f1  = _mm_set1_epi32(in32[j + 1]);
+    const __m128i* c0 = w + (j + 0) * OUT_CC;
+    const __m128i* c1 = w + (j + 1) * OUT_CC;
+
+    for (size_t i = 0; i < OUT_CC; i++)
+      m128_add_dpbusd_epi32x2(regs + i, f0, c0[i], f1, c1[i]);
+  }
+
+  for (size_t i = 0; i < OUT_CC; i++)
+    out[i] = regs[i];
+}
+#else
+INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
+  for (size_t o = 0; o < N_L3; o++)
+    dest[o] = biases[o];
 
   for (size_t i = 0; i < N_L1_ACT; i++)
-    for (size_t j = 0; j < N_L3; j++)
-      dest[j] = dest[j] + src[i] * weights[i * N_L3 + j];
+    for (size_t o = 0; o < N_L3; o++)
+      dest[o] += src[i] * weights[(i / 4) * N_L3 * 4 + o * 4 + (i % 4)];
+}
+#endif
 
-  for (size_t j = 0; j < N_L3; j++) {
-    const float c = Clamp01(dest[j]);
-    dest[j]       = c * c;
+#if defined(__SSE4_1__)
+INLINE void L2Activate(uint8_t* dest, int32_t* src) {
+  const __m128i* in = (__m128i*) src;
+  __m128i* out      = (__m128i*) dest;
+
+  for (size_t i = 0; i < N_L3 / 16; i++) {
+    __m128i a0 = _mm_packs_epi32(in[4 * i + 0], in[4 * i + 1]);
+    __m128i a1 = _mm_packs_epi32(in[4 * i + 2], in[4 * i + 3]);
+    a0         = _mm_max_epi16(a0, _mm_setzero_si128());
+    a1         = _mm_max_epi16(a1, _mm_setzero_si128());
+
+    const __m128i s0 = _mm_srli_epi16(_mm_mulhi_epi16(a0, a0), 3);
+    const __m128i s1 = _mm_srli_epi16(_mm_mulhi_epi16(a1, a1), 3);
+    out[i]           = _mm_packs_epi16(s0, s1);
   }
 }
-
-// Lane k sums inputs k, k + 8, k + 16, ... of L2's output followed by L1's; the
-// eight lanes then fold (k + 4), (k + 2), (k + 1) before the bias is added.
-INLINE float L3Transform(const float* restrict l2, const float* restrict l1, const float* restrict weights,
-                         const float bias) {
-  float lanes[L3_LANES] = {0};
-
-  for (size_t g = 0; g < N_L3; g += L3_LANES)
-    for (size_t k = 0; k < L3_LANES; k++)
-      lanes[k] = lanes[k] + l2[g + k] * weights[g + k];
-
-  for (size_t g = 0; g < N_L1_ACT; g += L3_LANES)
-    for (size_t k = 0; k < L3_LANES; k++)
-      lanes[k] = lanes[k] + l1[g + k] * weights[N_L3 + g + k];
-
-  float s4[4], s2[2];
-  for (size_t k = 0; k < 4; k++)
-    s4[k] = lanes[k] + lanes[k + 4];
-  for (size_t k = 0; k < 2; k++)
-    s2[k] = s4[k] + s4[k + 2];
-
-  return (s2[0] + s2[1]) + bias;
+#else
+INLINE void L2Activate(uint8_t* dest, int32_t* src) {
+  for (size_t i = 0; i < N_L3; i++)
+    dest[i] = SquareQ(src[i] < 0 ? 0 : src[i]);
 }
+#endif
+
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
+  __m512i a0 = _mm512_setzero_si512();
+  m512_add_dpbusd_epi32(&a0, *(__m512i*) src, *(__m512i*) weights);
+
+  return _mm512_reduce_add_epi32(a0);
+}
+#elif defined(__AVX2__)
+INLINE int32_t m256_reduce_add_epi32(__m256i a) {
+  const __m128i a4 = _mm_add_epi32(_mm256_castsi256_si128(a), _mm256_extracti128_si256(a, 1));
+  const __m128i a2 = _mm_add_epi32(a4, _mm_shuffle_epi32(a4, 0x4E));
+  const __m128i a1 = _mm_add_epi32(a2, _mm_shuffle_epi32(a2, 0xB1));
+
+  return _mm_cvtsi128_si32(a1);
+}
+
+INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
+  const __m256i* in = (__m256i*) src;
+  const __m256i* w  = (__m256i*) weights;
+
+  __m256i a0 = _mm256_setzero_si256();
+  m256_add_dpbusd_epi32x2(&a0, in[0], w[0], in[1], w[1]);
+
+  return m256_reduce_add_epi32(a0);
+}
+#elif defined(__SSE4_1__)
+INLINE int32_t m128_reduce_add_epi32(__m128i a) {
+  const __m128i a2 = _mm_add_epi32(a, _mm_shuffle_epi32(a, 0x4E));
+  const __m128i a1 = _mm_add_epi32(a2, _mm_shuffle_epi32(a2, 0xB1));
+
+  return _mm_cvtsi128_si32(a1);
+}
+
+INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
+  const __m128i* in = (__m128i*) src;
+  const __m128i* w  = (__m128i*) weights;
+
+  __m128i a0 = _mm_setzero_si128();
+  m128_add_dpbusd_epi32x2(&a0, in[0], w[0], in[1], w[1]);
+  m128_add_dpbusd_epi32x2(&a0, in[2], w[2], in[3], w[3]);
+
+  return m128_reduce_add_epi32(a0);
+}
+#else
+INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
+  int32_t result = 0;
+
+  for (size_t i = 0; i < N_L3_IN; i++)
+    result += src[i] * weights[i];
+
+  return result;
+}
+#endif
 
 INLINE int PropagateView(Accumulator* accumulator, const int stm, const int bucket) {
   uint8_t x0[N_L1] ALIGN;
-  // StoreNNZ always writes a full 8 entry group, so leave room for the tail.
-  uint16_t nnz[N_L1 / SPARSE_CHUNK_SIZE + 8] ALIGN;
-  int32_t sums[N_L2] ALIGN;
-  float l1[N_L1_ACT] ALIGN;
-  float l2[N_L3] ALIGN;
+  // The index list is written in whole groups of up to 32, so leave room for the tail.
+  uint16_t nnz[N_L1 / SPARSE_CHUNK_SIZE + 32] ALIGN;
+  int32_t dest[N_L3] ALIGN;
+  uint8_t act[N_L3_IN] ALIGN;
 
   const size_t count = InputPairwise8(x0, nnz, accumulator, stm);
-  L1Affine(sums, x0, nnz, count, L1_WEIGHTS[bucket]);
-  L1Activate(l1, sums, L1_BIASES[bucket]);
-  L2Affine(l2, l1, L2_WEIGHTS[bucket], L2_BIASES[bucket]);
+  L1Affine(dest, x0, nnz, count, L1_WEIGHTS[bucket], L1_BIASES_Q[bucket]);
+  L1Activate(act + N_L3, act + N_L3 + N_L2, dest);
+  L2Affine(dest, act + N_L3, L2_WEIGHTS_Q[bucket], L2_BIASES_Q[bucket]);
+  L2Activate(act, dest);
 
-  return (int) (L3Transform(l2, l1, L3_WEIGHTS[bucket], L3_BIASES[bucket]) * EVAL_SCALE);
+  const int32_t out = L3Transform(act, L3_WEIGHTS_Q[bucket]) + L3_BIASES_Q[bucket];
+  return (int) ((int64_t) out * EVAL_SCALE / HEAD_ONE);
 }
 
-// bullet's MaterialCount<8>: (pieces - 2) / 4, kings counted, so bucket 0 is two
-// to five pieces and bucket 7 is thirty or more.
 int OutputBucket(Board* board) {
   return (BitCount(OccBB(BOTH)) - 2) / 4;
 }
@@ -649,22 +817,51 @@ int Predict(Board* board) {
   return Propagate(board->accumulators, board->stm, OutputBucket(board));
 }
 
-const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +              // input weights
-                            sizeof(int16_t) * N_HIDDEN +                           // input biases
-                            sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L1 * N_L2 +      // L1 weights
-                            sizeof(float) * N_OUTPUT_BUCKETS * N_L2 +              // L1 biases
-                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3 * N_L1_ACT +   // L2 weights
-                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3 +              // L2 biases
-                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3_IN +           // L3 weights
-                            sizeof(float) * N_OUTPUT_BUCKETS;                      // L3 biases                            // output bias
+const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +            // input weights
+                            sizeof(int16_t) * N_HIDDEN +                         // input biases
+                            sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L1 * N_L2 +    // L1 weights
+                            sizeof(float) * N_OUTPUT_BUCKETS * N_L2 +            // L1 biases
+                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3 * N_L1_ACT + // L2 weights
+                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3 +            // L2 biases
+                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3_IN +         // L3 weights
+                            sizeof(float) * N_OUTPUT_BUCKETS;                    // L3 biases
 
 #if defined(__SSE4_1__) || defined(__ARM_NEON__)
 INLINE int WeightIdxScrambled(int idx) {
   return ((idx / SPARSE_CHUNK_SIZE) % (N_L1 / SPARSE_CHUNK_SIZE) * N_L2 * SPARSE_CHUNK_SIZE) +
          (idx / N_L1 * SPARSE_CHUNK_SIZE) + (idx % SPARSE_CHUNK_SIZE);
 }
-
 #endif
+
+INLINE int8_t QuantiseWeight(const float w) {
+  const long q = lroundf(w * HEAD_W_SCALE);
+  return (int8_t) (q > 127 ? 127 : q < -127 ? -127 : q);
+}
+
+INLINE void QuantiseHead() {
+  const float sqrFold = 127.0f / HEAD_SQR_ONE;
+
+  for (int b = 0; b < N_OUTPUT_BUCKETS; b++) {
+    for (int o = 0; o < N_L2; o++)
+      L1_BIASES_Q[b][o] = lroundf(L1_BIASES[b][o] * HEAD_ONE);
+
+    for (int o = 0; o < N_L3; o++)
+      for (int i = 0; i < N_L1_ACT; i++) {
+        const float fold = i < N_L2 ? 1.0f : sqrFold;
+        L2_WEIGHTS_Q[b][(i / 4) * N_L3 * 4 + o * 4 + (i % 4)] = QuantiseWeight(L2_WEIGHTS[b][o * N_L1_ACT + i] * fold);
+      }
+
+    for (int o = 0; o < N_L3; o++)
+      L2_BIASES_Q[b][o] = lroundf(L2_BIASES[b][o] * HEAD_ONE);
+
+    for (int i = 0; i < N_L3_IN; i++) {
+      const float fold = i < N_L3 ? sqrFold : i < N_L3 + N_L2 ? 1.0f : sqrFold;
+      L3_WEIGHTS_Q[b][i] = QuantiseWeight(L3_WEIGHTS[b][i] * fold);
+    }
+
+    L3_BIASES_Q[b] = lroundf(L3_BIASES[b] * HEAD_ONE);
+  }
+}
 
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
@@ -695,21 +892,15 @@ INLINE void CopyData(const unsigned char* in) {
 
   memcpy(L1_BIASES, &in[offset], sizeof(L1_BIASES));
   offset += sizeof(L1_BIASES);
-
-  // On disk [bucket][output][input]; held [bucket][input][output].
-  for (int b = 0; b < N_OUTPUT_BUCKETS; b++)
-    for (int o = 0; o < N_L3; o++)
-      for (int i = 0; i < N_L1_ACT; i++) {
-        memcpy(&L2_WEIGHTS[b][i * N_L3 + o], &in[offset], sizeof(float));
-        offset += sizeof(float);
-      }
-
+  memcpy(L2_WEIGHTS, &in[offset], sizeof(L2_WEIGHTS));
+  offset += sizeof(L2_WEIGHTS);
   memcpy(L2_BIASES, &in[offset], sizeof(L2_BIASES));
   offset += sizeof(L2_BIASES);
-
   memcpy(L3_WEIGHTS, &in[offset], sizeof(L3_WEIGHTS));
   offset += sizeof(L3_WEIGHTS);
   memcpy(L3_BIASES, &in[offset], sizeof(L3_BIASES));
+
+  QuantiseHead();
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
   const size_t WIDTH         = sizeof(__m512i) / sizeof(int16_t);
@@ -788,8 +979,6 @@ INLINE void InitLookupIndices() {
 void LoadDefaultNN() {
   InitLookupIndices();
 
-  // The makefile's default EVALFILE predates this format and is shorter than it,
-  // so a build that forgot EVALFILE would read past the end of the network.
   if ((size_t) EmbedSize < NETWORK_SIZE) {
     fprintf(stderr, "embedded network is %u bytes, this engine reads %zu: build with EVALFILE=<network>\n",
             (unsigned) EmbedSize, NETWORK_SIZE);
