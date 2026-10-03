@@ -16,7 +16,6 @@
 
 #include "evaluate.h"
 
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,27 +42,19 @@ INCBIN(Embed, EVALFILE);
 #define N_L3_IN     (N_L3 + N_L1_ACT)
 #define N_L2_CHUNKS (N_L1_ACT / 4)
 
-#define HEAD_ONE     (127 * 64)
-#define HEAD_W_SCALE 64.0f
-#define HEAD_SQR_ONE ((float) HEAD_ONE * (float) HEAD_ONE / (float) (1 << 19))
+#define HEAD_ONE (127 * 64)
 
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 
 int8_t L1_WEIGHTS[N_OUTPUT_BUCKETS][N_L1 * N_L2] ALIGN;
-float L1_BIASES[N_OUTPUT_BUCKETS][N_L2] ALIGN;
+int32_t L1_BIASES[N_OUTPUT_BUCKETS][N_L2] ALIGN;
 
-float L2_WEIGHTS[N_OUTPUT_BUCKETS][N_L3 * N_L1_ACT] ALIGN;
-float L2_BIASES[N_OUTPUT_BUCKETS][N_L3] ALIGN;
+int8_t L2_WEIGHTS[N_OUTPUT_BUCKETS][N_L2_CHUNKS * N_L3 * 4] ALIGN;
+int32_t L2_BIASES[N_OUTPUT_BUCKETS][N_L3] ALIGN;
 
-float L3_WEIGHTS[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
-float L3_BIASES[N_OUTPUT_BUCKETS];
-
-int32_t L1_BIASES_Q[N_OUTPUT_BUCKETS][N_L2] ALIGN;
-int8_t L2_WEIGHTS_Q[N_OUTPUT_BUCKETS][N_L2_CHUNKS * N_L3 * 4] ALIGN;
-int32_t L2_BIASES_Q[N_OUTPUT_BUCKETS][N_L3] ALIGN;
-int8_t L3_WEIGHTS_Q[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
-int32_t L3_BIASES_Q[N_OUTPUT_BUCKETS];
+int8_t L3_WEIGHTS[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
+int32_t L3_BIASES[N_OUTPUT_BUCKETS];
 
 uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
@@ -878,12 +869,12 @@ INLINE int PropagateView(Accumulator* accumulator, const int stm, const int buck
   uint8_t act[N_L3_IN] ALIGN;
 
   const size_t count = InputPairwise8(x0, nnz, accumulator, stm);
-  L1Affine(dest, x0, nnz, count, L1_WEIGHTS[bucket], L1_BIASES_Q[bucket]);
+  L1Affine(dest, x0, nnz, count, L1_WEIGHTS[bucket], L1_BIASES[bucket]);
   L1Activate(act + N_L3, act + N_L3 + N_L2, dest);
-  L2Affine(dest, act + N_L3, L2_WEIGHTS_Q[bucket], L2_BIASES_Q[bucket]);
+  L2Affine(dest, act + N_L3, L2_WEIGHTS[bucket], L2_BIASES[bucket]);
   L2Activate(act, dest);
 
-  const int32_t out = L3Transform(act, L3_WEIGHTS_Q[bucket]) + L3_BIASES_Q[bucket];
+  const int32_t out = L3Transform(act, L3_WEIGHTS[bucket]) + L3_BIASES[bucket];
   return (int) ((int64_t) out * EVAL_SCALE / HEAD_ONE);
 }
 
@@ -907,11 +898,11 @@ int Predict(Board* board) {
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +            // input weights
                             sizeof(int16_t) * N_HIDDEN +                         // input biases
                             sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L1 * N_L2 +    // L1 weights
-                            sizeof(float) * N_OUTPUT_BUCKETS * N_L2 +            // L1 biases
-                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3 * N_L1_ACT + // L2 weights
-                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3 +            // L2 biases
-                            sizeof(float) * N_OUTPUT_BUCKETS * N_L3_IN +         // L3 weights
-                            sizeof(float) * N_OUTPUT_BUCKETS;                    // L3 biases
+                            sizeof(int32_t) * N_OUTPUT_BUCKETS * N_L2 +          // L1 biases
+                            sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L3 * N_L1_ACT +  // L2 weights
+                            sizeof(int32_t) * N_OUTPUT_BUCKETS * N_L3 +          // L2 biases
+                            sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L3_IN +          // L3 weights
+                            sizeof(int32_t) * N_OUTPUT_BUCKETS;                  // L3 biases
 
 #if defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE int WeightIdxScrambled(int idx) {
@@ -920,34 +911,12 @@ INLINE int WeightIdxScrambled(int idx) {
 }
 #endif
 
-INLINE int8_t QuantiseWeight(const float w) {
-  const long q = lroundf(w * HEAD_W_SCALE);
-  return (int8_t) (q > 127 ? 127 : q < -127 ? -127 : q);
-}
+// [output][input] becomes [input chunk][output][4], so one broadcast chunk meets every output.
+INLINE int L2WeightIdxScrambled(int idx) {
+  const int o = idx / N_L1_ACT;
+  const int i = idx % N_L1_ACT;
 
-INLINE void QuantiseHead() {
-  const float sqrFold = 127.0f / HEAD_SQR_ONE;
-
-  for (int b = 0; b < N_OUTPUT_BUCKETS; b++) {
-    for (int o = 0; o < N_L2; o++)
-      L1_BIASES_Q[b][o] = lroundf(L1_BIASES[b][o] * HEAD_ONE);
-
-    for (int o = 0; o < N_L3; o++)
-      for (int i = 0; i < N_L1_ACT; i++) {
-        const float fold = i < N_L2 ? 1.0f : sqrFold;
-        L2_WEIGHTS_Q[b][(i / 4) * N_L3 * 4 + o * 4 + (i % 4)] = QuantiseWeight(L2_WEIGHTS[b][o * N_L1_ACT + i] * fold);
-      }
-
-    for (int o = 0; o < N_L3; o++)
-      L2_BIASES_Q[b][o] = lroundf(L2_BIASES[b][o] * HEAD_ONE);
-
-    for (int i = 0; i < N_L3_IN; i++) {
-      const float fold = i < N_L3 ? sqrFold : i < N_L3 + N_L2 ? 1.0f : sqrFold;
-      L3_WEIGHTS_Q[b][i] = QuantiseWeight(L3_WEIGHTS[b][i] * fold);
-    }
-
-    L3_BIASES_Q[b] = lroundf(L3_BIASES[b] * HEAD_ONE);
-  }
+  return (i / 4) * N_L3 * 4 + o * 4 + (i % 4);
 }
 
 INLINE void CopyData(const unsigned char* in) {
@@ -979,15 +948,16 @@ INLINE void CopyData(const unsigned char* in) {
 
   memcpy(L1_BIASES, &in[offset], sizeof(L1_BIASES));
   offset += sizeof(L1_BIASES);
-  memcpy(L2_WEIGHTS, &in[offset], sizeof(L2_WEIGHTS));
-  offset += sizeof(L2_WEIGHTS);
+
+  for (int b = 0; b < N_OUTPUT_BUCKETS; b++)
+    for (int i = 0; i < N_L3 * N_L1_ACT; i++)
+      L2_WEIGHTS[b][L2WeightIdxScrambled(i)] = (int8_t) in[offset++];
+
   memcpy(L2_BIASES, &in[offset], sizeof(L2_BIASES));
   offset += sizeof(L2_BIASES);
   memcpy(L3_WEIGHTS, &in[offset], sizeof(L3_WEIGHTS));
   offset += sizeof(L3_WEIGHTS);
   memcpy(L3_BIASES, &in[offset], sizeof(L3_BIASES));
-
-  QuantiseHead();
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
   const size_t WIDTH         = sizeof(__m512i) / sizeof(int16_t);
