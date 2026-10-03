@@ -1036,7 +1036,8 @@ INLINE void InitLookupIndices() {
 void LoadDefaultNN() {
   InitLookupIndices();
 
-  if ((size_t) EmbedSize < NETWORK_SIZE) {
+  // bullet pads a network to 64 bytes; anything else is another format.
+  if ((size_t) EmbedSize < NETWORK_SIZE || (size_t) EmbedSize >= NETWORK_SIZE + 64) {
     fprintf(stderr, "embedded network is %u bytes, this engine reads %zu: build with EVALFILE=<network>\n",
             (unsigned) EmbedSize, NETWORK_SIZE);
     exit(1);
@@ -1052,8 +1053,9 @@ int LoadNetwork(char* path) {
     return 0;
   }
 
-  uint8_t* data = malloc(NETWORK_SIZE);
-  if (fread(data, sizeof(uint8_t), NETWORK_SIZE, fin) != NETWORK_SIZE) {
+  uint8_t* data = malloc(NETWORK_SIZE + 64);
+  const size_t read = fread(data, sizeof(uint8_t), NETWORK_SIZE + 64, fin);
+  if (read < NETWORK_SIZE || read >= NETWORK_SIZE + 64) {
     printf("info string Error reading file at %s\n", path);
     return 0;
   }
