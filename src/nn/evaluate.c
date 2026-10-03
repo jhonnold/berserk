@@ -38,7 +38,7 @@ INCBIN(Embed, EVALFILE);
 #define FT_SHIFT   9
 #define EVAL_SCALE 160
 
-#define N_L1_ACT    (2 * N_L2)
+#define N_L1_ACT    N_L2
 #define N_L3_IN     N_L3
 #define N_L2_CHUNKS (N_L1_ACT / 4)
 
@@ -587,21 +587,16 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
 #endif
 
 #if defined(__SSE4_1__)
-INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
+INLINE void L1Activate(uint8_t* dest, int32_t* src) {
   const __m128i* in = (__m128i*) src;
-  __m128i* outC     = (__m128i*) clamped;
-  __m128i* outS     = (__m128i*) squared;
+  __m128i* out      = (__m128i*) dest;
 
   for (size_t i = 0; i < N_L2 / 16; i++) {
     const __m128i a0 = _mm_packs_epi32(in[4 * i + 0], in[4 * i + 1]);
     const __m128i a1 = _mm_packs_epi32(in[4 * i + 2], in[4 * i + 3]);
 
     const __m128i c = _mm_packs_epi16(_mm_srai_epi16(a0, 6), _mm_srai_epi16(a1, 6));
-    outC[i]         = _mm_max_epi8(c, _mm_setzero_si128());
-
-    const __m128i s0 = _mm_srli_epi16(_mm_mulhi_epi16(a0, a0), 3);
-    const __m128i s1 = _mm_srli_epi16(_mm_mulhi_epi16(a1, a1), 3);
-    outS[i]          = _mm_packs_epi16(s0, s1);
+    out[i]          = _mm_max_epi8(c, _mm_setzero_si128());
   }
 }
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
@@ -632,11 +627,10 @@ INLINE uint8_t SquareQ(const int32_t x) {
   return q > 127 ? 127 : q;
 }
 
-INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
+INLINE void L1Activate(uint8_t* dest, int32_t* src) {
   for (size_t i = 0; i < N_L2; i++) {
     const int32_t c = src[i] >> 6;
-    clamped[i]      = c < 0 ? 0 : c > 127 ? 127 : c;
-    squared[i]      = SquareQ(src[i]);
+    dest[i]         = c < 0 ? 0 : c > 127 ? 127 : c;
   }
 }
 #endif
@@ -873,7 +867,7 @@ INLINE int PropagateView(Accumulator* accumulator, const int stm, const int buck
 
   const size_t count = InputPairwise8(x0, nnz, accumulator, stm);
   L1Affine(dest, x0, nnz, count, L1_WEIGHTS[bucket], L1_BIASES[bucket]);
-  L1Activate(act1, act1 + N_L2, dest);
+  L1Activate(act1, dest);
   L2Affine(dest, act1, L2_WEIGHTS[bucket], L2_BIASES[bucket]);
   L2Activate(act2, dest);
 
