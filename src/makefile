@@ -50,7 +50,7 @@ endif
 
 # Setup arch
 ifeq ($(ARCH), )
-   ARCH = native
+   ARCH = avx2
 endif
 
 ifeq ($(ARCH), native)

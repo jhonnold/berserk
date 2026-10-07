@@ -28,7 +28,7 @@
 #define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-#define N_HIDDEN   1024
+#define N_HIDDEN   256
 // Pairwise multiplication halves each perspective to N_HIDDEN / 2 units, so the
 // two of them together are N_HIDDEN wide. See nn/evaluate.c, FT_SHIFT.
 #define N_L1       N_HIDDEN
