@@ -113,102 +113,6 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
   }
 }
 
-INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
-  regi_t regs[NUM_REGS];
-
-  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
-    const size_t unrollOffset = c * UNROLL;
-
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
-
-    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
-    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
-
-    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
-    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w2[i]);
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
-  }
-}
-
-INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
-  regi_t regs[NUM_REGS];
-
-  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
-    const size_t unrollOffset = c * UNROLL;
-
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
-
-    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
-    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
-
-    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
-    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w2[i]);
-
-    const size_t o3  = f3 * N_HIDDEN + unrollOffset;
-    const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w3[i]);
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
-  }
-}
-
-INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4) {
-  regi_t regs[NUM_REGS];
-
-  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
-    const size_t unrollOffset = c * UNROLL;
-
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
-
-    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
-    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
-
-    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
-    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w2[i]);
-
-    const size_t o3  = f3 * N_HIDDEN + unrollOffset;
-    const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w3[i]);
-
-    const size_t o4  = f4 * N_HIDDEN + unrollOffset;
-    const regi_t* w4 = (regi_t*) &INPUT_WEIGHTS[o4];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w4[i]);
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
-  }
-}
-
 #if defined(__AVX2__)
 #define THREAT_TILE 8
 
@@ -343,6 +247,23 @@ INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const int perspe
   dest->correct[perspective] = 1;
 }
 
+INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2, const int* tRem, int tr, const int* tAdd, int ta) {
+  const int rem[1] = {f1}, add[1] = {f2};
+  ApplyFusedDelta(dest, src, rem, 1, add, 1, tRem, tr, tAdd, ta);
+}
+
+INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, const int* tRem, int tr, const int* tAdd,
+                           int ta) {
+  const int rem[2] = {f1, f2}, add[1] = {f3};
+  ApplyFusedDelta(dest, src, rem, 2, add, 1, tRem, tr, tAdd, ta);
+}
+
+INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4, const int* tRem, int tr,
+                              const int* tAdd, int ta) {
+  const int rem[2] = {f1, f2}, add[2] = {f3, f4};
+  ApplyFusedDelta(dest, src, rem, 2, add, 2, tRem, tr, tAdd, ta);
+}
+
 INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumulator* step, const int view,
                          const int flip) {
   const Move move      = step->move;
@@ -350,22 +271,25 @@ INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumul
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
 
-  int pRem[2], pAdd[2], pr = 0, pa = 0;
-  pRem[pr++] = FeatureIdx(Moving(move), From(move), king, view);
-  pAdd[pa++] = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
-
-  if (IsCas(move)) {
-    pRem[pr++] = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
-    pAdd[pa++] = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
-  } else if (IsCap(move)) {
-    int capSq  = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
-    pRem[pr++] = FeatureIdx(captured, capSq, king, view);
-  }
-
   int tRem[MAX_DIRTY_THREATS], tAdd[MAX_DIRTY_THREATS], tr = 0, ta = 0;
   ThreatIndices(step, view, flip, tRem, &tr, tAdd, &ta);
 
-  ApplyFusedDelta(output, prev, pRem, pr, pAdd, pa, tRem, tr, tAdd, ta);
+  int from = FeatureIdx(Moving(move), From(move), king, view);
+  int to   = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
+
+  if (IsCas(move)) {
+    int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
+    int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
+
+    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo, tRem, tr, tAdd, ta);
+  } else if (IsCap(move)) {
+    int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
+    int capturedTo = FeatureIdx(captured, capSq, king, view);
+
+    ApplySubSubAdd(output, prev, from, capturedTo, to, tRem, tr, tAdd, ta);
+  } else {
+    ApplySubAdd(output, prev, from, to, tRem, tr, tAdd, ta);
+  }
 }
 
 INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
