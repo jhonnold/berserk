@@ -309,6 +309,50 @@ void PrintBoard(Board* board) {
 
 // Special pieces are those giving check, and those that are pinned
 
+INLINE void MovePieces(Board* board, Move move, int captured) {
+  int from  = From(move);
+  int to    = To(move);
+  int piece = Moving(move);
+
+  FlipBits(board->pieces[piece], from, to);
+  FlipBits(OccBB(board->stm), from, to);
+  FlipBits(OccBB(BOTH), from, to);
+
+  board->squares[from] = NO_PIECE;
+  board->squares[to]   = piece;
+
+  if (IsCas(move)) {
+    int rookFrom = board->cr[CASTLING_ROOK[to]];
+    int rookTo   = CASTLE_ROOK_DEST[to];
+
+    FlipBits(PieceBB(ROOK, board->stm), rookFrom, rookTo);
+    FlipBits(OccBB(board->stm), rookFrom, rookTo);
+    FlipBits(OccBB(BOTH), rookFrom, rookTo);
+
+    // chess960 can have the king going where the rook started
+    // do this check to prevent accidental wipe outs
+    if (rookFrom != to)
+      board->squares[rookFrom] = NO_PIECE;
+    board->squares[rookTo] = Piece(ROOK, board->stm);
+  } else if (IsCap(move)) {
+    int capSq = IsEP(move) ? to - PawnDir(board->stm) : to;
+    if (IsEP(move))
+      board->squares[capSq] = NO_PIECE;
+
+    FlipBit(board->pieces[captured], capSq);
+    FlipBit(OccBB(board->xstm), capSq);
+    FlipBit(OccBB(BOTH), capSq);
+  }
+
+  if (IsPromo(move)) {
+    int promoted = PromoPiece(move, board->stm);
+    FlipBit(board->pieces[piece], to);
+    FlipBit(board->pieces[promoted], to);
+
+    board->squares[to] = promoted;
+  }
+}
+
 void MakeMove(Move move, Board* board) {
   MakeMoveUpdate(move, board, 1);
 }
@@ -319,22 +363,17 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int piece    = Moving(move);
   int captured = IsEP(move) ? Piece(PAWN, board->xstm) : board->squares[to];
 
-  if (update)
-    board->accumulators->nDirty = ThreatsForMove(board, move, captured, board->accumulators->dirty);
-
   // store hard to recalculate values
   memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
   board->history[board->histPly].capture = captured;
 
+  if (update)
+    board->accumulators->nDirty = MovePiecesWithThreats(board, move, captured, board->accumulators->dirty);
+  else
+    MovePieces(board, move, captured);
+
   board->fmr++;
   board->nullply++;
-
-  FlipBits(board->pieces[piece], from, to);
-  FlipBits(OccBB(board->stm), from, to);
-  FlipBits(OccBB(BOTH), from, to);
-
-  board->squares[from] = NO_PIECE;
-  board->squares[to]   = piece;
 
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
   if (PieceType(piece) == PAWN)
@@ -345,25 +384,9 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     int rookTo   = CASTLE_ROOK_DEST[to];
     int rook     = Piece(ROOK, board->stm);
 
-    FlipBits(PieceBB(ROOK, board->stm), rookFrom, rookTo);
-    FlipBits(OccBB(board->stm), rookFrom, rookTo);
-    FlipBits(OccBB(BOTH), rookFrom, rookTo);
-
-    // chess960 can have the king going where the rook started
-    // do this check to prevent accidental wipe outs
-    if (rookFrom != to)
-      board->squares[rookFrom] = NO_PIECE;
-    board->squares[rookTo] = rook;
-
     board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
   } else if (IsCap(move)) {
     int capSq = IsEP(move) ? to - PawnDir(board->stm) : to;
-    if (IsEP(move))
-      board->squares[capSq] = NO_PIECE;
-
-    FlipBit(board->pieces[captured], capSq);
-    FlipBit(OccBB(board->xstm), capSq);
-    FlipBit(OccBB(BOTH), capSq);
 
     board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
     if (PieceType(captured) == PAWN)
@@ -395,10 +418,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       }
     } else if (IsPromo(move)) {
       int promoted = PromoPiece(move, board->stm);
-      FlipBit(board->pieces[piece], to);
-      FlipBit(board->pieces[promoted], to);
-
-      board->squares[to] = promoted;
 
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];

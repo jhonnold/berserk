@@ -36,7 +36,7 @@ extern BitBoard THREAT_EMPTY[10][64];
 
 void InitThreats();
 
-int ThreatsForMove(Board* board, Move move, int captured, uint32_t* dirty);
+int MovePiecesWithThreats(Board* board, Move move, int captured, uint32_t* dirty);
 
 int ActiveThreats(Board* board, const int view, int* indices);
 
