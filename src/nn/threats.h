@@ -21,8 +21,7 @@
 #include "../types.h"
 #include "../util.h"
 
-// A dirty threat packs one attack that a move created or removed, in absolute terms:
-// from | to << 8 | attacker << 16 | victim << 20 | add << 31.
+// from | to << 8 | attacker << 16 | victim << 20 | add << 31
 #define DirtyFrom(d)     ((d) & 63)
 #define DirtyTo(d)       (((d) >> 8) & 63)
 #define DirtyAttacker(d) (((d) >> 16) & 15)
@@ -31,27 +30,20 @@
 
 extern int8_t THREAT_WEIGHTS[N_THREATS * N_HIDDEN];
 
-// [attacker block][relative victim]: (first index of the victim class << 1) | mutual,
-// or -1 when the pair is not a feature. A block is relative colour * 5 + piece type.
 extern int32_t THREAT_PAIR[10][12];
 extern uint16_t THREAT_OFFSET[10][64];
 extern BitBoard THREAT_EMPTY[10][64];
 
 void InitThreats();
 
-// The changes `move` makes to the set of threats, written before the board is touched.
 int ThreatsForMove(Board* board, Move move, int captured, uint32_t* dirty);
 
-// Every threat feature `view` has on this board, for a full rebuild. Returns the count.
 int ActiveThreats(Board* board, const int view, int* indices);
 
-// The square transform of `view`'s threat features: rank-flipped for black and mirrored
-// when that side's king is on files a-d, exactly as `FeatureIdx` does.
 INLINE int ThreatFlip(int kingSq, const int view) {
   return (7 * !(kingSq & 4)) ^ (56 * view);
 }
 
-// The feature for one attack as `view` sees it, or -1 when it is not one.
 INLINE int ThreatIdx(int attacker, int from, int victim, int to, const int view, const int flip) {
   const int block = 5 * ((attacker ^ view) & 1) + (attacker >> 1);
   const int rel   = 6 * ((victim ^ view) & 1) + (victim >> 1);
@@ -60,7 +52,6 @@ INLINE int ThreatIdx(int attacker, int from, int victim, int to, const int view,
   from ^= flip;
   to ^= flip;
 
-  // Mutual pairs are one feature, kept where from > to.
   if (e < 0 || ((e & 1) && from < to))
     return -1;
 

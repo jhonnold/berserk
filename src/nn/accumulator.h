@@ -209,12 +209,7 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
   }
 }
 
-// `dest = src - psq rows + psq rows - threat rows + threat rows` in one pass, the PSQ
-// rows int16 and the threat rows int8 widened to the int16 sums. PSQ and threat
-// features share the one accumulator.
 #if defined(__AVX2__)
-// Registers per pass. The accumulator is 64 ymm wide, so a pass holds an eighth of it
-// and leaves registers for the widened rows.
 #define THREAT_TILE 8
 
 INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
@@ -282,8 +277,6 @@ INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, cons
 }
 #endif
 
-// `dest = src + every threat row of the board`, for a rebuild. The PSQ part of `src`
-// carries the bias.
 INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const int view) {
   int add[256];
   const int a = ActiveThreats(board, view, add);
@@ -291,7 +284,6 @@ INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const int
   ApplyFusedDelta(dest, src, NULL, 0, NULL, 0, NULL, 0, add, a);
 }
 
-// One move's threat changes, as `view` sees them.
 INLINE void ThreatIndices(const Accumulator* step, const int view, const int flip, int* rem, int* r, int* add,
                           int* a) {
   for (int i = 0; i < step->nDirty; i++) {
@@ -300,8 +292,6 @@ INLINE void ThreatIndices(const Accumulator* step, const int view, const int fli
     if (idx < 0)
       continue;
 
-    // The rows are spread over 61 MB; start the first line's fetch while the rest of
-    // the list is indexed.
     __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
 
     if (DirtyAdd(d))
@@ -349,7 +339,6 @@ INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const int perspe
   if (delta->r || delta->a)
     ApplyDelta(state->values, state->values, delta);
 
-  // The cached state is PSQ only; the threats are rebuilt on top of it.
   AddAllThreats(dest->values[perspective], state->values, board, perspective);
   dest->correct[perspective] = 1;
 }
@@ -384,7 +373,6 @@ INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
   while (!(--curr)->correct[view])
     ; // go back to the latest correct accumulator
 
-  // King moves that change the mirror force a refresh, so one flip serves the chain.
   const int flip = ThreatFlip(LSB(PieceBB(KING, view)), view);
 
   do {

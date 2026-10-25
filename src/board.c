@@ -319,7 +319,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int piece    = Moving(move);
   int captured = IsEP(move) ? Piece(PAWN, board->xstm) : board->squares[to];
 
-  // Threat changes are worked out on the board as it stands before the move.
   if (update)
     board->accumulators->nDirty = ThreatsForMove(board, move, captured, board->accumulators->dirty);
 

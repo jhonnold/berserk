@@ -924,9 +924,6 @@ INLINE int L2WeightIdxScrambled(int idx) {
   return (i / 4) * N_L3 * 4 + o * 4 + (i % 4);
 }
 
-// Reorders each pair of SIMD registers' 128-bit lanes so that packus, which works
-// within lanes, writes the pairwise bytes back in order. Run on every int16 row the
-// accumulators read, and on 0..N_HIDDEN-1 to learn the order for the int8 threat rows.
 INLINE void PermuteForPackus(int16_t* data, size_t len) {
 #if defined(__AVX512F__) && defined(__AVX512BW__)
   __m512i* v = (__m512i*) data;
@@ -1007,8 +1004,7 @@ INLINE void CopyData(const unsigned char* in) {
   PermuteForPackus(INPUT_WEIGHTS, N_FEATURES * N_HIDDEN);
   PermuteForPackus(INPUT_BIASES, N_HIDDEN);
 
-  // The threat accumulator is added to the PSQ one lane for lane, so its rows take the
-  // order the PSQ rows just took.
+  // Threat rows take the same lane order as the PSQ rows
   int16_t order[N_HIDDEN] ALIGN;
   for (int i = 0; i < N_HIDDEN; i++)
     order[i] = i;

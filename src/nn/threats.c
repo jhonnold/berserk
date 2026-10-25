@@ -14,14 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Threat inputs: one feature per attack of a non-king piece on a non-king piece,
-// indexed by (attacker, from, victim, to) in the perspective's frame. The trainer's
-// `crates/train/src/threats.rs` builds the same layout; docs/INPUTS.md describes it.
-//
-// Features always active together with another one are dropped: P->B and P->Q (the
-// bishop or queen attacks back), B->Q and R->Q (the queen sees the same line), and one
-// direction of each mutual same-type pair. That leaves 60,144.
-
 #include "threats.h"
 
 #include <stdio.h>
@@ -39,10 +31,8 @@ int32_t THREAT_PAIR[10][12];
 uint16_t THREAT_OFFSET[10][64];
 BitBoard THREAT_EMPTY[10][64];
 
-// The squares beyond `s` on the line from `a` through `s`.
 static BitBoard RAY_PASS[64][64];
 
-// Victim class per (attacker type, victim type), -1 where the pair is dropped.
 static const int MAP[5][6] = {
   {0, 1, -1, 2, -1, -1}, // P
   {0, 1, 2, 3, 4, -1},   // N
@@ -51,7 +41,6 @@ static const int MAP[5][6] = {
   {0, 1, 2, 3, 4, -1},   // Q
 };
 
-// Victim classes per attacker type, times the two victim colours.
 static const int TARGETS[5] = {6, 10, 8, 8, 10};
 
 static BitBoard EmptyAttacks(int colour, int pt, int sq) {
@@ -73,7 +62,6 @@ void InitThreats() {
 
       int pairs = 0;
       for (int sq = 0; sq < 64; sq++) {
-        // Relative white plays towards rank 8, as white does in absolute terms.
         THREAT_EMPTY[block][sq]  = EmptyAttacks(colour, pt, sq);
         THREAT_OFFSET[block][sq] = pairs;
         pairs += BitCount(THREAT_EMPTY[block][sq]);
@@ -119,8 +107,6 @@ void InitThreats() {
   }
 }
 
-// A copy of the pieces that the move's steps can be played on, so each step sees the
-// board exactly as it stands between the previous step and the next.
 typedef struct {
   BitBoard pcs[12];
   BitBoard occ;
@@ -147,9 +133,6 @@ INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {
   }
 }
 
-// Every threat involving `pc` on `s`, added or removed. `tb` must hold `pc` on `s`. With
-// `rays`, also the attacks that `s` blocks for sliders seeing it, with the opposite sign:
-// a piece arriving on `s` cuts them, one leaving opens them.
 static void PieceThreats(ThreatBoard* tb, DirtyList* list, int pc, int s, int add, int rays) {
   const BitBoard occ     = tb->occ;
   const BitBoard kings   = tb->pcs[WHITE_KING] | tb->pcs[BLACK_KING];
@@ -204,7 +187,6 @@ INLINE void Add(ThreatBoard* tb, DirtyList* list, int pc, int s) {
   PieceThreats(tb, list, pc, s, ADD, 1);
 }
 
-// Occupancy does not change, so no ray is cut or opened; sliders on `s` are just attackers.
 INLINE void Swap(ThreatBoard* tb, DirtyList* list, int old, int new, int s) {
   PieceThreats(tb, list, old, s, SUB, 0);
   FlipBit(tb->pcs[old], s);

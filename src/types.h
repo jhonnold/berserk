@@ -28,7 +28,6 @@
 #define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-// Piece-to-piece threats; see nn/threats.c for the layout.
 #define N_THREATS  60144
 #define N_HIDDEN   1024
 // Pairwise multiplication halves each perspective to N_HIDDEN / 2 units, so the
@@ -57,8 +56,6 @@ enum {
 
 typedef int16_t acc_t;
 
-// The most threat changes one move can make: a remove and two adds or swaps of up to
-// 32 each (8 out, 16 in, 8 discovered), en passant being the worst case.
 #define MAX_DIRTY_THREATS 96
 
 typedef struct {
@@ -66,9 +63,7 @@ typedef struct {
   uint16_t captured;
   uint16_t nDirty;
   Move move;
-  // The threat changes the move stored here makes, perspective independent.
   uint32_t dirty[MAX_DIRTY_THREATS];
-  // PSQ and threat features together.
   acc_t values[2][N_HIDDEN] ALIGN;
 } Accumulator;
 
