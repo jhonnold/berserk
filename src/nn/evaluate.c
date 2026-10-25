@@ -105,18 +105,11 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const __m512i* in = (__m512i*) acc->values[views[v]];
-    const __m512i* th = (__m512i*) acc->threats[views[v]];
     __m512i* out      = (__m512i*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const __m512i o0 = m512_pairwise_epi16(_mm512_adds_epi16(in[i + 0], th[i + 0]),
-                                             _mm512_adds_epi16(in[i + 1], th[i + 1]),
-                                             _mm512_adds_epi16(in[i + 0 + HALF], th[i + 0 + HALF]),
-                                             _mm512_adds_epi16(in[i + 1 + HALF], th[i + 1 + HALF]));
-      const __m512i o1 = m512_pairwise_epi16(_mm512_adds_epi16(in[i + 2], th[i + 2]),
-                                             _mm512_adds_epi16(in[i + 3], th[i + 3]),
-                                             _mm512_adds_epi16(in[i + 2 + HALF], th[i + 2 + HALF]),
-                                             _mm512_adds_epi16(in[i + 3 + HALF], th[i + 3 + HALF]));
+      const __m512i o0 = m512_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const __m512i o1 = m512_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
@@ -168,18 +161,11 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const __m256i* in = (__m256i*) acc->values[views[v]];
-    const __m256i* th = (__m256i*) acc->threats[views[v]];
     __m256i* out      = (__m256i*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const __m256i o0 = m256_pairwise_epi16(_mm256_adds_epi16(in[i + 0], th[i + 0]),
-                                             _mm256_adds_epi16(in[i + 1], th[i + 1]),
-                                             _mm256_adds_epi16(in[i + 0 + HALF], th[i + 0 + HALF]),
-                                             _mm256_adds_epi16(in[i + 1 + HALF], th[i + 1 + HALF]));
-      const __m256i o1 = m256_pairwise_epi16(_mm256_adds_epi16(in[i + 2], th[i + 2]),
-                                             _mm256_adds_epi16(in[i + 3], th[i + 3]),
-                                             _mm256_adds_epi16(in[i + 2 + HALF], th[i + 2 + HALF]),
-                                             _mm256_adds_epi16(in[i + 3 + HALF], th[i + 3 + HALF]));
+      const __m256i o0 = m256_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const __m256i o1 = m256_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
@@ -216,18 +202,11 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const __m128i* in = (__m128i*) acc->values[views[v]];
-    const __m128i* th = (__m128i*) acc->threats[views[v]];
     __m128i* out      = (__m128i*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const __m128i o0 = m128_pairwise_epi16(_mm_adds_epi16(in[i + 0], th[i + 0]),
-                                             _mm_adds_epi16(in[i + 1], th[i + 1]),
-                                             _mm_adds_epi16(in[i + 0 + HALF], th[i + 0 + HALF]),
-                                             _mm_adds_epi16(in[i + 1 + HALF], th[i + 1 + HALF]));
-      const __m128i o1 = m128_pairwise_epi16(_mm_adds_epi16(in[i + 2], th[i + 2]),
-                                             _mm_adds_epi16(in[i + 3], th[i + 3]),
-                                             _mm_adds_epi16(in[i + 2 + HALF], th[i + 2 + HALF]),
-                                             _mm_adds_epi16(in[i + 3 + HALF], th[i + 3 + HALF]));
+      const __m128i o0 = m128_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const __m128i o1 = m128_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
@@ -268,18 +247,11 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const int16x8_t* in = (int16x8_t*) acc->values[views[v]];
-    const int16x8_t* th = (int16x8_t*) acc->threats[views[v]];
     uint8x16_t* out     = (uint8x16_t*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const uint8x16_t o0 = u8x16_pairwise_s16(vqaddq_s16(in[i + 0], th[i + 0]),
-                                               vqaddq_s16(in[i + 1], th[i + 1]),
-                                               vqaddq_s16(in[i + 0 + HALF], th[i + 0 + HALF]),
-                                               vqaddq_s16(in[i + 1 + HALF], th[i + 1 + HALF]));
-      const uint8x16_t o1 = u8x16_pairwise_s16(vqaddq_s16(in[i + 2], th[i + 2]),
-                                               vqaddq_s16(in[i + 3], th[i + 3]),
-                                               vqaddq_s16(in[i + 2 + HALF], th[i + 2 + HALF]),
-                                               vqaddq_s16(in[i + 3 + HALF], th[i + 3 + HALF]));
+      const uint8x16_t o0 = u8x16_pairwise_s16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const uint8x16_t o1 = u8x16_pairwise_s16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
@@ -306,15 +278,11 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
-    const acc_t* th = acc->threats[views[v]];
     uint8_t* out    = &outputs[(N_HIDDEN / 2) * v];
 
-    // The two halves are added with saturation, as the SIMD paths do.
     for (size_t i = 0; i < N_HIDDEN / 2; i++) {
-      const int a  = Max(INT16_MIN, Min(INT16_MAX, in[i] + th[i]));
-      const int b  = Max(INT16_MIN, Min(INT16_MAX, in[i + N_HIDDEN / 2] + th[i + N_HIDDEN / 2]));
-      const int lo = Min(FT_MAX, Max(0, a));
-      const int hi = Min(FT_MAX, b);
+      const int lo = Min(FT_MAX, Max(0, in[i]));
+      const int hi = Min(FT_MAX, (int) in[i + N_HIDDEN / 2]);
 
       out[i] = Min(FT_MAX, Max(0, (lo * hi) >> FT_SHIFT));
     }

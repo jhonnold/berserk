@@ -209,13 +209,16 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
   }
 }
 
-// `dest = src - rem rows + add rows`, the rows int8 and widened to the int16 sums.
+// `dest = src - psq rows + psq rows - threat rows + threat rows` in one pass, the PSQ
+// rows int16 and the threat rows int8 widened to the int16 sums. PSQ and threat
+// features share the one accumulator.
 #if defined(__AVX2__)
 // Registers per pass. The accumulator is 64 ymm wide, so a pass holds an eighth of it
 // and leaves registers for the widened rows.
 #define THREAT_TILE 8
 
-INLINE void ApplyThreatDelta(acc_t* dest, const acc_t* src, const int* rem, const int r, const int* add, const int a) {
+INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
+                            const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
   for (size_t c = 0; c < N_HIDDEN / (16 * THREAT_TILE); c++) {
     const size_t offset = c * 16 * THREAT_TILE;
     const __m256i* in   = (const __m256i*) &src[offset];
@@ -225,14 +228,26 @@ INLINE void ApplyThreatDelta(acc_t* dest, const acc_t* src, const int* rem, cons
     for (size_t i = 0; i < THREAT_TILE; i++)
       regs[i] = _mm256_load_si256(&in[i]);
 
-    for (int k = 0; k < r; k++) {
-      const __m128i* w = (const __m128i*) &THREAT_WEIGHTS[(size_t) rem[k] * N_HIDDEN + offset];
+    for (int k = 0; k < pr; k++) {
+      const __m256i* w = (const __m256i*) &INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i++)
+        regs[i] = _mm256_sub_epi16(regs[i], _mm256_load_si256(&w[i]));
+    }
+
+    for (int k = 0; k < pa; k++) {
+      const __m256i* w = (const __m256i*) &INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i++)
+        regs[i] = _mm256_add_epi16(regs[i], _mm256_load_si256(&w[i]));
+    }
+
+    for (int k = 0; k < tr; k++) {
+      const __m128i* w = (const __m128i*) &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
         regs[i] = _mm256_sub_epi16(regs[i], _mm256_cvtepi8_epi16(_mm_load_si128(&w[i])));
     }
 
-    for (int k = 0; k < a; k++) {
-      const __m128i* w = (const __m128i*) &THREAT_WEIGHTS[(size_t) add[k] * N_HIDDEN + offset];
+    for (int k = 0; k < ta; k++) {
+      const __m128i* w = (const __m128i*) &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
         regs[i] = _mm256_add_epi16(regs[i], _mm256_cvtepi8_epi16(_mm_load_si128(&w[i])));
     }
@@ -242,43 +257,43 @@ INLINE void ApplyThreatDelta(acc_t* dest, const acc_t* src, const int* rem, cons
   }
 }
 #else
-INLINE void ApplyThreatDelta(acc_t* dest, const acc_t* src, const int* rem, const int r, const int* add, const int a) {
+INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
+                            const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
   int16_t sums[N_HIDDEN];
   memcpy(sums, src, sizeof(sums));
 
-  for (int k = 0; k < r; k++) {
-    const int8_t* w = &THREAT_WEIGHTS[(size_t) rem[k] * N_HIDDEN];
+  for (int k = 0; k < pr; k++)
     for (int i = 0; i < N_HIDDEN; i++)
-      sums[i] -= w[i];
-  }
+      sums[i] -= INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + i];
 
-  for (int k = 0; k < a; k++) {
-    const int8_t* w = &THREAT_WEIGHTS[(size_t) add[k] * N_HIDDEN];
+  for (int k = 0; k < pa; k++)
     for (int i = 0; i < N_HIDDEN; i++)
-      sums[i] += w[i];
-  }
+      sums[i] += INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + i];
+
+  for (int k = 0; k < tr; k++)
+    for (int i = 0; i < N_HIDDEN; i++)
+      sums[i] -= THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + i];
+
+  for (int k = 0; k < ta; k++)
+    for (int i = 0; i < N_HIDDEN; i++)
+      sums[i] += THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + i];
 
   memcpy(dest, sums, sizeof(sums));
 }
 #endif
 
-extern const acc_t THREAT_ZERO[N_HIDDEN];
-
-// Rebuilds `view`'s threat accumulator from the board. There is no bias: it lives on
-// the PSQ accumulator.
-INLINE void RefreshThreats(Accumulator* dest, Board* board, const int view) {
+// `dest = src + every threat row of the board`, for a rebuild. The PSQ part of `src`
+// carries the bias.
+INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const int view) {
   int add[256];
   const int a = ActiveThreats(board, view, add);
 
-  ApplyThreatDelta(dest->threats[view], THREAT_ZERO, NULL, 0, add, a);
-  dest->threatCorrect[view] = 1;
+  ApplyFusedDelta(dest, src, NULL, 0, NULL, 0, NULL, 0, add, a);
 }
 
 // One move's threat changes, as `view` sees them.
-INLINE void ApplyThreatUpdates(acc_t* output, acc_t* prev, const Accumulator* step, const int view, const int flip) {
-  int rem[MAX_DIRTY_THREATS], add[MAX_DIRTY_THREATS];
-  int r = 0, a = 0;
-
+INLINE void ThreatIndices(const Accumulator* step, const int view, const int flip, int* rem, int* r, int* add,
+                          int* a) {
   for (int i = 0; i < step->nDirty; i++) {
     const uint32_t d = step->dirty[i];
     const int idx    = ThreatIdx(DirtyAttacker(d), DirtyFrom(d), DirtyVictim(d), DirtyTo(d), view, flip);
@@ -290,39 +305,9 @@ INLINE void ApplyThreatUpdates(acc_t* output, acc_t* prev, const Accumulator* st
     __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
 
     if (DirtyAdd(d))
-      add[a++] = idx;
+      add[(*a)++] = idx;
     else
-      rem[r++] = idx;
-  }
-
-  ApplyThreatDelta(output, prev, rem, r, add, a);
-}
-
-INLINE void ApplyLazyThreatUpdates(Accumulator* live, Board* board, const int view) {
-  const int flip    = ThreatFlip(LSB(PieceBB(KING, view)), view);
-  Accumulator* curr = live;
-  while (!(--curr)->threatCorrect[view])
-    ; // go back to the latest correct accumulator
-
-  do {
-    ApplyThreatUpdates((curr + 1)->threats[view], curr->threats[view], curr, view, flip);
-    (curr + 1)->threatCorrect[view] = 1;
-  } while (++curr != live);
-}
-
-// Threat features are mirrored by the king's file and nothing else, so only a king
-// crossing the d/e line forces a rebuild.
-INLINE int CanEfficientlyUpdateThreats(Accumulator* live, const int view) {
-  Accumulator* curr = live;
-
-  while (1) {
-    curr--;
-
-    const Move move = curr->move;
-    if (Moving(move) == Piece(KING, view) && ((From(move) ^ To(move)) & 4))
-      return 0;
-    if (curr->threatCorrect[view])
-      return 1;
+      rem[(*r)++] = idx;
   }
 }
 
@@ -364,31 +349,34 @@ INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const int perspe
   if (delta->r || delta->a)
     ApplyDelta(state->values, state->values, delta);
 
-  // Copy in state
-  memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
+  // The cached state is PSQ only; the threats are rebuilt on top of it.
+  AddAllThreats(dest->values[perspective], state->values, board, perspective);
   dest->correct[perspective] = 1;
 }
 
-INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
+INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumulator* step, const int view,
+                         const int flip) {
+  const Move move      = step->move;
+  const int captured   = step->captured;
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
 
-  int from = FeatureIdx(Moving(move), From(move), king, view);
-  int to   = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
+  int pRem[2], pAdd[2], pr = 0, pa = 0;
+  pRem[pr++] = FeatureIdx(Moving(move), From(move), king, view);
+  pAdd[pa++] = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
 
   if (IsCas(move)) {
-    int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
-    int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
-
-    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
+    pRem[pr++] = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
+    pAdd[pa++] = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
   } else if (IsCap(move)) {
-    int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
-    int capturedTo = FeatureIdx(captured, capSq, king, view);
-
-    ApplySubSubAdd(output, prev, from, capturedTo, to);
-  } else {
-    ApplySubAdd(output, prev, from, to);
+    int capSq  = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
+    pRem[pr++] = FeatureIdx(captured, capSq, king, view);
   }
+
+  int tRem[MAX_DIRTY_THREATS], tAdd[MAX_DIRTY_THREATS], tr = 0, ta = 0;
+  ThreatIndices(step, view, flip, tRem, &tr, tAdd, &ta);
+
+  ApplyFusedDelta(output, prev, pRem, pr, pAdd, pa, tRem, tr, tAdd, ta);
 }
 
 INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
@@ -396,8 +384,11 @@ INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
   while (!(--curr)->correct[view])
     ; // go back to the latest correct accumulator
 
+  // King moves that change the mirror force a refresh, so one flip serves the chain.
+  const int flip = ThreatFlip(LSB(PieceBB(KING, view)), view);
+
   do {
-    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr->move, curr->captured, view);
+    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr, view, flip);
     (curr + 1)->correct[view] = 1;
   } while (++curr != live);
 }

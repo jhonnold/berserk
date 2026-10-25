@@ -63,14 +63,13 @@ typedef int16_t acc_t;
 
 typedef struct {
   uint8_t correct[2];
-  uint8_t threatCorrect[2];
   uint16_t captured;
   uint16_t nDirty;
   Move move;
   // The threat changes the move stored here makes, perspective independent.
   uint32_t dirty[MAX_DIRTY_THREATS];
+  // PSQ and threat features together.
   acc_t values[2][N_HIDDEN] ALIGN;
-  acc_t threats[2][N_HIDDEN] ALIGN;
 } Accumulator;
 
 typedef struct {

@@ -26,8 +26,6 @@
 #include "../movegen.h"
 #include "../util.h"
 
-const acc_t THREAT_ZERO[N_HIDDEN] ALIGN = {0};
-
 void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
     AccumulatorKingState* state = refreshTable + b;
@@ -57,7 +55,6 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   acc_t* values = dest->values[perspective];
   memcpy(values, INPUT_BIASES, sizeof(acc_t) * N_HIDDEN);
   ApplyDelta(values, values, delta);
+  AddAllThreats(values, values, board, perspective);
   dest->correct[perspective] = 1;
-
-  RefreshThreats(dest, board, perspective);
 }

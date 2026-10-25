@@ -428,7 +428,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
-    board->accumulators->threatCorrect[WHITE] = board->accumulators->threatCorrect[BLACK] = 0;
   }
 }
 
