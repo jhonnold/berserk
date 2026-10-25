@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "evaluate.h"
+#include "threats.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,11 +105,18 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const __m512i* in = (__m512i*) acc->values[views[v]];
+    const __m512i* th = (__m512i*) acc->threats[views[v]];
     __m512i* out      = (__m512i*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const __m512i o0 = m512_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
-      const __m512i o1 = m512_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
+      const __m512i o0 = m512_pairwise_epi16(_mm512_adds_epi16(in[i + 0], th[i + 0]),
+                                             _mm512_adds_epi16(in[i + 1], th[i + 1]),
+                                             _mm512_adds_epi16(in[i + 0 + HALF], th[i + 0 + HALF]),
+                                             _mm512_adds_epi16(in[i + 1 + HALF], th[i + 1 + HALF]));
+      const __m512i o1 = m512_pairwise_epi16(_mm512_adds_epi16(in[i + 2], th[i + 2]),
+                                             _mm512_adds_epi16(in[i + 3], th[i + 3]),
+                                             _mm512_adds_epi16(in[i + 2 + HALF], th[i + 2 + HALF]),
+                                             _mm512_adds_epi16(in[i + 3 + HALF], th[i + 3 + HALF]));
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
@@ -160,11 +168,18 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const __m256i* in = (__m256i*) acc->values[views[v]];
+    const __m256i* th = (__m256i*) acc->threats[views[v]];
     __m256i* out      = (__m256i*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const __m256i o0 = m256_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
-      const __m256i o1 = m256_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
+      const __m256i o0 = m256_pairwise_epi16(_mm256_adds_epi16(in[i + 0], th[i + 0]),
+                                             _mm256_adds_epi16(in[i + 1], th[i + 1]),
+                                             _mm256_adds_epi16(in[i + 0 + HALF], th[i + 0 + HALF]),
+                                             _mm256_adds_epi16(in[i + 1 + HALF], th[i + 1 + HALF]));
+      const __m256i o1 = m256_pairwise_epi16(_mm256_adds_epi16(in[i + 2], th[i + 2]),
+                                             _mm256_adds_epi16(in[i + 3], th[i + 3]),
+                                             _mm256_adds_epi16(in[i + 2 + HALF], th[i + 2 + HALF]),
+                                             _mm256_adds_epi16(in[i + 3 + HALF], th[i + 3 + HALF]));
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
@@ -201,11 +216,18 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const __m128i* in = (__m128i*) acc->values[views[v]];
+    const __m128i* th = (__m128i*) acc->threats[views[v]];
     __m128i* out      = (__m128i*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const __m128i o0 = m128_pairwise_epi16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
-      const __m128i o1 = m128_pairwise_epi16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
+      const __m128i o0 = m128_pairwise_epi16(_mm_adds_epi16(in[i + 0], th[i + 0]),
+                                             _mm_adds_epi16(in[i + 1], th[i + 1]),
+                                             _mm_adds_epi16(in[i + 0 + HALF], th[i + 0 + HALF]),
+                                             _mm_adds_epi16(in[i + 1 + HALF], th[i + 1 + HALF]));
+      const __m128i o1 = m128_pairwise_epi16(_mm_adds_epi16(in[i + 2], th[i + 2]),
+                                             _mm_adds_epi16(in[i + 3], th[i + 3]),
+                                             _mm_adds_epi16(in[i + 2 + HALF], th[i + 2 + HALF]),
+                                             _mm_adds_epi16(in[i + 3 + HALF], th[i + 3 + HALF]));
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
@@ -246,11 +268,18 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const int16x8_t* in = (int16x8_t*) acc->values[views[v]];
+    const int16x8_t* th = (int16x8_t*) acc->threats[views[v]];
     uint8x16_t* out     = (uint8x16_t*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const uint8x16_t o0 = u8x16_pairwise_s16(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
-      const uint8x16_t o1 = u8x16_pairwise_s16(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
+      const uint8x16_t o0 = u8x16_pairwise_s16(vqaddq_s16(in[i + 0], th[i + 0]),
+                                               vqaddq_s16(in[i + 1], th[i + 1]),
+                                               vqaddq_s16(in[i + 0 + HALF], th[i + 0 + HALF]),
+                                               vqaddq_s16(in[i + 1 + HALF], th[i + 1 + HALF]));
+      const uint8x16_t o1 = u8x16_pairwise_s16(vqaddq_s16(in[i + 2], th[i + 2]),
+                                               vqaddq_s16(in[i + 3], th[i + 3]),
+                                               vqaddq_s16(in[i + 2 + HALF], th[i + 2 + HALF]),
+                                               vqaddq_s16(in[i + 3 + HALF], th[i + 3 + HALF]));
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
@@ -277,11 +306,15 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const acc_t* in = acc->values[views[v]];
+    const acc_t* th = acc->threats[views[v]];
     uint8_t* out    = &outputs[(N_HIDDEN / 2) * v];
 
+    // The two halves are added with saturation, as the SIMD paths do.
     for (size_t i = 0; i < N_HIDDEN / 2; i++) {
-      const int lo = Min(FT_MAX, Max(0, in[i]));
-      const int hi = Min(FT_MAX, (int) in[i + N_HIDDEN / 2]);
+      const int a  = Max(INT16_MIN, Min(INT16_MAX, in[i] + th[i]));
+      const int b  = Max(INT16_MIN, Min(INT16_MAX, in[i + N_HIDDEN / 2] + th[i + N_HIDDEN / 2]));
+      const int lo = Min(FT_MAX, Max(0, a));
+      const int hi = Min(FT_MAX, b);
 
       out[i] = Min(FT_MAX, Max(0, (lo * hi) >> FT_SHIFT));
     }
@@ -900,6 +933,7 @@ int Predict(Board* board) {
 
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +            // input weights
                             sizeof(int16_t) * N_HIDDEN +                         // input biases
+                            sizeof(int8_t) * N_THREATS * N_HIDDEN +              // threat weights
                             sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L1 * N_L2 +    // L1 weights
                             sizeof(int32_t) * N_OUTPUT_BUCKETS * N_L2 +          // L1 biases
                             sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L3 * N_L1_ACT +  // L2 weights
@@ -922,6 +956,44 @@ INLINE int L2WeightIdxScrambled(int idx) {
   return (i / 4) * N_L3 * 4 + o * 4 + (i % 4);
 }
 
+// Reorders each pair of SIMD registers' 128-bit lanes so that packus, which works
+// within lanes, writes the pairwise bytes back in order. Run on every int16 row the
+// accumulators read, and on 0..N_HIDDEN-1 to learn the order for the int8 threat rows.
+INLINE void PermuteForPackus(int16_t* data, size_t len) {
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+  __m512i* v = (__m512i*) data;
+
+  for (size_t i = 0; i < len / 32; i += 2) {
+    __m128i a1 = _mm512_extracti32x4_epi32(v[i], 1);
+    __m128i a2 = _mm512_extracti32x4_epi32(v[i], 2);
+    __m128i a3 = _mm512_extracti32x4_epi32(v[i], 3);
+    __m128i b0 = _mm512_extracti32x4_epi32(v[i + 1], 0);
+    __m128i b1 = _mm512_extracti32x4_epi32(v[i + 1], 1);
+    __m128i b2 = _mm512_extracti32x4_epi32(v[i + 1], 2);
+
+    v[i]     = _mm512_inserti32x4(v[i], a2, 1);
+    v[i]     = _mm512_inserti32x4(v[i], b0, 2);
+    v[i]     = _mm512_inserti32x4(v[i], b2, 3);
+    v[i + 1] = _mm512_inserti32x4(v[i + 1], a1, 0);
+    v[i + 1] = _mm512_inserti32x4(v[i + 1], a3, 1);
+    v[i + 1] = _mm512_inserti32x4(v[i + 1], b1, 2);
+  }
+#elif defined(__AVX2__)
+  __m256i* v = (__m256i*) data;
+
+  for (size_t i = 0; i < len / 16; i += 2) {
+    __m128i a1 = _mm256_extracti128_si256(v[i], 1);
+    __m128i b0 = _mm256_extracti128_si256(v[i + 1], 0);
+
+    v[i]     = _mm256_inserti128_si256(v[i], b0, 1);
+    v[i + 1] = _mm256_inserti128_si256(v[i + 1], a1, 0);
+  }
+#else
+  (void) data;
+  (void) len;
+#endif
+}
+
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
 
@@ -933,6 +1005,8 @@ INLINE void CopyData(const unsigned char* in) {
   offset += N_FEATURES * N_HIDDEN * sizeof(int16_t);
   memcpy(INPUT_BIASES, &in[offset], N_HIDDEN * sizeof(int16_t));
   offset += N_HIDDEN * sizeof(int16_t);
+  const int8_t* threats = (const int8_t*) &in[offset];
+  offset += N_THREATS * N_HIDDEN * sizeof(int8_t);
 
   for (int b = 0; b < N_OUTPUT_BUCKETS; b++) {
     memcpy(l1, &in[offset], N_L1 * N_L2 * sizeof(int8_t));
@@ -962,69 +1036,19 @@ INLINE void CopyData(const unsigned char* in) {
   offset += sizeof(L3_WEIGHTS);
   memcpy(L3_BIASES, &in[offset], sizeof(L3_BIASES));
 
-#if defined(__AVX512F__) && defined(__AVX512BW__)
-  const size_t WIDTH         = sizeof(__m512i) / sizeof(int16_t);
-  const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
-  const size_t BIAS_CHUNKS   = N_HIDDEN / WIDTH;
+  PermuteForPackus(INPUT_WEIGHTS, N_FEATURES * N_HIDDEN);
+  PermuteForPackus(INPUT_BIASES, N_HIDDEN);
 
-  __m512i* weights = (__m512i*) INPUT_WEIGHTS;
-  __m512i* biases  = (__m512i*) INPUT_BIASES;
+  // The threat accumulator is added to the PSQ one lane for lane, so its rows take the
+  // order the PSQ rows just took.
+  int16_t order[N_HIDDEN] ALIGN;
+  for (int i = 0; i < N_HIDDEN; i++)
+    order[i] = i;
+  PermuteForPackus(order, N_HIDDEN);
 
-  for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
-    __m128i a1 = _mm512_extracti32x4_epi32(weights[i], 1);
-    __m128i a2 = _mm512_extracti32x4_epi32(weights[i], 2);
-    __m128i a3 = _mm512_extracti32x4_epi32(weights[i], 3);
-    __m128i b0 = _mm512_extracti32x4_epi32(weights[i + 1], 0);
-    __m128i b1 = _mm512_extracti32x4_epi32(weights[i + 1], 1);
-    __m128i b2 = _mm512_extracti32x4_epi32(weights[i + 1], 2);
-
-    weights[i]     = _mm512_inserti32x4(weights[i], a2, 1);
-    weights[i]     = _mm512_inserti32x4(weights[i], b0, 2);
-    weights[i]     = _mm512_inserti32x4(weights[i], b2, 3);
-    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], a1, 0);
-    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], a3, 1);
-    weights[i + 1] = _mm512_inserti32x4(weights[i + 1], b1, 2);
-  }
-
-  for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
-    __m128i a1 = _mm512_extracti32x4_epi32(biases[i], 1);
-    __m128i a2 = _mm512_extracti32x4_epi32(biases[i], 2);
-    __m128i a3 = _mm512_extracti32x4_epi32(biases[i], 3);
-    __m128i b0 = _mm512_extracti32x4_epi32(biases[i + 1], 0);
-    __m128i b1 = _mm512_extracti32x4_epi32(biases[i + 1], 1);
-    __m128i b2 = _mm512_extracti32x4_epi32(biases[i + 1], 2);
-
-    biases[i]     = _mm512_inserti32x4(biases[i], a2, 1);
-    biases[i]     = _mm512_inserti32x4(biases[i], b0, 2);
-    biases[i]     = _mm512_inserti32x4(biases[i], b2, 3);
-    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], a1, 0);
-    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], a3, 1);
-    biases[i + 1] = _mm512_inserti32x4(biases[i + 1], b1, 2);
-  }
-#elif defined(__AVX2__)
-  const size_t WIDTH         = sizeof(__m256i) / sizeof(int16_t);
-  const size_t WEIGHT_CHUNKS = (N_FEATURES * N_HIDDEN) / WIDTH;
-  const size_t BIAS_CHUNKS   = N_HIDDEN / WIDTH;
-
-  __m256i* weights = (__m256i*) INPUT_WEIGHTS;
-  __m256i* biases  = (__m256i*) INPUT_BIASES;
-
-  for (size_t i = 0; i < WEIGHT_CHUNKS; i += 2) {
-    __m128i a1 = _mm256_extracti128_si256(weights[i], 1);
-    __m128i b0 = _mm256_extracti128_si256(weights[i + 1], 0);
-
-    weights[i]     = _mm256_inserti128_si256(weights[i], b0, 1);
-    weights[i + 1] = _mm256_inserti128_si256(weights[i + 1], a1, 0);
-  }
-
-  for (size_t i = 0; i < BIAS_CHUNKS; i += 2) {
-    __m128i a1 = _mm256_extracti128_si256(biases[i], 1);
-    __m128i b0 = _mm256_extracti128_si256(biases[i + 1], 0);
-
-    biases[i]     = _mm256_inserti128_si256(biases[i], b0, 1);
-    biases[i + 1] = _mm256_inserti128_si256(biases[i + 1], a1, 0);
-  }
-#endif
+  for (size_t f = 0; f < N_THREATS; f++)
+    for (int i = 0; i < N_HIDDEN; i++)
+      THREAT_WEIGHTS[f * N_HIDDEN + i] = threats[f * N_HIDDEN + order[i]];
 }
 
 INLINE void InitLookupIndices() {

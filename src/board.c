@@ -26,6 +26,7 @@
 #include "bits.h"
 #include "eval.h"
 #include "move.h"
+#include "nn/threats.h"
 #include "movegen.h"
 #include "transposition.h"
 #include "types.h"
@@ -318,6 +319,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   int piece    = Moving(move);
   int captured = IsEP(move) ? Piece(PAWN, board->xstm) : board->squares[to];
 
+  // Threat changes are worked out on the board as it stands before the move.
+  if (update)
+    board->accumulators->nDirty = ThreatsForMove(board, move, captured, board->accumulators->dirty);
+
   // store hard to recalculate values
   memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
   board->history[board->histPly].capture = captured;
@@ -423,6 +428,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
+    board->accumulators->threatCorrect[WHITE] = board->accumulators->threatCorrect[BLACK] = 0;
   }
 }
 
@@ -727,4 +733,4 @@ int HasCycle(Board* board, int ply) {
   }
 
   return 0;
-}
+}

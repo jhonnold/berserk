@@ -50,6 +50,13 @@ Score Evaluate(Board* board, ThreadData* thread) {
       else
         RefreshAccumulator(acc, board, c);
     }
+
+    if (!acc->threatCorrect[c]) {
+      if (CanEfficientlyUpdateThreats(acc, c))
+        ApplyLazyThreatUpdates(acc, board, c);
+      else
+        RefreshThreats(acc, board, c);
+    }
   }
 
   const int bucket = OutputBucket(board);
@@ -136,4 +143,4 @@ void EvaluateTrace(Board* board) {
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
 
   AlignedFree(board->accumulators);
-}
+}

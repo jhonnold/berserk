@@ -25,6 +25,7 @@
 #include "../movegen.h"
 #include "../types.h"
 #include "../util.h"
+#include "threats.h"
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
@@ -205,6 +206,119 @@ INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, i
 
     for (size_t i = 0; i < NUM_REGS; i++)
       regi_store(&outputs[i], regs[i]);
+  }
+}
+
+// `dest = src - rem rows + add rows`, the rows int8 and widened to the int16 sums.
+#if defined(__AVX2__)
+// Registers per pass. The accumulator is 64 ymm wide, so a pass holds an eighth of it
+// and leaves registers for the widened rows.
+#define THREAT_TILE 8
+
+INLINE void ApplyThreatDelta(acc_t* dest, const acc_t* src, const int* rem, const int r, const int* add, const int a) {
+  for (size_t c = 0; c < N_HIDDEN / (16 * THREAT_TILE); c++) {
+    const size_t offset = c * 16 * THREAT_TILE;
+    const __m256i* in   = (const __m256i*) &src[offset];
+    __m256i* out        = (__m256i*) &dest[offset];
+
+    __m256i regs[THREAT_TILE];
+    for (size_t i = 0; i < THREAT_TILE; i++)
+      regs[i] = _mm256_load_si256(&in[i]);
+
+    for (int k = 0; k < r; k++) {
+      const __m128i* w = (const __m128i*) &THREAT_WEIGHTS[(size_t) rem[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i++)
+        regs[i] = _mm256_sub_epi16(regs[i], _mm256_cvtepi8_epi16(_mm_load_si128(&w[i])));
+    }
+
+    for (int k = 0; k < a; k++) {
+      const __m128i* w = (const __m128i*) &THREAT_WEIGHTS[(size_t) add[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i++)
+        regs[i] = _mm256_add_epi16(regs[i], _mm256_cvtepi8_epi16(_mm_load_si128(&w[i])));
+    }
+
+    for (size_t i = 0; i < THREAT_TILE; i++)
+      _mm256_store_si256(&out[i], regs[i]);
+  }
+}
+#else
+INLINE void ApplyThreatDelta(acc_t* dest, const acc_t* src, const int* rem, const int r, const int* add, const int a) {
+  int16_t sums[N_HIDDEN];
+  memcpy(sums, src, sizeof(sums));
+
+  for (int k = 0; k < r; k++) {
+    const int8_t* w = &THREAT_WEIGHTS[(size_t) rem[k] * N_HIDDEN];
+    for (int i = 0; i < N_HIDDEN; i++)
+      sums[i] -= w[i];
+  }
+
+  for (int k = 0; k < a; k++) {
+    const int8_t* w = &THREAT_WEIGHTS[(size_t) add[k] * N_HIDDEN];
+    for (int i = 0; i < N_HIDDEN; i++)
+      sums[i] += w[i];
+  }
+
+  memcpy(dest, sums, sizeof(sums));
+}
+#endif
+
+extern const acc_t THREAT_ZERO[N_HIDDEN];
+
+// Rebuilds `view`'s threat accumulator from the board. There is no bias: it lives on
+// the PSQ accumulator.
+INLINE void RefreshThreats(Accumulator* dest, Board* board, const int view) {
+  int add[256];
+  const int a = ActiveThreats(board, view, add);
+
+  ApplyThreatDelta(dest->threats[view], THREAT_ZERO, NULL, 0, add, a);
+  dest->threatCorrect[view] = 1;
+}
+
+// One move's threat changes, as `view` sees them.
+INLINE void ApplyThreatUpdates(acc_t* output, acc_t* prev, const Accumulator* step, const int view, const int flip) {
+  int rem[MAX_DIRTY_THREATS], add[MAX_DIRTY_THREATS];
+  int r = 0, a = 0;
+
+  for (int i = 0; i < step->nDirty; i++) {
+    const uint32_t d = step->dirty[i];
+    const int idx    = ThreatIdx(DirtyAttacker(d), DirtyFrom(d), DirtyVictim(d), DirtyTo(d), view, flip);
+    if (idx < 0)
+      continue;
+
+    if (DirtyAdd(d))
+      add[a++] = idx;
+    else
+      rem[r++] = idx;
+  }
+
+  ApplyThreatDelta(output, prev, rem, r, add, a);
+}
+
+INLINE void ApplyLazyThreatUpdates(Accumulator* live, Board* board, const int view) {
+  const int flip    = ThreatFlip(LSB(PieceBB(KING, view)), view);
+  Accumulator* curr = live;
+  while (!(--curr)->threatCorrect[view])
+    ; // go back to the latest correct accumulator
+
+  do {
+    ApplyThreatUpdates((curr + 1)->threats[view], curr->threats[view], curr, view, flip);
+    (curr + 1)->threatCorrect[view] = 1;
+  } while (++curr != live);
+}
+
+// Threat features are mirrored by the king's file and nothing else, so only a king
+// crossing the d/e line forces a rebuild.
+INLINE int CanEfficientlyUpdateThreats(Accumulator* live, const int view) {
+  Accumulator* curr = live;
+
+  while (1) {
+    curr--;
+
+    const Move move = curr->move;
+    if (Moving(move) == Piece(KING, view) && ((From(move) ^ To(move)) & 4))
+      return 0;
+    if (curr->threatCorrect[view])
+      return 1;
   }
 }
 
