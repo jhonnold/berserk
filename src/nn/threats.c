@@ -112,8 +112,8 @@ void InitThreats() {
       if (dr && df && abs(dr) != abs(df))
         continue;
 
-      const int sr = (dr > 0) - (dr < 0), sf = (df > 0) - (df < 0);
-      for (int r = (s >> 3) + sr, f = (s & 7) + sf; r >= 0 && r < 8 && f >= 0 && f < 8; r += sr, f += sf)
+      const int stepR = (dr > 0) - (dr < 0), stepF = (df > 0) - (df < 0);
+      for (int r = (s >> 3) + stepR, f = (s & 7) + stepF; r >= 0 && r < 8 && f >= 0 && f < 8; r += stepR, f += stepF)
         RAY_PASS[a][s] |= Bit(8 * r + f);
     }
   }
