@@ -247,20 +247,27 @@ INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const int perspe
   dest->correct[perspective] = 1;
 }
 
+INLINE void PrefetchRow(int f) {
+  __builtin_prefetch(&INPUT_WEIGHTS[(size_t) f * N_HIDDEN]);
+}
+
 INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2, const int* tRem, int tr, const int* tAdd, int ta) {
   const int rem[1] = {f1}, add[1] = {f2};
+  PrefetchRow(f1), PrefetchRow(f2);
   ApplyFusedDelta(dest, src, rem, 1, add, 1, tRem, tr, tAdd, ta);
 }
 
 INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, const int* tRem, int tr, const int* tAdd,
                            int ta) {
   const int rem[2] = {f1, f2}, add[1] = {f3};
+  PrefetchRow(f1), PrefetchRow(f2), PrefetchRow(f3);
   ApplyFusedDelta(dest, src, rem, 2, add, 1, tRem, tr, tAdd, ta);
 }
 
 INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4, const int* tRem, int tr,
                               const int* tAdd, int ta) {
   const int rem[2] = {f1, f2}, add[2] = {f3, f4};
+  PrefetchRow(f1), PrefetchRow(f2), PrefetchRow(f3), PrefetchRow(f4);
   ApplyFusedDelta(dest, src, rem, 2, add, 2, tRem, tr, tAdd, ta);
 }
 
