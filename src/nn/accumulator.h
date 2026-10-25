@@ -285,6 +285,10 @@ INLINE void ApplyThreatUpdates(acc_t* output, acc_t* prev, const Accumulator* st
     if (idx < 0)
       continue;
 
+    // The rows are spread over 61 MB; start the first line's fetch while the rest of
+    // the list is indexed.
+    __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
+
     if (DirtyAdd(d))
       add[a++] = idx;
     else
