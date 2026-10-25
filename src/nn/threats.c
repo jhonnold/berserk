@@ -261,23 +261,26 @@ int MovePiecesWithThreats(Board* board, Move move, int captured, uint32_t* dirty
 }
 
 int ActiveThreats(Board* board, const int view, int* indices) {
-  const BitBoard occ   = OccBB(BOTH);
-  const BitBoard kings = PieceBB(KING, WHITE) | PieceBB(KING, BLACK);
-  const int flip       = ThreatFlip(LSB(PieceBB(KING, view)), view);
+  const BitBoard occ     = OccBB(BOTH);
+  const BitBoard targets = occ & ~(PieceBB(KING, WHITE) | PieceBB(KING, BLACK));
+  const int flip         = ThreatFlip(LSB(PieceBB(KING, view)), view);
 
   int n = 0;
 
-  BitBoard attackers = occ & ~kings;
-  while (attackers) {
-    const int from = PopLSB(&attackers);
-    const int pc   = board->squares[from];
+  for (int pc = WHITE_PAWN; pc <= BLACK_QUEEN; pc++) {
+    BitBoard attackers = board->pieces[pc];
+    while (attackers) {
+      const int from = PopLSB(&attackers);
 
-    BitBoard targets = PieceAttacks(pc, from, occ) & occ & ~kings;
-    while (targets) {
-      const int to  = PopLSB(&targets);
-      const int idx = ThreatIdx(pc, from, board->squares[to], to, view, flip);
-      if (idx >= 0)
-        indices[n++] = idx;
+      BitBoard t = PieceAttacks(pc, from, occ) & targets;
+      while (t) {
+        const int to  = PopLSB(&t);
+        const int idx = ThreatIdx(pc, from, board->squares[to], to, view, flip);
+        if (idx >= 0) {
+          __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
+          indices[n++] = idx;
+        }
+      }
     }
   }
 
