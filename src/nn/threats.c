@@ -185,13 +185,44 @@ INLINE void Add(Board* board, DirtyList* list, int pc, int s) {
 }
 
 INLINE void Swap(Board* board, DirtyList* list, int old, int new, int s) {
-  PieceThreats(board, list, old, s, SUB, 0);
+  const BitBoard occ    = OccBB(BOTH);
+  const BitBoard kings  = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
+  const BitBoard queens = board->pieces[WHITE_QUEEN] | board->pieces[BLACK_QUEEN];
+
+  BitBoard in = (GetBishopAttacks(s, occ) & (board->pieces[WHITE_BISHOP] | board->pieces[BLACK_BISHOP] | queens)) |
+                (GetRookAttacks(s, occ) & (board->pieces[WHITE_ROOK] | board->pieces[BLACK_ROOK] | queens)) |
+                (GetKnightAttacks(s) & (board->pieces[WHITE_KNIGHT] | board->pieces[BLACK_KNIGHT])) |
+                (GetPawnAttacks(s, WHITE) & board->pieces[BLACK_PAWN]) |
+                (GetPawnAttacks(s, BLACK) & board->pieces[WHITE_PAWN]);
+
+  BitBoard out = PieceAttacks(old, s, occ) & occ & ~kings;
+  while (out) {
+    const int to = PopLSB(&out);
+    Push(list, old, s, board->squares[to], to, SUB);
+  }
+
+  const int newIsKing = PieceType(new) == KING;
+  while (in) {
+    const int from     = PopLSB(&in);
+    const int attacker = board->squares[from];
+    Push(list, attacker, from, old, s, SUB);
+    if (!newIsKing)
+      Push(list, attacker, from, new, s, ADD);
+  }
+
+  if (!newIsKing) {
+    out = PieceAttacks(new, s, occ) & occ & ~kings;
+    while (out) {
+      const int to = PopLSB(&out);
+      Push(list, new, s, board->squares[to], to, ADD);
+    }
+  }
+
   FlipBit(board->pieces[old], s);
   FlipBit(OccBB(old & 1), s);
   FlipBit(board->pieces[new], s);
   FlipBit(OccBB(new & 1), s);
   board->squares[s] = new;
-  PieceThreats(board, list, new, s, ADD, 0);
 }
 
 int MovePiecesWithThreats(Board* board, Move move, int captured, uint32_t* dirty) {
