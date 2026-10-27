@@ -29,47 +29,55 @@
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
-#define UNROLL     512
-#define NUM_REGS   16
-#define regi_t     __m512i
-#define regi_load  _mm512_load_si512
-#define regi_sub   _mm512_sub_epi16
-#define regi_add   _mm512_add_epi16
-#define regi_store _mm512_store_si512
+#define UNROLL        512
+#define NUM_REGS      16
+#define regi_t        __m512i
+#define regi_load     _mm512_load_si512
+#define regi_sub      _mm512_sub_epi16
+#define regi_add      _mm512_add_epi16
+#define regi_store    _mm512_store_si512
+#define regi_load8(a) _mm512_cvtepi8_epi16(_mm256_load_si256((const __m256i*) (a)))
+#define THREAT_TILE   16
 #elif defined(__AVX2__)
 #include <immintrin.h>
-#define UNROLL     256
-#define NUM_REGS   16
-#define regi_t     __m256i
-#define regi_load  _mm256_load_si256
-#define regi_sub   _mm256_sub_epi16
-#define regi_add   _mm256_add_epi16
-#define regi_store _mm256_store_si256
+#define UNROLL        256
+#define NUM_REGS      16
+#define regi_t        __m256i
+#define regi_load     _mm256_load_si256
+#define regi_sub      _mm256_sub_epi16
+#define regi_add      _mm256_add_epi16
+#define regi_store    _mm256_store_si256
+#define regi_load8(a) _mm256_cvtepi8_epi16(_mm_load_si128((const __m128i*) (a)))
+#define THREAT_TILE   8
 #elif defined(__SSE4_1__)
 #include <immintrin.h>
-#define UNROLL     128
-#define NUM_REGS   16
-#define regi_t     __m128i
-#define regi_load  _mm_load_si128
-#define regi_sub   _mm_sub_epi16
-#define regi_add   _mm_add_epi16
-#define regi_store _mm_store_si128
+#define UNROLL        128
+#define NUM_REGS      16
+#define regi_t        __m128i
+#define regi_load     _mm_load_si128
+#define regi_sub      _mm_sub_epi16
+#define regi_add      _mm_add_epi16
+#define regi_store    _mm_store_si128
+#define regi_load8(a) _mm_cvtepi8_epi16(_mm_loadl_epi64((const __m128i*) (a)))
+#define THREAT_TILE   8
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 #include <arm_neon.h>
-#define UNROLL           128
-#define NUM_REGS         16
-#define regi_t           int16x8_t
-#define regi_load(a)     vld1q_s16((int16_t*) (a))
-#define regi_sub(a, b)   vsubq_s16(a, b)
-#define regi_add(a, b)   vaddq_s16(a, b)
+#define UNROLL        128
+#define NUM_REGS      16
+#define regi_t        int16x8_t
+#define regi_load(a)  vld1q_s16((int16_t*) (a))
+#define regi_sub(a,   b)   vsubq_s16(a, b)
+#define regi_add(a,   b)   vaddq_s16(a, b)
 #define regi_store(a, b) vst1q_s16((int16_t*) (a), b)
+#define regi_load8(a) vmovl_s8(vld1_s8((const int8_t*) (a)))
+#define THREAT_TILE   16
 #else
-#define UNROLL           16
-#define NUM_REGS         16
-#define regi_t           acc_t
-#define regi_load(a)     (*(a))
-#define regi_sub(a, b)   ((a) - (b))
-#define regi_add(a, b)   ((a) + (b))
+#define UNROLL        16
+#define NUM_REGS      16
+#define regi_t        acc_t
+#define regi_load(a)  (*(a))
+#define regi_sub(a,   b)   ((a) - (b))
+#define regi_add(a,   b)   ((a) + (b))
 #define regi_store(a, b) (*(a) = (b))
 #endif
 
@@ -113,46 +121,46 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
   }
 }
 
-#if defined(__AVX2__)
-#define THREAT_TILE 8
-
+#if defined(__AVX2__) || defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
                             const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
-  for (size_t c = 0; c < N_HIDDEN / (16 * THREAT_TILE); c++) {
-    const size_t offset = c * 16 * THREAT_TILE;
-    const __m256i* in   = (const __m256i*) &src[offset];
-    __m256i* out        = (__m256i*) &dest[offset];
+  const size_t LANES = sizeof(regi_t) / sizeof(acc_t);
 
-    __m256i regs[THREAT_TILE];
+  for (size_t c = 0; c < N_HIDDEN / (LANES * THREAT_TILE); c++) {
+    const size_t offset = c * LANES * THREAT_TILE;
+    const regi_t* in    = (const regi_t*) &src[offset];
+    regi_t* out         = (regi_t*) &dest[offset];
+
+    regi_t regs[THREAT_TILE];
     for (size_t i = 0; i < THREAT_TILE; i++)
-      regs[i] = _mm256_load_si256(&in[i]);
+      regs[i] = regi_load(&in[i]);
 
     for (int k = 0; k < pr; k++) {
-      const __m256i* w = (const __m256i*) &INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + offset];
+      const regi_t* w = (const regi_t*) &INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = _mm256_sub_epi16(regs[i], _mm256_load_si256(&w[i]));
+        regs[i] = regi_sub(regs[i], regi_load(&w[i]));
     }
 
     for (int k = 0; k < pa; k++) {
-      const __m256i* w = (const __m256i*) &INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + offset];
+      const regi_t* w = (const regi_t*) &INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = _mm256_add_epi16(regs[i], _mm256_load_si256(&w[i]));
+        regs[i] = regi_add(regs[i], regi_load(&w[i]));
     }
 
     for (int k = 0; k < tr; k++) {
-      const __m128i* w = (const __m128i*) &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
+      const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = _mm256_sub_epi16(regs[i], _mm256_cvtepi8_epi16(_mm_load_si128(&w[i])));
+        regs[i] = regi_sub(regs[i], regi_load8(&w[i * LANES]));
     }
 
     for (int k = 0; k < ta; k++) {
-      const __m128i* w = (const __m128i*) &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
+      const int8_t* w = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = _mm256_add_epi16(regs[i], _mm256_cvtepi8_epi16(_mm_load_si128(&w[i])));
+        regs[i] = regi_add(regs[i], regi_load8(&w[i * LANES]));
     }
 
     for (size_t i = 0; i < THREAT_TILE; i++)
-      _mm256_store_si256(&out[i], regs[i]);
+      regi_store(&out[i], regs[i]);
   }
 }
 #else
