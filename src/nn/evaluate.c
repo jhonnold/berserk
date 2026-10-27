@@ -849,7 +849,6 @@ INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
 
   int32x4_t a0 = vdupq_n_s32(0);
   int8x16_add_dpbusd_x2(&a0, in[0], w[0], in[1], w[1]);
-  int8x16_add_dpbusd_x2(&a0, in[2], w[2], in[3], w[3]);
 
   return vaddvq_s32(a0);
 }
