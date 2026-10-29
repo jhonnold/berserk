@@ -79,6 +79,8 @@
 #define regi_sub(a,   b)   ((a) - (b))
 #define regi_add(a,   b)   ((a) + (b))
 #define regi_store(a, b) (*(a) = (b))
+#define regi_load8(a)    ((acc_t) (a)[0])
+#define THREAT_TILE      16
 #endif
 
 extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
@@ -121,7 +123,6 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
   }
 }
 
-#if defined(__AVX2__) || defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
                             const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
   const size_t LANES = sizeof(regi_t) / sizeof(acc_t);
@@ -163,31 +164,6 @@ INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, cons
       regi_store(&out[i], regs[i]);
   }
 }
-#else
-INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
-                            const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
-  int16_t sums[N_HIDDEN];
-  memcpy(sums, src, sizeof(sums));
-
-  for (int k = 0; k < pr; k++)
-    for (int i = 0; i < N_HIDDEN; i++)
-      sums[i] -= INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + i];
-
-  for (int k = 0; k < pa; k++)
-    for (int i = 0; i < N_HIDDEN; i++)
-      sums[i] += INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + i];
-
-  for (int k = 0; k < tr; k++)
-    for (int i = 0; i < N_HIDDEN; i++)
-      sums[i] -= THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + i];
-
-  for (int k = 0; k < ta; k++)
-    for (int i = 0; i < N_HIDDEN; i++)
-      sums[i] += THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + i];
-
-  memcpy(dest, sums, sizeof(sums));
-}
-#endif
 
 INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const int view) {
   int add[256];
