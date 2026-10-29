@@ -26,8 +26,8 @@
 #include "bits.h"
 #include "eval.h"
 #include "move.h"
-#include "nn/threats.h"
 #include "movegen.h"
+#include "nn/threats.h"
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
@@ -309,50 +309,6 @@ void PrintBoard(Board* board) {
 
 // Special pieces are those giving check, and those that are pinned
 
-INLINE void MovePieces(Board* board, Move move, int captured) {
-  int from  = From(move);
-  int to    = To(move);
-  int piece = Moving(move);
-
-  FlipBits(board->pieces[piece], from, to);
-  FlipBits(OccBB(board->stm), from, to);
-  FlipBits(OccBB(BOTH), from, to);
-
-  board->squares[from] = NO_PIECE;
-  board->squares[to]   = piece;
-
-  if (IsCas(move)) {
-    int rookFrom = board->cr[CASTLING_ROOK[to]];
-    int rookTo   = CASTLE_ROOK_DEST[to];
-
-    FlipBits(PieceBB(ROOK, board->stm), rookFrom, rookTo);
-    FlipBits(OccBB(board->stm), rookFrom, rookTo);
-    FlipBits(OccBB(BOTH), rookFrom, rookTo);
-
-    // chess960 can have the king going where the rook started
-    // do this check to prevent accidental wipe outs
-    if (rookFrom != to)
-      board->squares[rookFrom] = NO_PIECE;
-    board->squares[rookTo] = Piece(ROOK, board->stm);
-  } else if (IsCap(move)) {
-    int capSq = IsEP(move) ? to - PawnDir(board->stm) : to;
-    if (IsEP(move))
-      board->squares[capSq] = NO_PIECE;
-
-    FlipBit(board->pieces[captured], capSq);
-    FlipBit(OccBB(board->xstm), capSq);
-    FlipBit(OccBB(BOTH), capSq);
-  }
-
-  if (IsPromo(move)) {
-    int promoted = PromoPiece(move, board->stm);
-    FlipBit(board->pieces[piece], to);
-    FlipBit(board->pieces[promoted], to);
-
-    board->squares[to] = promoted;
-  }
-}
-
 void MakeMove(Move move, Board* board) {
   MakeMoveUpdate(move, board, 1);
 }
@@ -367,10 +323,11 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
   board->history[board->histPly].capture = captured;
 
+  // without an update the threats are still found, so perft runs search's board code
+  uint32_t scratch[MAX_DIRTY_THREATS];
+  const int nDirty = MovePiecesWithThreats(board, move, captured, update ? board->accumulators->dirty : scratch);
   if (update)
-    board->accumulators->nDirty = MovePiecesWithThreats(board, move, captured, board->accumulators->dirty);
-  else
-    MovePieces(board, move, captured);
+    board->accumulators->nDirty = nDirty;
 
   board->fmr++;
   board->nullply++;
@@ -750,4 +707,4 @@ int HasCycle(Board* board, int ply) {
   }
 
   return 0;
-}
+}

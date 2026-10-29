@@ -225,7 +225,10 @@ INLINE void Swap(Board* board, DirtyList* list, int old, int new, int s) {
   board->squares[s] = new;
 }
 
-int MovePiecesWithThreats(Board* board, Move move, int captured, uint32_t* dirty) {
+__attribute__((always_inline)) inline int MovePiecesWithThreats(Board* board,
+                                                                Move move,
+                                                                int captured,
+                                                                uint32_t* dirty) {
   DirtyList list = {dirty, 0};
 
   const int from  = From(move);

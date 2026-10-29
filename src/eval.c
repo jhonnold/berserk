@@ -136,4 +136,4 @@ void EvaluateTrace(Board* board) {
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
 
   AlignedFree(board->accumulators);
-}
+}
