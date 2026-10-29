@@ -116,15 +116,9 @@ INLINE void Push(DirtyThreatList* list, int attacker, int from, int victim, int 
   list->dirty[list->n++] = from | (to << 8) | (attacker << 16) | (victim << 20) | ((uint32_t) add << 31);
 }
 
+// GetPieceAttacks plus pawns; never called for a king
 INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {
-  switch (PieceType(pc)) {
-    case PAWN: return GetPawnAttacks(sq, pc & 1);
-    case KNIGHT: return GetKnightAttacks(sq);
-    case BISHOP: return GetBishopAttacks(sq, occ);
-    case ROOK: return GetRookAttacks(sq, occ);
-    case QUEEN: return GetQueenAttacks(sq, occ);
-    default: return 0;
-  }
+  return PieceType(pc) == PAWN ? GetPawnAttacks(sq, pc & 1) : GetPieceAttacks(sq, occ, PieceType(pc));
 }
 
 static void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int rays) {
@@ -185,15 +179,10 @@ INLINE void Add(Board* board, DirtyThreatList* list, int pc, int s) {
 }
 
 INLINE void Swap(Board* board, DirtyThreatList* list, int old, int new, int s) {
-  const BitBoard occ    = OccBB(BOTH);
-  const BitBoard kings  = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
-  const BitBoard queens = board->pieces[WHITE_QUEEN] | board->pieces[BLACK_QUEEN];
+  const BitBoard occ   = OccBB(BOTH);
+  const BitBoard kings = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
 
-  BitBoard in = (GetBishopAttacks(s, occ) & (board->pieces[WHITE_BISHOP] | board->pieces[BLACK_BISHOP] | queens)) |
-                (GetRookAttacks(s, occ) & (board->pieces[WHITE_ROOK] | board->pieces[BLACK_ROOK] | queens)) |
-                (GetKnightAttacks(s) & (board->pieces[WHITE_KNIGHT] | board->pieces[BLACK_KNIGHT])) |
-                (GetPawnAttacks(s, WHITE) & board->pieces[BLACK_PAWN]) |
-                (GetPawnAttacks(s, BLACK) & board->pieces[WHITE_PAWN]);
+  BitBoard in = AttacksToSquare(board, s, occ) & ~kings;
 
   BitBoard out = PieceAttacks(old, s, occ) & occ & ~kings;
   while (out) {
