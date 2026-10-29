@@ -312,7 +312,7 @@ INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
   while (!(--curr)->correct[view])
     ; // go back to the latest correct accumulator
 
-  const int flip = ThreatFlip(LSB(PieceBB(KING, view)), view);
+  const int flip = FeatureFlip(LSB(PieceBB(KING, view)), view);
 
   do {
     ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr, view, flip);

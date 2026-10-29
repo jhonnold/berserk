@@ -18,6 +18,7 @@
 #define THREATS_H
 
 #include "../bits.h"
+#include "../board.h"
 #include "../types.h"
 #include "../util.h"
 
@@ -39,10 +40,6 @@ void InitThreats();
 int MovePiecesWithThreats(Board* board, Move move, int captured, uint32_t* dirty);
 
 int ActiveThreats(Board* board, const int view, int* indices);
-
-INLINE int ThreatFlip(int kingSq, const int view) {
-  return (7 * !(kingSq & 4)) ^ (56 * view);
-}
 
 INLINE int ThreatIdx(int attacker, int from, int victim, int to, const int view, const int flip) {
   const int block = 5 * ((attacker ^ view) & 1) + (attacker >> 1);

@@ -266,7 +266,7 @@ __attribute__((always_inline)) inline int MovePiecesWithThreats(Board* board,
 int ActiveThreats(Board* board, const int view, int* indices) {
   const BitBoard occ     = OccBB(BOTH);
   const BitBoard targets = occ & ~(PieceBB(KING, WHITE) | PieceBB(KING, BLACK));
-  const int flip         = ThreatFlip(LSB(PieceBB(KING, view)), view);
+  const int flip         = FeatureFlip(LSB(PieceBB(KING, view)), view);
 
   int n = 0;
 
