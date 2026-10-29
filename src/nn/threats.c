@@ -110,9 +110,9 @@ void InitThreats() {
 typedef struct {
   uint32_t* dirty;
   int n;
-} DirtyList;
+} DirtyThreatList;
 
-INLINE void Push(DirtyList* list, int attacker, int from, int victim, int to, int add) {
+INLINE void Push(DirtyThreatList* list, int attacker, int from, int victim, int to, int add) {
   list->dirty[list->n++] = from | (to << 8) | (attacker << 16) | (victim << 20) | ((uint32_t) add << 31);
 }
 
@@ -127,7 +127,7 @@ INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {
   }
 }
 
-static void PieceThreats(Board* board, DirtyList* list, int pc, int s, int add, int rays) {
+static void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int rays) {
   const BitBoard occ     = OccBB(BOTH);
   const BitBoard kings   = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
   const BitBoard queens  = board->pieces[WHITE_QUEEN] | board->pieces[BLACK_QUEEN];
@@ -168,7 +168,7 @@ static void PieceThreats(Board* board, DirtyList* list, int pc, int s, int add, 
   }
 }
 
-INLINE void Remove(Board* board, DirtyList* list, int pc, int s) {
+INLINE void Remove(Board* board, DirtyThreatList* list, int pc, int s) {
   PieceThreats(board, list, pc, s, SUB, 1);
   FlipBit(board->pieces[pc], s);
   FlipBit(OccBB(pc & 1), s);
@@ -176,7 +176,7 @@ INLINE void Remove(Board* board, DirtyList* list, int pc, int s) {
   board->squares[s] = NO_PIECE;
 }
 
-INLINE void Add(Board* board, DirtyList* list, int pc, int s) {
+INLINE void Add(Board* board, DirtyThreatList* list, int pc, int s) {
   FlipBit(board->pieces[pc], s);
   FlipBit(OccBB(pc & 1), s);
   FlipBit(OccBB(BOTH), s);
@@ -184,7 +184,7 @@ INLINE void Add(Board* board, DirtyList* list, int pc, int s) {
   PieceThreats(board, list, pc, s, ADD, 1);
 }
 
-INLINE void Swap(Board* board, DirtyList* list, int old, int new, int s) {
+INLINE void Swap(Board* board, DirtyThreatList* list, int old, int new, int s) {
   const BitBoard occ    = OccBB(BOTH);
   const BitBoard kings  = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
   const BitBoard queens = board->pieces[WHITE_QUEEN] | board->pieces[BLACK_QUEEN];
@@ -229,7 +229,7 @@ __attribute__((always_inline)) inline int MovePiecesWithThreats(Board* board,
                                                                 Move move,
                                                                 int captured,
                                                                 uint32_t* dirty) {
-  DirtyList list = {dirty, 0};
+  DirtyThreatList list = {dirty, 0};
 
   const int from  = From(move);
   const int to    = To(move);
