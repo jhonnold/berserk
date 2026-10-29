@@ -9,12 +9,12 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-26.04]
         version: [11]
     
     steps:
     - name: Set up GCC ${{matrix.version}}
-      uses: egor-tensin/setup-gcc@v1
+      uses: egor-tensin/setup-gcc@v2
       with:
         version: ${{matrix.version}}
         platform: x64
@@ -39,10 +39,10 @@ jobs:
       run: ./tests/perft.sh 1>/dev/null
   
   clang-format-checking:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v2
       
-      - uses: RafikFarhad/clang-format-github-action@v2.1.0
+      - uses: RafikFarhad/clang-format-github-action@v5
         with:
           sources: 'src/*.c,src/*.h'
