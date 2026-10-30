@@ -16,6 +16,7 @@
 
 #include "eval.h"
 
+#include <math.h>
 #include <stdio.h>
 
 #include "attacks.h"
@@ -136,6 +137,32 @@ void EvaluateTrace(Board* board) {
   }
 
   printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
+
+  // the piece loop left the accumulators on a board missing a piece
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
+
+  printf("+------------+------------+------------+\n");
+  printf("|   Bucket   |    NNUE    |   Final    |\n");
+  printf("+------------+------------+------------+\n");
+
+  for (int b = 0; b < N_OUTPUT_BUCKETS; b++) {
+    int v = Propagate(board->accumulators, board->stm, b);
+    v     = board->stm == WHITE ? v : -v;
+
+    double nnue  = Normalize(v) / 100;
+    double final = Normalize((128 + board->phase) * v / 128) / 100;
+
+    printf("|  %-9d |  %c %5.2f   |  %c %5.2f   |",
+           b,
+           nnue < 0 ? '-' : '+',
+           fabs(nnue),
+           final < 0 ? '-' : '+',
+           fabs(final));
+    printf(b == OutputBucket(board) ? " <-- this bucket is used\n" : "\n");
+  }
+
+  printf("+------------+------------+------------+\n\n");
 
   printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));
