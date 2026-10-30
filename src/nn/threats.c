@@ -121,6 +121,24 @@ INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {
   return PieceType(pc) == PAWN ? GetPawnAttacks(sq, pc & 1) : GetPieceAttacks(sq, occ, PieceType(pc));
 }
 
+// MAP as bitboards: the pieces a pt can threaten, and the pieces that can threaten a pt
+INLINE BitBoard FeatureVictims(Board* board, int pt) {
+  const BitBoard queens = PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
+  if (pt == PAWN)
+    return ~(queens | PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK));
+  if (pt == BISHOP || pt == ROOK)
+    return ~queens;
+  return ~0ULL;
+}
+
+INLINE BitBoard FeatureAttackers(Board* board, int pt) {
+  if (pt == BISHOP)
+    return ~(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK));
+  if (pt == QUEEN)
+    return PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
+  return ~0ULL;
+}
+
 static void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int rays) {
   const BitBoard occ     = OccBB(BOTH);
   const BitBoard kings   = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
@@ -131,7 +149,7 @@ static void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int
   const BitBoard sliders = (GetBishopAttacks(s, occ) & diagSl) | (GetRookAttacks(s, occ) & orthoSl);
 
   if (PieceType(pc) != KING) {
-    BitBoard out = PieceAttacks(pc, s, occ) & occ & ~kings;
+    BitBoard out = PieceAttacks(pc, s, occ) & occ & ~kings & FeatureVictims(board, PieceType(pc));
     while (out) {
       const int to = PopLSB(&out);
       Push(list, pc, s, board->squares[to], to, add);
@@ -140,6 +158,7 @@ static void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int
     BitBoard in = sliders | (GetKnightAttacks(s) & (board->pieces[WHITE_KNIGHT] | board->pieces[BLACK_KNIGHT])) |
                   (GetPawnAttacks(s, WHITE) & board->pieces[BLACK_PAWN]) |
                   (GetPawnAttacks(s, BLACK) & board->pieces[WHITE_PAWN]);
+    in &= FeatureAttackers(board, PieceType(pc));
     while (in) {
       const int from = PopLSB(&in);
       Push(list, board->squares[from], from, pc, s, add);
@@ -154,10 +173,11 @@ static void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int
       if (!past)
         continue;
 
-      const int to     = from < s ? LSB(past) : MSB(past);
-      const int victim = board->squares[to];
-      if (PieceType(victim) != KING)
-        Push(list, board->squares[from], from, victim, to, !add);
+      const int to       = from < s ? LSB(past) : MSB(past);
+      const int victim   = board->squares[to];
+      const int attacker = board->squares[from];
+      if (PieceType(victim) != KING && (PieceType(victim) != QUEEN || PieceType(attacker) == QUEEN))
+        Push(list, attacker, from, victim, to, !add);
     }
   }
 }
@@ -182,25 +202,28 @@ INLINE void Swap(Board* board, DirtyThreatList* list, int old, int new, int s) {
   const BitBoard occ   = OccBB(BOTH);
   const BitBoard kings = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
 
-  BitBoard in = AttacksToSquare(board, s, occ) & ~kings;
+  const BitBoard in = AttacksToSquare(board, s, occ) & ~kings;
 
-  BitBoard out = PieceAttacks(old, s, occ) & occ & ~kings;
+  BitBoard out = PieceAttacks(old, s, occ) & occ & ~kings & FeatureVictims(board, PieceType(old));
   while (out) {
     const int to = PopLSB(&out);
     Push(list, old, s, board->squares[to], to, SUB);
   }
 
-  const int newIsKing = PieceType(new) == KING;
-  while (in) {
-    const int from     = PopLSB(&in);
-    const int attacker = board->squares[from];
-    Push(list, attacker, from, old, s, SUB);
-    if (!newIsKing)
-      Push(list, attacker, from, new, s, ADD);
+  BitBoard inOld = in & FeatureAttackers(board, PieceType(old));
+  while (inOld) {
+    const int from = PopLSB(&inOld);
+    Push(list, board->squares[from], from, old, s, SUB);
   }
 
-  if (!newIsKing) {
-    out = PieceAttacks(new, s, occ) & occ & ~kings;
+  if (PieceType(new) != KING) {
+    BitBoard inNew = in & FeatureAttackers(board, PieceType(new));
+    while (inNew) {
+      const int from = PopLSB(&inNew);
+      Push(list, board->squares[from], from, new, s, ADD);
+    }
+
+    out = PieceAttacks(new, s, occ) & occ & ~kings & FeatureVictims(board, PieceType(new));
     while (out) {
       const int to = PopLSB(&out);
       Push(list, new, s, board->squares[to], to, ADD);
@@ -260,11 +283,13 @@ int ActiveThreats(Board* board, const int view, int* indices) {
   int n = 0;
 
   for (int pc = WHITE_PAWN; pc <= BLACK_QUEEN; pc++) {
+    const BitBoard victims = targets & FeatureVictims(board, PieceType(pc));
+
     BitBoard attackers = board->pieces[pc];
     while (attackers) {
       const int from = PopLSB(&attackers);
 
-      BitBoard t = PieceAttacks(pc, from, occ) & targets;
+      BitBoard t = PieceAttacks(pc, from, occ) & victims;
       while (t) {
         const int to  = PopLSB(&t);
         const int idx = ThreatIdx(pc, from, board->squares[to], to, view, flip);
