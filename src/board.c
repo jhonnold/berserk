@@ -326,8 +326,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   // without an update the threats are still found, so perft runs search's board code
   uint32_t scratch[MAX_DIRTY_THREATS];
   const int nDirty = MovePiecesWithThreats(board, move, captured, update ? board->accumulators->dirty : scratch);
-  if (update)
-    board->accumulators->nDirty = nDirty;
 
   board->fmr++;
   board->nullply++;
@@ -400,6 +398,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   if (update) {
     board->accumulators->move     = move;
     board->accumulators->captured = captured;
+    board->accumulators->nDirty   = nDirty;
 
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
