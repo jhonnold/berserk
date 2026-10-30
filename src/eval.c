@@ -94,11 +94,16 @@ void EvaluateTrace(Board* board) {
       } else {
         // To calculate the piece value, we pop it
         // reset the accumulators and take a diff
+        // threats read the piece bitboards, so it has to leave those too
+        PopBit(board->pieces[pc], sq);
+        PopBit(OccBB(pc & 1), sq);
         PopBit(OccBB(BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
         int new = Propagate(board->accumulators, board->stm, OutputBucket(board));
         new     = board->stm == WHITE ? new : -new;
+        SetBit(board->pieces[pc], sq);
+        SetBit(OccBB(pc & 1), sq);
         SetBit(OccBB(BOTH), sq);
 
         int diff       = base - new;
