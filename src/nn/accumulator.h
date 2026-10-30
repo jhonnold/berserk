@@ -29,15 +29,16 @@
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
-#define UNROLL        512
-#define NUM_REGS      16
+// 12 registers of 32 lanes: 384 divides N_HIDDEN = 768, where 512 does not.
+#define UNROLL        384
+#define NUM_REGS      12
 #define regi_t        __m512i
 #define regi_load     _mm512_load_si512
 #define regi_sub      _mm512_sub_epi16
 #define regi_add      _mm512_add_epi16
 #define regi_store    _mm512_store_si512
 #define regi_load8(a) _mm512_cvtepi8_epi16(_mm256_load_si256((const __m256i*) (a)))
-#define THREAT_TILE   16
+#define THREAT_TILE   12
 #elif defined(__AVX2__)
 #include <immintrin.h>
 #define UNROLL        256
@@ -82,6 +83,10 @@
 #define regi_load8(a)    ((acc_t) (a)[0])
 #define THREAT_TILE      16
 #endif
+
+_Static_assert(N_HIDDEN % UNROLL == 0, "ApplyDelta would skip the tail of the accumulator");
+_Static_assert(N_HIDDEN % (sizeof(regi_t) / sizeof(acc_t) * THREAT_TILE) == 0,
+               "ApplyFusedDelta would skip the tail of the accumulator");
 
 extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
 extern int16_t INPUT_BIASES[N_HIDDEN];
