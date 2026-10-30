@@ -22,8 +22,6 @@
 
 #include "../attacks.h"
 #include "../board.h"
-#include "../move.h"
-#include "../movegen.h"
 
 int8_t THREAT_WEIGHTS[N_THREATS * N_HIDDEN] ALIGN;
 
@@ -31,7 +29,7 @@ int32_t THREAT_PAIR[10][12];
 uint16_t THREAT_OFFSET[10][64];
 BitBoard THREAT_EMPTY[10][64];
 
-static BitBoard RAY_PASS[64][64];
+BitBoard RAY_PASS[64][64];
 
 static const int MAP[5][6] = {
   {0, 1, -1, 2, -1, -1}, // P
@@ -107,39 +105,7 @@ void InitThreats() {
   }
 }
 
-typedef struct {
-  uint32_t* dirty;
-  int n;
-} DirtyThreatList;
-
-INLINE void Push(DirtyThreatList* list, int attacker, int from, int victim, int to, int add) {
-  list->dirty[list->n++] = from | (to << 8) | (attacker << 16) | (victim << 20) | ((uint32_t) add << 31);
-}
-
-// GetPieceAttacks plus pawns; never called for a king
-INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {
-  return PieceType(pc) == PAWN ? GetPawnAttacks(sq, pc & 1) : GetPieceAttacks(sq, occ, PieceType(pc));
-}
-
-// MAP as bitboards: the pieces a pt can threaten, and the pieces that can threaten a pt
-INLINE BitBoard FeatureVictims(Board* board, int pt) {
-  const BitBoard queens = PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
-  if (pt == PAWN)
-    return ~(queens | PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK));
-  if (pt == BISHOP || pt == ROOK)
-    return ~queens;
-  return ~0ULL;
-}
-
-INLINE BitBoard FeatureAttackers(Board* board, int pt) {
-  if (pt == BISHOP)
-    return ~(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK));
-  if (pt == QUEEN)
-    return PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
-  return ~0ULL;
-}
-
-static void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int rays) {
+void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int rays) {
   const BitBoard occ     = OccBB(BOTH);
   const BitBoard kings   = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
   const BitBoard queens  = board->pieces[WHITE_QUEEN] | board->pieces[BLACK_QUEEN];
@@ -165,114 +131,19 @@ static void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int
     }
   }
 
-  if (rays) {
-    BitBoard sl = sliders;
-    while (sl) {
-      const int from      = PopLSB(&sl);
-      const BitBoard past = RAY_PASS[from][s] & occ;
-      if (!past)
-        continue;
+  BitBoard sl = rays ? sliders : 0;
+  while (sl) {
+    const int from      = PopLSB(&sl);
+    const BitBoard past = RAY_PASS[from][s] & occ;
+    if (!past)
+      continue;
 
-      const int to       = from < s ? LSB(past) : MSB(past);
-      const int victim   = board->squares[to];
-      const int attacker = board->squares[from];
-      if (PieceType(victim) != KING && (PieceType(victim) != QUEEN || PieceType(attacker) == QUEEN))
-        Push(list, attacker, from, victim, to, !add);
-    }
+    const int to       = from < s ? LSB(past) : MSB(past);
+    const int victim   = board->squares[to];
+    const int attacker = board->squares[from];
+    if (PieceType(victim) != KING && (PieceType(victim) != QUEEN || PieceType(attacker) == QUEEN))
+      Push(list, attacker, from, victim, to, !add);
   }
-}
-
-INLINE void Remove(Board* board, DirtyThreatList* list, int pc, int s) {
-  PieceThreats(board, list, pc, s, SUB, 1);
-  FlipBit(board->pieces[pc], s);
-  FlipBit(OccBB(pc & 1), s);
-  FlipBit(OccBB(BOTH), s);
-  board->squares[s] = NO_PIECE;
-}
-
-INLINE void Add(Board* board, DirtyThreatList* list, int pc, int s) {
-  FlipBit(board->pieces[pc], s);
-  FlipBit(OccBB(pc & 1), s);
-  FlipBit(OccBB(BOTH), s);
-  board->squares[s] = pc;
-  PieceThreats(board, list, pc, s, ADD, 1);
-}
-
-INLINE void Swap(Board* board, DirtyThreatList* list, int old, int new, int s) {
-  const BitBoard occ   = OccBB(BOTH);
-  const BitBoard kings = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
-
-  const BitBoard in = AttacksToSquare(board, s, occ) & ~kings;
-
-  BitBoard out = PieceAttacks(old, s, occ) & occ & ~kings & FeatureVictims(board, PieceType(old));
-  while (out) {
-    const int to = PopLSB(&out);
-    Push(list, old, s, board->squares[to], to, SUB);
-  }
-
-  BitBoard inOld = in & FeatureAttackers(board, PieceType(old));
-  while (inOld) {
-    const int from = PopLSB(&inOld);
-    Push(list, board->squares[from], from, old, s, SUB);
-  }
-
-  if (PieceType(new) != KING) {
-    BitBoard inNew = in & FeatureAttackers(board, PieceType(new));
-    while (inNew) {
-      const int from = PopLSB(&inNew);
-      Push(list, board->squares[from], from, new, s, ADD);
-    }
-
-    out = PieceAttacks(new, s, occ) & occ & ~kings & FeatureVictims(board, PieceType(new));
-    while (out) {
-      const int to = PopLSB(&out);
-      Push(list, new, s, board->squares[to], to, ADD);
-    }
-  }
-
-  FlipBit(board->pieces[old], s);
-  FlipBit(OccBB(old & 1), s);
-  FlipBit(board->pieces[new], s);
-  FlipBit(OccBB(new & 1), s);
-  board->squares[s] = new;
-}
-
-__attribute__((always_inline)) inline int MovePiecesWithThreats(Board* board,
-                                                                Move move,
-                                                                int captured,
-                                                                uint32_t* dirty) {
-  DirtyThreatList list = {dirty, 0};
-
-  const int from  = From(move);
-  const int to    = To(move);
-  const int piece = Moving(move);
-  const int stm   = piece & 1;
-
-  if (IsCas(move)) {
-    const int rookFrom = board->cr[CASTLING_ROOK[to]];
-    const int rookTo   = CASTLE_ROOK_DEST[to];
-    const int rook     = Piece(ROOK, stm);
-
-    Remove(board, &list, piece, from);
-    Remove(board, &list, rook, rookFrom);
-    Add(board, &list, piece, to);
-    Add(board, &list, rook, rookTo);
-  } else {
-    const int placed = IsPromo(move) ? PromoPiece(move, stm) : piece;
-
-    Remove(board, &list, piece, from);
-
-    if (IsEP(move)) {
-      Remove(board, &list, captured, to - PawnDir(stm));
-      Add(board, &list, placed, to);
-    } else if (IsCap(move)) {
-      Swap(board, &list, captured, placed, to);
-    } else {
-      Add(board, &list, placed, to);
-    }
-  }
-
-  return list.n;
 }
 
 int ActiveThreats(Board* board, const int view, int* indices) {

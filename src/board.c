@@ -307,6 +307,28 @@ void PrintBoard(Board* board) {
   printf("\nFEN: %s\n\n", fenBuffer);
 }
 
+INLINE void RemovePiece(Board* board, int pc, int s) {
+  FlipBit(board->pieces[pc], s);
+  FlipBit(OccBB(pc & 1), s);
+  FlipBit(OccBB(BOTH), s);
+  board->squares[s] = NO_PIECE;
+}
+
+INLINE void AddPiece(Board* board, int pc, int s) {
+  FlipBit(board->pieces[pc], s);
+  FlipBit(OccBB(pc & 1), s);
+  FlipBit(OccBB(BOTH), s);
+  board->squares[s] = pc;
+}
+
+INLINE void SwapPiece(Board* board, int old, int new, int s) {
+  FlipBit(board->pieces[old], s);
+  FlipBit(OccBB(old & 1), s);
+  FlipBit(board->pieces[new], s);
+  FlipBit(OccBB(new & 1), s);
+  board->squares[s] = new;
+}
+
 // Special pieces are those giving check, and those that are pinned
 
 void MakeMove(Move move, Board* board) {
@@ -325,7 +347,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 
   // without an update the threats are still found, so perft runs search's board code
   uint32_t scratch[MAX_DIRTY_THREATS];
-  const int nDirty = MovePiecesWithThreats(board, move, captured, update ? board->accumulators->dirty : scratch);
+  DirtyThreatList list = {update ? board->accumulators->dirty : scratch, 0};
+  const int stm        = piece & 1;
 
   board->fmr++;
   board->nullply++;
@@ -334,22 +357,52 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   if (PieceType(piece) == PAWN)
     board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
+  // each piece leaves before the next arrives, so lines through its square are open
   if (IsCas(move)) {
-    int rookFrom = board->cr[CASTLING_ROOK[to]];
-    int rookTo   = CASTLE_ROOK_DEST[to];
-    int rook     = Piece(ROOK, board->stm);
+    const int rookFrom = board->cr[CASTLING_ROOK[to]];
+    const int rookTo   = CASTLE_ROOK_DEST[to];
+    const int rook     = Piece(ROOK, stm);
+
+    PieceThreats(board, &list, piece, from, SUB, 1);
+    RemovePiece(board, piece, from);
+    PieceThreats(board, &list, rook, rookFrom, SUB, 1);
+    RemovePiece(board, rook, rookFrom);
+    AddPiece(board, piece, to);
+    PieceThreats(board, &list, piece, to, ADD, 1);
+    AddPiece(board, rook, rookTo);
+    PieceThreats(board, &list, rook, rookTo, ADD, 1);
 
     board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
-  } else if (IsCap(move)) {
-    int capSq = IsEP(move) ? to - PawnDir(board->stm) : to;
+  } else {
+    const int placed = IsPromo(move) ? PromoPiece(move, stm) : piece;
 
-    board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
-    if (PieceType(captured) == PAWN)
-      board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
+    PieceThreats(board, &list, piece, from, SUB, 1);
+    RemovePiece(board, piece, from);
 
-    board->piecesCounts -= PieceCount(captured);
-    board->phase -= PHASE_VALUES[PieceType(captured)];
-    board->fmr = 0;
+    if (IsCap(move)) {
+      const int capSq = IsEP(move) ? to - PawnDir(stm) : to;
+
+      if (IsEP(move)) {
+        PieceThreats(board, &list, captured, capSq, SUB, 1);
+        RemovePiece(board, captured, capSq);
+        AddPiece(board, placed, to);
+        PieceThreats(board, &list, placed, to, ADD, 1);
+      } else {
+        SwapThreats(board, &list, captured, placed, to);
+        SwapPiece(board, captured, placed, to);
+      }
+
+      board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
+      if (PieceType(captured) == PAWN)
+        board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
+
+      board->piecesCounts -= PieceCount(captured);
+      board->phase -= PHASE_VALUES[PieceType(captured)];
+      board->fmr = 0;
+    } else {
+      AddPiece(board, placed, to);
+      PieceThreats(board, &list, placed, to, ADD, 1);
+    }
   }
 
   if (board->epSquare)
@@ -398,7 +451,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   if (update) {
     board->accumulators->move     = move;
     board->accumulators->captured = captured;
-    board->accumulators->nDirty   = nDirty;
+    board->accumulators->nDirty   = list.n;
 
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
