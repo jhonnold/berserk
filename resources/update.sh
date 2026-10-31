@@ -3,7 +3,8 @@
 set -uex
 
 # Select a compiler, prioritize Clang
-if hash clang 2>/dev/null; then
+# clang's pgo build needs llvm-profdata (through xcrun on Mac)
+if hash clang 2>/dev/null && { hash llvm-profdata 2>/dev/null || xcrun -f llvm-profdata >/dev/null 2>&1; }; then
     cc=clang
 elif hash gcc 2>/dev/null; then
     cc=gcc
@@ -35,5 +36,5 @@ fi
 
 EXE=$PWD/berserk
 
-$EXE bench 13 > bench.log 2 >&1
+$EXE bench 13 > bench.log 2>&1
 grep Results bench.log
