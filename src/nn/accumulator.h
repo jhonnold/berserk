@@ -134,6 +134,35 @@ INLINE void ThreatIndices(const Accumulator* step, const int view, const int fli
   }
 }
 
+// The pairs of the pawns in moved (white | black), against the pawns of that position.
+// Pairs between two moved pawns are taken once, from the first of them.
+INLINE void PairDelta(BitBoard moved, const BitBoard white, const BitBoard black, const int view, const int flip,
+                      int* out, int* n) {
+  BitBoard partners = (white | black) & ~moved;
+  while (moved) {
+    const int a  = PopLSB(&moved);
+    const int ia = PairId((black >> a) & 1, a, view, flip);
+
+    BitBoard p = PAIR_BAND[a] & (partners | moved);
+    while (p) {
+      const int b   = PopLSB(&p);
+      const int idx = PairIdx(ia, PairId((black >> b) & 1, b, view, flip));
+      __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
+      out[(*n)++] = idx;
+    }
+  }
+}
+
+INLINE void PairIndices(const Accumulator* step, const int view, const int flip, int* rem, int* r, int* add, int* a) {
+  const BitBoard bw = step->pawns[0][WHITE], bb = step->pawns[0][BLACK];
+  const BitBoard aw = step->pawns[1][WHITE], ab = step->pawns[1][BLACK];
+  if (bw == aw && bb == ab)
+    return;
+
+  PairDelta((bw & ~aw) | (bb & ~ab), bw, bb, view, flip, rem, r);
+  PairDelta((aw & ~bw) | (ab & ~bb), aw, ab, view, flip, add, a);
+}
+
 void ResetRefreshTable(AccumulatorKingState* refreshTable);
 void ResetAccumulator(Accumulator* dest, Board* board, const int perspective);
 
@@ -207,8 +236,9 @@ INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumul
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
 
-  int tRem[MAX_DIRTY_THREATS], tAdd[MAX_DIRTY_THREATS], tr = 0, ta = 0;
+  int tRem[MAX_DIRTY_THREATS + MAX_PAIR_DELTA], tAdd[MAX_DIRTY_THREATS + MAX_PAIR_DELTA], tr = 0, ta = 0;
   ThreatIndices(step, view, flip, tRem, &tr, tAdd, &ta);
+  PairIndices(step, view, flip, tRem, &tr, tAdd, &ta);
 
   int from = FeatureIdx(Moving(move), From(move), king, view);
   int to   = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
