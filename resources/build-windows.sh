@@ -11,8 +11,9 @@ set -uex
 cd "$(dirname "$0")/../src"
 
 CC=x86_64-w64-mingw32-gcc-posix
-VER=14
-ARCHES="x86-64 sse41 avx2 avx512"
+# the dev build id from the makefile, e.g. 20261031
+VER=$(sed -n 's/^VERSION *= *\([0-9]*\).*/\1/p' makefile)
+ARCHES="x86-64 sse41 avx2 avx512 avx512vnni"
 
 for arch in $ARCHES; do
   make clean
