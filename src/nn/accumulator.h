@@ -121,7 +121,8 @@ INLINE void ThreatIndices(const Accumulator* step, const int view, const int fli
                           int* a) {
   for (int i = 0; i < step->nDirty; i++) {
     const uint32_t d = step->dirty[i];
-    const int idx    = ThreatIdx(DirtyAttacker(d), DirtyFrom(d), DirtyVictim(d), DirtyTo(d), view, flip);
+    const int idx    = DirtyXray(d) ? XrayIdx(DirtyAttacker(d), DirtyFrom(d), DirtyVictim(d), DirtyTo(d), view, flip) :
+                                      ThreatIdx(DirtyAttacker(d), DirtyFrom(d), DirtyVictim(d), DirtyTo(d), view, flip);
     if (idx < 0)
       continue;
 

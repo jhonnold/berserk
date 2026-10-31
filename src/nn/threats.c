@@ -144,6 +144,79 @@ void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, i
     if (PieceType(victim) != KING && (PieceType(victim) != QUEEN || PieceType(attacker) == QUEEN))
       Push(list, attacker, from, victim, to, !add);
   }
+
+  XrayThreats(board, list, pc, s, add, 1);
+}
+
+// The own sliders a slider on sq sees first along its lines: the pieces it x-rays through
+INLINE BitBoard XrayFronts(Board* board, int pc, int sq, BitBoard occ) {
+  const int c          = pc & 1;
+  const BitBoard queen = board->pieces[Piece(QUEEN, c)];
+
+  BitBoard fronts = 0;
+  if (PieceType(pc) != ROOK)
+    fronts |= GetBishopAttacks(sq, occ) & (board->pieces[Piece(BISHOP, c)] | queen);
+  if (PieceType(pc) != BISHOP)
+    fronts |= GetRookAttacks(sq, occ) & (board->pieces[Piece(ROOK, c)] | queen);
+  return fronts;
+}
+
+void XrayThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int open) {
+  const BitBoard occ     = OccBB(BOTH);
+  const BitBoard queens  = board->pieces[WHITE_QUEEN] | board->pieces[BLACK_QUEEN];
+  const BitBoard diagSl  = board->pieces[WHITE_BISHOP] | board->pieces[BLACK_BISHOP] | queens;
+  const BitBoard orthoSl = board->pieces[WHITE_ROOK] | board->pieces[BLACK_ROOK] | queens;
+  const int pt           = PieceType(pc);
+
+  // pc's own x-rays
+  if (pt >= BISHOP && pt <= QUEEN) {
+    BitBoard fronts = XrayFronts(board, pc, s, occ);
+    while (fronts) {
+      const int f  = PopLSB(&fronts);
+      const int to = NextPast(s, f, occ);
+      if (to >= 0 && PieceType(board->squares[to]) != KING)
+        PushXray(list, pc, s, board->squares[to], to, add);
+    }
+  }
+
+  // sliders seeing s through one piece that lets them: they x-ray pc, or past s if empty
+  const BitBoard diag = GetBishopAttacks(s, occ), ortho = GetRookAttacks(s, occ);
+  BitBoard behind     = (GetBishopAttacks(s, occ ^ (diag & occ)) & ~diag & diagSl) |
+                    (GetRookAttacks(s, occ ^ (ortho & occ)) & ~ortho & orthoSl);
+  while (behind) {
+    const int a        = PopLSB(&behind);
+    const int attacker = board->squares[a];
+    const int f        = LSB(BetweenSquares(a, s) & occ);
+    if (!Fronts(attacker, board->squares[f], !!(diag & Bit(f))))
+      continue;
+
+    if (pt != KING)
+      PushXray(list, attacker, a, pc, s, add);
+
+    const int to = open ? NextPast(a, s, occ) : -1;
+    if (to >= 0 && PieceType(board->squares[to]) != KING)
+      PushXray(list, attacker, a, board->squares[to], to, !add);
+  }
+
+  // sliders seeing s directly: they x-ray through pc, or through the next piece if empty
+  BitBoard direct = (diag & diagSl) | (ortho & orthoSl);
+  while (direct) {
+    const int a        = PopLSB(&direct);
+    const int attacker = board->squares[a];
+    const int isDiag   = !!(diag & Bit(a));
+    const int v        = NextPast(a, s, occ);
+    if (v < 0)
+      continue;
+
+    if (Fronts(attacker, pc, isDiag) && PieceType(board->squares[v]) != KING)
+      PushXray(list, attacker, a, board->squares[v], v, add);
+
+    if (open && Fronts(attacker, board->squares[v], isDiag)) {
+      const int to = NextPast(a, v, occ);
+      if (to >= 0 && PieceType(board->squares[to]) != KING)
+        PushXray(list, attacker, a, board->squares[to], to, !add);
+    }
+  }
 }
 
 int ActiveThreats(Board* board, const int view, int* indices) {
@@ -164,6 +237,22 @@ int ActiveThreats(Board* board, const int view, int* indices) {
       while (t) {
         const int to  = PopLSB(&t);
         const int idx = ThreatIdx(pc, from, board->squares[to], to, view, flip);
+        if (idx >= 0) {
+          __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
+          indices[n++] = idx;
+        }
+      }
+
+      if (PieceType(pc) < BISHOP)
+        continue;
+
+      BitBoard fronts = XrayFronts(board, pc, from, occ);
+      while (fronts) {
+        const int to = NextPast(from, PopLSB(&fronts), occ);
+        if (to < 0 || PieceType(board->squares[to]) == KING)
+          continue;
+
+        const int idx = XrayIdx(pc, from, board->squares[to], to, view, flip);
         if (idx >= 0) {
           __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
           indices[n++] = idx;
