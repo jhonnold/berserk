@@ -62,12 +62,17 @@ Below is a list of many chess engine lists throughout the web (*variance in Elo 
 ### Evaluation
 
 - [NNUE](https://www.chessprogramming.org/NNUE)
-  - Horizontally Mirrored 16 Buckets
-  - 2x(12288 -> 512) -> 1
+  - Horizontally Mirrored 16 King Buckets (12288 inputs)
+  - Threat Inputs (60144 features)
+  - 2x(12288 + 60144 -> 512) -> Pairwise -> 512 -> 16 -> 32 -> 32 -> 1
+  - Clamped + Squared activations, 8 Output Buckets (by piece count)
 - [Berserk FenGen](https://github.com/jhonnold/berserk/tree/fen-gen)
-- [Grapheus](https://github.com/Luecx/Grapheus)
+- [bullet](https://github.com/jw1912/bullet)
+  - The current trainer for all networks.
+- ~~[Grapheus](https://github.com/Luecx/Grapheus)~~
+  - No longer in use, replaced by bullet.
 - ~~[Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)~~
-  - This has been deprecated in favor of an even newer trainer written by Luecx, Grapheus.
+  - No longer in use, replaced by Grapheus and later bullet.
 - ~~[Berserk Trainer](https://github.com/jhonnold/berserk-trainer)~~
   - This has been deprecated in favor of Koivisto's trainer, but trained all networks through Berserk 8.5.1+
 
@@ -96,6 +101,7 @@ This engine could not be written without some influence and they are...
 
 ### Additional Resources
 
+- [bullet](https://github.com/jw1912/bullet)
 - [Grapheus](https://github.com/Luecx/Grapheus)
 - [Koivisto's CUDA Trainer](https://github.com/Luecx/CudAD)
 - [OpenBench](https://github.com/AndyGrant/OpenBench)

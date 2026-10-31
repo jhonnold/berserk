@@ -27,6 +27,7 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
+#include "nn/threats.h"
 #include "transposition.h"
 #include "types.h"
 #include "uci.h"
@@ -306,6 +307,28 @@ void PrintBoard(Board* board) {
   printf("\nFEN: %s\n\n", fenBuffer);
 }
 
+INLINE void RemovePiece(Board* board, int pc, int s) {
+  FlipBit(board->pieces[pc], s);
+  FlipBit(OccBB(pc & 1), s);
+  FlipBit(OccBB(BOTH), s);
+  board->squares[s] = NO_PIECE;
+}
+
+INLINE void AddPiece(Board* board, int pc, int s) {
+  FlipBit(board->pieces[pc], s);
+  FlipBit(OccBB(pc & 1), s);
+  FlipBit(OccBB(BOTH), s);
+  board->squares[s] = pc;
+}
+
+INLINE void SwapPiece(Board* board, int old, int new, int s) {
+  FlipBit(board->pieces[old], s);
+  FlipBit(OccBB(old & 1), s);
+  FlipBit(board->pieces[new], s);
+  FlipBit(OccBB(new & 1), s);
+  board->squares[s] = new;
+}
+
 // Special pieces are those giving check, and those that are pinned
 
 void MakeMove(Move move, Board* board) {
@@ -322,52 +345,64 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
   board->history[board->histPly].capture = captured;
 
+  // without an update the threats are still found, so perft runs search's board code
+  uint32_t scratch[MAX_DIRTY_THREATS];
+  DirtyThreatList list = {update ? board->accumulators->dirty : scratch, 0};
+  const int stm        = piece & 1;
+
   board->fmr++;
   board->nullply++;
-
-  FlipBits(board->pieces[piece], from, to);
-  FlipBits(OccBB(board->stm), from, to);
-  FlipBits(OccBB(BOTH), from, to);
-
-  board->squares[from] = NO_PIECE;
-  board->squares[to]   = piece;
 
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
   if (PieceType(piece) == PAWN)
     board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
+  // each piece leaves before the next arrives, so lines through its square are open
   if (IsCas(move)) {
-    int rookFrom = board->cr[CASTLING_ROOK[to]];
-    int rookTo   = CASTLE_ROOK_DEST[to];
-    int rook     = Piece(ROOK, board->stm);
+    const int rookFrom = board->cr[CASTLING_ROOK[to]];
+    const int rookTo   = CASTLE_ROOK_DEST[to];
+    const int rook     = Piece(ROOK, stm);
 
-    FlipBits(PieceBB(ROOK, board->stm), rookFrom, rookTo);
-    FlipBits(OccBB(board->stm), rookFrom, rookTo);
-    FlipBits(OccBB(BOTH), rookFrom, rookTo);
-
-    // chess960 can have the king going where the rook started
-    // do this check to prevent accidental wipe outs
-    if (rookFrom != to)
-      board->squares[rookFrom] = NO_PIECE;
-    board->squares[rookTo] = rook;
+    PieceThreats(board, &list, piece, from, SUB, 1);
+    RemovePiece(board, piece, from);
+    PieceThreats(board, &list, rook, rookFrom, SUB, 1);
+    RemovePiece(board, rook, rookFrom);
+    AddPiece(board, piece, to);
+    PieceThreats(board, &list, piece, to, ADD, 1);
+    AddPiece(board, rook, rookTo);
+    PieceThreats(board, &list, rook, rookTo, ADD, 1);
 
     board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
-  } else if (IsCap(move)) {
-    int capSq = IsEP(move) ? to - PawnDir(board->stm) : to;
-    if (IsEP(move))
-      board->squares[capSq] = NO_PIECE;
+  } else {
+    const int placed = IsPromo(move) ? PromoPiece(move, stm) : piece;
 
-    FlipBit(board->pieces[captured], capSq);
-    FlipBit(OccBB(board->xstm), capSq);
-    FlipBit(OccBB(BOTH), capSq);
+    PieceThreats(board, &list, piece, from, SUB, 1);
+    RemovePiece(board, piece, from);
 
-    board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
-    if (PieceType(captured) == PAWN)
-      board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
+    if (IsCap(move)) {
+      const int capSq = IsEP(move) ? to - PawnDir(stm) : to;
 
-    board->piecesCounts -= PieceCount(captured);
-    board->phase -= PHASE_VALUES[PieceType(captured)];
-    board->fmr = 0;
+      if (IsEP(move)) {
+        PieceThreats(board, &list, captured, capSq, SUB, 1);
+        RemovePiece(board, captured, capSq);
+        AddPiece(board, placed, to);
+        PieceThreats(board, &list, placed, to, ADD, 1);
+      } else {
+        SwapThreats(board, &list, captured, placed, to);
+        SwapPiece(board, captured, placed, to);
+      }
+
+      board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
+      if (PieceType(captured) == PAWN)
+        board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
+
+      board->piecesCounts -= PieceCount(captured);
+      board->phase -= PHASE_VALUES[PieceType(captured)];
+      board->fmr = 0;
+    } else {
+      AddPiece(board, placed, to);
+      PieceThreats(board, &list, placed, to, ADD, 1);
+    }
   }
 
   if (board->epSquare)
@@ -391,10 +426,6 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       }
     } else if (IsPromo(move)) {
       int promoted = PromoPiece(move, board->stm);
-      FlipBit(board->pieces[piece], to);
-      FlipBit(board->pieces[promoted], to);
-
-      board->squares[to] = promoted;
 
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];
@@ -420,6 +451,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   if (update) {
     board->accumulators->move     = move;
     board->accumulators->captured = captured;
+    board->accumulators->nDirty   = list.n;
 
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;

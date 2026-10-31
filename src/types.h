@@ -28,11 +28,14 @@
 #define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-#define N_HIDDEN   1024
-#define N_L1       (2 * N_HIDDEN)
+#define N_THREATS  60144
+#define N_HIDDEN   512
+// Pairwise multiplication halves each perspective to N_HIDDEN / 2 units, so the
+// two of them together are N_HIDDEN wide. See nn/evaluate.c, FT_SHIFT.
+#define N_L1       N_HIDDEN
 #define N_L2       16
 #define N_L3       32
-#define N_OUTPUT   1
+#define N_OUTPUT_BUCKETS 8
 
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
@@ -53,10 +56,14 @@ enum {
 
 typedef int16_t acc_t;
 
+#define MAX_DIRTY_THREATS 96
+
 typedef struct {
   uint8_t correct[2];
   uint16_t captured;
+  uint16_t nDirty;
   Move move;
+  uint32_t dirty[MAX_DIRTY_THREATS];
   acc_t values[2][N_HIDDEN] ALIGN;
 } Accumulator;
 

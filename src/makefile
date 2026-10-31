@@ -1,10 +1,10 @@
 # General
 EXE      = berserk
 SRC      = attacks.c bench.c berserk.c bits.c board.c datagen.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
-		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c pyrrhic/tbprobe.c
+		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c nn/threats.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 20260906
-MAIN_NETWORK = berserk-9b84c340af7e.nn
+VERSION  = 20261031
+MAIN_NETWORK = berserk-b54d47b98924.nn
 EVALFILE = $(MAIN_NETWORK)
 NETWORK_BASE = https://github.com/jhonnold/berserk-networks/releases/download/networks
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
@@ -19,6 +19,7 @@ M64     = -m64 -mpopcnt
 MSSE41  = $(M64) -msse -msse2 -mssse3 -msse4.1
 MAVX2   = $(MSSE41) -mbmi -mfma -mavx2
 MAVX512 = $(MAVX2) -mavx512f -mavx512bw
+MVNNI   = $(MAVX512) -mavx512vl -mavx512vnni -mavx512vbmi2
 ARM64   = -arch arm64
 
 XCRUN   =
@@ -62,6 +63,8 @@ else ifeq ($(findstring sse41, $(ARCH)), sse41)
 	CFLAGS = $(FLAGS) $(MSSE41)
 else ifeq ($(findstring avx2, $(ARCH)), avx2)
 	CFLAGS = $(FLAGS) $(MAVX2)
+else ifeq ($(findstring avx512vnni, $(ARCH)), avx512vnni)
+	CFLAGS = $(FLAGS) $(MVNNI)
 else ifeq ($(findstring avx512, $(ARCH)), avx512)
 	CFLAGS = $(FLAGS) $(MAVX512)
 endif

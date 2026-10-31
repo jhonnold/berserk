@@ -25,52 +25,8 @@
 #include "../movegen.h"
 #include "../types.h"
 #include "../util.h"
-
-#if defined(__AVX512F__) && defined(__AVX512BW__)
-#include <immintrin.h>
-#define UNROLL     512
-#define NUM_REGS   16
-#define regi_t     __m512i
-#define regi_load  _mm512_load_si512
-#define regi_sub   _mm512_sub_epi16
-#define regi_add   _mm512_add_epi16
-#define regi_store _mm512_store_si512
-#elif defined(__AVX2__)
-#include <immintrin.h>
-#define UNROLL     256
-#define NUM_REGS   16
-#define regi_t     __m256i
-#define regi_load  _mm256_load_si256
-#define regi_sub   _mm256_sub_epi16
-#define regi_add   _mm256_add_epi16
-#define regi_store _mm256_store_si256
-#elif defined(__SSE4_1__)
-#include <immintrin.h>
-#define UNROLL     128
-#define NUM_REGS   16
-#define regi_t     __m128i
-#define regi_load  _mm_load_si128
-#define regi_sub   _mm_sub_epi16
-#define regi_add   _mm_add_epi16
-#define regi_store _mm_store_si128
-#elif defined(__ARM_NEON__) || defined(__ARM_NEON)
-#include <arm_neon.h>
-#define UNROLL           128
-#define NUM_REGS         16
-#define regi_t           int16x8_t
-#define regi_load(a)     vld1q_s16((int16_t*) (a))
-#define regi_sub(a, b)   vsubq_s16(a, b)
-#define regi_add(a, b)   vaddq_s16(a, b)
-#define regi_store(a, b) vst1q_s16((int16_t*) (a), b)
-#else
-#define UNROLL           16
-#define NUM_REGS         16
-#define regi_t           acc_t
-#define regi_load(a)     (*(a))
-#define regi_sub(a, b)   ((a) - (b))
-#define regi_add(a, b)   ((a) + (b))
-#define regi_store(a, b) (*(a) = (b))
-#endif
+#include "simd.h"
+#include "threats.h"
 
 extern int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN];
 extern int16_t INPUT_BIASES[N_HIDDEN];
@@ -82,129 +38,99 @@ typedef struct {
 } Delta;
 
 INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
-  regi_t regs[NUM_REGS];
+  vi16_t regs[NUM_REGS];
 
   for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
     const size_t unrollOffset = c * UNROLL;
 
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
+    const vi16_t* inputs = (vi16_t*) &src[unrollOffset];
+    vi16_t* outputs      = (vi16_t*) &dest[unrollOffset];
 
     for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
+      regs[i] = vi16_load(&inputs[i]);
 
     for (size_t r = 0; r < delta->r; r++) {
       const size_t offset   = delta->rem[r] * N_HIDDEN + unrollOffset;
-      const regi_t* weights = (regi_t*) &INPUT_WEIGHTS[offset];
+      const vi16_t* weights = (vi16_t*) &INPUT_WEIGHTS[offset];
       for (size_t i = 0; i < NUM_REGS; i++)
-        regs[i] = regi_sub(regs[i], weights[i]);
+        regs[i] = vi16_sub(regs[i], weights[i]);
     }
 
     for (size_t a = 0; a < delta->a; a++) {
       const size_t offset   = delta->add[a] * N_HIDDEN + unrollOffset;
-      const regi_t* weights = (regi_t*) &INPUT_WEIGHTS[offset];
+      const vi16_t* weights = (vi16_t*) &INPUT_WEIGHTS[offset];
       for (size_t i = 0; i < NUM_REGS; i++)
-        regs[i] = regi_add(regs[i], weights[i]);
+        regs[i] = vi16_add(regs[i], weights[i]);
     }
 
     for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
+      vi16_store(&outputs[i], regs[i]);
   }
 }
 
-INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2) {
-  regi_t regs[NUM_REGS];
+INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
+                            const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
+  const size_t LANES = sizeof(vi16_t) / sizeof(acc_t);
 
-  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
-    const size_t unrollOffset = c * UNROLL;
+  for (size_t c = 0; c < N_HIDDEN / (LANES * THREAT_TILE); c++) {
+    const size_t offset = c * LANES * THREAT_TILE;
+    const vi16_t* in    = (const vi16_t*) &src[offset];
+    vi16_t* out         = (vi16_t*) &dest[offset];
 
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
+    vi16_t regs[THREAT_TILE];
+    for (size_t i = 0; i < THREAT_TILE; i++)
+      regs[i] = vi16_load(&in[i]);
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
+    for (int k = 0; k < pr; k++) {
+      const vi16_t* w = (const vi16_t*) &INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i++)
+        regs[i] = vi16_sub(regs[i], vi16_load(&w[i]));
+    }
 
-    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
-    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
+    for (int k = 0; k < pa; k++) {
+      const vi16_t* w = (const vi16_t*) &INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i++)
+        regs[i] = vi16_add(regs[i], vi16_load(&w[i]));
+    }
 
-    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
-    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w2[i]);
+    for (int k = 0; k < tr; k++) {
+      const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i++)
+        regs[i] = vi16_sub(regs[i], vi16_load8(&w[i * LANES]));
+    }
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
+    for (int k = 0; k < ta; k++) {
+      const int8_t* w = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i++)
+        regs[i] = vi16_add(regs[i], vi16_load8(&w[i * LANES]));
+    }
+
+    for (size_t i = 0; i < THREAT_TILE; i++)
+      vi16_store(&out[i], regs[i]);
   }
 }
 
-INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3) {
-  regi_t regs[NUM_REGS];
+INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const int view) {
+  int add[256];
+  const int a = ActiveThreats(board, view, add);
 
-  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
-    const size_t unrollOffset = c * UNROLL;
-
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
-
-    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
-    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
-
-    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
-    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w2[i]);
-
-    const size_t o3  = f3 * N_HIDDEN + unrollOffset;
-    const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w3[i]);
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
-  }
+  ApplyFusedDelta(dest, src, NULL, 0, NULL, 0, NULL, 0, add, a);
 }
 
-INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4) {
-  regi_t regs[NUM_REGS];
+INLINE void ThreatIndices(const Accumulator* step, const int view, const int flip, int* rem, int* r, int* add,
+                          int* a) {
+  for (int i = 0; i < step->nDirty; i++) {
+    const uint32_t d = step->dirty[i];
+    const int idx    = ThreatIdx(DirtyAttacker(d), DirtyFrom(d), DirtyVictim(d), DirtyTo(d), view, flip);
+    if (idx < 0)
+      continue;
 
-  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
-    const size_t unrollOffset = c * UNROLL;
+    __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
 
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
-
-    const size_t o1  = f1 * N_HIDDEN + unrollOffset;
-    const regi_t* w1 = (regi_t*) &INPUT_WEIGHTS[o1];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w1[i]);
-
-    const size_t o2  = f2 * N_HIDDEN + unrollOffset;
-    const regi_t* w2 = (regi_t*) &INPUT_WEIGHTS[o2];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_sub(regs[i], w2[i]);
-
-    const size_t o3  = f3 * N_HIDDEN + unrollOffset;
-    const regi_t* w3 = (regi_t*) &INPUT_WEIGHTS[o3];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w3[i]);
-
-    const size_t o4  = f4 * N_HIDDEN + unrollOffset;
-    const regi_t* w4 = (regi_t*) &INPUT_WEIGHTS[o4];
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_add(regs[i], w4[i]);
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
+    if (DirtyAdd(d))
+      add[(*a)++] = idx;
+    else
+      rem[(*r)++] = idx;
   }
 }
 
@@ -246,14 +172,43 @@ INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const int perspe
   if (delta->r || delta->a)
     ApplyDelta(state->values, state->values, delta);
 
-  // Copy in state
-  memcpy(dest->values[perspective], state->values, sizeof(acc_t) * N_HIDDEN);
+  AddAllThreats(dest->values[perspective], state->values, board, perspective);
   dest->correct[perspective] = 1;
 }
 
-INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move move, const int captured, const int view) {
+INLINE void PrefetchRow(int f) {
+  __builtin_prefetch(&INPUT_WEIGHTS[(size_t) f * N_HIDDEN]);
+}
+
+INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2, const int* tRem, int tr, const int* tAdd, int ta) {
+  const int rem[1] = {f1}, add[1] = {f2};
+  PrefetchRow(f1), PrefetchRow(f2);
+  ApplyFusedDelta(dest, src, rem, 1, add, 1, tRem, tr, tAdd, ta);
+}
+
+INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, const int* tRem, int tr, const int* tAdd,
+                           int ta) {
+  const int rem[2] = {f1, f2}, add[1] = {f3};
+  PrefetchRow(f1), PrefetchRow(f2), PrefetchRow(f3);
+  ApplyFusedDelta(dest, src, rem, 2, add, 1, tRem, tr, tAdd, ta);
+}
+
+INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4, const int* tRem, int tr,
+                              const int* tAdd, int ta) {
+  const int rem[2] = {f1, f2}, add[2] = {f3, f4};
+  PrefetchRow(f1), PrefetchRow(f2), PrefetchRow(f3), PrefetchRow(f4);
+  ApplyFusedDelta(dest, src, rem, 2, add, 2, tRem, tr, tAdd, ta);
+}
+
+INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumulator* step, const int view,
+                         const int flip) {
+  const Move move      = step->move;
+  const int captured   = step->captured;
   const int king       = LSB(PieceBB(KING, view));
   const int movingSide = Moving(move) & 1;
+
+  int tRem[MAX_DIRTY_THREATS], tAdd[MAX_DIRTY_THREATS], tr = 0, ta = 0;
+  ThreatIndices(step, view, flip, tRem, &tr, tAdd, &ta);
 
   int from = FeatureIdx(Moving(move), From(move), king, view);
   int to   = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
@@ -262,14 +217,14 @@ INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Move mo
     int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
     int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
-    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo);
+    ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo, tRem, tr, tAdd, ta);
   } else if (IsCap(move)) {
     int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
-    ApplySubSubAdd(output, prev, from, capturedTo, to);
+    ApplySubSubAdd(output, prev, from, capturedTo, to, tRem, tr, tAdd, ta);
   } else {
-    ApplySubAdd(output, prev, from, to);
+    ApplySubAdd(output, prev, from, to, tRem, tr, tAdd, ta);
   }
 }
 
@@ -278,8 +233,10 @@ INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
   while (!(--curr)->correct[view])
     ; // go back to the latest correct accumulator
 
+  const int flip = FeatureFlip(LSB(PieceBB(KING, view)), view);
+
   do {
-    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr->move, curr->captured, view);
+    ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr, view, flip);
     (curr + 1)->correct[view] = 1;
   } while (++curr != live);
 }

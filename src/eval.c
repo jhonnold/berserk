@@ -16,6 +16,7 @@
 
 #include "eval.h"
 
+#include <math.h>
 #include <stdio.h>
 
 #include "attacks.h"
@@ -52,7 +53,8 @@ Score Evaluate(Board* board, ThreadData* thread) {
     }
   }
 
-  int score = board->stm == WHITE ? Propagate(acc, WHITE) : Propagate(acc, BLACK);
+  const int bucket = OutputBucket(board);
+  int score        = board->stm == WHITE ? Propagate(acc, WHITE, bucket) : Propagate(acc, BLACK, bucket);
 
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
@@ -68,7 +70,7 @@ void EvaluateTrace(Board* board) {
   ResetAccumulator(board->accumulators, board, WHITE);
   ResetAccumulator(board->accumulators, board, BLACK);
 
-  int base   = Propagate(board->accumulators, board->stm);
+  int base   = Propagate(board->accumulators, board->stm, OutputBucket(board));
   base       = board->stm == WHITE ? base : -base;
   int scaled = (128 + board->phase) * base / 128;
 
@@ -93,11 +95,16 @@ void EvaluateTrace(Board* board) {
       } else {
         // To calculate the piece value, we pop it
         // reset the accumulators and take a diff
+        // threats read the piece bitboards, so it has to leave those too
+        PopBit(board->pieces[pc], sq);
+        PopBit(OccBB(pc & 1), sq);
         PopBit(OccBB(BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
-        int new = Propagate(board->accumulators, board->stm);
+        int new = Propagate(board->accumulators, board->stm, OutputBucket(board));
         new     = board->stm == WHITE ? new : -new;
+        SetBit(board->pieces[pc], sq);
+        SetBit(OccBB(pc & 1), sq);
         SetBit(OccBB(BOTH), sq);
 
         int diff       = base - new;
@@ -130,6 +137,32 @@ void EvaluateTrace(Board* board) {
   }
 
   printf("+-------+-------+-------+-------+-------+-------+-------+-------+\n\n");
+
+  // the piece loop left the accumulators on a board missing a piece
+  ResetAccumulator(board->accumulators, board, WHITE);
+  ResetAccumulator(board->accumulators, board, BLACK);
+
+  printf("+------------+------------+------------+\n");
+  printf("|   Bucket   |    NNUE    |   Final    |\n");
+  printf("+------------+------------+------------+\n");
+
+  for (int b = 0; b < N_OUTPUT_BUCKETS; b++) {
+    int v = Propagate(board->accumulators, board->stm, b);
+    v     = board->stm == WHITE ? v : -v;
+
+    double nnue  = Normalize(v) / 100;
+    double final = Normalize((128 + board->phase) * v / 128) / 100;
+
+    printf("|  %-9d |  %c %5.2f   |  %c %5.2f   |",
+           b,
+           nnue < 0 ? '-' : '+',
+           fabs(nnue),
+           final < 0 ? '-' : '+',
+           fabs(final));
+    printf(b == OutputBucket(board) ? " <-- this bucket is used\n" : "\n");
+  }
+
+  printf("+------------+------------+------------+\n\n");
 
   printf(" NNUE Score: %dcp (white)\n", (int) Normalize(base));
   printf("Final Score: %dcp (white)\n", (int) Normalize(scaled));

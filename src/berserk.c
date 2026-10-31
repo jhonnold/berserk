@@ -22,6 +22,7 @@
 #include "datagen.h"
 #include "eval.h"
 #include "nn/evaluate.h"
+#include "nn/threats.h"
 #include "random.h"
 #include "search.h"
 #include "thread.h"
@@ -38,6 +39,7 @@ int main(int argc, char** argv) {
   InitZobristKeys();
   InitPruningAndReductionTables();
   InitAttacks();
+  InitThreats();
   InitCuckoo();
 
   LoadDefaultNN();
