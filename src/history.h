@@ -78,10 +78,12 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 
 INLINE int GetCorrectionScore(Board* board, ThreadData* thread, SearchStack* ss) {
   const int pawn = thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
+  const int white = thread->nonPawnCorrection[WHITE][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK];
+  const int black = thread->nonPawnCorrection[BLACK][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
   const int cont2 = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
-  return (31 * pawn + 17 * cont1 + 46 * cont2) / 8192;
+  return (31 * pawn + 26 * (white + black) + 17 * cont1 + 46 * cont2) / 8192;
 }
 
 void UpdateHistories(SearchStack* ss,
@@ -93,7 +95,7 @@ void UpdateHistories(SearchStack* ss,
                      Move captures[],
                      int nC);
 
-void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
+void UpdateCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
 
 #endif
