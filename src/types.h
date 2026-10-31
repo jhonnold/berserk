@@ -28,7 +28,9 @@
 #define N_KING_BUCKETS 16
 
 #define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-#define N_THREATS  60144
+#define N_PIECE_THREATS 59808
+#define N_PAIRS         4560 // 96 pawn ids, one feature per unordered pair
+#define N_THREATS       (N_PIECE_THREATS + N_PAIRS)
 #define N_HIDDEN   512
 // Pairwise multiplication halves each perspective to N_HIDDEN / 2 units, so the
 // two of them together are N_HIDDEN wide. See nn/evaluate.c, FT_SHIFT.
@@ -57,6 +59,8 @@ enum {
 typedef int16_t acc_t;
 
 #define MAX_DIRTY_THREATS 96
+// One step's pair changes per side: at most two pawns leave, each with 17 partners
+#define MAX_PAIR_DELTA 48
 
 typedef struct {
   uint8_t correct[2];
@@ -64,6 +68,7 @@ typedef struct {
   uint16_t nDirty;
   Move move;
   uint32_t dirty[MAX_DIRTY_THREATS];
+  BitBoard pawns[2][2]; // [before, after][colour], for the pawn pairs
   acc_t values[2][N_HIDDEN] ALIGN;
 } Accumulator;
 

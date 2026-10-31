@@ -350,6 +350,11 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   DirtyThreatList list = {update ? board->accumulators->dirty : scratch, 0};
   const int stm        = piece & 1;
 
+  if (update) {
+    board->accumulators->pawns[0][WHITE] = PieceBB(PAWN, WHITE);
+    board->accumulators->pawns[0][BLACK] = PieceBB(PAWN, BLACK);
+  }
+
   board->fmr++;
   board->nullply++;
 
@@ -452,6 +457,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->accumulators->move     = move;
     board->accumulators->captured = captured;
     board->accumulators->nDirty   = list.n;
+    board->accumulators->pawns[1][WHITE] = PieceBB(PAWN, WHITE);
+    board->accumulators->pawns[1][BLACK] = PieceBB(PAWN, BLACK);
 
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;

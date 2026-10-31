@@ -31,15 +31,19 @@ BitBoard THREAT_EMPTY[10][64];
 
 BitBoard RAY_PASS[64][64];
 
+BitBoard PAIR_BAND[64];
+int32_t PAIR_TRI[96];
+
+// Pawn on pawn is left to the pawn pairs
 static const int MAP[5][6] = {
-  {0, 1, -1, 2, -1, -1}, // P
+  {-1, 0, -1, 1, -1, -1}, // P
   {0, 1, 2, 3, 4, -1},   // N
   {0, 1, 2, 3, -1, -1},  // B
   {0, 1, 2, 3, -1, -1},  // R
   {0, 1, 2, 3, 4, -1},   // Q
 };
 
-static const int TARGETS[5] = {6, 10, 8, 8, 10};
+static const int TARGETS[5] = {4, 10, 8, 8, 10};
 
 static BitBoard EmptyAttacks(int colour, int pt, int sq) {
   switch (pt) {
@@ -74,7 +78,7 @@ void InitThreats() {
           }
 
           const int first                 = next + (vc * (TARGETS[pt] / 2) + class) * pairs;
-          const int mutual                = pt == vt && (pt != PAWN || colour != vc);
+          const int mutual                = pt == vt;
           THREAT_PAIR[block][6 * vc + vt] = (first << 1) | mutual;
         }
       }
@@ -83,10 +87,19 @@ void InitThreats() {
     }
   }
 
-  if (next != N_THREATS) {
-    fprintf(stderr, "threat layout has %d features, expected %d\n", next, N_THREATS);
+  if (next != N_PIECE_THREATS) {
+    fprintf(stderr, "threat layout has %d features, expected %d\n", next, N_PIECE_THREATS);
     exit(1);
   }
+
+  for (int sq = 0; sq < 64; sq++) {
+    const BitBoard file = 0x0101010101010101ULL << (sq & 7);
+    const BitBoard band = file | ((file << 1) & ~0x0101010101010101ULL) | ((file >> 1) & ~0x8080808080808080ULL);
+    PAIR_BAND[sq]       = band & 0x00FFFFFFFFFFFF00ULL & ~Bit(sq);
+  }
+
+  for (int id = 0; id < 96; id++)
+    PAIR_TRI[id] = N_PIECE_THREATS + id * (id - 1) / 2;
 
   for (int a = 0; a < 64; a++) {
     for (int s = 0; s < 64; s++) {
@@ -169,6 +182,21 @@ int ActiveThreats(Board* board, const int view, int* indices) {
           indices[n++] = idx;
         }
       }
+    }
+  }
+
+  const BitBoard black = PieceBB(PAWN, BLACK);
+  BitBoard rest        = PieceBB(PAWN, WHITE) | black;
+  while (rest) {
+    const int a  = PopLSB(&rest);
+    const int ia = PairId((black >> a) & 1, a, view, flip);
+
+    BitBoard partners = PAIR_BAND[a] & rest;
+    while (partners) {
+      const int b   = PopLSB(&partners);
+      const int idx = PairIdx(ia, PairId((black >> b) & 1, b, view, flip));
+      __builtin_prefetch(&THREAT_WEIGHTS[(size_t) idx * N_HIDDEN]);
+      indices[n++] = idx;
     }
   }
 
