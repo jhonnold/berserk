@@ -5,25 +5,19 @@ on:
 
 jobs:
   engine:
-    name: Berserk on ${{matrix.os}} with gcc-${{matrix.version}}
+    name: Berserk on ${{matrix.os}} with clang-${{matrix.version}}
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
-        version: [11]
-    
-    steps:
-    - name: Set up GCC ${{matrix.version}}
-      uses: egor-tensin/setup-gcc@v1
-      with:
-        version: ${{matrix.version}}
-        platform: x64
+        os: [ubuntu-26.04]
+        version: [21]
 
+    steps:
     - name: Clone Berserk
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Compile
-      run: cd src && make build ARCH=avx2
+      run: cd src && make build ARCH=avx2 CC=clang-${{matrix.version}}
 
     - name: Bench
       run: |
@@ -31,18 +25,18 @@ jobs:
         ./src/berserk bench > output
         real=$(grep 'Results:' output | grep -Po '(?<=[\s]{5})[0-9]+?(?= nodes)')
         if [[ "$bench" != "$real" ]]; then echo "got $real, expected $bench" && exit 1; fi
-    
+
     - name: Install Expect
       run: sudo apt-get install -y expect
 
     - name: Perft Test
       run: ./tests/perft.sh 1>/dev/null
-  
+
   clang-format-checking:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v2
-      
+      - uses: actions/checkout@v4
+
       - uses: RafikFarhad/clang-format-github-action@v2.1.0
         with:
           sources: 'src/*.c,src/*.h'

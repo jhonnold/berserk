@@ -3,8 +3,8 @@ EXE      = berserk
 SRC      = attacks.c bench.c berserk.c bits.c board.c datagen.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
 		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c nn/threats.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 20260906
-MAIN_NETWORK = berserk-9b84c340af7e.nn
+VERSION  = 20261031
+MAIN_NETWORK = berserk-b54d47b98924.nn
 EVALFILE = $(MAIN_NETWORK)
 NETWORK_BASE = https://github.com/jhonnold/berserk-networks/releases/download/networks
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
