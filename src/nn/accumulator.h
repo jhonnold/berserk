@@ -38,75 +38,75 @@ typedef struct {
 } Delta;
 
 INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
-  regi_t regs[NUM_REGS];
+  vi16_t regs[NUM_REGS];
 
   for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
     const size_t unrollOffset = c * UNROLL;
 
-    const regi_t* inputs = (regi_t*) &src[unrollOffset];
-    regi_t* outputs      = (regi_t*) &dest[unrollOffset];
+    const vi16_t* inputs = (vi16_t*) &src[unrollOffset];
+    vi16_t* outputs      = (vi16_t*) &dest[unrollOffset];
 
     for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = regi_load(&inputs[i]);
+      regs[i] = vi16_load(&inputs[i]);
 
     for (size_t r = 0; r < delta->r; r++) {
       const size_t offset   = delta->rem[r] * N_HIDDEN + unrollOffset;
-      const regi_t* weights = (regi_t*) &INPUT_WEIGHTS[offset];
+      const vi16_t* weights = (vi16_t*) &INPUT_WEIGHTS[offset];
       for (size_t i = 0; i < NUM_REGS; i++)
-        regs[i] = regi_sub(regs[i], weights[i]);
+        regs[i] = vi16_sub(regs[i], weights[i]);
     }
 
     for (size_t a = 0; a < delta->a; a++) {
       const size_t offset   = delta->add[a] * N_HIDDEN + unrollOffset;
-      const regi_t* weights = (regi_t*) &INPUT_WEIGHTS[offset];
+      const vi16_t* weights = (vi16_t*) &INPUT_WEIGHTS[offset];
       for (size_t i = 0; i < NUM_REGS; i++)
-        regs[i] = regi_add(regs[i], weights[i]);
+        regs[i] = vi16_add(regs[i], weights[i]);
     }
 
     for (size_t i = 0; i < NUM_REGS; i++)
-      regi_store(&outputs[i], regs[i]);
+      vi16_store(&outputs[i], regs[i]);
   }
 }
 
 INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
                             const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
-  const size_t LANES = sizeof(regi_t) / sizeof(acc_t);
+  const size_t LANES = sizeof(vi16_t) / sizeof(acc_t);
 
   for (size_t c = 0; c < N_HIDDEN / (LANES * THREAT_TILE); c++) {
     const size_t offset = c * LANES * THREAT_TILE;
-    const regi_t* in    = (const regi_t*) &src[offset];
-    regi_t* out         = (regi_t*) &dest[offset];
+    const vi16_t* in    = (const vi16_t*) &src[offset];
+    vi16_t* out         = (vi16_t*) &dest[offset];
 
-    regi_t regs[THREAT_TILE];
+    vi16_t regs[THREAT_TILE];
     for (size_t i = 0; i < THREAT_TILE; i++)
-      regs[i] = regi_load(&in[i]);
+      regs[i] = vi16_load(&in[i]);
 
     for (int k = 0; k < pr; k++) {
-      const regi_t* w = (const regi_t*) &INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + offset];
+      const vi16_t* w = (const vi16_t*) &INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = regi_sub(regs[i], regi_load(&w[i]));
+        regs[i] = vi16_sub(regs[i], vi16_load(&w[i]));
     }
 
     for (int k = 0; k < pa; k++) {
-      const regi_t* w = (const regi_t*) &INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + offset];
+      const vi16_t* w = (const vi16_t*) &INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = regi_add(regs[i], regi_load(&w[i]));
+        regs[i] = vi16_add(regs[i], vi16_load(&w[i]));
     }
 
     for (int k = 0; k < tr; k++) {
       const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = regi_sub(regs[i], regi_load8(&w[i * LANES]));
+        regs[i] = vi16_sub(regs[i], vi16_load8(&w[i * LANES]));
     }
 
     for (int k = 0; k < ta; k++) {
       const int8_t* w = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = regi_add(regs[i], regi_load8(&w[i * LANES]));
+        regs[i] = vi16_add(regs[i], vi16_load8(&w[i * LANES]));
     }
 
     for (size_t i = 0; i < THREAT_TILE; i++)
-      regi_store(&out[i], regs[i]);
+      vi16_store(&out[i], regs[i]);
   }
 }
 

@@ -69,22 +69,22 @@ INLINE size_t StoreNNZ(uint16_t* dest, size_t count, nnz_t* base, const nnz_t in
 #endif
 
 #if defined(SIMD)
-INLINE vecu8_t Pairwise(vec16_t a0, vec16_t a1, vec16_t b0, vec16_t b1) {
-  const vec16_t zero = vec_zero16();
-  const vec16_t cap  = vec_set1_16(FT_MAX);
+INLINE vu8_t Pairwise(vi16_t a0, vi16_t a1, vi16_t b0, vi16_t b1) {
+  const vi16_t zero = vi16_zero();
+  const vi16_t cap  = vi16_set1(FT_MAX);
 
-  a0 = vec_slli16(vec_min16(vec_max16(a0, zero), cap), MULHI_SHIFT - FT_SHIFT);
-  a1 = vec_slli16(vec_min16(vec_max16(a1, zero), cap), MULHI_SHIFT - FT_SHIFT);
-  b0 = vec_min16(b0, cap);
-  b1 = vec_min16(b1, cap);
+  a0 = vi16_slli(vi16_min(vi16_max(a0, zero), cap), MULHI_SHIFT - FT_SHIFT);
+  a1 = vi16_slli(vi16_min(vi16_max(a1, zero), cap), MULHI_SHIFT - FT_SHIFT);
+  b0 = vi16_min(b0, cap);
+  b1 = vi16_min(b1, cap);
 
-  return vec_packus16(vec_mulhi16(a0, b0), vec_mulhi16(a1, b1));
+  return vi16_packus(vi16_mulhi(a0, b0), vi16_mulhi(a1, b1));
 }
 #endif
 
 INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
 #if defined(SIMD)
-  const size_t WIDTH = sizeof(vec16_t) / sizeof(acc_t);
+  const size_t WIDTH = sizeof(vi16_t) / sizeof(acc_t);
   const size_t HALF  = N_HIDDEN / 2 / WIDTH;
   const int views[2] = {stm, !stm};
 
@@ -102,19 +102,19 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
   size_t count = 0;
 
   for (int v = 0; v < 2; v++) {
-    const vec16_t* in = (vec16_t*) acc->values[views[v]];
-    vecu8_t* out      = (vecu8_t*) &outputs[(N_HIDDEN / 2) * v];
+    const vi16_t* in = (vi16_t*) acc->values[views[v]];
+    vu8_t* out      = (vu8_t*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
-      const vecu8_t o0 = Pairwise(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
-      const vecu8_t o1 = Pairwise(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
+      const vu8_t o0 = Pairwise(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const vu8_t o1 = Pairwise(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
       out[i / 2 + 0] = o0;
       out[i / 2 + 1] = o1;
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
-      const uint32_t m0 = vec_nnz_mask(o0);
-      const uint32_t m1 = vec_nnz_mask(o1);
+      const uint32_t m0 = vi32_nnz_mask(o0);
+      const uint32_t m1 = vi32_nnz_mask(o1);
 
 #if defined(__AVX512VBMI2__)
       const uint32_t m = m0 | (m1 << 16);
@@ -131,10 +131,10 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
       base = _mm512_add_epi32(base, increment);
 #endif
 #elif defined(__AVX2__)
-      count = StoreNNZ(nnz, count, &base, increment, vec_nnz_mask(o0));
-      count = StoreNNZ(nnz, count, &base, increment, vec_nnz_mask(o1));
+      count = StoreNNZ(nnz, count, &base, increment, vi32_nnz_mask(o0));
+      count = StoreNNZ(nnz, count, &base, increment, vi32_nnz_mask(o1));
 #else
-      count = StoreNNZ(nnz, count, &base, increment, vec_nnz_mask2(o0, o1));
+      count = StoreNNZ(nnz, count, &base, increment, vi32_nnz_mask2(o0, o1));
 #endif
     }
   }
@@ -162,33 +162,33 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 }
 
 #if defined(SIMD)
-INLINE void L1Chunk(vec32_t* regs, const int32_t* in32, const uint16_t i0, const int8_t* weights) {
-  const size_t OUT_CC = N_L2 / (sizeof(vec32_t) / sizeof(int32_t));
+INLINE void L1Chunk(vi32_t* regs, const int32_t* in32, const uint16_t i0, const int8_t* weights) {
+  const size_t OUT_CC = N_L2 / (sizeof(vi32_t) / sizeof(int32_t));
 
-  const vec8_t f0  = vec_bcast32(&in32[i0]);
-  const vec8_t* c0 = (vec8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+  const vi8_t f0  = vi8_bcast32(&in32[i0]);
+  const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
 
   for (size_t j = 0; j < OUT_CC; j++)
-    vec_dpbusd(regs + j, f0, c0[j]);
+    vi32_dpbusd(regs + j, f0, c0[j]);
 }
 #endif
 
 INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
                      const int32_t* biases) {
 #if defined(SIMD)
-  const size_t OUT_WIDTH = sizeof(vec32_t) / sizeof(int32_t);
+  const size_t OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t);
   const size_t OUT_CC    = N_L2 / OUT_WIDTH;
 
   const int32_t* in32 = (int32_t*) src;
-  vec32_t* out        = (vec32_t*) dest;
+  vi32_t* out        = (vi32_t*) dest;
 
   size_t i = 0;
 #if L1_UNROLL == 4
   // Two sets of sums so consecutive chunks don't wait on each other
-  vec32_t regs[OUT_CC], alts[OUT_CC];
+  vi32_t regs[OUT_CC], alts[OUT_CC];
   for (i = 0; i < OUT_CC; i++) {
-    regs[i] = vec_load32(biases + i * OUT_WIDTH);
-    alts[i] = vec_zero32();
+    regs[i] = vi32_load(biases + i * OUT_WIDTH);
+    alts[i] = vi32_zero();
   }
 
   for (i = 0; i + 3 < count; i += 4) {
@@ -197,19 +197,19 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
     const uint16_t i2 = nnz[i + 2];
     const uint16_t i3 = nnz[i + 3];
 
-    const vec8_t f0 = vec_bcast32(&in32[i0]);
-    const vec8_t f1 = vec_bcast32(&in32[i1]);
-    const vec8_t f2 = vec_bcast32(&in32[i2]);
-    const vec8_t f3 = vec_bcast32(&in32[i3]);
+    const vi8_t f0 = vi8_bcast32(&in32[i0]);
+    const vi8_t f1 = vi8_bcast32(&in32[i1]);
+    const vi8_t f2 = vi8_bcast32(&in32[i2]);
+    const vi8_t f3 = vi8_bcast32(&in32[i3]);
 
-    const vec8_t* c0 = (vec8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vec8_t* c1 = (vec8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vec8_t* c2 = (vec8_t*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vec8_t* c3 = (vec8_t*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c1 = (vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c2 = (vi8_t*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c3 = (vi8_t*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++) {
-      vec_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
-      vec_dpbusd_x2(alts + j, f2, c2[j], f3, c3[j]);
+      vi32_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
+      vi32_dpbusd_x2(alts + j, f2, c2[j], f3, c3[j]);
     }
   }
 
@@ -217,24 +217,24 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
     L1Chunk(regs, in32, nnz[i], weights);
 
   for (i = 0; i < OUT_CC; i++)
-    out[i] = vec_add32(regs[i], alts[i]);
+    out[i] = vi32_add(regs[i], alts[i]);
 #else
-  vec32_t regs[OUT_CC];
+  vi32_t regs[OUT_CC];
   for (i = 0; i < OUT_CC; i++)
-    regs[i] = vec_load32(biases + i * OUT_WIDTH);
+    regs[i] = vi32_load(biases + i * OUT_WIDTH);
 
   for (i = 0; i + 1 < count; i += 2) {
     const uint16_t i0 = nnz[i + 0];
     const uint16_t i1 = nnz[i + 1];
 
-    const vec8_t f0 = vec_bcast32(&in32[i0]);
-    const vec8_t f1 = vec_bcast32(&in32[i1]);
+    const vi8_t f0 = vi8_bcast32(&in32[i0]);
+    const vi8_t f1 = vi8_bcast32(&in32[i1]);
 
-    const vec8_t* c0 = (vec8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vec8_t* c1 = (vec8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c1 = (vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++)
-      vec_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
+      vi32_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
   }
 
   if (i < count)
@@ -296,25 +296,25 @@ INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
 
 INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
 #if defined(SIMD)
-  const size_t OUT_WIDTH = sizeof(vec32_t) / sizeof(int32_t);
+  const size_t OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t);
   const size_t OUT_CC    = N_L3 / OUT_WIDTH;
 
   const int32_t* in32 = (int32_t*) src;
-  const vec8_t* w     = (vec8_t*) weights;
-  vec32_t* out        = (vec32_t*) dest;
+  const vi8_t* w     = (vi8_t*) weights;
+  vi32_t* out        = (vi32_t*) dest;
 
-  vec32_t regs[OUT_CC];
+  vi32_t regs[OUT_CC];
   for (size_t i = 0; i < OUT_CC; i++)
-    regs[i] = vec_load32(biases + i * OUT_WIDTH);
+    regs[i] = vi32_load(biases + i * OUT_WIDTH);
 
   for (size_t j = 0; j < N_L2_CHUNKS; j += 2) {
-    const vec8_t f0  = vec_bcast32(&in32[j + 0]);
-    const vec8_t f1  = vec_bcast32(&in32[j + 1]);
-    const vec8_t* c0 = w + (j + 0) * OUT_CC;
-    const vec8_t* c1 = w + (j + 1) * OUT_CC;
+    const vi8_t f0  = vi8_bcast32(&in32[j + 0]);
+    const vi8_t f1  = vi8_bcast32(&in32[j + 1]);
+    const vi8_t* c0 = w + (j + 0) * OUT_CC;
+    const vi8_t* c1 = w + (j + 1) * OUT_CC;
 
     for (size_t i = 0; i < OUT_CC; i++)
-      vec_dpbusd_x2(regs + i, f0, c0[i], f1, c1[i]);
+      vi32_dpbusd_x2(regs + i, f0, c0[i], f1, c1[i]);
   }
 
   for (size_t i = 0; i < OUT_CC; i++)
@@ -350,22 +350,22 @@ INLINE void L2Activate(uint8_t* dest, int32_t* src) {
 
 INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
 #if defined(SIMD)
-  vec32_t a0 = vec_zero32();
+  vi32_t a0 = vi32_zero();
 
 #if defined(__AVX512F__) && defined(__AVX512BW__)
   // the 32 inputs fill half a register
   const __m512i in = _mm512_zextsi256_si512(*(__m256i*) src);
   const __m512i w  = _mm512_zextsi256_si512(*(__m256i*) weights);
-  vec_dpbusd(&a0, in, w);
+  vi32_dpbusd(&a0, in, w);
 #elif defined(__AVX2__)
-  vec_dpbusd(&a0, *(vec8_t*) src, *(vec8_t*) weights);
+  vi32_dpbusd(&a0, *(vi8_t*) src, *(vi8_t*) weights);
 #else
-  const vec8_t* in = (vec8_t*) src;
-  const vec8_t* w  = (vec8_t*) weights;
-  vec_dpbusd_x2(&a0, in[0], w[0], in[1], w[1]);
+  const vi8_t* in = (vi8_t*) src;
+  const vi8_t* w  = (vi8_t*) weights;
+  vi32_dpbusd_x2(&a0, in[0], w[0], in[1], w[1]);
 #endif
 
-  return vec_reduce32(a0);
+  return vi32_reduce(a0);
 #else
   int32_t result = 0;
 
