@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "eval.h"
+#include "history.h"
 #include "nn/accumulator.h"
 #include "search.h"
 #include "tb.h"
@@ -188,6 +189,7 @@ void ThreadsSetNumber(int n) {
 // End
 void ThreadsExit() {
   ThreadsSetNumber(0);
+  CorrectionFree();
 
   pthread_cond_destroy(&Threads.sleep);
   pthread_mutex_destroy(&Threads.mutex);
@@ -200,6 +202,7 @@ void ThreadsInit() {
 
   Threads.count = 1;
   ThreadCreate(0);
+  CorrectionInit();
 }
 
 INLINE void InitRootMove(RootMove* rm, Move move) {

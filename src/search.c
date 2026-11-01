@@ -476,7 +476,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, thread, ss));
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -485,7 +485,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         eval = ttScore;
     } else if (!ss->skip) {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, thread, ss));
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -856,7 +856,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
   if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= ss->staticEval ? BOUND_LOWER : BOUND_UPPER))) {
-    UpdateCorrection(ss->staticEval, bestScore, depth, board, thread);
+    UpdateCorrection(ss->staticEval, bestScore, depth, board);
     UpdateContCorrection(ss->staticEval, bestScore, depth, ss);
   }
 
@@ -910,7 +910,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       rawEval = ttEval;
       if (rawEval == EVAL_UNKNOWN)
         rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, thread, ss));
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -919,7 +919,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, thread, ss));
+      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, ss));
 
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
@@ -1110,8 +1110,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->hh, 0, sizeof(thread->hh));
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
-  memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
-  memset(&thread->nonPawnCorrection, 0, sizeof(thread->nonPawnCorrection));
+  CorrectionClearPart(thread->idx, Threads.count);
   memset(&thread->contCorrection, 0, sizeof(thread->contCorrection));
 
   thread->board.accumulators = thread->accumulators;

@@ -18,10 +18,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "board.h"
 #include "move.h"
 #include "util.h"
+
+CorrectionHistory Correction;
 
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
@@ -89,16 +92,16 @@ void UpdateHistories(SearchStack* ss,
   }
 }
 
-void UpdateCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+void UpdateCorrection(int raw, int real, int depth, Board* board) {
   const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
-  int16_t* pawnCorrection  = &thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
+  int16_t* pawnCorrection  = &Correction.pawn[board->pawnZobrist & Correction.mask];
   AddHistoryHeuristic(pawnCorrection, correction);
 
   int16_t* whiteCorrection =
-    &thread->nonPawnCorrection[WHITE][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK];
+    &Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & Correction.mask];
   AddHistoryHeuristic(whiteCorrection, correction);
   int16_t* blackCorrection =
-    &thread->nonPawnCorrection[BLACK][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
+    &Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & Correction.mask];
   AddHistoryHeuristic(blackCorrection, correction);
 }
 
@@ -114,4 +117,41 @@ void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
     int16_t* contCorrection  = &(*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
     AddHistoryHeuristic(contCorrection, correction);
   }
+}
+
+void CorrectionFree() {
+  if (Correction.pawn) {
+    AlignedFree(Correction.pawn);
+    AlignedFree(Correction.nonPawn[WHITE]);
+    AlignedFree(Correction.nonPawn[BLACK]);
+  }
+
+  Correction.pawn = Correction.nonPawn[WHITE] = Correction.nonPawn[BLACK] = NULL;
+  Correction.size = Correction.mask = 0;
+}
+
+// Allocate the shared tables at a fixed CORRECTION_SIZE, regardless of thread count
+void CorrectionInit() {
+  const uint64_t size = CORRECTION_SIZE;
+
+  CorrectionFree();
+
+  Correction.size           = size;
+  Correction.mask           = size - 1;
+  Correction.pawn           = AlignedMalloc(size * sizeof(int16_t), 64);
+  Correction.nonPawn[WHITE] = AlignedMalloc(size * sizeof(int16_t), 64);
+  Correction.nonPawn[BLACK] = AlignedMalloc(size * sizeof(int16_t), 64);
+
+  CorrectionClearPart(0, 1);
+}
+
+// Zero this thread's slice of the shared tables
+void CorrectionClearPart(int idx, int count) {
+  const uint64_t begin = idx * Correction.size / count;
+  const uint64_t end   = (idx + 1) * Correction.size / count;
+  const uint64_t bytes = (end - begin) * sizeof(int16_t);
+
+  memset(Correction.pawn + begin, 0, bytes);
+  memset(Correction.nonPawn[WHITE] + begin, 0, bytes);
+  memset(Correction.nonPawn[BLACK] + begin, 0, bytes);
 }
