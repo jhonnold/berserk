@@ -810,6 +810,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         rm->score    = score;
         rm->seldepth = thread->seldepth;
 
+        // Remember if this is only a bound, its PV is incomplete if the search stops before a re-search
+        rm->scoreBound = score >= beta ? BOUND_LOWER : score <= alpha ? BOUND_UPPER : BOUND_EXACT;
+
         rm->pv.count    = childPv.count + 1;
         rm->pv.moves[0] = move;
         memcpy(rm->pv.moves + 1, childPv.moves, childPv.count * sizeof(Move));
@@ -1052,8 +1055,12 @@ void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) 
                       Normalize(bounded); // convert to 50% WR at 100cp
     char* type    = abs(bounded) > MATE_BOUND ? "mate" : "cp";
     char* bound   = " ";
-    if (updated)
-      bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
+    if (updated) {
+      int scoreBound = thread->rootMoves[i].scoreBound;
+      bound          = (bounded >= beta || scoreBound == BOUND_LOWER)  ? " lowerbound " :
+                       (bounded <= alpha || scoreBound == BOUND_UPPER) ? " upperbound " :
+                                                                         " ";
+    }
 
     printf("info depth %d seldepth %d multipv %d score %s %d%s",
            realDepth,
