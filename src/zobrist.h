@@ -31,6 +31,7 @@ void InitZobristKeys();
 uint64_t Zobrist(Board* board);
 uint64_t PawnZobrist(Board* board);
 uint64_t NonPawnZobrist(Board* board, int color);
+uint64_t MinorZobrist(Board* board);
 
 INLINE uint64_t KeyAfter(Board* board, const Move move) {
   if (!move)

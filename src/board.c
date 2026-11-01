@@ -55,6 +55,7 @@ void ClearBoard(Board* board) {
   board->zobrist      = 0ULL;
   board->pawnZobrist  = 0ULL;
   board->nonPawnZobrist[WHITE] = board->nonPawnZobrist[BLACK] = 0ULL;
+  board->minorZobrist = 0ULL;
 
   board->stm  = WHITE;
   board->xstm = BLACK;
@@ -234,6 +235,7 @@ void ParseFen(char* fen, Board* board) {
   board->pawnZobrist = PawnZobrist(board);
   board->nonPawnZobrist[WHITE] = NonPawnZobrist(board, WHITE);
   board->nonPawnZobrist[BLACK] = NonPawnZobrist(board, BLACK);
+  board->minorZobrist = MinorZobrist(board);
 }
 
 void BoardToFen(char* fen, Board* board) {
@@ -361,6 +363,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
   else
     board->nonPawnZobrist[stm] ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
+  if ((unsigned) (PieceType(piece) - KNIGHT) <= 1)
+    board->minorZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
   // each piece leaves before the next arrives, so lines through its square are open
   if (IsCas(move)) {
@@ -403,6 +407,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
         board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
       else
         board->nonPawnZobrist[stm ^ 1] ^= ZOBRIST_PIECES[captured][capSq];
+      if ((unsigned) (PieceType(captured) - KNIGHT) <= 1)
+        board->minorZobrist ^= ZOBRIST_PIECES[captured][capSq];
 
       board->piecesCounts -= PieceCount(captured);
       board->phase -= PHASE_VALUES[PieceType(captured)];
@@ -438,6 +444,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];
       board->nonPawnZobrist[stm] ^= ZOBRIST_PIECES[promoted][to];
+      if ((unsigned) (PieceType(promoted) - KNIGHT) <= 1)
+        board->minorZobrist ^= ZOBRIST_PIECES[promoted][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
       board->phase += PHASE_VALUES[PieceType(promoted)];
     }
@@ -453,6 +461,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->pawnZobrist ^= ZOBRIST_SIDE_KEY;
   board->nonPawnZobrist[WHITE] ^= ZOBRIST_SIDE_KEY;
   board->nonPawnZobrist[BLACK] ^= ZOBRIST_SIDE_KEY;
+  board->minorZobrist ^= ZOBRIST_SIDE_KEY;
 
   // special pieces must be loaded after the stm has changed
   // this is because the new stm to move will be the one in check
@@ -540,6 +549,7 @@ void MakeNullMove(Board* board) {
   board->pawnZobrist ^= ZOBRIST_SIDE_KEY;
   board->nonPawnZobrist[WHITE] ^= ZOBRIST_SIDE_KEY;
   board->nonPawnZobrist[BLACK] ^= ZOBRIST_SIDE_KEY;
+  board->minorZobrist ^= ZOBRIST_SIDE_KEY;
 
   board->histPly++;
   board->stm = board->xstm;

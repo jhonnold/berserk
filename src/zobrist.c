@@ -91,3 +91,19 @@ uint64_t NonPawnZobrist(Board* board, int color) {
 
   return hash;
 }
+
+// Generate a Minor Piece Zobrist key for the current board state
+uint64_t MinorZobrist(Board* board) {
+  uint64_t hash = 0ULL;
+
+  for (int piece = WHITE_KNIGHT; piece <= BLACK_BISHOP; piece++) {
+    BitBoard pcs = board->pieces[piece];
+    while (pcs)
+      hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
+  }
+
+  if (board->stm)
+    hash ^= ZOBRIST_SIDE_KEY;
+
+  return hash;
+}
