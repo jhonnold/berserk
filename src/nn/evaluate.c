@@ -471,6 +471,22 @@ INLINE void PermuteForPackus(int16_t* data, size_t len) {
 #endif
 }
 
+// The accumulator lane that byte p of a threat row feeds. With paired int8 rows
+// a two-register block of 2L bytes is widened by unpacklo/hi, which take bytes
+// 0-7 (lo) and 8-15 (hi) of each 128-bit lane, so the block is stored lane-split.
+INLINE int PairedLane(int p) {
+#if defined(PAIRED_I8)
+  const int L     = sizeof(vi16_t) / sizeof(acc_t);
+  const int block = p / (2 * L) * (2 * L);
+  const int k     = p % (2 * L) / 16;
+  const int j     = p % 16;
+
+  return block + (j < 8 ? 8 * k + j : L + 8 * k + j - 8);
+#else
+  return p;
+#endif
+}
+
 INLINE void CopyData(const unsigned char* in) {
   size_t offset = 0;
 
@@ -524,7 +540,7 @@ INLINE void CopyData(const unsigned char* in) {
 
   for (size_t f = 0; f < N_THREATS; f++)
     for (int i = 0; i < N_HIDDEN; i++)
-      THREAT_WEIGHTS[f * N_HIDDEN + i] = threats[f * N_HIDDEN + order[i]];
+      THREAT_WEIGHTS[f * N_HIDDEN + i] = threats[f * N_HIDDEN + order[PairedLane(i)]];
 }
 
 INLINE void InitLookupIndices() {

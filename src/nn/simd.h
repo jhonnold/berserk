@@ -38,6 +38,8 @@
 #define vi16_load           _mm512_load_si512
 #define vi16_store          _mm512_store_si512
 #define vi16_load8(a)       _mm512_cvtepi8_epi16(_mm256_load_si256((const __m256i*) (a)))
+#define vi8_load(p)         _mm512_load_si512((const __m512i*) (p))
+#define PAIRED_I8
 #define vi16_add            _mm512_add_epi16
 #define vi16_sub            _mm512_sub_epi16
 #define vi16_zero()         _mm512_setzero_si512()
@@ -91,6 +93,8 @@ INLINE void vi32_dpbusd_x2(__m512i* acc, __m512i a0, __m512i b0, __m512i a1, __m
 #define vi16_load           _mm256_load_si256
 #define vi16_store          _mm256_store_si256
 #define vi16_load8(a)       _mm256_cvtepi8_epi16(_mm_load_si128((const __m128i*) (a)))
+#define vi8_load(p)         _mm256_load_si256((const __m256i*) (p))
+#define PAIRED_I8
 #define vi16_add            _mm256_add_epi16
 #define vi16_sub            _mm256_sub_epi16
 #define vi16_zero()         _mm256_setzero_si256()
@@ -151,6 +155,8 @@ INLINE int32_t vi32_reduce(__m256i a) {
 #define vi16_load           _mm_load_si128
 #define vi16_store          _mm_store_si128
 #define vi16_load8(a)       _mm_cvtepi8_epi16(_mm_loadl_epi64((const __m128i*) (a)))
+#define vi8_load(p)         _mm_load_si128((const __m128i*) (p))
+#define PAIRED_I8
 #define vi16_add            _mm_add_epi16
 #define vi16_sub            _mm_sub_epi16
 #define vi16_zero()         _mm_setzero_si128()
@@ -268,6 +274,31 @@ INLINE void vi32_dpbusd_x2(int32x4_t* acc, int8x16_t a0, int8x16_t b0, int8x16_t
 #define vi16_load8(a)    ((acc_t) (a)[0])
 #define vi16_add(a, b)   ((a) + (b))
 #define vi16_sub(a, b)   ((a) - (b))
+#endif
+
+// Paired int8 rows (x86): unpacklo/hi interleave two weight rows inside each
+// 128-bit lane and maddubs against ones sums each pair, one shuffle per two rows.
+// A lone row is widened by unpacking it with itself and shifting. The rows are
+// stored lane-split (see PairedLane) so lo/hi land in two adjacent registers.
+#if defined(PAIRED_I8)
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+#define VP(x) _mm512_##x
+#elif defined(__AVX2__)
+#define VP(x) _mm256_##x
+#else
+#define VP(x) _mm_##x
+#endif
+INLINE void vi16_widen2(vi8_t a, vi8_t b, vi16_t* lo, vi16_t* hi) {
+  const vi8_t ones = VP(set1_epi8)(1);
+  *lo              = VP(maddubs_epi16)(ones, VP(unpacklo_epi8)(a, b));
+  *hi              = VP(maddubs_epi16)(ones, VP(unpackhi_epi8)(a, b));
+}
+
+INLINE void vi16_widen1(vi8_t a, vi16_t* lo, vi16_t* hi) {
+  *lo = VP(srai_epi16)(VP(unpacklo_epi8)(a, a), 8);
+  *hi = VP(srai_epi16)(VP(unpackhi_epi8)(a, a), 8);
+}
+#undef VP
 #endif
 
 // The activations after L1 and L2 run 128 bits wide on every arch, and the NNZ
