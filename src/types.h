@@ -44,7 +44,7 @@
 
 #define CORRECTION_GRAIN 256
 
-// correction history entries per search thread, shared across all threads
+// correction history entries, shared across all threads
 #define CORRECTION_SIZE 131072
 
 typedef int Score;

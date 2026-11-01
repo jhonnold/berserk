@@ -99,7 +99,7 @@ void UpdateHistories(SearchStack* ss,
 
 void UpdateCorrection(int raw, int real, int depth, Board* board);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
-void CorrectionResize(int threads);
+void CorrectionInit();
 void CorrectionClearPart(int idx, int count);
 void CorrectionFree();
 

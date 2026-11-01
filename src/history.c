@@ -130,14 +130,9 @@ void CorrectionFree() {
   Correction.size = Correction.mask = 0;
 }
 
-// Size the shared tables to CORRECTION_SIZE entries per thread (rounded to a power of 2)
-void CorrectionResize(int threads) {
-  uint64_t size = CORRECTION_SIZE;
-  while (size < (uint64_t) CORRECTION_SIZE * threads)
-    size <<= 1;
-
-  if (size == Correction.size)
-    return;
+// Allocate the shared tables at a fixed CORRECTION_SIZE, regardless of thread count
+void CorrectionInit() {
+  const uint64_t size = CORRECTION_SIZE;
 
   CorrectionFree();
 

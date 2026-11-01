@@ -184,8 +184,6 @@ void ThreadsSetNumber(int n) {
 
   if (n == 0)
     Threads.searching = 0;
-  else
-    CorrectionResize(n);
 }
 
 // End
@@ -204,7 +202,7 @@ void ThreadsInit() {
 
   Threads.count = 1;
   ThreadCreate(0);
-  CorrectionResize(1);
+  CorrectionInit();
 }
 
 INLINE void InitRootMove(RootMove* rm, Move move) {
