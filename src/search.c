@@ -398,7 +398,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // drop into noisy moves only
   if (depth <= 0)
-    return Quiesce(alpha, beta, 0, thread, ss);
+    return Quiesce(alpha, beta, 0, thread, pv, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     return 0;
@@ -530,7 +530,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Razoring
     if (depth <= 5 && eval + 146 * depth <= alpha) {
-      score = Quiesce(alpha, beta, 0, thread, ss);
+      score = Quiesce(alpha, beta, 0, thread, pv, ss);
 
       if (LoadRlx(Threads.stop))
         return 0;
@@ -601,7 +601,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         MakeMove(move, board);
 
         // qsearch to quickly check
-        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
+        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, pv, ss + 1);
 
         // if it's still above our cutoff, revalidate
         if (score >= probBeta)
@@ -863,8 +863,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   return bestScore;
 }
 
-int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
+int Quiesce(int alpha, int beta, int depth, ThreadData* thread, PV* pv, SearchStack* ss) {
   Board* board = &thread->board;
+
+  // Track the qsearch PV too, so mates found past the main search horizon get a full line
+  PV childPv;
+  pv->count = 0;
 
   int score     = -CHECKMATE;
   int futility  = -CHECKMATE;
@@ -981,7 +985,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     IncRlx(thread->nodes);
     MakeMove(move, board);
 
-    score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
+    score = -Quiesce(-beta, -alpha, depth - 1, thread, &childPv, ss + 1);
 
     UndoMove(move, board);
 
@@ -997,6 +1001,12 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       if (score > alpha) {
         bestMove = move;
         alpha    = score;
+
+        if (isPV) {
+          pv->count    = childPv.count + 1;
+          pv->moves[0] = move;
+          memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
+        }
       }
 
       // failed high
