@@ -36,6 +36,8 @@ extern int32_t THREAT_PAIR[10][12];
 extern uint16_t THREAT_OFFSET[10][64];
 extern BitBoard THREAT_EMPTY[10][64];
 extern BitBoard RAY_PASS[64][64];
+extern BitBoard PAIR_BAND[64];
+extern int32_t PAIR_TRI[96];
 
 void InitThreats();
 
@@ -53,6 +55,15 @@ INLINE int ThreatIdx(int attacker, int from, int victim, int to, const int view,
     return -1;
 
   return (e >> 1) + THREAT_OFFSET[block][from] + BitCount(THREAT_EMPTY[block][from] & (Bit(to) - 1));
+}
+
+// A pawn's id among the 96: colour relative to the view, square in its frame
+INLINE int PairId(int colour, int sq, const int view, const int flip) {
+  return 48 * (colour ^ view) + (sq ^ flip) - 8;
+}
+
+INLINE int PairIdx(int a, int b) {
+  return a > b ? PAIR_TRI[a] + b : PAIR_TRI[b] + a;
 }
 
 typedef struct {
@@ -73,14 +84,14 @@ INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {
 INLINE BitBoard FeatureVictims(Board* board, int pt) {
   const BitBoard queens = PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
   if (pt == PAWN)
-    return ~(queens | PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK));
+    return PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK) | PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK);
   if (pt == BISHOP || pt == ROOK)
     return ~queens;
   return ~0ULL;
 }
 
 INLINE BitBoard FeatureAttackers(Board* board, int pt) {
-  if (pt == BISHOP)
+  if (pt == PAWN || pt == BISHOP)
     return ~(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK));
   if (pt == QUEEN)
     return PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
