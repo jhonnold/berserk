@@ -919,7 +919,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, PV* pv, SearchSt
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
 
-      if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
+      // A mate or TB score from the TT must not stand pat on a PV node, it would leave the PV without moves
+      if (ttScore != UNKNOWN && (!isPV || abs(ttScore) < TB_WIN_BOUND) &&
+          (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
