@@ -89,10 +89,17 @@ void UpdateHistories(SearchStack* ss,
   }
 }
 
-void UpdatePawnCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
+void UpdateCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
   const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
   int16_t* pawnCorrection  = &thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
   AddHistoryHeuristic(pawnCorrection, correction);
+
+  int16_t* whiteCorrection =
+    &thread->nonPawnCorrection[WHITE][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK];
+  AddHistoryHeuristic(whiteCorrection, correction);
+  int16_t* blackCorrection =
+    &thread->nonPawnCorrection[BLACK][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
+  AddHistoryHeuristic(blackCorrection, correction);
 }
 
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {

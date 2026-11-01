@@ -856,7 +856,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
     TTPut(tt, board->zobrist, depth, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
   if (!inCheck && !IsCap(bestMove) && (bound & (bestScore >= ss->staticEval ? BOUND_LOWER : BOUND_UPPER))) {
-    UpdatePawnCorrection(ss->staticEval, bestScore, depth, board, thread);
+    UpdateCorrection(ss->staticEval, bestScore, depth, board, thread);
     UpdateContCorrection(ss->staticEval, bestScore, depth, ss);
   }
 
@@ -1111,6 +1111,7 @@ void SearchClearThread(ThreadData* thread) {
   memset(&thread->ch, 0, sizeof(thread->ch));
   memset(&thread->caph, 0, sizeof(thread->caph));
   memset(&thread->pawnCorrection, 0, sizeof(thread->pawnCorrection));
+  memset(&thread->nonPawnCorrection, 0, sizeof(thread->nonPawnCorrection));
   memset(&thread->contCorrection, 0, sizeof(thread->contCorrection));
 
   thread->board.accumulators = thread->accumulators;
