@@ -44,11 +44,8 @@
 
 #define CORRECTION_GRAIN 256
 
-#define PAWN_CORRECTION_SIZE 131072
-#define PAWN_CORRECTION_MASK (PAWN_CORRECTION_SIZE - 1)
-
-#define NON_PAWN_CORRECTION_SIZE 131072
-#define NON_PAWN_CORRECTION_MASK (NON_PAWN_CORRECTION_SIZE - 1)
+// correction history entries per search thread, shared across all threads
+#define CORRECTION_SIZE 131072
 
 typedef int Score;
 typedef uint64_t BitBoard;
@@ -217,8 +214,6 @@ struct ThreadData {
   int16_t ch[2][12][64][12][64]; // continuation move history table
   int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
 
-  int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
-  int16_t nonPawnCorrection[2][NON_PAWN_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
 
   int action, calls;
@@ -230,6 +225,14 @@ struct ThreadData {
 typedef struct {
   Board* board;
 } SearchArgs;
+
+// pawn and non-pawn correction histories, shared by all threads
+typedef struct {
+  int16_t* pawn;
+  int16_t* nonPawn[2];
+  uint64_t size;
+  uint64_t mask;
+} CorrectionHistory;
 
 // Move generation storage
 // moves/scores idx's match

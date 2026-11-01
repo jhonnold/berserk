@@ -76,10 +76,12 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
     AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
 }
 
-INLINE int GetCorrectionScore(Board* board, ThreadData* thread, SearchStack* ss) {
-  const int pawn = thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
-  const int white = thread->nonPawnCorrection[WHITE][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK];
-  const int black = thread->nonPawnCorrection[BLACK][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
+extern CorrectionHistory Correction;
+
+INLINE int GetCorrectionScore(Board* board, SearchStack* ss) {
+  const int pawn  = Correction.pawn[board->pawnZobrist & Correction.mask];
+  const int white = Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & Correction.mask];
+  const int black = Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & Correction.mask];
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
   const int cont2 = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
@@ -95,7 +97,10 @@ void UpdateHistories(SearchStack* ss,
                      Move captures[],
                      int nC);
 
-void UpdateCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
+void UpdateCorrection(int raw, int real, int depth, Board* board);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
+void CorrectionResize(int threads);
+void CorrectionClearPart(int idx, int count);
+void CorrectionFree();
 
 #endif
