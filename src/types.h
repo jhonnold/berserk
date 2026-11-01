@@ -48,6 +48,9 @@
 #define NON_PAWN_CORRECTION_SIZE 131072
 #define NON_PAWN_CORRECTION_MASK (NON_PAWN_CORRECTION_SIZE - 1)
 
+#define MAJOR_CORRECTION_SIZE 131072
+#define MAJOR_CORRECTION_MASK (MAJOR_CORRECTION_SIZE - 1)
+
 typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
@@ -83,6 +86,7 @@ typedef struct {
   uint64_t zobrist;
   uint64_t pawnZobrist;
   uint64_t nonPawnZobrist[2];
+  uint64_t majorZobrist;
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
@@ -101,6 +105,7 @@ typedef struct {
   uint64_t zobrist;     // zobrist hash of the position
   uint64_t pawnZobrist; // pawn zobrist hash of the position (pawns + stm)
   uint64_t nonPawnZobrist[2]; // per color non-pawn zobrist hash (pieces + stm)
+  uint64_t majorZobrist; // major piece zobrist hash of the position (rooks + queens + stm)
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
@@ -214,6 +219,7 @@ struct ThreadData {
 
   int16_t pawnCorrection[PAWN_CORRECTION_SIZE];
   int16_t nonPawnCorrection[2][NON_PAWN_CORRECTION_SIZE];
+  int16_t majorCorrection[MAJOR_CORRECTION_SIZE];
   int16_t contCorrection[12][64][12][64];
 
   int action, calls;

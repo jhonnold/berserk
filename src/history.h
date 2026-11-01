@@ -80,10 +80,11 @@ INLINE int GetCorrectionScore(Board* board, ThreadData* thread, SearchStack* ss)
   const int pawn = thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
   const int white = thread->nonPawnCorrection[WHITE][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK];
   const int black = thread->nonPawnCorrection[BLACK][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
+  const int major = thread->majorCorrection[board->majorZobrist & MAJOR_CORRECTION_MASK];
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
   const int cont2 = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
-  return (31 * pawn + 26 * (white + black) + 17 * cont1 + 46 * cont2) / 8192;
+  return (31 * pawn + 26 * (white + black) + 24 * major + 17 * cont1 + 46 * cont2) / 8192;
 }
 
 void UpdateHistories(SearchStack* ss,

@@ -100,6 +100,9 @@ void UpdateCorrection(int raw, int real, int depth, Board* board, ThreadData* th
   int16_t* blackCorrection =
     &thread->nonPawnCorrection[BLACK][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
   AddHistoryHeuristic(blackCorrection, correction);
+
+  int16_t* majorCorrection = &thread->majorCorrection[board->majorZobrist & MAJOR_CORRECTION_MASK];
+  AddHistoryHeuristic(majorCorrection, correction);
 }
 
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
