@@ -93,6 +93,49 @@ INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, cons
         regs[i] = vi16_add(regs[i], vi16_load(&w[i]));
     }
 
+#if defined(PAIRED_I8)
+    int k = 0;
+    for (; k + 1 < tr; k += 2) {
+      const int8_t* wa = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
+      const int8_t* wb = &THREAT_WEIGHTS[(size_t) tRem[k + 1] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i += 2) {
+        vi16_t lo, hi;
+        vi16_widen2(vi8_load(&wa[i * LANES]), vi8_load(&wb[i * LANES]), &lo, &hi);
+        regs[i]     = vi16_sub(regs[i], lo);
+        regs[i + 1] = vi16_sub(regs[i + 1], hi);
+      }
+    }
+    if (k < tr) {
+      const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i += 2) {
+        vi16_t lo, hi;
+        vi16_widen1(vi8_load(&w[i * LANES]), &lo, &hi);
+        regs[i]     = vi16_sub(regs[i], lo);
+        regs[i + 1] = vi16_sub(regs[i + 1], hi);
+      }
+    }
+
+    k = 0;
+    for (; k + 1 < ta; k += 2) {
+      const int8_t* wa = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
+      const int8_t* wb = &THREAT_WEIGHTS[(size_t) tAdd[k + 1] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i += 2) {
+        vi16_t lo, hi;
+        vi16_widen2(vi8_load(&wa[i * LANES]), vi8_load(&wb[i * LANES]), &lo, &hi);
+        regs[i]     = vi16_add(regs[i], lo);
+        regs[i + 1] = vi16_add(regs[i + 1], hi);
+      }
+    }
+    if (k < ta) {
+      const int8_t* w = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
+      for (size_t i = 0; i < THREAT_TILE; i += 2) {
+        vi16_t lo, hi;
+        vi16_widen1(vi8_load(&w[i * LANES]), &lo, &hi);
+        regs[i]     = vi16_add(regs[i], lo);
+        regs[i + 1] = vi16_add(regs[i + 1], hi);
+      }
+    }
+#else
     for (int k = 0; k < tr; k++) {
       const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
       for (size_t i = 0; i < THREAT_TILE; i++)
@@ -104,6 +147,7 @@ INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, cons
       for (size_t i = 0; i < THREAT_TILE; i++)
         regs[i] = vi16_add(regs[i], vi16_load8(&w[i * LANES]));
     }
+#endif
 
     for (size_t i = 0; i < THREAT_TILE; i++)
       vi16_store(&out[i], regs[i]);
