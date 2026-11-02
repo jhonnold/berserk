@@ -176,8 +176,7 @@ INLINE void L1Chunk(vi32_t* regs, const int32_t* in32, const uint16_t i0, const 
 INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
                      const int32_t* biases) {
 #if defined(SIMD)
-  const size_t OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t);
-  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
+  enum { OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t), OUT_CC = N_L2 / OUT_WIDTH };
 
   const int32_t* in32 = (int32_t*) src;
   vi32_t* out        = (vi32_t*) dest;
@@ -296,8 +295,7 @@ INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
 
 INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
 #if defined(SIMD)
-  const size_t OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t);
-  const size_t OUT_CC    = N_L3 / OUT_WIDTH;
+  enum { OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t), OUT_CC = N_L3 / OUT_WIDTH };
 
   const int32_t* in32 = (int32_t*) src;
   const vi8_t* w     = (vi8_t*) weights;
