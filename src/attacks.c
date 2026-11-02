@@ -388,47 +388,7 @@ BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
   return occupany;
 }
 
-uint64_t FindMagicNumber(int sq, int n, int isBishop) {
-  int numOccupancies = 1 << n;
-
-  BitBoard occupancies[4096];
-  BitBoard attacks[4096];
-  BitBoard usedAttacks[4096];
-
-  BitBoard mask = isBishop ? MAGICS[sq].bishop.mask : MAGICS[sq].rook.mask;
-
-  for (int i = 0; i < numOccupancies; i++) {
-    occupancies[i] = SetPieceLayoutOccupancy(i, n, mask);
-    attacks[i]     = isBishop ? GetBishopAttacksOTF(sq, occupancies[i]) : GetRookAttacksOTF(sq, occupancies[i]);
-  }
-
-  for (int count = 0; count < 10000000; count++) {
-    uint64_t magic = RandomMagic();
-
-    if (BitCount((mask * magic) & 0xFF00000000000000) < 6)
-      continue;
-
-    memset(usedAttacks, 0UL, sizeof(usedAttacks));
-
-    int failed = 0;
-    for (int i = 0; !failed && i < numOccupancies; i++) {
-      int idx = (occupancies[i] * magic) >> (64 - n);
-
-      if (!usedAttacks[idx])
-        usedAttacks[idx] = attacks[i];
-      else if (usedAttacks[idx] != attacks[i])
-        failed = 1;
-    }
-
-    if (!failed)
-      return magic;
-  }
-
-  printf("failed to find magic number");
-  return 0;
-}
-
-// Magics are searched for offline (see FindMagicNumber) and baked in so that
+// Magics were searched for offline and are baked in so that
 // startup does not pay for the search. Correctness is covered by the perft
 // suite, which exercises every slider lookup.
 void InitBishopMagics() {

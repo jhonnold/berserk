@@ -88,8 +88,6 @@ void ParseGo(char* in, Board* board) {
   Limits.depth            = MAX_SEARCH_PLY;
   Limits.start            = GetTimeMS();
   Limits.timeset          = 0;
-  Limits.stopped          = 0;
-  Limits.quit             = 0;
   Limits.multiPV          = MULTI_PV;
   Limits.searchMoves      = 0;
   Limits.searchable.count = 0;
@@ -299,7 +297,7 @@ void UCILoop() {
   Threads.searching = Threads.sleeping = 0;
 
   while (ReadLine(in)) {
-    if (in[0] == '\n')
+    if (!in[0])
       continue;
 
     if (!strncmp(in, "isready", 7)) {

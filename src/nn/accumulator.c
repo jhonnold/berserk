@@ -35,9 +35,6 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   }
 }
 
-// Refreshes an accumulator using a diff from the last known board state
-// with proper king bucketing
-
 // Resets an accumulator from pieces on the board
 void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   Delta delta[1];

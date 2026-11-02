@@ -332,8 +332,6 @@ INLINE void SwapPiece(Board* board, int old, int new, int s) {
   board->squares[s] = new;
 }
 
-// Special pieces are those giving check, and those that are pinned
-
 void MakeMove(Move move, Board* board) {
   MakeMoveUpdate(move, board, 1);
 }

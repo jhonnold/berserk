@@ -40,8 +40,6 @@
 #define RANK_7 0x000000000000FF00ULL
 #define RANK_8 0x00000000000000FFULL
 
-#define DARK_SQS 0x55AA55AA55AA55AAULL
-
 #define Bit(sq)                (1ULL << (sq))
 #define BitCount(bb)           (__builtin_popcountll(bb))
 #define SetBit(bb, sq)         ((bb) |= Bit(sq))
@@ -54,8 +52,6 @@
 
 #define ShiftN(bb)  ((bb) >> 8)
 #define ShiftS(bb)  ((bb) << 8)
-#define ShiftNN(bb) ((bb) >> 16)
-#define ShiftSS(bb) ((bb) << 16)
 #define ShiftW(bb)  (((bb) & ~A_FILE) >> 1)
 #define ShiftE(bb)  (((bb) & ~H_FILE) << 1)
 #define ShiftNE(bb) (((bb) & ~H_FILE) >> 7)
@@ -73,12 +69,6 @@ INLINE BitBoard ShiftPawnCapW(BitBoard bb, const int c) {
 
 INLINE BitBoard ShiftPawnCapE(BitBoard bb, const int c) {
   return c == WHITE ? ShiftNE(bb) : ShiftSE(bb);
-}
-
-INLINE uint8_t PawnFiles(BitBoard pawns) {
-  pawns |= (pawns >> 8);
-  pawns |= (pawns >> 16);
-  return (uint8_t) ((pawns | (pawns >> 32)) & 0xFF);
 }
 
 INLINE int PopLSB(BitBoard* bb) {

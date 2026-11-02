@@ -39,8 +39,3 @@ void SeedRandom(uint64_t seed) {
   for (int i = 0; i < 64; i++)
     RandomUInt64();
 }
-
-// Magic's are combined to try and get one with few bits
-uint64_t RandomMagic() {
-  return RandomUInt64() & RandomUInt64() & RandomUInt64();
-}

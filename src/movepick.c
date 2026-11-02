@@ -286,16 +286,3 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
     default: return NULL_MOVE;
   }
 }
-
-char* PhaseName(MovePicker* picker) {
-  switch (picker->phase) {
-    case HASH_MOVE: return "HASH_MOVE";
-    case PLAY_GOOD_NOISY: return "PLAY_GOOD_NOISY";
-    case PLAY_KILLER_1: return "PLAY_KILLER_1";
-    case PLAY_KILLER_2: return "PLAY_KILLER_2";
-    case PLAY_COUNTER: return "PLAY_COUNTER";
-    case PLAY_QUIETS: return "PLAY_QUIETS";
-    case PLAY_BAD_NOISY: return "PLAY_BAD_NOISY";
-    default: return "UNKNOWN";
-  }
-}

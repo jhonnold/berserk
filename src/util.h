@@ -30,7 +30,6 @@
 #define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
 // single writer (the owning thread), so a relaxed load + store avoids a locked RMW
 #define IncRlx(x)  atomic_store_explicit(&(x), LoadRlx(x) + 1, memory_order_relaxed)
-#define DecRlx(x)  atomic_fetch_sub_explicit(&(x), 1, memory_order_relaxed)
 
 long GetTimeMS();
 

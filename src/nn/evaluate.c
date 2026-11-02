@@ -404,13 +404,6 @@ int Propagate(Accumulator* accumulator, const int stm, const int bucket) {
   return stm == WHITE ? PropagateView(accumulator, WHITE, bucket) : PropagateView(accumulator, BLACK, bucket);
 }
 
-int Predict(Board* board) {
-  ResetAccumulator(board->accumulators, board, WHITE);
-  ResetAccumulator(board->accumulators, board, BLACK);
-
-  return Propagate(board->accumulators, board->stm, OutputBucket(board));
-}
-
 const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +            // input weights
                             sizeof(int16_t) * N_HIDDEN +                         // input biases
                             sizeof(int8_t) * N_THREATS * N_HIDDEN +              // threat weights

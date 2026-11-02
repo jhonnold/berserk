@@ -42,8 +42,6 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
-#define CORRECTION_GRAIN 256
-
 // correction history entries, shared across all threads
 #define CORRECTION_SIZE 131072
 
@@ -165,9 +163,6 @@ typedef struct {
   int timeset;
   int depth;
   int mate;
-  int movesToGo;
-  int stopped;
-  int quit;
   int multiPV;
   int infinite;
   int searchMoves;
@@ -222,10 +217,6 @@ struct ThreadData {
   pthread_cond_t sleep;
 };
 
-typedef struct {
-  Board* board;
-} SearchArgs;
-
 // pawn and non-pawn correction histories, shared by all threads
 typedef struct {
   int16_t pawn[CORRECTION_SIZE] ALIGN;
@@ -233,13 +224,6 @@ typedef struct {
 } CorrectionHistory;
 
 #define CORRECTION_MASK (CORRECTION_SIZE - 1)
-
-// Move generation storage
-// moves/scores idx's match
-enum {
-  ALL_MOVES,
-  NOISY_MOVES
-};
 
 enum {
   HASH_MOVE,
@@ -391,11 +375,6 @@ enum {
   ROOK,
   QUEEN,
   KING
-};
-
-enum {
-  MG,
-  EG
 };
 
 #endif

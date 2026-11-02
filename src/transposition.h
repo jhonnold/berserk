@@ -20,7 +20,6 @@
 #include "types.h"
 #include "util.h"
 
-#define NO_ENTRY    0ULL
 #define MEGABYTE    (1024ull * 1024ull)
 #define BUCKET_SIZE 3
 

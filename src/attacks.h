@@ -20,7 +20,7 @@
 // Hyperbola quintessence computes slider attacks arithmetically instead of
 // reading a magic table, so it needs no lookup memory beyond a per square
 // descriptor. It only pays off with the 256 bit shuffles, so it is limited to
-// AVX2, and PEXT builds keep their existing table lookup.
+// AVX2; other builds use the fancy magic tables.
 #if defined(__AVX2__)
 #define USE_DUAL_HQ
 #endif
@@ -91,7 +91,6 @@ extern SquareMagics MAGICS[64];
 
 void InitBetweenSquares();
 void InitPinnedMovementSquares();
-void initPawnSpans();
 void InitPawnAttacks();
 void InitKnightAttacks();
 void InitKingAttacks();
@@ -115,8 +114,6 @@ BitBoard GetGeneratedKingAttacks(int sq);
 BitBoard GetBishopMask(int sq);
 BitBoard GetRookMask(int sq);
 BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks);
-
-uint64_t FindMagicNumber(int sq, int n, int bishop);
 #endif
 
 
