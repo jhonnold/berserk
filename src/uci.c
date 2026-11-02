@@ -469,7 +469,6 @@ void UCILoop() {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
 
-  pthread_mutex_destroy(&Threads.lock);
   ThreadsExit();
 }
 
