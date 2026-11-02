@@ -19,6 +19,13 @@ jobs:
     - name: Compile
       run: cd src && make build ARCH=avx2 CC=clang-${{matrix.version}}
 
+    - name: Strict warnings
+      run: |
+        cd src
+        clang-${{matrix.version}} -std=gnu11 -march=x86-64-v3 -fsyntax-only -Werror \
+          -Wall -Wextra -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wmissing-variable-declarations \
+          -Wwrite-strings -Wvla -Wcast-qual -DVERSION='"ci"' -DEVALFILE='"none"' *.c nn/*.c
+
     - name: Bench
       run: |
         bench=$(git show --summary | grep -Po '(?<=Bench: )[0-9]+?(?=$)')

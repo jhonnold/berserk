@@ -12,7 +12,7 @@ DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 # Flags
 STD    = -std=gnu11
 LIBS   = -pthread -lm
-WARN   = -Wall -Wextra -Wshadow
+WARN   = -Wall -Wextra -Wshadow -Wstrict-prototypes -Wwrite-strings -Wvla -Wcast-qual
 
 FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
 M64     = -m64 -mpopcnt
