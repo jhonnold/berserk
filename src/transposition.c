@@ -34,6 +34,8 @@
 // Global TT
 TTTable TT = {0};
 
+static void TTFree();
+
 size_t TTInit(int mb) {
   if (TT.mem)
     TTFree();
@@ -59,7 +61,7 @@ size_t TTInit(int mb) {
   return size;
 }
 
-void TTFree() {
+static void TTFree() {
   if (TT.mem)
     AlignedFree(TT.mem);
 
@@ -80,14 +82,14 @@ void TTClearPart(int idx) {
   memset(TT.buckets + begin / sizeof(TTBucket), 0, end - begin);
 }
 
-inline void TTClear() {
+void TTClear() {
   for (int i = 0; i < Threads.count; i++)
     ThreadWake(Threads.threads[i], THREAD_TT_CLEAR);
   for (int i = 0; i < Threads.count; i++)
     ThreadWaitUntilSleep(Threads.threads[i]);
 }
 
-inline void TTUpdate() {
+void TTUpdate() {
   TT.age += AGE_INC;
 }
 

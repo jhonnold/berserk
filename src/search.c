@@ -42,9 +42,16 @@
 #include "zobrist.h"
 
 // arrays to store these pruning cutoffs at specific depths
-int LMR[MAX_SEARCH_PLY][64];
-int LMP[2][MAX_SEARCH_PLY];
-int STATIC_PRUNE[2][MAX_SEARCH_PLY];
+static int LMR[MAX_SEARCH_PLY][64];
+static int LMP[2][MAX_SEARCH_PLY];
+static int STATIC_PRUNE[2][MAX_SEARCH_PLY];
+
+static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
+static int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss);
+static void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board);
+static void PrintPV(PV* pv, Board* board);
+static void SortRootMoves(ThreadData* thread, int offset);
+static int ValidRootMove(ThreadData* thread, Move move);
 
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
@@ -369,7 +376,7 @@ void Search(ThreadData* thread) {
   }
 }
 
-int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
+static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss) {
   Board* board = &thread->board;
 
   PV childPv;
@@ -863,7 +870,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   return bestScore;
 }
 
-int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
+static int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
   Board* board = &thread->board;
 
   int score     = -CHECKMATE;
@@ -1019,7 +1026,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
   return bestScore;
 }
 
-void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) {
+static void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) {
   uint64_t nodes  = NodesSearched();
   uint64_t tbhits = TBHits();
   uint64_t time   = Max(1, GetTimeMS() - Limits.start);
@@ -1075,13 +1082,13 @@ void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) 
   }
 }
 
-void PrintPV(PV* pv, Board* board) {
+static void PrintPV(PV* pv, Board* board) {
   for (int i = 0; i < pv->count; i++)
     printf("%s ", MoveToStr(pv->moves[i], board));
   printf("\n");
 }
 
-void SortRootMoves(ThreadData* thread, int offset) {
+static void SortRootMoves(ThreadData* thread, int offset) {
   for (int i = offset; i < thread->numRootMoves; i++) {
     int best = i;
 
@@ -1097,7 +1104,7 @@ void SortRootMoves(ThreadData* thread, int offset) {
   }
 }
 
-int ValidRootMove(ThreadData* thread, Move move) {
+static int ValidRootMove(ThreadData* thread, Move move) {
   for (int i = thread->multiPV; i < thread->numRootMoves; i++)
     if (move == thread->rootMoves[i].move)
       return 1;

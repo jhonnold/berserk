@@ -97,7 +97,7 @@ static const uint64_t BISHOP_MAGIC_NUMBERS[64] = {
 
 #endif
 
-void InitBetweenSquares() {
+static void InitBetweenSquares() {
   int i;
   for (int f = 0; f < 64; f++) {
     for (int t = f + 1; t < 64; t++) {
@@ -134,7 +134,7 @@ void InitBetweenSquares() {
       BETWEEN_SQS[f][t] = BETWEEN_SQS[t][f];
 }
 
-void InitPinnedMovementSquares() {
+static void InitPinnedMovementSquares() {
   int dirs[] = {W, NE, N, NW, E, SW, S, SE};
 
   for (int pSq = 0; pSq < 64; pSq++) {
@@ -177,7 +177,7 @@ void InitPinnedMovementSquares() {
   }
 }
 
-BitBoard GetGeneratedPawnAttacks(int sq, int color) {
+static BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -193,14 +193,14 @@ BitBoard GetGeneratedPawnAttacks(int sq, int color) {
   return attacks;
 }
 
-void InitPawnAttacks() {
+static void InitPawnAttacks() {
   for (int i = 0; i < 64; i++) {
     PAWN_ATTACKS[WHITE][i] = GetGeneratedPawnAttacks(i, WHITE);
     PAWN_ATTACKS[BLACK][i] = GetGeneratedPawnAttacks(i, BLACK);
   }
 }
 
-BitBoard GetGeneratedKnightAttacks(int sq) {
+static BitBoard GetGeneratedKnightAttacks(int sq) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -226,12 +226,12 @@ BitBoard GetGeneratedKnightAttacks(int sq) {
   return attacks;
 }
 
-void InitKnightAttacks() {
+static void InitKnightAttacks() {
   for (int i = 0; i < 64; i++)
     KNIGHT_ATTACKS[i] = GetGeneratedKnightAttacks(i);
 }
 
-BitBoard GetGeneratedKingAttacks(int sq) {
+static BitBoard GetGeneratedKingAttacks(int sq) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -248,14 +248,14 @@ BitBoard GetGeneratedKingAttacks(int sq) {
   return attacks;
 }
 
-void InitKingAttacks() {
+static void InitKingAttacks() {
   for (int i = 0; i < 64; i++)
     KING_ATTACKS[i] = GetGeneratedKingAttacks(i);
 }
 
 #ifndef USE_DUAL_HQ
 
-BitBoard GetBishopMask(int sq) {
+static BitBoard GetBishopMask(int sq) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
@@ -273,14 +273,14 @@ BitBoard GetBishopMask(int sq) {
   return attacks;
 }
 
-void InitBishopMasks() {
+static void InitBishopMasks() {
   for (int i = 0; i < 64; i++)
     MAGICS[i].bishop.mask = GetBishopMask(i);
 }
 
 #endif
 
-BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
+static BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
@@ -315,7 +315,7 @@ BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
 
 #ifndef USE_DUAL_HQ
 
-BitBoard GetRookMask(int sq) {
+static BitBoard GetRookMask(int sq) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
@@ -333,14 +333,14 @@ BitBoard GetRookMask(int sq) {
   return attacks;
 }
 
-void InitRookMasks() {
+static void InitRookMasks() {
   for (int i = 0; i < 64; i++)
     MAGICS[i].rook.mask = GetRookMask(i);
 }
 
 #endif
 
-BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
+static BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
@@ -375,7 +375,7 @@ BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
 
 #ifndef USE_DUAL_HQ
 
-BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
+static BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
   BitBoard occupany = 0;
 
   for (int i = 0; i < bits; i++) {
@@ -391,17 +391,17 @@ BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
 // Magics were searched for offline and are baked in so that
 // startup does not pay for the search. Correctness is covered by the perft
 // suite, which exercises every slider lookup.
-void InitBishopMagics() {
+static void InitBishopMagics() {
   for (int i = 0; i < 64; i++)
     MAGICS[i].bishop.magic = BISHOP_MAGIC_NUMBERS[i];
 }
 
-void InitRookMagics() {
+static void InitRookMagics() {
   for (int i = 0; i < 64; i++)
     MAGICS[i].rook.magic = ROOK_MAGIC_NUMBERS[i];
 }
 
-void InitBishopAttacks() {
+static void InitBishopAttacks() {
   BitBoard* table = BISHOP_TABLE;
 
   for (int sq = 0; sq < 64; sq++) {
@@ -422,7 +422,7 @@ void InitBishopAttacks() {
   }
 }
 
-void InitRookAttacks() {
+static void InitRookAttacks() {
   BitBoard* table = ROOK_TABLE;
 
   for (int sq = 0; sq < 64; sq++) {
@@ -465,7 +465,7 @@ static BitBoard RayMask(int sq, int dr, int df) {
   return mask;
 }
 
-void InitDualMagics() {
+static void InitDualMagics() {
   for (int f = 0; f < 8; f++)
     for (int occ = 0; occ < 64; occ++)
       RANK_ATTACKS[f][occ] = (uint8_t) GetRookAttacksOTF(f, (BitBoard) occ << 1);
@@ -490,7 +490,7 @@ void InitDualMagics() {
 
 #endif
 
-void InitSliderRays() {
+static void InitSliderRays() {
   for (int sq = 0; sq < 64; sq++) {
     BISHOP_RAYS[sq] = GetBishopAttacksOTF(sq, 0);
     ROOK_RAYS[sq]   = GetRookAttacksOTF(sq, 0);

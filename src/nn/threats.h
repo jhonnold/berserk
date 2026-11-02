@@ -35,7 +35,6 @@ extern int8_t THREAT_WEIGHTS[N_THREATS * N_HIDDEN];
 extern int32_t THREAT_PAIR[10][12];
 extern uint16_t THREAT_OFFSET[10][64];
 extern BitBoard THREAT_EMPTY[10][64];
-extern BitBoard RAY_PASS[64][64];
 extern BitBoard PAIR_BAND[64];
 extern int32_t PAIR_TRI[96];
 

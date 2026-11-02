@@ -50,7 +50,6 @@ INLINE Move TBMoveFromResult(unsigned res, Board* board) {
 }
 
 void TBRootMoves(SimpleMoveList* moves, Board* board);
-unsigned TBRootProbe(Board* board, unsigned* results);
 unsigned TBProbe(Board* board);
 
 #endif

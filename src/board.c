@@ -43,7 +43,7 @@ const uint16_t KING_BUCKETS[64] = {15, 15, 14, 14, 14, 14, 15, 15, //
                                    3,  2,  1,  0,  0,  1,  2,  3};
 
 // reset the board to an empty state
-void ClearBoard(Board* board) {
+static void ClearBoard(Board* board) {
   memset(board->pieces, 0, sizeof(board->pieces));
   memset(board->occupancies, 0, sizeof(board->occupancies));
   memset(board->history, 0, sizeof(board->history));
@@ -570,7 +570,7 @@ void UndoNullMove(Board* board) {
   memcpy(board, &board->history[board->histPly], offsetof(Board, stm));
 }
 
-inline int IsFiftyMoveRule(Board* board) {
+int IsFiftyMoveRule(Board* board) {
   if (board->fmr > 99) {
     if (board->checkers) {
       SimpleMoveList moves[1];
@@ -692,8 +692,8 @@ int IsLegal(Move move, Board* board) {
   return !GetBit(board->pinned, from) || GetBit(PinnedMoves(from, kingSq), to);
 }
 
-uint64_t cuckoo[8192];
-Move cuckooMove[8192];
+static uint64_t cuckoo[8192];
+static Move cuckooMove[8192];
 
 INLINE uint64_t Hash1(uint64_t hash) {
   return hash & 0x1fff;

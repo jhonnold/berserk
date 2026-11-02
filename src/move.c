@@ -26,7 +26,7 @@
 
 const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
 
-const char* PROMOTION_TO_CHAR = "-nbrq-";
+static const char* PROMOTION_TO_CHAR = "-nbrq-";
 
 const int CHAR_TO_PIECE[] = {
   ['P'] = WHITE_PAWN,   //

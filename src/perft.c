@@ -26,7 +26,7 @@
 #include "types.h"
 #include "util.h"
 
-uint64_t Perft(int depth, Board* board) {
+static uint64_t Perft(int depth, Board* board) {
   if (depth == 0)
     return 1;
 

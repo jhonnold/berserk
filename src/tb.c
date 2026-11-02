@@ -26,6 +26,8 @@
 
 #define ByteSwap(bb) __builtin_bswap64((bb))
 
+static unsigned TBRootProbe(Board* board, unsigned* results);
+
 void TBRootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
 
@@ -42,7 +44,7 @@ void TBRootMoves(SimpleMoveList* moves, Board* board) {
       moves->moves[moves->count++] = TBMoveFromResult(results[i], board);
 }
 
-unsigned TBRootProbe(Board* board, unsigned* results) {
+static unsigned TBRootProbe(Board* board, unsigned* results) {
   if (board->castling || BitCount(OccBB(BOTH)) > TB_LARGEST)
     return TB_RESULT_FAILED;
 

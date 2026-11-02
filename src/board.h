@@ -35,7 +35,6 @@
 
 extern const uint16_t KING_BUCKETS[64];
 
-void ClearBoard(Board* board);
 void ParseFen(char* fen, Board* board);
 void BoardToFen(char* fen, Board* board);
 void PrintBoard(Board* board);

@@ -48,16 +48,16 @@ INCBIN(Embed, EVALFILE);
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 
-int8_t L1_WEIGHTS[N_OUTPUT_BUCKETS][N_L1 * N_L2] ALIGN;
-int32_t L1_BIASES[N_OUTPUT_BUCKETS][N_L2] ALIGN;
+static int8_t L1_WEIGHTS[N_OUTPUT_BUCKETS][N_L1 * N_L2] ALIGN;
+static int32_t L1_BIASES[N_OUTPUT_BUCKETS][N_L2] ALIGN;
 
-int8_t L2_WEIGHTS[N_OUTPUT_BUCKETS][N_L2_CHUNKS * N_L3 * 4] ALIGN;
-int32_t L2_BIASES[N_OUTPUT_BUCKETS][N_L3] ALIGN;
+static int8_t L2_WEIGHTS[N_OUTPUT_BUCKETS][N_L2_CHUNKS * N_L3 * 4] ALIGN;
+static int32_t L2_BIASES[N_OUTPUT_BUCKETS][N_L3] ALIGN;
 
-int8_t L3_WEIGHTS[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
-int32_t L3_BIASES[N_OUTPUT_BUCKETS];
+static int8_t L3_WEIGHTS[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
+static int32_t L3_BIASES[N_OUTPUT_BUCKETS];
 
-uint16_t LOOKUP_INDICES[256][8] ALIGN;
+static uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 #if defined(SIMD) && !(defined(__AVX512F__) && defined(__AVX512BW__))
 INLINE size_t StoreNNZ(uint16_t* dest, size_t count, nnz_t* base, const nnz_t increment, const uint32_t lookup) {
@@ -404,7 +404,7 @@ int Propagate(Accumulator* accumulator, const int stm, const int bucket) {
   return stm == WHITE ? PropagateView(accumulator, WHITE, bucket) : PropagateView(accumulator, BLACK, bucket);
 }
 
-const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +            // input weights
+static const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +            // input weights
                             sizeof(int16_t) * N_HIDDEN +                         // input biases
                             sizeof(int8_t) * N_THREATS * N_HIDDEN +              // threat weights
                             sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L1 * N_L2 +    // L1 weights

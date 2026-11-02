@@ -31,10 +31,11 @@
 #include "util.h"
 
 // Ethereal's bench set
-const int NUM_BENCH_POSITIONS = 50;
-char* benchmarks[]            = {
+static char* benchmarks[]            = {
 #include "files/bench.csv"
 };
+
+#define NUM_BENCH_POSITIONS ((int) (sizeof(benchmarks) / sizeof(benchmarks[0])))
 
 void Bench(int depth) {
   Board board;

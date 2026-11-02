@@ -29,7 +29,7 @@ int32_t THREAT_PAIR[10][12];
 uint16_t THREAT_OFFSET[10][64];
 BitBoard THREAT_EMPTY[10][64];
 
-BitBoard RAY_PASS[64][64];
+static BitBoard RAY_PASS[64][64];
 
 BitBoard PAIR_BAND[64];
 int32_t PAIR_TRI[96];

@@ -65,7 +65,6 @@ typedef struct {
 
 extern DualMagic DUAL_MAGICS[64];
 
-void InitDualMagics();
 
 #else
 
@@ -89,32 +88,8 @@ extern SquareMagics MAGICS[64];
 
 #endif
 
-void InitBetweenSquares();
-void InitPinnedMovementSquares();
-void InitPawnAttacks();
-void InitKnightAttacks();
-void InitKingAttacks();
-void InitSliderRays();
-#ifndef USE_DUAL_HQ
-void InitBishopMasks();
-void InitBishopMagics();
-void InitBishopAttacks();
-void InitRookMasks();
-void InitRookMagics();
-void InitRookAttacks();
-#endif
 void InitAttacks();
 
-BitBoard GetGeneratedPawnAttacks(int sq, int color);
-BitBoard GetGeneratedKnightAttacks(int sq);
-BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers);
-BitBoard GetRookAttacksOTF(int sq, BitBoard blockers);
-BitBoard GetGeneratedKingAttacks(int sq);
-#ifndef USE_DUAL_HQ
-BitBoard GetBishopMask(int sq);
-BitBoard GetRookMask(int sq);
-BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks);
-#endif
 
 
 #ifdef USE_DUAL_HQ

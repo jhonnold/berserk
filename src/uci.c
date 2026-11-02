@@ -39,15 +39,15 @@
 #include "transposition.h"
 #include "util.h"
 
-int MOVE_OVERHEAD  = 50;
-int MULTI_PV       = 1;
-int PONDER_ENABLED = 0;
+static int MOVE_OVERHEAD  = 50;
+static int MULTI_PV       = 1;
+static int PONDER_ENABLED = 0;
 int CHESS_960      = 0;
 int CONTEMPT       = 0;
 int SHOW_WDL       = 1;
 int MINIMAL        = 0;
 int NORMALIZE      = 1;
-int SOFT_NODES     = 0;
+static int SOFT_NODES     = 0;
 
 SearchParams Limits;
 
@@ -55,8 +55,8 @@ SearchParams Limits;
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
-const double as[4] = {0.01538655, -1.33196512, 7.43032607, 152.07701643};
-const double bs[4] = {-2.66442843, 18.35463702, -38.91760538, 56.27652511};
+static const double as[4] = {0.01538655, -1.33196512, 7.43032607, 152.07701643};
+static const double bs[4] = {-2.66442843, 18.35463702, -38.91760538, 56.27652511};
 
 // win% as permilli given score and ply
 int WRModel(Score s, int ply) {
@@ -82,7 +82,9 @@ void RootMoves(SimpleMoveList* moves, Board* board) {
 }
 
 // uci "go" command
-void ParseGo(char* in, Board* board) {
+static int GetOptionIntValue(char* in);
+
+static void ParseGo(char* in, Board* board) {
   in += 3;
 
   Limits.depth            = MAX_SEARCH_PLY;
@@ -221,7 +223,7 @@ void ParseGo(char* in, Board* board) {
 }
 
 // uci "position" command
-void ParsePosition(char* in, Board* board) {
+static void ParsePosition(char* in, Board* board) {
   in += 9;
   char* ptrChar = in;
 
@@ -256,7 +258,7 @@ void ParsePosition(char* in, Board* board) {
   }
 }
 
-void PrintUCIOptions() {
+static void PrintUCIOptions() {
   printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 16 min 2 max %d\n", HASH_MAX);
@@ -275,7 +277,7 @@ void PrintUCIOptions() {
   printf("uciok\n");
 }
 
-int ReadLine(char* in) {
+static int ReadLine(char* in) {
   if (fgets(in, 8192, stdin) == NULL)
     return 0;
 
@@ -471,7 +473,7 @@ void UCILoop() {
   ThreadsExit();
 }
 
-int GetOptionIntValue(char* in) {
+static int GetOptionIntValue(char* in) {
   int n;
   sscanf(in, "%*s %*s %*s %*s %d", &n);
 

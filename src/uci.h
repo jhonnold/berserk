@@ -33,13 +33,8 @@ int WRModel(Score s, int ply);
 
 void RootMoves(SimpleMoveList* moves, Board* board);
 
-void ParseGo(char* in, Board* board);
-void ParsePosition(char* in, Board* board);
-void PrintUCIOptions();
 
-int ReadLine(char* in);
 void UCILoop();
 
-int GetOptionIntValue(char* in);
 
 #endif

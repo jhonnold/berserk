@@ -33,7 +33,6 @@
 
 extern const int CHAR_TO_PIECE[];
 extern const char* PIECE_TO_CHAR;
-extern const char* PROMOTION_TO_CHAR;
 extern const char* SQ_TO_COORD[64];
 extern const int CASTLE_ROOK_DEST[64];
 extern const int CASTLING_ROOK[64];

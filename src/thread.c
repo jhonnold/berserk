@@ -71,7 +71,7 @@ void ThreadWake(ThreadData* thread, int action) {
 }
 
 // Idle loop that wakes into an action
-void ThreadIdle(ThreadData* thread) {
+static void ThreadIdle(ThreadData* thread) {
   while (1) {
     pthread_mutex_lock(&thread->mutex);
 
@@ -100,7 +100,7 @@ void ThreadIdle(ThreadData* thread) {
 }
 
 // Build a thread
-void* ThreadInit(void* arg) {
+static void* ThreadInit(void* arg) {
   int i = (intptr_t) arg;
 
   ThreadData* thread = calloc(1, sizeof(ThreadData));
@@ -138,7 +138,7 @@ void* ThreadInit(void* arg) {
 }
 
 // Create a thread with idx i
-void ThreadCreate(int i) {
+static void ThreadCreate(int i) {
   pthread_t thread;
 
   // Don't trust the platform default (musl gives 128KB)
@@ -159,7 +159,7 @@ void ThreadCreate(int i) {
 }
 
 // Teardown and free a thread
-void ThreadDestroy(ThreadData* thread) {
+static void ThreadDestroy(ThreadData* thread) {
   pthread_mutex_lock(&thread->mutex);
   thread->action = THREAD_EXIT;
   pthread_cond_signal(&thread->sleep);
