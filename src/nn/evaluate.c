@@ -574,18 +574,19 @@ int LoadNetwork(char* path) {
 
   uint8_t* data = malloc(NETWORK_SIZE + 64);
   const size_t read = fread(data, sizeof(uint8_t), NETWORK_SIZE + 64, fin);
+  fclose(fin);
+
   if (read < NETWORK_SIZE || read >= NETWORK_SIZE + 64) {
     printf("info string Error reading file at %s\n", path);
+    free(data);
     return 0;
   }
 
   CopyData(data);
+  free(data);
 
   for (int i = 0; i < Threads.count; i++)
     ResetRefreshTable(Threads.threads[i]->refreshTable);
-
-  fclose(fin);
-  free(data);
 
   return 1;
 }
