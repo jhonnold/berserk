@@ -24,14 +24,14 @@ long GetTimeMS() {
 }
 
 #else
-#include <stddef.h>
-#include <sys/time.h>
+#include <time.h>
 
+// monotonic, so a wall clock adjustment mid search cannot skew time management
 long GetTimeMS() {
-  struct timeval time;
-  gettimeofday(&time, NULL);
+  struct timespec time;
+  clock_gettime(CLOCK_MONOTONIC, &time);
 
-  return time.tv_sec * 1000 + time.tv_usec / 1000;
+  return time.tv_sec * 1000 + time.tv_nsec / 1000000;
 }
 
 #endif
