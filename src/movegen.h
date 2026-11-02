@@ -20,17 +20,12 @@
 #include "attacks.h"
 #include "bits.h"
 #include "board.h"
-#include "eval.h"
 #include "move.h"
-#include "search.h"
-#include "see.h"
-#include "transposition.h"
 #include "types.h"
 #include "util.h"
 
 extern const int CASTLE_MAP[4][3];
 
-#define PawnDir(c)   ((c) == WHITE ? N : S)
 #define PromoRank(c) ((c) == WHITE ? RANK_7 : RANK_2)
 #define DPRank(c)    ((c) == WHITE ? RANK_3 : RANK_6)
 

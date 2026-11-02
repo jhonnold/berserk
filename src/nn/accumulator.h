@@ -22,7 +22,6 @@
 #include "../bits.h"
 #include "../board.h"
 #include "../move.h"
-#include "../movegen.h"
 #include "../types.h"
 #include "../util.h"
 #include "simd.h"
@@ -331,8 +330,5 @@ INLINE int CanEfficientlyUpdate(Accumulator* live, const int view) {
       return 1;
   }
 }
-
-void LoadDefaultNN();
-int LoadNetwork(char* path);
 
 #endif

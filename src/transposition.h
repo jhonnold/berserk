@@ -17,6 +17,7 @@
 #ifndef TRANSPOSITION_H
 #define TRANSPOSITION_H
 
+#include "search.h"
 #include "types.h"
 #include "util.h"
 

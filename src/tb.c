@@ -26,6 +26,32 @@
 
 #define ByteSwap(bb) __builtin_bswap64((bb))
 
+INLINE Move TBMoveFromResult(unsigned res, Board* board) {
+  unsigned from  = TB_GET_FROM(res) ^ 56;
+  unsigned to    = TB_GET_TO(res) ^ 56;
+  unsigned ep    = TB_GET_EP(res);
+  unsigned promo = TB_GET_PROMOTES(res);
+  int piece      = board->squares[from];
+  int capture    = board->squares[to] != NO_PIECE;
+
+  int flags = QUIET_FLAG;
+  if (ep)
+    flags = EP_FLAG;
+  else if (capture)
+    flags = CAPTURE_FLAG;
+
+  if (promo) {
+    switch (KING - promo) {
+      case KNIGHT: flags |= KNIGHT_PROMO_FLAG; break;
+      case BISHOP: flags |= BISHOP_PROMO_FLAG; break;
+      case ROOK: flags |= ROOK_PROMO_FLAG; break;
+      case QUEEN: flags |= QUEEN_PROMO_FLAG; break;
+    }
+  }
+
+  return BuildMove(from, to, piece, flags);
+}
+
 static unsigned TBRootProbe(Board* board, unsigned* results);
 
 void TBRootMoves(SimpleMoveList* moves, Board* board) {

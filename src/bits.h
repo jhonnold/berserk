@@ -50,6 +50,8 @@
 #define LSB(bb)                (__builtin_ctzll(bb))
 #define MSB(bb)                (63 ^ __builtin_clzll(bb))
 
+#define PawnDir(c) ((c) == WHITE ? N : S)
+
 #define ShiftN(bb)  ((bb) >> 8)
 #define ShiftS(bb)  ((bb) << 8)
 #define ShiftW(bb)  (((bb) & ~A_FILE) >> 1)
