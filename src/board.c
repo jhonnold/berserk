@@ -477,6 +477,12 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
 }
 
 void UndoMove(Move move, Board* board) {
+  UndoMoveUpdate(move, board, 1);
+}
+
+// update must match the MakeMoveUpdate call being undone: without one the
+// accumulator stack was never advanced, so it must not be stepped back
+void UndoMoveUpdate(Move move, Board* board, int update) {
   int from  = From(move);
   int to    = To(move);
   int piece = Moving(move);
@@ -485,7 +491,8 @@ void UndoMove(Move move, Board* board) {
   board->xstm ^= 1;
   board->histPly--;
   board->moveNo -= (board->stm == BLACK);
-  board->accumulators--;
+  if (update)
+    board->accumulators--;
 
   // reload historical values
   memcpy(board, &board->history[board->histPly], offsetof(Board, stm));

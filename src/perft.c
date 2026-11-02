@@ -39,7 +39,7 @@ uint64_t Perft(int depth, Board* board) {
   while ((move = NextMove(&mp, board, 0))) {
     MakeMoveUpdate(move, board, 0);
     nodes += Perft(depth - 1, board);
-    UndoMove(move, board);
+    UndoMoveUpdate(move, board, 0);
   }
 
   return nodes;
@@ -59,7 +59,7 @@ void PerftTest(int depth, Board* board) {
   while ((move = NextMove(&mp, board, 0))) {
     MakeMoveUpdate(move, board, 0);
     uint64_t nodes = Perft(depth - 1, board);
-    UndoMove(move, board);
+    UndoMoveUpdate(move, board, 0);
 
     printf("%5s: %" PRIu64 "\n", MoveToStr(move, board), nodes);
     total += nodes;
