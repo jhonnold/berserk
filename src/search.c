@@ -111,6 +111,34 @@ INLINE int ThreadValue(ThreadData* thread, const int worstScore) {
   return (thread->rootMoves[0].score - worstScore) * thread->depth;
 }
 
+// Static eval of a node not in check. Sets *rawEval to the uncorrected eval (what the TT keeps) and
+// ss->staticEval to the corrected one, and returns the eval search prunes with: scaled toward 0 by the
+// fifty move counter and, on a TT hit, replaced by a TT score whose bound says it is tighter. Without a
+// TT hit the fresh eval is stored in the TT entry.
+INLINE int StaticEval(ThreadData* thread,
+                      SearchStack* ss,
+                      TTEntry* tt,
+                      int ttHit,
+                      int ttEval,
+                      int ttScore,
+                      int ttBound,
+                      int ttPv,
+                      int* rawEval) {
+  Board* board = &thread->board;
+
+  *rawEval = ttHit && ttEval != EVAL_UNKNOWN ? ttEval : Evaluate(board, thread);
+  ss->staticEval = ClampEval(*rawEval + GetCorrectionScore(board, ss));
+
+  int eval = AdjustEvalOnFMR(board, ss->staticEval);
+
+  if (!ttHit)
+    TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, *rawEval, ttPv);
+  else if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
+    eval = ttScore;
+
+  return eval;
+}
+
 // Record move on the search stack, count the node and play it
 INLINE void PlayMove(ThreadData* thread, SearchStack* ss, Move move) {
   Board* board = &thread->board;
@@ -516,26 +544,9 @@ static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thre
   if (inCheck) {
     rawEval = eval = ss->staticEval = EVAL_UNKNOWN;
   } else {
-    if (ttHit) {
-      rawEval = ttEval;
-      if (rawEval == EVAL_UNKNOWN)
-        rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, ss));
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
-      if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
-        eval = ttScore;
-    } else if (!ss->skip) {
-      rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, ss));
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
-      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
-    }
+    // a singular search (ss->skip) has no TT entry and keeps the eval of the node it re-searches
+    if (ttHit || !ss->skip)
+      eval = StaticEval(thread, ss, tt, ttHit, ttEval, ttScore, ttBound, ttPv, &rawEval);
 
     // Improving
     improving = ss->ply >= 2 && (ss->staticEval > (ss - 2)->staticEval || (ss - 2)->staticEval == EVAL_UNKNOWN);
@@ -935,26 +946,7 @@ static int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchSta
   if (inCheck) {
     rawEval = eval = ss->staticEval = EVAL_UNKNOWN;
   } else {
-    if (ttHit) {
-      rawEval = ttEval;
-      if (rawEval == EVAL_UNKNOWN)
-        rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, ss));
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
-      if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
-        eval = ttScore;
-    } else {
-      rawEval = Evaluate(board, thread);
-      eval = ss->staticEval = ClampEval(rawEval + GetCorrectionScore(board, ss));
-
-      // correct eval on fmr
-      eval = AdjustEvalOnFMR(board, eval);
-
-      TTPut(tt, board->zobrist, -1, UNKNOWN, BOUND_UNKNOWN, NULL_MOVE, ss->ply, rawEval, ttPv);
-    }
+    eval = StaticEval(thread, ss, tt, ttHit, ttEval, ttScore, ttBound, ttPv, &rawEval);
 
     // stand pat
     if (eval >= beta)
