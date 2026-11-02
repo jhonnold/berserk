@@ -79,9 +79,9 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 extern CorrectionHistory Correction;
 
 INLINE int GetCorrectionScore(Board* board, SearchStack* ss) {
-  const int pawn  = Correction.pawn[board->pawnZobrist & Correction.mask];
-  const int white = Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & Correction.mask];
-  const int black = Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & Correction.mask];
+  const int pawn  = Correction.pawn[board->pawnZobrist & CORRECTION_MASK];
+  const int white = Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & CORRECTION_MASK];
+  const int black = Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & CORRECTION_MASK];
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
   const int cont2 = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
@@ -99,8 +99,6 @@ void UpdateHistories(SearchStack* ss,
 
 void UpdateCorrection(int raw, int real, int depth, Board* board);
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
-void CorrectionInit();
 void CorrectionClearPart(int idx, int count);
-void CorrectionFree();
 
 #endif
