@@ -193,11 +193,13 @@ void ThreadsExit() {
 
   pthread_cond_destroy(&Threads.sleep);
   pthread_mutex_destroy(&Threads.mutex);
+  pthread_mutex_destroy(&Threads.lock);
 }
 
 // Start
 void ThreadsInit() {
   pthread_mutex_init(&Threads.mutex, NULL);
+  pthread_mutex_init(&Threads.lock, NULL);
   pthread_cond_init(&Threads.sleep, NULL);
 
   Threads.count = 1;
