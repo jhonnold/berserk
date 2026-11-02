@@ -26,6 +26,15 @@
 #include "../movegen.h"
 #include "../util.h"
 
+const uint16_t KING_BUCKETS[64] = {15, 15, 14, 14, 14, 14, 15, 15, //
+                                   15, 15, 14, 14, 14, 14, 15, 15, //
+                                   13, 13, 12, 12, 12, 12, 13, 13, //
+                                   13, 13, 12, 12, 12, 12, 13, 13, //
+                                   11, 10, 9,  8,  8,  9,  10, 11, //
+                                   11, 10, 9,  8,  8,  9,  10, 11, //
+                                   7,  6,  5,  4,  4,  5,  6,  7,  //
+                                   3,  2,  1,  0,  0,  1,  2,  3};
+
 void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
     AccumulatorKingState* state = refreshTable + b;

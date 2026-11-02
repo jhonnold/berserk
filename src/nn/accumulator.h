@@ -24,6 +24,7 @@
 #include "../move.h"
 #include "../types.h"
 #include "../util.h"
+#include "features.h"
 #include "simd.h"
 #include "threats.h"
 

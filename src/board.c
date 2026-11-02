@@ -33,15 +33,6 @@
 #include "uci.h"
 #include "zobrist.h"
 
-const uint16_t KING_BUCKETS[64] = {15, 15, 14, 14, 14, 14, 15, 15, //
-                                   15, 15, 14, 14, 14, 14, 15, 15, //
-                                   13, 13, 12, 12, 12, 12, 13, 13, //
-                                   13, 13, 12, 12, 12, 12, 13, 13, //
-                                   11, 10, 9,  8,  8,  9,  10, 11, //
-                                   11, 10, 9,  8,  8,  9,  10, 11, //
-                                   7,  6,  5,  4,  4,  5,  6,  7,  //
-                                   3,  2,  1,  0,  0,  1,  2,  3};
-
 // reset the board to an empty state
 static void ClearBoard(Board* board) {
   memset(board->pieces, 0, sizeof(board->pieces));
