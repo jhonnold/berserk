@@ -106,17 +106,18 @@ void UpdateCorrection(int raw, int real, int depth, Board* board) {
 }
 
 void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
-  if ((ss - 1)->move && (ss - 2)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
-    int16_t* contCorrection  = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    AddHistoryHeuristic(contCorrection, correction);
-  }
+  if (!(ss - 1)->move)
+    return;
 
-  if ((ss - 1)->move && (ss - 3)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
-    int16_t* contCorrection  = &(*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    AddHistoryHeuristic(contCorrection, correction);
-  }
+  const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+  const int moving         = Moving((ss - 1)->move);
+  const int to             = To((ss - 1)->move);
+
+  if ((ss - 2)->move)
+    AddHistoryHeuristic(&(*(ss - 2)->cont)[moving][to], correction);
+
+  if ((ss - 3)->move)
+    AddHistoryHeuristic(&(*(ss - 3)->cont)[moving][to], correction);
 }
 
 // Zero this thread's slice of the shared tables
