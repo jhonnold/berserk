@@ -100,9 +100,8 @@ INLINE BitBoard FeatureAttackers(Board* board, int pt) {
 
 // The threats a piece on s takes part in, pushed as add. Neither the piece on s
 // nor its occupancy bit changes the result, so this runs on either side of the flip.
-// Not inlined: it has eight call sites in MakeMoveUpdate. rays is always 1, but
-// gcc specialises the function on it and runs ~1% slower without it.
-void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int rays);
+// Not inlined: it has eight call sites in MakeMoveUpdate.
+void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add);
 
 // A capture: occupancy is unchanged, so no lines open or close
 INLINE void SwapThreats(Board* board, DirtyThreatList* list, int old, int new, int s) {

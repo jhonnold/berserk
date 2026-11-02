@@ -118,7 +118,7 @@ void InitThreats() {
   }
 }
 
-void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int rays) {
+void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add) {
   const BitBoard occ     = OccBB(BOTH);
   const BitBoard kings   = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
   const BitBoard queens  = board->pieces[WHITE_QUEEN] | board->pieces[BLACK_QUEEN];
@@ -144,7 +144,7 @@ void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, i
     }
   }
 
-  BitBoard sl = rays ? sliders : 0;
+  BitBoard sl = sliders;
   while (sl) {
     const int from      = PopLSB(&sl);
     const BitBoard past = RAY_PASS[from][s] & occ;

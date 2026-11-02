@@ -373,31 +373,31 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     const int rookTo   = CASTLE_ROOK_DEST[to];
     const int rook     = Piece(ROOK, stm);
 
-    PieceThreats(board, &list, piece, from, SUB, 1);
+    PieceThreats(board, &list, piece, from, SUB);
     RemovePiece(board, piece, from);
-    PieceThreats(board, &list, rook, rookFrom, SUB, 1);
+    PieceThreats(board, &list, rook, rookFrom, SUB);
     RemovePiece(board, rook, rookFrom);
     AddPiece(board, piece, to);
-    PieceThreats(board, &list, piece, to, ADD, 1);
+    PieceThreats(board, &list, piece, to, ADD);
     AddPiece(board, rook, rookTo);
-    PieceThreats(board, &list, rook, rookTo, ADD, 1);
+    PieceThreats(board, &list, rook, rookTo, ADD);
 
     board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
     board->nonPawnZobrist[stm] ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
   } else {
     const int placed = IsPromo(move) ? PromoPiece(move, stm) : piece;
 
-    PieceThreats(board, &list, piece, from, SUB, 1);
+    PieceThreats(board, &list, piece, from, SUB);
     RemovePiece(board, piece, from);
 
     if (IsCap(move)) {
       const int capSq = IsEP(move) ? to - PawnDir(stm) : to;
 
       if (IsEP(move)) {
-        PieceThreats(board, &list, captured, capSq, SUB, 1);
+        PieceThreats(board, &list, captured, capSq, SUB);
         RemovePiece(board, captured, capSq);
         AddPiece(board, placed, to);
-        PieceThreats(board, &list, placed, to, ADD, 1);
+        PieceThreats(board, &list, placed, to, ADD);
       } else {
         SwapThreats(board, &list, captured, placed, to);
         SwapPiece(board, captured, placed, to);
@@ -414,7 +414,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       board->fmr = 0;
     } else {
       AddPiece(board, placed, to);
-      PieceThreats(board, &list, placed, to, ADD, 1);
+      PieceThreats(board, &list, placed, to, ADD);
     }
   }
 
