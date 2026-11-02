@@ -26,7 +26,6 @@
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
 
-typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
 

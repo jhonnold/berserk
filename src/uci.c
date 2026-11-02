@@ -53,7 +53,7 @@ static const double as[4] = {0.01538655, -1.33196512, 7.43032607, 152.07701643};
 static const double bs[4] = {-2.66442843, 18.35463702, -38.91760538, 56.27652511};
 
 // win% as permilli given score and ply
-int WRModel(Score s, int ply) {
+int WRModel(int s, int ply) {
   double m = Min(240, ply) / 64.0;
 
   double a = (((as[0] * m + as[1]) * m + as[2]) * m) + as[3];

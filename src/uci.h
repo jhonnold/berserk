@@ -19,7 +19,7 @@
 
 #include "types.h"
 
-int WRModel(Score s, int ply);
+int WRModel(int s, int ply);
 
 
 void UCILoop(void);

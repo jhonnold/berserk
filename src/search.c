@@ -166,13 +166,13 @@ void MainSearch(void) {
   }
 
   ThreadData* bestThread = mainThread;
-  Score bestScore        = bestThread->rootMoves[0].score;
-  Score bestVoteScore    = voteMap[FromTo(bestThread->rootMoves[0].move)];
+  int bestScore          = bestThread->rootMoves[0].score;
+  int bestVoteScore      = voteMap[FromTo(bestThread->rootMoves[0].move)];
 
   for (int i = 1; i < Threads.count; i++) {
     ThreadData* curr    = Threads.threads[i];
-    Score currScore     = curr->rootMoves[0].score;
-    Score currVoteScore = voteMap[FromTo(curr->rootMoves[0].move)];
+    int currScore       = curr->rootMoves[0].score;
+    int currVoteScore   = voteMap[FromTo(curr->rootMoves[0].move)];
 
     // Always choose the fastest mate or longest avoidance of mate
     if (abs(bestScore) >= TB_WIN_BOUND) {
@@ -358,8 +358,8 @@ void Search(ThreadData* thread) {
       searchStability        = sameBestMove ? Min(10, searchStability + 1) : 0; // increase how stable our best move is
       double stabilityFactor = 1.3110 - 0.0533 * searchStability;
 
-      Score searchScoreDiff = scores[thread->depth - 3] - bestScore;
-      Score prevScoreDiff   = thread->previousScore - bestScore;
+      int searchScoreDiff = scores[thread->depth - 3] - bestScore;
+      int prevScoreDiff   = thread->previousScore - bestScore;
 
       // if we don't know the previous score, work only on the searchscore
       if (thread->previousScore == UNKNOWN)
@@ -591,7 +591,7 @@ static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thre
         thread->nmpMinPly = ss->ply + 3 * (depth - R) / 4;
         thread->npmColor  = board->stm;
 
-        Score verify = Negamax(beta - 1, beta, depth - R, 0, thread, pv, ss);
+        int verify = Negamax(beta - 1, beta, depth - R, 0, thread, pv, ss);
 
         thread->nmpMinPly = 0;
 

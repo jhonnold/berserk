@@ -34,7 +34,7 @@ INLINE int ClampEval(int eval) {
 extern const int PHASE_VALUES[6];
 
 void SetContempt(int* dest, int stm);
-Score Evaluate(Board* board, ThreadData* thread);
+int Evaluate(Board* board, ThreadData* thread);
 void EvaluateTrace(Board* board);
 
 #endif

@@ -39,7 +39,7 @@ void SetContempt(int* dest, int stm) {
 }
 
 // Main evalution method
-Score Evaluate(Board* board, ThreadData* thread) {
+int Evaluate(Board* board, ThreadData* thread) {
   if (IsMaterialDraw(board))
     return 0;
 
