@@ -111,6 +111,30 @@ INLINE int ThreadValue(ThreadData* thread, const int worstScore) {
   return (thread->rootMoves[0].score - worstScore) * thread->depth;
 }
 
+// Record move on the search stack, count the node and play it
+INLINE void PlayMove(ThreadData* thread, SearchStack* ss, Move move) {
+  Board* board = &thread->board;
+
+  TTPrefetch(KeyAfter(board, move));
+  ss->move = move;
+  ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
+  ss->cont = &thread->contCorrection[Moving(move)][To(move)];
+  IncRlx(thread->nodes);
+  MakeMove(move, board);
+}
+
+// As PlayMove, with the null move's history pointing at the unused [0][WHITE_PAWN][A1] slots
+INLINE void PlayNullMove(ThreadData* thread, SearchStack* ss) {
+  Board* board = &thread->board;
+
+  TTPrefetch(KeyAfter(board, NULL_MOVE));
+  ss->move = NULL_MOVE;
+  ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
+  ss->cont = &thread->contCorrection[WHITE_PAWN][A1];
+  IncRlx(thread->nodes);
+  MakeNullMove(board);
+}
+
 void StartSearch(Board* board, uint8_t ponder) {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
@@ -567,12 +591,7 @@ static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thre
         HasNonPawn(board, board->stm) && (ss->ply >= thread->nmpMinPly || board->stm != thread->npmColor)) {
       int R = 4 + 367 * depth / 1024 + Min(9 * (eval - beta) / 1024, 4);
 
-      TTPrefetch(KeyAfter(board, NULL_MOVE));
-      ss->move = NULL_MOVE;
-      ss->ch   = &thread->ch[0][WHITE_PAWN][A1];
-      ss->cont = &thread->contCorrection[WHITE_PAWN][A1];
-      IncRlx(thread->nodes);
-      MakeNullMove(board);
+      PlayNullMove(thread, ss);
 
       score = -Negamax(-beta, -beta + 1, depth - R, !cutnode, thread, &childPv, ss + 1);
 
@@ -613,12 +632,7 @@ static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thre
         if (!IsLegal(move, board))
           continue;
 
-        TTPrefetch(KeyAfter(board, move));
-        ss->move = move;
-        ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
-        ss->cont = &thread->contCorrection[Moving(move)][To(move)];
-        IncRlx(thread->nodes);
-        MakeMove(move, board);
+        PlayMove(thread, ss, move);
 
         // qsearch to quickly check
         score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
@@ -742,12 +756,7 @@ static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thre
       }
     }
 
-    TTPrefetch(KeyAfter(board, move));
-    ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
-    ss->cont = &thread->contCorrection[Moving(move)][To(move)];
-    IncRlx(thread->nodes);
-    MakeMove(move, board);
+    PlayMove(thread, ss, move);
 
     // apply extensions
     int newDepth = depth + extension;
@@ -994,12 +1003,7 @@ static int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchSta
     else if (IsCap(move) && numCaptures < 32)
       captures[numCaptures++] = move;
 
-    TTPrefetch(KeyAfter(board, move));
-    ss->move = move;
-    ss->ch   = &thread->ch[IsCap(move)][Moving(move)][To(move)];
-    ss->cont = &thread->contCorrection[Moving(move)][To(move)];
-    IncRlx(thread->nodes);
-    MakeMove(move, board);
+    PlayMove(thread, ss, move);
 
     score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
 
