@@ -171,7 +171,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
           return move;
       }
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     // Probcut MP Steps
@@ -191,7 +191,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
           return move;
       }
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     // QSearch MP Steps
@@ -204,11 +204,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = QS_PLAY_NOISY_MOVES;
       // fallthrough
     case QS_PLAY_NOISY_MOVES:
-      while (picker->current != picker->end)
+      if (picker->current != picker->end)
         return Best(picker->current++, picker->end);
 
       if (!picker->genChecks) {
-        picker->phase = -1;
+        picker->phase = NO_MORE_MOVES;
         return NULL_MOVE;
       }
 
@@ -223,10 +223,10 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       // fallthrough
     case QS_PLAY_QUIET_CHECKS:
-      while (picker->current != picker->end)
+      if (picker->current != picker->end)
         return (picker->current++)->move;
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     // QSearch Evasion Steps
@@ -274,14 +274,14 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
           return move;
       }
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     case PERFT_MOVES:
-      while (picker->current != picker->end)
+      if (picker->current != picker->end)
         return (picker->current++)->move;
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
     default: return NULL_MOVE;
   }
