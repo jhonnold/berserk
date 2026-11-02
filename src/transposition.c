@@ -60,7 +60,12 @@ size_t TTInit(int mb) {
 }
 
 void TTFree() {
-  AlignedFree(TT.mem);
+  if (TT.mem)
+    AlignedFree(TT.mem);
+
+  TT.mem     = NULL;
+  TT.buckets = NULL;
+  TT.count   = 0;
 }
 
 void TTClearPart(int idx) {
