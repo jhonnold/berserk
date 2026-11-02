@@ -26,6 +26,13 @@
 
 #define ByteSwap(bb) __builtin_bswap64((bb))
 
+// Pyrrhic's eight board arguments: both colours, then each piece type, in a1 = 0 order
+#define TB_PIECES(board)                                                                                               \
+  ByteSwap(OccBB(WHITE)), ByteSwap(OccBB(BLACK)), ByteSwap(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),               \
+    ByteSwap(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)), ByteSwap(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),    \
+    ByteSwap(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),                                                         \
+    ByteSwap(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)), ByteSwap(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK))
+
 INLINE Move TBMoveFromResult(unsigned res, Board* board) {
   unsigned from  = TB_GET_FROM(res) ^ 56;
   unsigned to    = TB_GET_TO(res) ^ 56;
@@ -74,14 +81,7 @@ static unsigned TBRootProbe(Board* board, unsigned* results) {
   if (board->castling || BitCount(OccBB(BOTH)) > TB_LARGEST)
     return TB_RESULT_FAILED;
 
-  return tb_probe_root(ByteSwap(OccBB(WHITE)),
-                       ByteSwap(OccBB(BLACK)),
-                       ByteSwap(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
-                       ByteSwap(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
-                       ByteSwap(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
-                       ByteSwap(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
-                       ByteSwap(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
-                       ByteSwap(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
+  return tb_probe_root(TB_PIECES(board),
                        board->fmr,
                        board->epSquare ? (board->epSquare ^ 56) : 0,
                        board->stm == WHITE ? 1 : 0,
@@ -92,14 +92,7 @@ unsigned TBProbe(Board* board) {
   if (board->castling || board->fmr || BitCount(OccBB(BOTH)) > TB_LARGEST)
     return TB_RESULT_FAILED;
 
-  return tb_probe_wdl(ByteSwap(OccBB(WHITE)),
-                      ByteSwap(OccBB(BLACK)),
-                      ByteSwap(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
-                      ByteSwap(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
-                      ByteSwap(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
-                      ByteSwap(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
-                      ByteSwap(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
-                      ByteSwap(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
+  return tb_probe_wdl(TB_PIECES(board),
                       board->epSquare ? (board->epSquare ^ 56) : 0,
                       board->stm == WHITE ? 1 : 0);
 }
