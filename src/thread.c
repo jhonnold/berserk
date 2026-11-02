@@ -210,6 +210,8 @@ INLINE void InitRootMove(RootMove* rm, Move move) {
 
   rm->previousScore = rm->score = rm->avgScore = -CHECKMATE;
 
+  rm->scoreBound = BOUND_EXACT;
+
   rm->pv.moves[0] = move;
   rm->pv.count    = 1;
 

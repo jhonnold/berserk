@@ -398,7 +398,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
   // drop into noisy moves only
   if (depth <= 0)
-    return Quiesce(alpha, beta, 0, thread, ss);
+    return Quiesce(alpha, beta, 0, thread, pv, ss);
 
   if (LoadRlx(Threads.stop) || (!thread->idx && CheckLimits(thread)))
     return 0;
@@ -530,7 +530,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
 
     // Razoring
     if (depth <= 5 && eval + 146 * depth <= alpha) {
-      score = Quiesce(alpha, beta, 0, thread, ss);
+      score = Quiesce(alpha, beta, 0, thread, pv, ss);
 
       if (LoadRlx(Threads.stop))
         return 0;
@@ -601,7 +601,7 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         MakeMove(move, board);
 
         // qsearch to quickly check
-        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, ss + 1);
+        score = -Quiesce(-probBeta, -probBeta + 1, 0, thread, pv, ss + 1);
 
         // if it's still above our cutoff, revalidate
         if (score >= probBeta)
@@ -810,6 +810,9 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
         rm->score    = score;
         rm->seldepth = thread->seldepth;
 
+        // Remember if this is only a bound, its PV is incomplete if the search stops before a re-search
+        rm->scoreBound = score >= beta ? BOUND_LOWER : score <= alpha ? BOUND_UPPER : BOUND_EXACT;
+
         rm->pv.count    = childPv.count + 1;
         rm->pv.moves[0] = move;
         memcpy(rm->pv.moves + 1, childPv.moves, childPv.count * sizeof(Move));
@@ -863,8 +866,12 @@ int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV*
   return bestScore;
 }
 
-int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss) {
+int Quiesce(int alpha, int beta, int depth, ThreadData* thread, PV* pv, SearchStack* ss) {
   Board* board = &thread->board;
+
+  // Track the qsearch PV too, so mates found past the main search horizon get a full line
+  PV childPv;
+  pv->count = 0;
 
   int score     = -CHECKMATE;
   int futility  = -CHECKMATE;
@@ -915,7 +922,9 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       // correct eval on fmr
       eval = AdjustEvalOnFMR(board, eval);
 
-      if (ttScore != UNKNOWN && (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
+      // A mate or TB score from the TT must not stand pat on a PV node, it would leave the PV without moves
+      if (ttScore != UNKNOWN && (!isPV || abs(ttScore) < TB_WIN_BOUND) &&
+          (ttBound & (ttScore > eval ? BOUND_LOWER : BOUND_UPPER)))
         eval = ttScore;
     } else {
       rawEval = Evaluate(board, thread);
@@ -981,7 +990,7 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
     IncRlx(thread->nodes);
     MakeMove(move, board);
 
-    score = -Quiesce(-beta, -alpha, depth - 1, thread, ss + 1);
+    score = -Quiesce(-beta, -alpha, depth - 1, thread, &childPv, ss + 1);
 
     UndoMove(move, board);
 
@@ -997,6 +1006,12 @@ int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss)
       if (score > alpha) {
         bestMove = move;
         alpha    = score;
+
+        if (isPV) {
+          pv->count    = childPv.count + 1;
+          pv->moves[0] = move;
+          memcpy(pv->moves + 1, childPv.moves, childPv.count * sizeof(Move));
+        }
       }
 
       // failed high
@@ -1040,8 +1055,12 @@ void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) 
                       Normalize(bounded); // convert to 50% WR at 100cp
     char* type    = abs(bounded) > MATE_BOUND ? "mate" : "cp";
     char* bound   = " ";
-    if (updated)
-      bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
+    if (updated) {
+      int scoreBound = thread->rootMoves[i].scoreBound;
+      bound          = (bounded >= beta || scoreBound == BOUND_LOWER)  ? " lowerbound " :
+                       (bounded <= alpha || scoreBound == BOUND_UPPER) ? " upperbound " :
+                                                                         " ";
+    }
 
     printf("info depth %d seldepth %d multipv %d score %s %d%s",
            realDepth,
