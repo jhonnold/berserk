@@ -26,6 +26,7 @@
 #include "nn/accumulator.h"
 #include "nn/evaluate.h"
 #include "options.h"
+#include "thread.h"
 #include "util.h"
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};

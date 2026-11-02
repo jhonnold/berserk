@@ -24,6 +24,11 @@
 #include "types.h"
 #include "util.h"
 
+typedef struct {
+  int score;
+  Move move;
+} ScoredMove;
+
 extern const int CASTLE_MAP[4][3];
 
 #define PromoRank(c) ((c) == WHITE ? RANK_7 : RANK_2)

@@ -20,8 +20,21 @@
 #include "bits.h"
 #include "board.h"
 #include "move.h"
+#include "search.h"
+#include "thread.h"
 #include "types.h"
 #include "util.h"
+
+// correction history entries, shared across all threads
+#define CORRECTION_SIZE 131072
+
+// pawn and non-pawn correction histories, shared by all threads
+typedef struct {
+  int16_t pawn[CORRECTION_SIZE] ALIGN;
+  int16_t nonPawn[2][CORRECTION_SIZE] ALIGN;
+} CorrectionHistory;
+
+#define CORRECTION_MASK (CORRECTION_SIZE - 1)
 
 #define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
 #define TH(p, e, d, c)      (thread->caph[p][e][d][c])

@@ -23,6 +23,52 @@
 #include "types.h"
 
 typedef struct {
+  Move move;
+  int seldepth;
+  int score, previousScore, avgScore;
+  uint64_t nodes;
+  PV pv;
+} RootMove;
+
+enum {
+  THREAD_SLEEP,
+  THREAD_SEARCH,
+  THREAD_TT_CLEAR,
+  THREAD_SEARCH_CLEAR,
+  THREAD_EXIT,
+  THREAD_RESUME
+};
+
+struct ThreadData {
+  int idx, multiPV, depth, completedDepth, seldepth;
+  atomic_uint_fast64_t nodes, tbhits;
+
+  int nmpMinPly, npmColor;
+
+  Accumulator* accumulators;
+  AccumulatorKingState* refreshTable;
+
+  Board board;
+
+  int contempt[2];
+  int previousScore;
+  int numRootMoves;
+  RootMove rootMoves[MAX_MOVES];
+
+  Move counters[12][64];         // counter move butterfly table
+  int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
+  int16_t ch[2][12][64][12][64]; // continuation move history table
+  int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
+
+  int16_t contCorrection[12][64][12][64];
+
+  int action, calls;
+  pthread_t nativeThread;
+  pthread_mutex_t mutex;
+  pthread_cond_t sleep;
+};
+
+typedef struct {
   ThreadData* threads[2048];
   int count;
 

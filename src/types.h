@@ -19,61 +19,21 @@
 
 #include <inttypes.h>
 #include <limits.h>
-#include <pthread.h>
-#include <stdatomic.h>
 
 #define MAX_SEARCH_PLY 201 // effective max depth 250
 #define MAX_MOVES      128
 
-#define N_KING_BUCKETS 16
-
-#define N_FEATURES (N_KING_BUCKETS * 12 * 64)
-#define N_PIECE_THREATS 59808
-#define N_PAIRS         4560 // 96 pawn ids, one feature per unordered pair
-#define N_THREATS       (N_PIECE_THREATS + N_PAIRS)
-#define N_HIDDEN   512
-// Pairwise multiplication halves each perspective to N_HIDDEN / 2 units, so the
-// two of them together are N_HIDDEN wide. See nn/evaluate.c, FT_SHIFT.
-#define N_L1       N_HIDDEN
-#define N_L2       16
-#define N_L3       32
-#define N_OUTPUT_BUCKETS 8
-
 #define ALIGN_ON 64
 #define ALIGN    __attribute__((aligned(ALIGN_ON)))
-
-// correction history entries, shared across all threads
-#define CORRECTION_SIZE 131072
 
 typedef int Score;
 typedef uint64_t BitBoard;
 typedef uint32_t Move;
 
-enum {
-  SUB = 0,
-  ADD = 1
-};
-
-typedef int16_t acc_t;
-
-#define MAX_DIRTY_THREATS 96
-// One step's pair changes per side: at most two pawns leave, each with 17 partners
-#define MAX_PAIR_DELTA 48
-
-typedef struct {
-  uint8_t correct[2];
-  uint16_t captured;
-  uint16_t nDirty;
-  Move move;
-  uint32_t dirty[MAX_DIRTY_THREATS];
-  BitBoard pawns[2][2]; // [before, after][colour], for the pawn pairs
-  acc_t values[2][N_HIDDEN] ALIGN;
-} Accumulator;
-
-typedef struct {
-  acc_t values[N_HIDDEN] ALIGN;
-  BitBoard pcs[12];
-} AccumulatorKingState;
+// defined in nn/defs.h and thread.h; Board and the search only hold pointers
+typedef struct Accumulator Accumulator;
+typedef struct AccumulatorKingState AccumulatorKingState;
+typedef struct ThreadData ThreadData;
 
 typedef struct {
   int castling;
@@ -139,135 +99,6 @@ typedef struct {
   int count;
   Move moves[MAX_SEARCH_PLY];
 } PV;
-
-typedef int16_t PieceTo[12][64];
-
-typedef struct {
-  int ply, staticEval, de;
-  int reduction;
-  PieceTo* ch;
-  PieceTo* cont;
-  Move move, skip;
-  Move killers[2];
-} SearchStack;
-
-typedef struct {
-  long start;
-  int alloc;
-  int max;
-
-  uint64_t nodes;
-  uint64_t softNodes;
-  int hitrate;
-
-  int timeset;
-  int depth;
-  int mate;
-  int multiPV;
-  int infinite;
-  int searchMoves;
-  SimpleMoveList searchable;
-} SearchParams;
-
-typedef struct {
-  Move move;
-  int seldepth;
-  int score, previousScore, avgScore;
-  uint64_t nodes;
-  PV pv;
-} RootMove;
-
-enum {
-  THREAD_SLEEP,
-  THREAD_SEARCH,
-  THREAD_TT_CLEAR,
-  THREAD_SEARCH_CLEAR,
-  THREAD_EXIT,
-  THREAD_RESUME
-};
-
-typedef struct ThreadData ThreadData;
-
-struct ThreadData {
-  int idx, multiPV, depth, completedDepth, seldepth;
-  atomic_uint_fast64_t nodes, tbhits;
-
-  int nmpMinPly, npmColor;
-
-  Accumulator* accumulators;
-  AccumulatorKingState* refreshTable;
-
-  Board board;
-
-  int contempt[2];
-  int previousScore;
-  int numRootMoves;
-  RootMove rootMoves[MAX_MOVES];
-
-  Move counters[12][64];         // counter move butterfly table
-  int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
-  int16_t ch[2][12][64][12][64]; // continuation move history table
-  int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
-
-  int16_t contCorrection[12][64][12][64];
-
-  int action, calls;
-  pthread_t nativeThread;
-  pthread_mutex_t mutex;
-  pthread_cond_t sleep;
-};
-
-// pawn and non-pawn correction histories, shared by all threads
-typedef struct {
-  int16_t pawn[CORRECTION_SIZE] ALIGN;
-  int16_t nonPawn[2][CORRECTION_SIZE] ALIGN;
-} CorrectionHistory;
-
-#define CORRECTION_MASK (CORRECTION_SIZE - 1)
-
-enum {
-  HASH_MOVE,
-  GEN_NOISY_MOVES,
-  PLAY_GOOD_NOISY,
-  PLAY_KILLER_1,
-  PLAY_KILLER_2,
-  PLAY_COUNTER,
-  GEN_QUIET_MOVES,
-  PLAY_QUIETS,
-  PLAY_BAD_NOISY,
-  // ProbCut
-  PC_GEN_NOISY_MOVES,
-  PC_PLAY_GOOD_NOISY,
-  // QSearch
-  QS_GEN_NOISY_MOVES,
-  QS_PLAY_NOISY_MOVES,
-  QS_GEN_QUIET_CHECKS,
-  QS_PLAY_QUIET_CHECKS,
-  // QSearch Evasions
-  QS_EVASION_HASH_MOVE,
-  QS_EVASION_GEN_NOISY,
-  QS_EVASION_PLAY_NOISY,
-  QS_EVASION_GEN_QUIET,
-  QS_EVASION_PLAY_QUIET,
-  // ...
-  NO_MORE_MOVES,
-  PERFT_MOVES,
-};
-
-typedef struct {
-  int score;
-  Move move;
-} ScoredMove;
-
-typedef struct {
-  ThreadData* thread;
-  SearchStack* ss;
-  Move hashMove, killer1, killer2, counter;
-  int seeCutoff, phase, genChecks;
-
-  ScoredMove *current, *end, *endBad;
-  ScoredMove moves[MAX_MOVES];
-} MovePicker;
 
 enum {
   WHITE,

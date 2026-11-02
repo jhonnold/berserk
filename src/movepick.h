@@ -19,8 +19,49 @@
 
 #include "move.h"
 #include "movegen.h"
+#include "search.h"
+#include "thread.h"
 #include "types.h"
 #include "util.h"
+
+enum {
+  HASH_MOVE,
+  GEN_NOISY_MOVES,
+  PLAY_GOOD_NOISY,
+  PLAY_KILLER_1,
+  PLAY_KILLER_2,
+  PLAY_COUNTER,
+  GEN_QUIET_MOVES,
+  PLAY_QUIETS,
+  PLAY_BAD_NOISY,
+  // ProbCut
+  PC_GEN_NOISY_MOVES,
+  PC_PLAY_GOOD_NOISY,
+  // QSearch
+  QS_GEN_NOISY_MOVES,
+  QS_PLAY_NOISY_MOVES,
+  QS_GEN_QUIET_CHECKS,
+  QS_PLAY_QUIET_CHECKS,
+  // QSearch Evasions
+  QS_EVASION_HASH_MOVE,
+  QS_EVASION_GEN_NOISY,
+  QS_EVASION_PLAY_NOISY,
+  QS_EVASION_GEN_QUIET,
+  QS_EVASION_PLAY_QUIET,
+  // ...
+  NO_MORE_MOVES,
+  PERFT_MOVES,
+};
+
+typedef struct {
+  ThreadData* thread;
+  SearchStack* ss;
+  Move hashMove, killer1, killer2, counter;
+  int seeCutoff, phase, genChecks;
+
+  ScoredMove *current, *end, *endBad;
+  ScoredMove moves[MAX_MOVES];
+} MovePicker;
 
 enum {
   ST_QUIET,

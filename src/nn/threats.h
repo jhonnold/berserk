@@ -22,6 +22,7 @@
 #include "../board.h"
 #include "../types.h"
 #include "../util.h"
+#include "defs.h"
 
 // from | to << 8 | attacker << 16 | victim << 20 | add << 31
 #define DirtyFrom(d)     ((d) & 63)

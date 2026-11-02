@@ -18,6 +18,7 @@
 #define SIMD_H
 
 #include "../types.h"
+#include "defs.h"
 #include "../util.h"
 
 // One register of each lane type: vi16_t holds the accumulator's int16 lanes,

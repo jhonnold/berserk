@@ -19,6 +19,35 @@
 
 #include "types.h"
 
+typedef int16_t PieceTo[12][64];
+
+typedef struct {
+  int ply, staticEval, de;
+  int reduction;
+  PieceTo* ch;
+  PieceTo* cont;
+  Move move, skip;
+  Move killers[2];
+} SearchStack;
+
+typedef struct {
+  long start;
+  int alloc;
+  int max;
+
+  uint64_t nodes;
+  uint64_t softNodes;
+  int hitrate;
+
+  int timeset;
+  int depth;
+  int mate;
+  int multiPV;
+  int infinite;
+  int searchMoves;
+  SimpleMoveList searchable;
+} SearchParams;
+
 // search specific score evals
 #define UNKNOWN \
   32257 // this must be higher than CHECKMATE (some conditional logic relies on
