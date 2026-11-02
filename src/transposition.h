@@ -61,8 +61,8 @@ extern TTTable TT;
 
 size_t TTInit(int mb);
 void TTClearPart(int idx);
-void TTClear();
-void TTUpdate();
+void TTClear(void);
+void TTUpdate(void);
 INLINE uint64_t TTIdx(uint64_t hash) {
   return ((unsigned __int128) hash * (unsigned __int128) TT.count) >> 64;
 }
@@ -70,7 +70,7 @@ INLINE uint64_t TTIdx(uint64_t hash) {
 INLINE void TTPrefetch(uint64_t hash) {
   __builtin_prefetch(&TT.buckets[TTIdx(hash)]);
 }
-int TTFull();
+int TTFull(void);
 
 #define HASH_MAX ((int) (pow(2, 40) * sizeof(TTBucket) / MEGABYTE))
 

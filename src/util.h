@@ -31,7 +31,7 @@
 // single writer (the owning thread), so a relaxed load + store avoids a locked RMW
 #define IncRlx(x)  atomic_store_explicit(&(x), LoadRlx(x) + 1, memory_order_relaxed)
 
-long GetTimeMS();
+long GetTimeMS(void);
 
 INLINE void* AlignedMalloc(uint64_t size, const size_t on) {
   void* mem  = malloc(size + on + sizeof(void*));

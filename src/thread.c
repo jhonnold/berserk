@@ -187,7 +187,7 @@ void ThreadsSetNumber(int n) {
 }
 
 // End
-void ThreadsExit() {
+void ThreadsExit(void) {
   ThreadsSetNumber(0);
 
   pthread_cond_destroy(&Threads.sleep);
@@ -196,7 +196,7 @@ void ThreadsExit() {
 }
 
 // Start
-void ThreadsInit() {
+void ThreadsInit(void) {
   pthread_mutex_init(&Threads.mutex, NULL);
   pthread_mutex_init(&Threads.lock, NULL);
   pthread_cond_init(&Threads.sleep, NULL);
@@ -264,7 +264,7 @@ void SetupOtherThreads(Board* board) {
 }
 
 // sum node counts
-uint64_t NodesSearched() {
+uint64_t NodesSearched(void) {
   uint64_t nodes = 0;
   for (int i = 0; i < Threads.count; i++)
     nodes += LoadRlx(Threads.threads[i]->nodes);
@@ -272,7 +272,7 @@ uint64_t NodesSearched() {
   return nodes;
 }
 
-uint64_t TBHits() {
+uint64_t TBHits(void) {
   uint64_t tbhits = 0;
   for (int i = 0; i < Threads.count; i++)
     tbhits += LoadRlx(Threads.threads[i]->tbhits);

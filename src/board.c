@@ -711,7 +711,7 @@ INLINE uint64_t Hash2(uint64_t hash) {
   return (hash >> 16) & 0x1fff;
 }
 
-void InitCuckoo() {
+void InitCuckoo(void) {
   int validate = 0;
 
   for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {

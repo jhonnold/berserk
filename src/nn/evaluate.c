@@ -536,7 +536,7 @@ static void CopyData(const unsigned char* in) {
       THREAT_WEIGHTS[f * N_HIDDEN + i] = threats[f * N_HIDDEN + order[PairedLane(i)]];
 }
 
-INLINE void InitLookupIndices() {
+INLINE void InitLookupIndices(void) {
   for (size_t i = 0; i < 256; i++) {
     uint64_t j = i;
     uint64_t k = 0;
@@ -545,7 +545,7 @@ INLINE void InitLookupIndices() {
   }
 }
 
-void LoadDefaultNN() {
+void LoadDefaultNN(void) {
   InitLookupIndices();
 
   // bullet pads a network to 64 bytes; anything else is another format.

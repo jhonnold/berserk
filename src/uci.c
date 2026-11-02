@@ -236,7 +236,7 @@ static void ParsePosition(char* in, Board* board) {
   }
 }
 
-static void PrintUCIOptions() {
+static void PrintUCIOptions(void) {
   printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 16 min 2 max %d\n", HASH_MAX);
@@ -267,7 +267,7 @@ static int ReadLine(char* in) {
 }
 
 // Stop a running search, waking the main thread if it is parked on ponder or infinite
-static void StopSearch() {
+static void StopSearch(void) {
   if (!Threads.searching)
     return;
 
@@ -279,7 +279,7 @@ static void StopSearch() {
   pthread_mutex_unlock(&Threads.lock);
 }
 
-void UCILoop() {
+void UCILoop(void) {
   static char in[8192];
 
   Board board;

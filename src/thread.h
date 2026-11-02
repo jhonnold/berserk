@@ -85,13 +85,13 @@ void ThreadWaitUntilSleep(ThreadData* thread);
 void ThreadWait(ThreadData* thread, atomic_uchar* cond);
 void ThreadWake(ThreadData* thread, int action);
 void ThreadsSetNumber(int n);
-void ThreadsExit();
-void ThreadsInit();
+void ThreadsExit(void);
+void ThreadsInit(void);
 
 void SetupMainThread(Board* board);
 void SetupOtherThreads(Board* board);
 
-uint64_t NodesSearched();
-uint64_t TBHits();
+uint64_t NodesSearched(void);
+uint64_t TBHits(void);
 
 #endif

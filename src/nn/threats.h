@@ -39,7 +39,7 @@ extern BitBoard THREAT_EMPTY[10][64];
 extern BitBoard PAIR_BAND[64];
 extern int32_t PAIR_TRI[96];
 
-void InitThreats();
+void InitThreats(void);
 
 int ActiveThreats(Board* board, const int view, int* indices);
 

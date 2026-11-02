@@ -19,7 +19,7 @@
 #ifdef WIN32
 #include <windows.h>
 
-long GetTimeMS() {
+long GetTimeMS(void) {
   return GetTickCount();
 }
 
@@ -27,7 +27,7 @@ long GetTimeMS() {
 #include <time.h>
 
 // monotonic, so a wall clock adjustment mid search cannot skew time management
-long GetTimeMS() {
+long GetTimeMS(void) {
   struct timespec time;
   clock_gettime(CLOCK_MONOTONIC, &time);
 

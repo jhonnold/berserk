@@ -24,7 +24,7 @@
 int OutputBucket(Board* board);
 int Propagate(Accumulator* accumulator, const int stm, const int bucket);
 
-void LoadDefaultNN();
+void LoadDefaultNN(void);
 int LoadNetwork(char* path);
 
 #endif

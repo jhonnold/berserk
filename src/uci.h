@@ -22,7 +22,7 @@
 int WRModel(Score s, int ply);
 
 
-void UCILoop();
+void UCILoop(void);
 
 
 #endif

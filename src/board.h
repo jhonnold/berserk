@@ -92,7 +92,7 @@ void UndoMoveUpdate(Move move, Board* board, int update);
 int IsPseudoLegal(Move move, Board* board);
 int IsLegal(Move move, Board* board);
 
-void InitCuckoo();
+void InitCuckoo(void);
 int HasCycle(Board* board, int ply);
 
 INLINE BitBoard OpponentsEasyCaptures(Board* board) {

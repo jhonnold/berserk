@@ -60,17 +60,17 @@ typedef struct {
 extern SearchParams Limits;
 
 // Untimed, unlimited single PV search starting now; callers then set their limits
-void ResetLimits();
+void ResetLimits(void);
 
-void InitPruningAndReductionTables();
+void InitPruningAndReductionTables(void);
 
 void StartSearch(Board* board, uint8_t ponder);
-void MainSearch();
+void MainSearch(void);
 void Search(ThreadData* thread);
 
 
 
 void SearchClearThread(ThreadData* thread);
-void SearchClear();
+void SearchClear(void);
 
 #endif

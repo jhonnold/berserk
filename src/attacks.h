@@ -88,7 +88,7 @@ extern SquareMagics MAGICS[64];
 
 #endif
 
-void InitAttacks();
+void InitAttacks(void);
 
 
 

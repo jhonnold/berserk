@@ -19,7 +19,7 @@
 
 #include <inttypes.h>
 
-uint64_t RandomUInt64();
+uint64_t RandomUInt64(void);
 void SeedRandom(uint64_t seed);
 
 #endif

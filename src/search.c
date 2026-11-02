@@ -56,7 +56,7 @@ static void PrintPV(PV* pv, Board* board);
 static void SortRootMoves(ThreadData* thread, int offset);
 static int ValidRootMove(ThreadData* thread, Move move);
 
-void ResetLimits() {
+void ResetLimits(void) {
   memset(&Limits, 0, sizeof(Limits));
 
   Limits.start   = GetTimeMS();
@@ -66,7 +66,7 @@ void ResetLimits() {
   Limits.hitrate = 1000;
 }
 
-void InitPruningAndReductionTables() {
+void InitPruningAndReductionTables(void) {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
       LMR[depth][moves] = log(depth) * log(moves) / 2.1350 + 0.2319;
@@ -127,7 +127,7 @@ void StartSearch(Board* board, uint8_t ponder) {
   ThreadWake(Threads.threads[0], THREAD_SEARCH);
 }
 
-void MainSearch() {
+void MainSearch(void) {
   ThreadData* mainThread = Threads.threads[0];
   Board* board           = &mainThread->board;
 
@@ -1137,7 +1137,7 @@ void SearchClearThread(ThreadData* thread) {
   thread->previousScore      = UNKNOWN;
 }
 
-void SearchClear() {
+void SearchClear(void) {
   for (int i = 0; i < Threads.count; i++)
     ThreadWake(Threads.threads[i], THREAD_SEARCH_CLEAR);
   for (int i = 0; i < Threads.count; i++)

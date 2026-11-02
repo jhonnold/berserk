@@ -27,7 +27,7 @@ extern uint64_t ZOBRIST_EP_KEYS[64];
 extern uint64_t ZOBRIST_CASTLE_KEYS[16];
 extern uint64_t ZOBRIST_SIDE_KEY;
 
-void InitZobristKeys();
+void InitZobristKeys(void);
 uint64_t Zobrist(Board* board);
 uint64_t PawnZobrist(Board* board);
 uint64_t NonPawnZobrist(Board* board, int color);

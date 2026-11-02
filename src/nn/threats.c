@@ -56,7 +56,7 @@ static BitBoard EmptyAttacks(int colour, int pt, int sq) {
   }
 }
 
-void InitThreats() {
+void InitThreats(void) {
   int next = 0;
 
   for (int colour = 0; colour < 2; colour++) {
