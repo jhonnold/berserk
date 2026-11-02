@@ -141,7 +141,7 @@ INLINE void SetThreats(Board* board) {
   board->threatened |= board->threatenedBy[KING];
 }
 
-void ParseFen(char* fen, Board* board) {
+void ParseFen(const char* fen, Board* board) {
   ClearBoard(board);
 
   for (int i = 0; i < 64; i++) {

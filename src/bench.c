@@ -31,7 +31,7 @@
 #include "util.h"
 
 // Ethereal's bench set
-static char* benchmarks[]            = {
+static const char* benchmarks[] = {
 #include "files/bench.csv"
 };
 

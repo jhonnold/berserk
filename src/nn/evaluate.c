@@ -166,7 +166,7 @@ INLINE void L1Chunk(vi32_t* regs, const int32_t* in32, const uint16_t i0, const 
   const size_t OUT_CC = N_L2 / (sizeof(vi32_t) / sizeof(int32_t));
 
   const vi8_t f0  = vi8_bcast32(&in32[i0]);
-  const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+  const vi8_t* c0 = (const vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
 
   for (size_t j = 0; j < OUT_CC; j++)
     vi32_dpbusd(regs + j, f0, c0[j]);
@@ -201,10 +201,10 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
     const vi8_t f2 = vi8_bcast32(&in32[i2]);
     const vi8_t f3 = vi8_bcast32(&in32[i3]);
 
-    const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vi8_t* c1 = (vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vi8_t* c2 = (vi8_t*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vi8_t* c3 = (vi8_t*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c0 = (const vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c1 = (const vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c2 = (const vi8_t*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c3 = (const vi8_t*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++) {
       vi32_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
@@ -229,8 +229,8 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
     const vi8_t f0 = vi8_bcast32(&in32[i0]);
     const vi8_t f1 = vi8_bcast32(&in32[i1]);
 
-    const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vi8_t* c1 = (vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c0 = (const vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c1 = (const vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++)
       vi32_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
@@ -298,7 +298,7 @@ INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const i
   enum { OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t), OUT_CC = N_L3 / OUT_WIDTH };
 
   const int32_t* in32 = (int32_t*) src;
-  const vi8_t* w     = (vi8_t*) weights;
+  const vi8_t* w     = (const vi8_t*) weights;
   vi32_t* out        = (vi32_t*) dest;
 
   vi32_t regs[OUT_CC];
@@ -353,13 +353,13 @@ INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
 #if defined(__AVX512F__) && defined(__AVX512BW__)
   // the 32 inputs fill half a register
   const __m512i in = _mm512_zextsi256_si512(*(__m256i*) src);
-  const __m512i w  = _mm512_zextsi256_si512(*(__m256i*) weights);
+  const __m512i w  = _mm512_zextsi256_si512(*(const __m256i*) weights);
   vi32_dpbusd(&a0, in, w);
 #elif defined(__AVX2__)
-  vi32_dpbusd(&a0, *(vi8_t*) src, *(vi8_t*) weights);
+  vi32_dpbusd(&a0, *(const vi8_t*) src, *(const vi8_t*) weights);
 #else
   const vi8_t* in = (vi8_t*) src;
-  const vi8_t* w  = (vi8_t*) weights;
+  const vi8_t* w  = (const vi8_t*) weights;
   vi32_dpbusd_x2(&a0, in[0], w[0], in[1], w[1]);
 #endif
 

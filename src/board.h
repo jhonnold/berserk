@@ -33,7 +33,7 @@
 #define Rank(sq)        ((sq) >> 3)
 #define PieceCount(pc)  (1ull << ((pc) * 4))
 
-void ParseFen(char* fen, Board* board);
+void ParseFen(const char* fen, Board* board);
 void BoardToFen(char* fen, Board* board);
 void PrintBoard(Board* board);
 

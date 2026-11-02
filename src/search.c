@@ -1058,8 +1058,8 @@ static void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* 
                     !NORMALIZE || abs(bounded) > TB_WIN_BOUND ? // don't normalize our fake tb scores or real tb scores
                       bounded :
                       Normalize(bounded); // convert to 50% WR at 100cp
-    char* type    = abs(bounded) > MATE_BOUND ? "mate" : "cp";
-    char* bound   = " ";
+    const char* type  = abs(bounded) > MATE_BOUND ? "mate" : "cp";
+    const char* bound = " ";
     if (updated)
       bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
 

@@ -298,7 +298,7 @@ void UCILoop(void) {
     } else if (!strncmp(in, "position", 8)) {
       ParsePosition(in, &board);
     } else if (!strncmp(in, "ucinewgame", 10)) {
-      ParsePosition("position startpos\n", &board);
+      ParseFen(START_FEN, &board);
       TTClear();
       SearchClear();
     } else if (!strncmp(in, "go", 2)) {
@@ -328,8 +328,8 @@ void UCILoop(void) {
       printf(cycle ? "yes\n" : "no\n");
     } else if (!strncmp(in, "perft", 5)) {
       strtok(in, " ");
-      char* d   = strtok(NULL, " ") ?: "5";
-      char* fen = strtok(NULL, "\0") ?: START_FEN;
+      const char* d   = strtok(NULL, " ") ?: "5";
+      const char* fen = strtok(NULL, "\0") ?: START_FEN;
 
       int depth = atoi(d);
       ParseFen(fen, &board);
@@ -337,7 +337,7 @@ void UCILoop(void) {
       PerftTest(depth, &board);
     } else if (!strncmp(in, "bench", 5)) {
       strtok(in, " ");
-      char* d = strtok(NULL, " ") ?: "13";
+      const char* d = strtok(NULL, " ") ?: "13";
 
       int depth = atoi(d);
       Bench(depth);
@@ -393,7 +393,7 @@ void UCILoop(void) {
       printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
       printf("info string Resetting board...\n");
 
-      ParsePosition("position startpos\n", &board);
+      ParseFen(START_FEN, &board);
       TTClear();
       SearchClear();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
