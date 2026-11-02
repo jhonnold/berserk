@@ -22,3 +22,18 @@ const int CASTLE_MAP[4][3] = {
   {BLACK_KS, G8, F8},
   {BLACK_QS, C8, D8},
 };
+
+__attribute__((noinline)) ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_CAPTURE, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, GT_CAPTURE, BLACK);
+}
+
+__attribute__((noinline)) ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_QUIET, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, GT_QUIET, BLACK);
+}
+
+__attribute__((noinline)) ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddQuietChecks(moves, board, WHITE) : //
+                               AddQuietChecks(moves, board, BLACK);
+}

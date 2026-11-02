@@ -254,25 +254,18 @@ INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int colo
   return moves;
 }
 
-INLINE ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board) {
-  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_CAPTURE, WHITE) : //
-                               AddPseudoLegalMoves(moves, board, GT_CAPTURE, BLACK);
-}
+// Kept out of line: each one expands to a full generator per colour, and
+// inlining them into NextMove multiplied its size several times over.
+ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board);
 
-INLINE ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
-  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_QUIET, WHITE) : //
-                               AddPseudoLegalMoves(moves, board, GT_QUIET, BLACK);
-}
+ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board);
 
 INLINE ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board) {
   return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_LEGAL, WHITE) : //
                                AddPseudoLegalMoves(moves, board, GT_LEGAL, BLACK);
 }
 
-INLINE ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board) {
-  return board->stm == WHITE ? AddQuietChecks(moves, board, WHITE) : //
-                               AddQuietChecks(moves, board, BLACK);
-}
+ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board);
 
 INLINE ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
   return board->stm == WHITE ? AddLegalMoves(moves, board, WHITE) : //
