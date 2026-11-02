@@ -33,6 +33,23 @@
 #include "types.h"
 #include "zobrist.h"
 
+// MakeMove and UndoMove copy Board's leading fields to and from a BoardHistory
+// entry with one memcpy, so the two layouts must agree up to Board.stm
+#define SAME_OFFSET(b, h) _Static_assert(offsetof(Board, b) == offsetof(BoardHistory, h), #b " != " #h)
+SAME_OFFSET(castling, castling);
+SAME_OFFSET(epSquare, ep);
+SAME_OFFSET(fmr, fmr);
+SAME_OFFSET(nullply, nullply);
+SAME_OFFSET(zobrist, zobrist);
+SAME_OFFSET(pawnZobrist, pawnZobrist);
+SAME_OFFSET(nonPawnZobrist, nonPawnZobrist);
+SAME_OFFSET(checkers, checkers);
+SAME_OFFSET(pinned, pinned);
+SAME_OFFSET(threatened, threatened);
+SAME_OFFSET(threatenedBy, threatenedBy);
+SAME_OFFSET(stm, capture);
+#undef SAME_OFFSET
+
 // reset the board to an empty state
 static void ClearBoard(Board* board) {
   memset(board->pieces, 0, sizeof(board->pieces));
