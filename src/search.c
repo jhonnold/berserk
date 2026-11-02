@@ -1060,7 +1060,7 @@ void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) 
       printf("wdl %d %d %d ", wdlW, wdlD, wdlL);
     }
 
-    printf("nodes %" PRId64 " nps %" PRId64 " hashfull %d tbhits %" PRId64 " time %" PRId64 " pv ",
+    printf("nodes %" PRIu64 " nps %" PRIu64 " hashfull %d tbhits %" PRIu64 " time %" PRIu64 " pv ",
            nodes,
            nps,
            hashfull,
