@@ -31,6 +31,7 @@
 #include "movegen.h"
 #include "movepick.h"
 #include "nn/accumulator.h"
+#include "options.h"
 #include "pyrrhic/tbprobe.h"
 #include "see.h"
 #include "tb.h"
@@ -42,6 +43,8 @@
 #include "zobrist.h"
 
 // arrays to store these pruning cutoffs at specific depths
+SearchParams Limits;
+
 static int LMR[MAX_SEARCH_PLY][64];
 static int LMP[2][MAX_SEARCH_PLY];
 static int STATIC_PRUNE[2][MAX_SEARCH_PLY];

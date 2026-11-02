@@ -37,3 +37,12 @@ __attribute__((noinline)) ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Boar
   return board->stm == WHITE ? AddQuietChecks(moves, board, WHITE) : //
                                AddQuietChecks(moves, board, BLACK);
 }
+
+void RootMoves(SimpleMoveList* moves, Board* board) {
+  ScoredMove list[MAX_MOVES];
+  ScoredMove* end = AddPerftMoves(list, board);
+
+  moves->count = end - list;
+  for (int i = 0; i < moves->count; i++)
+    moves->moves[i] = list[i].move;
+}

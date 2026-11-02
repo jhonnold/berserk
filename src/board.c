@@ -28,9 +28,9 @@
 #include "move.h"
 #include "movegen.h"
 #include "nn/threats.h"
+#include "options.h"
 #include "transposition.h"
 #include "types.h"
-#include "uci.h"
 #include "zobrist.h"
 
 // reset the board to an empty state

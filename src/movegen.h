@@ -262,6 +262,9 @@ INLINE ScoredMove* AddEvasionMoves(ScoredMove* moves, Board* board) {
 
 ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board);
 
+// every legal move, in generation order
+void RootMoves(SimpleMoveList* moves, Board* board);
+
 INLINE ScoredMove* AddPerftMoves(ScoredMove* moves, Board* board) {
   return board->stm == WHITE ? AddLegalMoves(moves, board, WHITE) : //
                                AddLegalMoves(moves, board, BLACK);

@@ -20,9 +20,8 @@
 #include <string.h>
 
 #include "movegen.h"
-#include "movepick.h"
+#include "options.h"
 #include "types.h"
-#include "uci.h"
 
 const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
 

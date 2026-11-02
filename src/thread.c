@@ -24,12 +24,12 @@
 
 #include "eval.h"
 #include "history.h"
+#include "movegen.h"
 #include "nn/accumulator.h"
 #include "search.h"
 #include "tb.h"
 #include "transposition.h"
 #include "types.h"
-#include "uci.h"
 #include "util.h"
 
 // Below is an implementation of CFish's Sleeping Threads

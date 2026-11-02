@@ -22,12 +22,13 @@
 #include <string.h>
 
 #include "board.h"
+#include "movegen.h"
+#include "options.h"
 #include "random.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
 #include "types.h"
-#include "uci.h"
 #include "util.h"
 
 #define VERIFICATION_DEPTH 10

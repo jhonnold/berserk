@@ -31,6 +31,7 @@
 #include "movepick.h"
 #include "nn/accumulator.h"
 #include "nn/evaluate.h"
+#include "options.h"
 #include "perft.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
@@ -42,14 +43,7 @@
 static int MOVE_OVERHEAD  = 50;
 static int MULTI_PV       = 1;
 static int PONDER_ENABLED = 0;
-int CHESS_960      = 0;
-int CONTEMPT       = 0;
-int SHOW_WDL       = 1;
-int MINIMAL        = 0;
-int NORMALIZE      = 1;
 static int SOFT_NODES     = 0;
-
-SearchParams Limits;
 
 // All WDL work below is thanks to the work of vondele@ and
 // this repo: https://github.com/vondele/WLD_model
@@ -68,17 +62,6 @@ int WRModel(Score s, int ply) {
   double x = Min(4000.0, Max(-4000.0, s));
 
   return 0.5 + 1000 / (1 + exp((a - x) / b));
-}
-
-void RootMoves(SimpleMoveList* moves, Board* board) {
-  moves->count = 0;
-
-  MovePicker mp;
-  InitPerftMovePicker(&mp, board);
-
-  Move mv;
-  while ((mv = NextMove(&mp, board, 0)))
-    moves->moves[moves->count++] = mv;
 }
 
 // uci "go" command

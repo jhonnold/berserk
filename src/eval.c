@@ -25,7 +25,7 @@
 #include "move.h"
 #include "nn/accumulator.h"
 #include "nn/evaluate.h"
-#include "uci.h"
+#include "options.h"
 #include "util.h"
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};

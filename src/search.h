@@ -28,6 +28,8 @@
 #define TB_WIN_SCORE MATE_BOUND
 #define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
 
+extern SearchParams Limits;
+
 void InitPruningAndReductionTables();
 
 void StartSearch(Board* board, uint8_t ponder);

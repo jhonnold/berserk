@@ -22,12 +22,12 @@
 #include <string.h>
 
 #include "board.h"
+#include "eval.h"
 #include "move.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
 #include "types.h"
-#include "uci.h"
 #include "util.h"
 
 // Ethereal's bench set
