@@ -25,7 +25,8 @@
 #define Min(a, b) (((a) < (b)) ? (a) : (b))
 #define Max(a, b) (((a) > (b)) ? (a) : (b))
 
-#define INLINE static inline __attribute__((always_inline))
+#define INLINE   static inline __attribute__((always_inline))
+#define NOINLINE __attribute__((noinline))
 
 #define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
 // single writer (the owning thread), so a relaxed load + store avoids a locked RMW

@@ -24,14 +24,14 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-#define Piece(pc, c)   (((pc) << 1) + c)
+#define Piece(pc, c)   (((pc) << 1) + (c))
 #define PieceType(pc)  ((pc) >> 1)
 #define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
 #define OccBB(c)       (board->occupancies[c])
 
 #define File(sq)        ((sq) &7)
 #define Rank(sq)        ((sq) >> 3)
-#define PieceCount(pc)  (1ull << (pc * 4))
+#define PieceCount(pc)  (1ull << ((pc) * 4))
 
 void ParseFen(char* fen, Board* board);
 void BoardToFen(char* fen, Board* board);
