@@ -40,12 +40,9 @@ static char* benchmarks[]            = {
 void Bench(int depth) {
   Board board;
 
-  Limits.depth     = depth;
-  Limits.multiPV   = 1;
-  Limits.softNodes = 0;
-  Limits.hitrate   = INT_MAX;
-  Limits.max       = INT_MAX;
-  Limits.timeset   = 0;
+  ResetLimits();
+  Limits.depth   = depth;
+  Limits.hitrate = INT_MAX;
 
   Move bestMoves[NUM_BENCH_POSITIONS];
   int scores[NUM_BENCH_POSITIONS];

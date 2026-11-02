@@ -89,17 +89,9 @@ static int PlayRandomMoves(Board* board, int n) {
 }
 
 static int VerificationSearch(Board* board) {
-  Limits.depth       = VERIFICATION_DEPTH;
-  Limits.multiPV     = 1;
-  Limits.nodes       = VERIFICATION_NODES;
-  Limits.softNodes   = 0;
-  Limits.hitrate     = 1000;
-  Limits.max         = INT_MAX;
-  Limits.timeset     = 0;
-  Limits.mate        = 0;
-  Limits.infinite    = 0;
-  Limits.searchMoves = 0;
-  Limits.start       = GetTimeMS();
+  ResetLimits();
+  Limits.depth = VERIFICATION_DEPTH;
+  Limits.nodes = VERIFICATION_NODES;
 
   TTClear();
   SearchClear();

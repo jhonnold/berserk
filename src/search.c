@@ -56,6 +56,16 @@ static void PrintPV(PV* pv, Board* board);
 static void SortRootMoves(ThreadData* thread, int offset);
 static int ValidRootMove(ThreadData* thread, Move move);
 
+void ResetLimits() {
+  memset(&Limits, 0, sizeof(Limits));
+
+  Limits.start   = GetTimeMS();
+  Limits.max     = INT_MAX;
+  Limits.depth   = MAX_SEARCH_PLY - 1;
+  Limits.multiPV = 1;
+  Limits.hitrate = 1000;
+}
+
 void InitPruningAndReductionTables() {
   for (int depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)

@@ -71,14 +71,8 @@ static int GetOptionBoolValue(char* in);
 static void ParseGo(char* in, Board* board) {
   in += 3;
 
-  Limits.depth            = MAX_SEARCH_PLY;
-  Limits.start            = GetTimeMS();
-  Limits.timeset          = 0;
-  Limits.multiPV          = MULTI_PV;
-  Limits.searchMoves      = 0;
-  Limits.searchable.count = 0;
-  Limits.infinite         = 0;
-  Limits.mate             = 0;
+  ResetLimits();
+  Limits.multiPV = MULTI_PV;
 
   char* ptrChar = in;
   int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, ponder = 0, mate = 0;
