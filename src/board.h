@@ -94,6 +94,7 @@ void UndoNullMove(Board* board);
 void MakeMove(Move move, Board* board);
 void MakeMoveUpdate(Move move, Board* board, int update);
 void UndoMove(Move move, Board* board);
+void UndoMoveUpdate(Move move, Board* board, int update);
 
 int IsPseudoLegal(Move move, Board* board);
 int IsLegal(Move move, Board* board);
