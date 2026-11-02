@@ -66,6 +66,7 @@ int WRModel(Score s, int ply) {
 
 // uci "go" command
 static int GetOptionIntValue(char* in);
+static int GetOptionBoolValue(char* in);
 
 static void ParseGo(char* in, Board* board) {
   in += 3;
@@ -271,6 +272,19 @@ static int ReadLine(char* in) {
   return 1;
 }
 
+// Stop a running search, waking the main thread if it is parked on ponder or infinite
+static void StopSearch() {
+  if (!Threads.searching)
+    return;
+
+  Threads.stop = 1;
+  pthread_mutex_lock(&Threads.lock);
+  if (Threads.sleeping)
+    ThreadWake(Threads.threads[0], THREAD_RESUME);
+  Threads.sleeping = 0;
+  pthread_mutex_unlock(&Threads.lock);
+}
+
 void UCILoop() {
   static char in[8192];
 
@@ -296,23 +310,9 @@ void UCILoop() {
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &board);
     } else if (!strncmp(in, "stop", 4)) {
-      if (Threads.searching) {
-        Threads.stop = 1;
-        pthread_mutex_lock(&Threads.lock);
-        if (Threads.sleeping)
-          ThreadWake(Threads.threads[0], THREAD_RESUME);
-        Threads.sleeping = 0;
-        pthread_mutex_unlock(&Threads.lock);
-      }
+      StopSearch();
     } else if (!strncmp(in, "quit", 4)) {
-      if (Threads.searching) {
-        Threads.stop = 1;
-        pthread_mutex_lock(&Threads.lock);
-        if (Threads.sleeping)
-          ThreadWake(Threads.threads[0], THREAD_RESUME);
-        Threads.sleeping = 0;
-        pthread_mutex_unlock(&Threads.lock);
-      }
+      StopSearch();
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
@@ -389,22 +389,13 @@ void UCILoop() {
       MULTI_PV = Max(1, Min(256, n));
       printf("info string set MultiPV to value %d\n", MULTI_PV);
     } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      PONDER_ENABLED = !strncmp(opt, "true", 4);
+      PONDER_ENABLED = GetOptionBoolValue(in);
       printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_ShowWDL value ", 33)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      SHOW_WDL = !strncmp(opt, "true", 4);
+      SHOW_WDL = GetOptionBoolValue(in);
       printf("info string set SHOW_WDL to value %s\n", SHOW_WDL ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_Chess960 value ", 34)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      CHESS_960 = !strncmp(opt, "true", 4);
+      CHESS_960 = GetOptionBoolValue(in);
       printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
       printf("info string Resetting board...\n");
 
@@ -429,22 +420,13 @@ void UCILoop() {
       if (success)
         printf("info string set EvalFile to value %s\n", path);
     } else if (!strncmp(in, "setoption name Minimal value ", 29)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      MINIMAL = !strncmp(opt, "true", 4);
+      MINIMAL = GetOptionBoolValue(in);
       printf("info string set Minimal to value %s\n", MINIMAL ? "true" : "false");
     } else if (!strncmp(in, "setoption name Normalize value ", 31)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      NORMALIZE = !strncmp(opt, "true", 4);
+      NORMALIZE = GetOptionBoolValue(in);
       printf("info string set Normalize to value %s\n", NORMALIZE ? "true" : "false");
     } else if (!strncmp(in, "setoption name SoftNodes value ", 31)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      SOFT_NODES = !strncmp(opt, "true", 4);
+      SOFT_NODES = GetOptionBoolValue(in);
       printf("info string set SoftNodes to value %s\n", SOFT_NODES ? "true" : "false");
     } else
       printf("Unknown command: %s \n", in);
@@ -461,4 +443,11 @@ static int GetOptionIntValue(char* in) {
   sscanf(in, "%*s %*s %*s %*s %d", &n);
 
   return n;
+}
+
+static int GetOptionBoolValue(char* in) {
+  char opt[6] = {0};
+  sscanf(in, "%*s %*s %*s %*s %5s", opt);
+
+  return !strncmp(opt, "true", 4);
 }
