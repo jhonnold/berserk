@@ -24,12 +24,12 @@
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-#define Piece(pc, c)   (((pc) << 1) + (c))
-#define PieceType(pc)  ((pc) >> 1)
-#define PieceBB(pc, c) (board->pieces[Piece(pc, (c))])
-#define OccBB(c)       (board->occupancies[c])
+#define Piece(pc, c)      (((pc) << 1) + (c))
+#define PieceType(pc)     ((pc) >> 1)
+#define PieceBB(b, pc, c) ((b)->pieces[Piece(pc, (c))])
+#define OccBB(b, c)       ((b)->occupancies[c])
 
-#define File(sq)        ((sq) &7)
+#define File(sq)        ((sq) & 7)
 #define Rank(sq)        ((sq) >> 3)
 #define PieceCount(pc)  (1ull << ((pc) * 4))
 
@@ -97,9 +97,9 @@ int HasCycle(Board* board, int ply);
 
 INLINE BitBoard OpponentsEasyCaptures(Board* board) {
   const int stm         = board->stm;
-  const BitBoard queens = PieceBB(QUEEN, stm);
-  const BitBoard rooks  = queens | PieceBB(ROOK, stm);
-  const BitBoard minors = rooks | PieceBB(BISHOP, stm) | PieceBB(KNIGHT, stm);
+  const BitBoard queens = PieceBB(board, QUEEN, stm);
+  const BitBoard rooks  = queens | PieceBB(board, ROOK, stm);
+  const BitBoard minors = rooks | PieceBB(board, BISHOP, stm) | PieceBB(board, KNIGHT, stm);
 
   const BitBoard pawnThreats  = board->threatenedBy[PAWN];
   const BitBoard minorThreats = pawnThreats | board->threatenedBy[KNIGHT] | board->threatenedBy[BISHOP];
@@ -109,7 +109,7 @@ INLINE BitBoard OpponentsEasyCaptures(Board* board) {
 }
 
 INLINE int HasNonPawn(Board* board, const int color) {
-  return !!(OccBB(color) ^ PieceBB(KING, color) ^ PieceBB(PAWN, color));
+  return !!(OccBB(board, color) ^ PieceBB(board, KING, color) ^ PieceBB(board, PAWN, color));
 }
 
 #endif

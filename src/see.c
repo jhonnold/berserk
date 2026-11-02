@@ -44,12 +44,14 @@ int SEE(Board* board, Move move, int threshold) {
     return 1;
 
   int stm            = board->stm;
-  BitBoard occ       = OccBB(BOTH) ^ Bit(from) ^ Bit(to);
+  BitBoard occ       = OccBB(board, BOTH) ^ Bit(from) ^ Bit(to);
   BitBoard attackers = AttacksToSquare(board, to, occ);
   BitBoard mine, leastAttacker;
 
-  const BitBoard diag = PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
-  const BitBoard straight = PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
+  const BitBoard diag = PieceBB(board, BISHOP, WHITE) | PieceBB(board, BISHOP, BLACK) | PieceBB(board, QUEEN, WHITE) |
+                        PieceBB(board, QUEEN, BLACK);
+  const BitBoard straight = PieceBB(board, ROOK, WHITE) | PieceBB(board, ROOK, BLACK) | PieceBB(board, QUEEN, WHITE) |
+                            PieceBB(board, QUEEN, BLACK);
 
   int result = 1;
 
@@ -57,42 +59,42 @@ int SEE(Board* board, Move move, int threshold) {
     stm ^= 1;
     attackers &= occ;
 
-    if (!(mine = (attackers & OccBB(stm))))
+    if (!(mine = (attackers & OccBB(board, stm))))
       break;
 
     result ^= 1;
 
-    if ((leastAttacker = mine & PieceBB(PAWN, stm))) {
+    if ((leastAttacker = mine & PieceBB(board, PAWN, stm))) {
       if ((v = SEE_VALUE[PAWN] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
       attackers |= GetBishopAttacks(to, occ) & diag;
-    } else if ((leastAttacker = mine & PieceBB(KNIGHT, stm))) {
+    } else if ((leastAttacker = mine & PieceBB(board, KNIGHT, stm))) {
       if ((v = SEE_VALUE[KNIGHT] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
-    } else if ((leastAttacker = mine & PieceBB(BISHOP, stm))) {
+    } else if ((leastAttacker = mine & PieceBB(board, BISHOP, stm))) {
       if ((v = SEE_VALUE[BISHOP] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
       attackers |= GetBishopAttacks(to, occ) & diag;
-    } else if ((leastAttacker = mine & PieceBB(ROOK, stm))) {
+    } else if ((leastAttacker = mine & PieceBB(board, ROOK, stm))) {
       if ((v = SEE_VALUE[ROOK] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
       attackers |= GetRookAttacks(to, occ) & straight;
-    } else if ((leastAttacker = mine & PieceBB(QUEEN, stm))) {
+    } else if ((leastAttacker = mine & PieceBB(board, QUEEN, stm))) {
       if ((v = SEE_VALUE[QUEEN] - v) < result)
         break;
 
       occ ^= (leastAttacker & -leastAttacker);
       attackers |= (GetBishopAttacks(to, occ) & diag) | (GetRookAttacks(to, occ) & straight);
     } else
-      return (attackers & ~OccBB(stm)) ? result ^ 1 : result;
+      return (attackers & ~OccBB(board, stm)) ? result ^ 1 : result;
   }
 
   return result;

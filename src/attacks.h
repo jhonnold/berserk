@@ -179,14 +179,14 @@ INLINE BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
 
 // get a bitboard of ALL pieces attacking a given square
 INLINE BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
-  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) |                            // White and Black Pawn atx
-         (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |                            //
-         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |    // Knights
-         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |          // Kings
-         (GetBishopAttacks(sq, occ) & (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | // Bishop + Queen
-                                       PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) | //
-         (GetRookAttacks(sq, occ) & (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) |       // Rook + Queen
-                                     PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
+  return (GetPawnAttacks(sq, WHITE) & PieceBB(board, PAWN, BLACK)) | // White and Black Pawn atx
+         (GetPawnAttacks(sq, BLACK) & PieceBB(board, PAWN, WHITE)) | //
+         (GetKnightAttacks(sq) & (PieceBB(board, KNIGHT, WHITE) | PieceBB(board, KNIGHT, BLACK))) |    // Knights
+         (GetKingAttacks(sq) & (PieceBB(board, KING, WHITE) | PieceBB(board, KING, BLACK))) |          // Kings
+         (GetBishopAttacks(sq, occ) & (PieceBB(board, BISHOP, WHITE) | PieceBB(board, BISHOP, BLACK) | // Bishop + Queen
+                                       PieceBB(board, QUEEN, WHITE) | PieceBB(board, QUEEN, BLACK))) | //
+         (GetRookAttacks(sq, occ) & (PieceBB(board, ROOK, WHITE) | PieceBB(board, ROOK, BLACK) |       // Rook + Queen
+                                     PieceBB(board, QUEEN, WHITE) | PieceBB(board, QUEEN, BLACK)));
 }
 
 #endif

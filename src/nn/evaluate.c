@@ -395,7 +395,7 @@ INLINE int PropagateView(Accumulator* accumulator, const int stm, const int buck
 }
 
 int OutputBucket(Board* board) {
-  return (BitCount(OccBB(BOTH)) - 2) / 4;
+  return (BitCount(OccBB(board, BOTH)) - 2) / 4;
 }
 
 // Both call sites pass a literal side, so specialising on it lets the pair of

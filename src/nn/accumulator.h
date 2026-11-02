@@ -214,7 +214,7 @@ INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const int perspe
   Delta delta[1];
   delta->r = delta->a = 0;
 
-  int kingSq     = LSB(PieceBB(KING, perspective));
+  int kingSq     = LSB(PieceBB(board, KING, perspective));
   int pBucket    = perspective == WHITE ? 0 : 2 * N_KING_BUCKETS;
   int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
 
@@ -277,7 +277,7 @@ INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumul
                          const int flip) {
   const Move move      = step->move;
   const int captured   = step->captured;
-  const int king       = LSB(PieceBB(KING, view));
+  const int king       = LSB(PieceBB(board, KING, view));
   const int movingSide = Moving(move) & 1;
 
   int tRem[MAX_DIRTY_THREATS + MAX_PAIR_DELTA], tAdd[MAX_DIRTY_THREATS + MAX_PAIR_DELTA], tr = 0, ta = 0;
@@ -307,7 +307,7 @@ INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
   while (!(--curr)->correct[view])
     ; // go back to the latest correct accumulator
 
-  const int flip = FeatureFlip(LSB(PieceBB(KING, view)), view);
+  const int flip = FeatureFlip(LSB(PieceBB(board, KING, view)), view);
 
   do {
     ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr, view, flip);

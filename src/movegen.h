@@ -41,7 +41,7 @@ extern const int CASTLE_MAP[4][3];
 #define BLACK_KS 0x2
 #define BLACK_QS 0x1
 
-#define CanCastle(dir) (board->castling & (dir))
+#define CanCastle(b, dir) ((b)->castling & (dir))
 
 // Note: Any usage of & that matches 1 or 2 will match 3
 //       thus making GT_LEGAL generate all.
@@ -74,9 +74,9 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 
   if (type & GT_QUIET) {
     // Quiet non-promotions
-    BitBoard valid     = PieceBB(PAWN, stm) & ~PromoRank(stm);
-    BitBoard targets   = ShiftPawnDir(valid, stm) & ~OccBB(BOTH);
-    BitBoard dpTargets = ShiftPawnDir(targets & DPRank(stm), stm) & ~OccBB(BOTH);
+    BitBoard valid     = PieceBB(board, PAWN, stm) & ~PromoRank(stm);
+    BitBoard targets   = ShiftPawnDir(valid, stm) & ~OccBB(board, BOTH);
+    BitBoard dpTargets = ShiftPawnDir(targets & DPRank(stm), stm) & ~OccBB(board, BOTH);
 
     targets &= opts, dpTargets &= opts;
 
@@ -93,9 +93,9 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 
   if (type & GT_CAPTURE) {
     // Captures non-promotions
-    BitBoard valid    = PieceBB(PAWN, stm) & ~PromoRank(stm);
-    BitBoard eTargets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
-    BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
+    BitBoard valid    = PieceBB(board, PAWN, stm) & ~PromoRank(stm);
+    BitBoard eTargets = ShiftPawnCapE(valid, stm) & OccBB(board, xstm) & opts;
+    BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(board, xstm) & opts;
 
     while (eTargets) {
       int to = PopLSB(&eTargets);
@@ -118,10 +118,10 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
   }
 
   // Promotions (both capture and non-capture)
-  BitBoard valid    = PieceBB(PAWN, stm) & PromoRank(stm);
-  BitBoard sTargets = ShiftPawnDir(valid, stm) & ~OccBB(BOTH) & opts;
-  BitBoard eTargets = ShiftPawnCapE(valid, stm) & OccBB(xstm) & opts;
-  BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(xstm) & opts;
+  BitBoard valid    = PieceBB(board, PAWN, stm) & PromoRank(stm);
+  BitBoard sTargets = ShiftPawnDir(valid, stm) & ~OccBB(board, BOTH) & opts;
+  BitBoard eTargets = ShiftPawnCapE(valid, stm) & OccBB(board, xstm) & opts;
+  BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(board, xstm) & opts;
 
   while (sTargets) {
     int to = PopLSB(&sTargets);
@@ -149,13 +149,13 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
                                  const int piece) {
   const int xstm = stm ^ 1;
 
-  BitBoard movers = PieceBB(piece, stm);
+  BitBoard movers = PieceBB(board, piece, stm);
   while (movers) {
     int from       = PopLSB(&movers);
-    BitBoard valid = GetPieceAttacks(from, OccBB(BOTH), piece) & opts;
+    BitBoard valid = GetPieceAttacks(from, OccBB(board, BOTH), piece) & opts;
 
     if (type & GT_CAPTURE) {
-      BitBoard targets = valid & OccBB(xstm);
+      BitBoard targets = valid & OccBB(board, xstm);
 
       while (targets) {
         int to = PopLSB(&targets);
@@ -165,7 +165,7 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
     }
 
     if (type & GT_QUIET) {
-      BitBoard targets = valid & ~OccBB(BOTH);
+      BitBoard targets = valid & ~OccBB(board, BOTH);
 
       while (targets) {
         int to = PopLSB(&targets);
@@ -181,10 +181,10 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
 INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
   const int rookStart = stm == WHITE ? 0 : 2;
   const int rookEnd   = stm == WHITE ? 2 : 4;
-  const int from      = LSB(PieceBB(KING, stm));
+  const int from      = LSB(PieceBB(board, KING, stm));
 
   for (int rk = rookStart; rk < rookEnd; rk++) {
-    if (!CanCastle(CASTLE_MAP[rk][0]))
+    if (!CanCastle(board, CASTLE_MAP[rk][0]))
       continue;
 
     int rookFrom = board->cr[rk];
@@ -197,7 +197,7 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
     BitBoard rookCrossing = BetweenSquares(rookFrom, rookTo) | Bit(rookTo);
     BitBoard between      = kingCrossing | rookCrossing;
 
-    if (!((OccBB(BOTH) ^ Bit(from) ^ Bit(rookFrom)) & between))
+    if (!((OccBB(board, BOTH) ^ Bit(from) ^ Bit(rookFrom)) & between))
       if (!(kingCrossing & board->threatened))
         moves = AddMove(moves, from, to, Piece(KING, stm), CASTLE_FLAG);
   }
@@ -207,9 +207,9 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
 
 INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm) {
   const int xstm            = !stm;
-  const int oppKingSq       = LSB(PieceBB(KING, xstm));
-  const BitBoard bishopMask = GetBishopAttacks(oppKingSq, OccBB(BOTH));
-  const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(BOTH));
+  const int oppKingSq       = LSB(PieceBB(board, KING, xstm));
+  const BitBoard bishopMask = GetBishopAttacks(oppKingSq, OccBB(board, BOTH));
+  const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(board, BOTH));
 
   moves = AddPieceMoves(moves, bishopMask | rookMask, board, stm, GT_QUIET, QUEEN);
   moves = AddPieceMoves(moves, rookMask, board, stm, GT_QUIET, ROOK);
@@ -224,7 +224,7 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
     return AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
 
   BitBoard opts =
-    !board->checkers ? ALL : BetweenSquares(LSB(PieceBB(KING, color)), LSB(board->checkers)) | board->checkers;
+    !board->checkers ? ALL : BetweenSquares(LSB(PieceBB(board, KING, color)), LSB(board->checkers)) | board->checkers;
 
   moves = AddPawnMoves(moves, opts, board, color, type);
   moves = AddPieceMoves(moves, opts, board, color, type, KNIGHT);

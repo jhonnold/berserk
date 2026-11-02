@@ -36,20 +36,21 @@ typedef struct {
 
 #define CORRECTION_MASK (CORRECTION_SIZE - 1)
 
-#define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
-#define TH(p, e, d, c)      (thread->caph[p][e][d][c])
+#define HH(t, stm, m, threats) ((t)->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
+#define TH(t, p, e, d, c)      ((t)->caph[p][e][d][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return (int) HH(thread->board.stm, move, thread->board.threatened) + //
-         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +               //
-         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +               //
+  return (int) HH(thread, thread->board.stm, move, thread->board.threatened) + //
+         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +                       //
+         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +                       //
          (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
   Board* board = &thread->board;
 
-  return TH(Moving(move),
+  return TH(thread,
+            Moving(move),
             To(move),
             !GetBit(board->threatened, To(move)),
             IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));

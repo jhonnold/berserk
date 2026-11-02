@@ -51,7 +51,7 @@ void UpdateHistories(SearchStack* ss,
     // wasn't trivial. This idea was first thought of
     // by Alayan in Ethereal
     if (nQ > 1 || depth > 5) {
-      AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+      AddHistoryHeuristic(&HH(thread, stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
   } else {
@@ -60,7 +60,7 @@ void UpdateHistories(SearchStack* ss,
     int defended = !GetBit(board->threatened, to);
     int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, defended, captured), inc);
+    AddHistoryHeuristic(&TH(thread, piece, to, defended, captured), inc);
   }
 
   // Update quiets
@@ -72,7 +72,7 @@ void UpdateHistories(SearchStack* ss,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, board->threatened), malus);
+      AddHistoryHeuristic(&HH(thread, stm, m, board->threatened), malus);
       UpdateCH(ss, m, malus);
     }
   }
@@ -88,7 +88,7 @@ void UpdateHistories(SearchStack* ss,
     int defended = !GetBit(board->threatened, to);
     int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);
+    AddHistoryHeuristic(&TH(thread, piece, to, defended, captured), -inc);
   }
 }
 

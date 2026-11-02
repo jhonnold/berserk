@@ -120,7 +120,7 @@ void InitThreats(void) {
 }
 
 void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add) {
-  const BitBoard occ     = OccBB(BOTH);
+  const BitBoard occ     = OccBB(board, BOTH);
   const BitBoard kings   = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
   const BitBoard queens  = board->pieces[WHITE_QUEEN] | board->pieces[BLACK_QUEEN];
   const BitBoard diagSl  = board->pieces[WHITE_BISHOP] | board->pieces[BLACK_BISHOP] | queens;
@@ -161,9 +161,9 @@ void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add) {
 }
 
 int ActiveThreats(Board* board, const int view, int* indices) {
-  const BitBoard occ     = OccBB(BOTH);
-  const BitBoard targets = occ & ~(PieceBB(KING, WHITE) | PieceBB(KING, BLACK));
-  const int flip         = FeatureFlip(LSB(PieceBB(KING, view)), view);
+  const BitBoard occ     = OccBB(board, BOTH);
+  const BitBoard targets = occ & ~(PieceBB(board, KING, WHITE) | PieceBB(board, KING, BLACK));
+  const int flip         = FeatureFlip(LSB(PieceBB(board, KING, view)), view);
 
   int n = 0;
 
@@ -186,8 +186,8 @@ int ActiveThreats(Board* board, const int view, int* indices) {
     }
   }
 
-  const BitBoard black = PieceBB(PAWN, BLACK);
-  BitBoard rest        = PieceBB(PAWN, WHITE) | black;
+  const BitBoard black = PieceBB(board, PAWN, BLACK);
+  BitBoard rest        = PieceBB(board, PAWN, WHITE) | black;
   while (rest) {
     const int a  = PopLSB(&rest);
     const int ia = PairId((black >> a) & 1, a, view, flip);

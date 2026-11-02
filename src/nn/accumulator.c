@@ -49,9 +49,9 @@ void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
   Delta delta[1];
   delta->r = delta->a = 0;
 
-  int kingSq = LSB(PieceBB(KING, perspective));
+  int kingSq = LSB(PieceBB(board, KING, perspective));
 
-  BitBoard occ = OccBB(BOTH);
+  BitBoard occ = OccBB(board, BOTH);
   while (occ) {
     int sq                 = PopLSB(&occ);
     int pc                 = board->squares[sq];

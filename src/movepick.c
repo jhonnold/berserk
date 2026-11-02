@@ -61,10 +61,10 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
 
     if (type == ST_QUIET || type == ST_EVASION_QT) {
-      current->score = ((int) HH(board->stm, move, board->threatened) * 26 + //
-                        (int) (*(ss - 1)->ch)[pc][to] * 36 +                 //
-                        (int) (*(ss - 2)->ch)[pc][to] * 35 +                 //
-                        (int) (*(ss - 4)->ch)[pc][to] * 19 +                 //
+      current->score = ((int) HH(thread, board->stm, move, board->threatened) * 26 + //
+                        (int) (*(ss - 1)->ch)[pc][to] * 36 +                         //
+                        (int) (*(ss - 2)->ch)[pc][to] * 35 +                         //
+                        (int) (*(ss - 4)->ch)[pc][to] * 19 +                         //
                         (int) (*(ss - 6)->ch)[pc][to] * 17) /
                        16;
 

@@ -97,15 +97,15 @@ void EvaluateTrace(Board* board) {
         // reset the accumulators and take a diff
         // threats read the piece bitboards, so it has to leave those too
         PopBit(board->pieces[pc], sq);
-        PopBit(OccBB(pc & 1), sq);
-        PopBit(OccBB(BOTH), sq);
+        PopBit(OccBB(board, pc & 1), sq);
+        PopBit(OccBB(board, BOTH), sq);
         ResetAccumulator(board->accumulators, board, WHITE);
         ResetAccumulator(board->accumulators, board, BLACK);
         int new = Propagate(board->accumulators, board->stm, OutputBucket(board));
         new     = board->stm == WHITE ? new : -new;
         SetBit(board->pieces[pc], sq);
-        SetBit(OccBB(pc & 1), sq);
-        SetBit(OccBB(BOTH), sq);
+        SetBit(OccBB(board, pc & 1), sq);
+        SetBit(OccBB(board, BOTH), sq);
 
         int diff       = base - new;
         int normalized = Normalize(diff);

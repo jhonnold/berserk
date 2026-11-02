@@ -81,22 +81,22 @@ INLINE void SetSpecialPieces(Board* board) {
   const int stm  = board->stm;
   const int xstm = board->xstm;
 
-  int kingSq = LSB(PieceBB(KING, stm));
+  int kingSq = LSB(PieceBB(board, KING, stm));
 
   board->pinned   = 0;
-  board->checkers = (GetKnightAttacks(kingSq) & PieceBB(KNIGHT, xstm)) | // knight and
-                    (GetPawnAttacks(kingSq, stm) & PieceBB(PAWN, xstm)); // pawns are easy
+  board->checkers = (GetKnightAttacks(kingSq) & PieceBB(board, KNIGHT, xstm)) | // knight and
+                    (GetPawnAttacks(kingSq, stm) & PieceBB(board, PAWN, xstm)); // pawns are easy
 
-  BitBoard sliders = ((PieceBB(BISHOP, xstm) | PieceBB(QUEEN, xstm)) & BISHOP_RAYS[kingSq]) |
-                     ((PieceBB(ROOK, xstm) | PieceBB(QUEEN, xstm)) & ROOK_RAYS[kingSq]);
+  BitBoard sliders = ((PieceBB(board, BISHOP, xstm) | PieceBB(board, QUEEN, xstm)) & BISHOP_RAYS[kingSq]) |
+                     ((PieceBB(board, ROOK, xstm) | PieceBB(board, QUEEN, xstm)) & ROOK_RAYS[kingSq]);
   while (sliders) {
     int sq = PopLSB(&sliders);
 
-    BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(BOTH);
+    BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(board, BOTH);
     if (!blockers)
       SetBit(board->checkers, sq);
     else if (BitCount(blockers) == 1)
-      board->pinned |= (blockers & OccBB(stm));
+      board->pinned |= (blockers & OccBB(board, stm));
   }
 }
 
@@ -106,38 +106,38 @@ INLINE void SetThreats(Board* board) {
   const int xstm = board->stm;
 
   // Take the enemy king off for through threats.
-  BitBoard occ = OccBB(BOTH) ^ PieceBB(KING, xstm);
+  BitBoard occ = OccBB(board, BOTH) ^ PieceBB(board, KING, xstm);
 
-  BitBoard pawnAttacks      = stm == WHITE ? ShiftNW(PieceBB(PAWN, WHITE)) | ShiftNE(PieceBB(PAWN, WHITE)) :
-                                             ShiftSW(PieceBB(PAWN, BLACK)) | ShiftSE(PieceBB(PAWN, BLACK));
+  BitBoard pawnAttacks = stm == WHITE ? ShiftNW(PieceBB(board, PAWN, WHITE)) | ShiftNE(PieceBB(board, PAWN, WHITE)) :
+                                        ShiftSW(PieceBB(board, PAWN, BLACK)) | ShiftSE(PieceBB(board, PAWN, BLACK));
   board->threatenedBy[PAWN] = pawnAttacks;
   board->threatened         = board->threatenedBy[PAWN];
 
   board->threatenedBy[KNIGHT] = 0;
-  BitBoard knights            = PieceBB(KNIGHT, stm);
+  BitBoard knights            = PieceBB(board, KNIGHT, stm);
   while (knights)
     board->threatenedBy[KNIGHT] |= GetKnightAttacks(PopLSB(&knights));
   board->threatened |= board->threatenedBy[KNIGHT];
 
   board->threatenedBy[BISHOP] = 0;
-  BitBoard bishops            = PieceBB(BISHOP, stm);
+  BitBoard bishops            = PieceBB(board, BISHOP, stm);
   while (bishops)
     board->threatenedBy[BISHOP] |= GetBishopAttacks(PopLSB(&bishops), occ);
   board->threatened |= board->threatenedBy[BISHOP];
 
   board->threatenedBy[ROOK] = 0;
-  BitBoard rooks            = PieceBB(ROOK, stm);
+  BitBoard rooks            = PieceBB(board, ROOK, stm);
   while (rooks)
     board->threatenedBy[ROOK] |= GetRookAttacks(PopLSB(&rooks), occ);
   board->threatened |= board->threatenedBy[ROOK];
 
   board->threatenedBy[QUEEN] = 0;
-  BitBoard queens            = PieceBB(QUEEN, stm);
+  BitBoard queens            = PieceBB(board, QUEEN, stm);
   while (queens)
     board->threatenedBy[QUEEN] |= GetQueenAttacks(PopLSB(&queens), occ);
   board->threatened |= board->threatenedBy[QUEEN];
 
-  board->threatenedBy[KING] = GetKingAttacks(LSB(PieceBB(KING, stm)));
+  board->threatenedBy[KING] = GetKingAttacks(LSB(PieceBB(board, KING, stm)));
   board->threatened |= board->threatenedBy[KING];
 }
 
@@ -173,11 +173,11 @@ void ParseFen(char* fen, Board* board) {
   for (int i = 0; i < 4; i++)
     board->cr[i] = -1;
 
-  int whiteKing = LSB(PieceBB(KING, WHITE));
-  int blackKing = LSB(PieceBB(KING, BLACK));
+  int whiteKing = LSB(PieceBB(board, KING, WHITE));
+  int blackKing = LSB(PieceBB(board, KING, BLACK));
 
-  BitBoard whiteRooks = PieceBB(ROOK, WHITE) & RANK_1;
-  BitBoard blackRooks = PieceBB(ROOK, BLACK) & RANK_8;
+  BitBoard whiteRooks = PieceBB(board, ROOK, WHITE) & RANK_1;
+  BitBoard blackRooks = PieceBB(board, ROOK, BLACK) & RANK_8;
 
   while (*(++fen) != ' ') {
     if (*fen == 'K') {
@@ -230,10 +230,10 @@ void ParseFen(char* fen, Board* board) {
 
   sscanf(fen, " %d %d", &board->fmr, &board->moveNo);
 
-  OccBB(WHITE) = OccBB(BLACK) = OccBB(BOTH) = 0;
+  OccBB(board, WHITE) = OccBB(board, BLACK) = OccBB(board, BOTH) = 0;
   for (int i = WHITE_PAWN; i <= BLACK_KING; i++)
-    OccBB(i & 1) |= board->pieces[i];
-  OccBB(BOTH) = OccBB(WHITE) | OccBB(BLACK);
+    OccBB(board, i & 1) |= board->pieces[i];
+  OccBB(board, BOTH) = OccBB(board, WHITE) | OccBB(board, BLACK);
 
   SetSpecialPieces(board);
   SetThreats(board);
@@ -320,23 +320,23 @@ void PrintBoard(Board* board) {
 
 INLINE void RemovePiece(Board* board, int pc, int s) {
   FlipBit(board->pieces[pc], s);
-  FlipBit(OccBB(pc & 1), s);
-  FlipBit(OccBB(BOTH), s);
+  FlipBit(OccBB(board, pc & 1), s);
+  FlipBit(OccBB(board, BOTH), s);
   board->squares[s] = NO_PIECE;
 }
 
 INLINE void AddPiece(Board* board, int pc, int s) {
   FlipBit(board->pieces[pc], s);
-  FlipBit(OccBB(pc & 1), s);
-  FlipBit(OccBB(BOTH), s);
+  FlipBit(OccBB(board, pc & 1), s);
+  FlipBit(OccBB(board, BOTH), s);
   board->squares[s] = pc;
 }
 
 INLINE void SwapPiece(Board* board, int old, int new, int s) {
   FlipBit(board->pieces[old], s);
-  FlipBit(OccBB(old & 1), s);
+  FlipBit(OccBB(board, old & 1), s);
   FlipBit(board->pieces[new], s);
-  FlipBit(OccBB(new & 1), s);
+  FlipBit(OccBB(board, new & 1), s);
   board->squares[s] = new;
 }
 
@@ -360,8 +360,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   const int stm        = piece & 1;
 
   if (update) {
-    board->accumulators->pawns[0][WHITE] = PieceBB(PAWN, WHITE);
-    board->accumulators->pawns[0][BLACK] = PieceBB(PAWN, BLACK);
+    board->accumulators->pawns[0][WHITE] = PieceBB(board, PAWN, WHITE);
+    board->accumulators->pawns[0][BLACK] = PieceBB(board, PAWN, BLACK);
   }
 
   board->fmr++;
@@ -439,7 +439,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     if ((from ^ to) == 16) {
       int epSquare = to - PawnDir(board->stm);
 
-      if (GetPawnAttacks(epSquare, board->stm) & PieceBB(PAWN, board->xstm)) {
+      if (GetPawnAttacks(epSquare, board->stm) & PieceBB(board, PAWN, board->xstm)) {
         board->epSquare = epSquare;
         board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];
       }
@@ -471,11 +471,11 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   SetThreats(board);
 
   if (update) {
-    board->accumulators->move     = move;
-    board->accumulators->captured = captured;
-    board->accumulators->nDirty   = list.n;
-    board->accumulators->pawns[1][WHITE] = PieceBB(PAWN, WHITE);
-    board->accumulators->pawns[1][BLACK] = PieceBB(PAWN, BLACK);
+    board->accumulators->move            = move;
+    board->accumulators->captured        = captured;
+    board->accumulators->nDirty          = list.n;
+    board->accumulators->pawns[1][WHITE] = PieceBB(board, PAWN, WHITE);
+    board->accumulators->pawns[1][BLACK] = PieceBB(board, PAWN, BLACK);
 
     board->accumulators++;
     board->accumulators->correct[WHITE] = board->accumulators->correct[BLACK] = 0;
@@ -513,8 +513,8 @@ void UndoMoveUpdate(Move move, Board* board, int update) {
   }
 
   FlipBits(board->pieces[piece], to, from);
-  FlipBits(OccBB(board->stm), to, from);
-  FlipBits(OccBB(BOTH), to, from);
+  FlipBits(OccBB(board, board->stm), to, from);
+  FlipBits(OccBB(board, BOTH), to, from);
 
   board->squares[to]   = NO_PIECE;
   board->squares[from] = piece;
@@ -524,9 +524,9 @@ void UndoMoveUpdate(Move move, Board* board, int update) {
     int rookTo   = CASTLE_ROOK_DEST[to];
     int rook     = Piece(ROOK, board->stm);
 
-    FlipBits(PieceBB(ROOK, board->stm), rookTo, rookFrom);
-    FlipBits(OccBB(board->stm), rookTo, rookFrom);
-    FlipBits(OccBB(BOTH), rookTo, rookFrom);
+    FlipBits(PieceBB(board, ROOK, board->stm), rookTo, rookFrom);
+    FlipBits(OccBB(board, board->stm), rookTo, rookFrom);
+    FlipBits(OccBB(board, BOTH), rookTo, rookFrom);
 
     if (from != rookTo)
       board->squares[rookTo] = NO_PIECE;
@@ -536,8 +536,8 @@ void UndoMoveUpdate(Move move, Board* board, int update) {
     int captured = board->history[board->histPly].capture;
 
     FlipBit(board->pieces[captured], capSq);
-    FlipBit(OccBB(board->xstm), capSq);
-    FlipBit(OccBB(BOTH), capSq);
+    FlipBit(OccBB(board, board->xstm), capSq);
+    FlipBit(OccBB(board, BOTH), capSq);
 
     board->squares[capSq] = captured;
 
@@ -607,7 +607,7 @@ int IsPseudoLegal(Move move, Board* board) {
       return 0;
 
     int idx = 2 * board->stm + (File(to) != 6); // 0 = G1, 1 = C1, 2 = G8, 3 = C8
-    if (!CanCastle(CASTLE_MAP[idx][0]))
+    if (!CanCastle(board, CASTLE_MAP[idx][0]))
       return 0;
     if (GetBit(board->pinned, board->cr[idx]))
       return 0;
@@ -617,7 +617,7 @@ int IsPseudoLegal(Move move, Board* board) {
     BitBoard rookCrossing = BetweenSquares(board->cr[idx], rookTo) | Bit(rookTo);
     BitBoard between      = kingCrossing | rookCrossing;
 
-    if ((OccBB(BOTH) ^ Bit(from) ^ Bit(board->cr[idx])) & between)
+    if ((OccBB(board, BOTH) ^ Bit(from) ^ Bit(board->cr[idx])) & between)
       return 0;
     if (kingCrossing & board->threatened)
       return 0;
@@ -629,11 +629,11 @@ int IsPseudoLegal(Move move, Board* board) {
     if (BitCount(board->checkers) > 1)
       return 0;
 
-    int king       = LSB(PieceBB(KING, board->stm));
+    int king       = LSB(PieceBB(board, KING, board->stm));
     BitBoard valid = board->checkers ? (board->checkers | BetweenSquares(king, LSB(board->checkers))) : ALL;
     BitBoard goal  = board->stm == WHITE ? RANK_8 : RANK_1;
-    BitBoard opts =
-      (ShiftPawnDir(Bit(from), board->stm) & ~OccBB(BOTH)) | (GetPawnAttacks(from, board->stm) & OccBB(board->xstm));
+    BitBoard opts  = (ShiftPawnDir(Bit(from), board->stm) & ~OccBB(board, BOTH)) |
+                    (GetPawnAttacks(from, board->stm) & OccBB(board, board->xstm));
 
     return !!GetBit(goal & opts & valid, to);
   }
@@ -644,7 +644,7 @@ int IsPseudoLegal(Move move, Board* board) {
     return 0;
   if (IsEP(move) && to != board->epSquare)
     return 0;
-  if (GetBit(OccBB(board->stm), to))
+  if (GetBit(OccBB(board, board->stm), to))
     return 0;
   if (pcType == KING && GetBit(board->threatened, to))
     return 0;
@@ -654,7 +654,7 @@ int IsPseudoLegal(Move move, Board* board) {
       return 0;
 
     if (!IsEP(move)) {
-      if (!(GetPawnAttacks(from, board->stm) & OccBB(board->xstm) & Bit(to))         // capture
+      if (!(GetPawnAttacks(from, board->stm) & OccBB(board, board->xstm) & Bit(to))  // capture
           && !((from + PawnDir(board->stm) == to) && board->squares[to] == NO_PIECE) // single push
           && !((from + 2 * PawnDir(board->stm) == to)                                // double push
                && board->squares[to] == NO_PIECE                                     //
@@ -663,7 +663,7 @@ int IsPseudoLegal(Move move, Board* board) {
                ))
         return 0;
     }
-  } else if (!GetBit(GetPieceAttacks(from, OccBB(BOTH), pcType), to)) {
+  } else if (!GetBit(GetPieceAttacks(from, OccBB(board, BOTH), pcType), to)) {
     return 0;
   }
 
@@ -671,7 +671,7 @@ int IsPseudoLegal(Move move, Board* board) {
     if (BitCount(board->checkers) > 1)
       return 0;
 
-    int kingsq                 = LSB(PieceBB(KING, board->stm));
+    int kingsq                 = LSB(PieceBB(board, KING, board->stm));
     BitBoard blocksAndCaptures = board->checkers | BetweenSquares(kingsq, LSB(board->checkers));
     int to2                    = IsEP(move) ? to - PawnDir(board->stm) : to;
     if (!GetBit(blocksAndCaptures, to2))
@@ -686,15 +686,16 @@ int IsPseudoLegal(Move move, Board* board) {
 int IsLegal(Move move, Board* board) {
   int from   = From(move);
   int to     = To(move);
-  int kingSq = LSB(PieceBB(KING, board->stm));
+  int kingSq = LSB(PieceBB(board, KING, board->stm));
 
   if (IsEP(move)) {
     // ep is checked by just applying the move
     int captureSq = to - PawnDir(board->stm);
-    BitBoard occ  = (OccBB(BOTH) ^ Bit(from) ^ Bit(captureSq)) | Bit(to);
+    BitBoard occ  = (OccBB(board, BOTH) ^ Bit(from) ^ Bit(captureSq)) | Bit(to);
     // EP can only be illegal due to crazy discover checks
-    return !(GetBishopAttacks(kingSq, occ) & (PieceBB(BISHOP, board->xstm) | PieceBB(QUEEN, board->xstm))) &&
-           !(GetRookAttacks(kingSq, occ) & (PieceBB(ROOK, board->xstm) | PieceBB(QUEEN, board->xstm)));
+    return !(GetBishopAttacks(kingSq, occ) &
+             (PieceBB(board, BISHOP, board->xstm) | PieceBB(board, QUEEN, board->xstm))) &&
+           !(GetRookAttacks(kingSq, occ) & (PieceBB(board, ROOK, board->xstm) | PieceBB(board, QUEEN, board->xstm)));
   }
 
   return !GetBit(board->pinned, from) || GetBit(PinnedMoves(from, kingSq), to);
@@ -772,7 +773,7 @@ int HasCycle(Board* board, int ply) {
     if ((h = Hash1(moveKey), cuckoo[h] == moveKey) || (h = Hash2(moveKey), cuckoo[h] == moveKey)) {
       Move move        = cuckooMove[h];
       BitBoard between = BetweenSquares(From(move), To(move));
-      if (between & OccBB(BOTH))
+      if (between & OccBB(board, BOTH))
         continue;
 
       if (ply > i)

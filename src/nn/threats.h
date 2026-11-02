@@ -82,9 +82,10 @@ INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {
 
 // MAP as bitboards: the pieces a pt can threaten, and the pieces that can threaten a pt
 INLINE BitBoard FeatureVictims(Board* board, int pt) {
-  const BitBoard queens = PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
+  const BitBoard queens = PieceBB(board, QUEEN, WHITE) | PieceBB(board, QUEEN, BLACK);
   if (pt == PAWN)
-    return PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK) | PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK);
+    return PieceBB(board, KNIGHT, WHITE) | PieceBB(board, KNIGHT, BLACK) | PieceBB(board, ROOK, WHITE) |
+           PieceBB(board, ROOK, BLACK);
   if (pt == BISHOP || pt == ROOK)
     return ~queens;
   return ~0ULL;
@@ -92,9 +93,10 @@ INLINE BitBoard FeatureVictims(Board* board, int pt) {
 
 INLINE BitBoard FeatureAttackers(Board* board, int pt) {
   if (pt == PAWN || pt == BISHOP)
-    return ~(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK));
+    return ~(PieceBB(board, PAWN, WHITE) | PieceBB(board, PAWN, BLACK));
   if (pt == QUEEN)
-    return PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK) | PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK);
+    return PieceBB(board, KNIGHT, WHITE) | PieceBB(board, KNIGHT, BLACK) | PieceBB(board, QUEEN, WHITE) |
+           PieceBB(board, QUEEN, BLACK);
   return ~0ULL;
 }
 
@@ -105,7 +107,7 @@ void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add);
 
 // A capture: occupancy is unchanged, so no lines open or close
 INLINE void SwapThreats(Board* board, DirtyThreatList* list, int old, int new, int s) {
-  const BitBoard occ   = OccBB(BOTH);
+  const BitBoard occ   = OccBB(board, BOTH);
   const BitBoard kings = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
 
   const BitBoard in = AttacksToSquare(board, s, occ) & ~kings;
