@@ -105,7 +105,7 @@ INLINE int TTScore(TTEntry* e, int ply) {
   return e->score >= TB_WIN_BOUND ? e->score - ply : e->score <= -TB_WIN_BOUND ? e->score + ply : e->score;
 }
 
-extern const int DEPTH_OFFSET;
+#define DEPTH_OFFSET (-2)
 
 INLINE int TTDepth(TTEntry* e) {
   return e->depth + DEPTH_OFFSET;
