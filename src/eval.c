@@ -54,7 +54,7 @@ Score Evaluate(Board* board, ThreadData* thread) {
   }
 
   const int bucket = OutputBucket(board);
-  int score        = board->stm == WHITE ? Propagate(acc, WHITE, bucket) : Propagate(acc, BLACK, bucket);
+  int score        = Propagate(acc, board->stm, bucket);
 
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
