@@ -480,7 +480,7 @@ INLINE int PairedLane(int p) {
 #endif
 }
 
-INLINE void CopyData(const unsigned char* in) {
+static void CopyData(const unsigned char* in) {
   size_t offset = 0;
 
   // Alloc a chunk of memory for the L1 weights which we
