@@ -17,12 +17,7 @@
 #ifndef SEE_H
 #define SEE_H
 
-#include "attacks.h"
-#include "bits.h"
-#include "board.h"
-#include "move.h"
 #include "types.h"
-#include "util.h"
 
 extern const int SEE_VALUE[7];
 

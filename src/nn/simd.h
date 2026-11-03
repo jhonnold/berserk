@@ -17,7 +17,6 @@
 #ifndef SIMD_H
 #define SIMD_H
 
-#include "../types.h"
 #include "defs.h"
 #include "../util.h"
 

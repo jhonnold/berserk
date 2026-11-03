@@ -16,7 +16,6 @@
 
 #include "util.h"
 
-#include "types.h"
 
 #ifdef WIN32
 #include <windows.h>

@@ -22,7 +22,6 @@
 #include "bits.h"
 #include "board.h"
 #include "movegen.h"
-#include "random.h"
 
 // This file was built using all the logic found in the BBC video guide on
 // youtube I highly recommend it to understand how magic bitboards

@@ -17,7 +17,6 @@
 #ifndef UCI_H
 #define UCI_H
 
-#include "types.h"
 
 int WRModel(int s, int ply);
 

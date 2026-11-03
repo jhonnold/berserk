@@ -22,8 +22,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "eval.h"
-#include "history.h"
 #include "movegen.h"
 #include "nn/accumulator.h"
 #include "search.h"

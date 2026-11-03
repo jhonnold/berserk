@@ -23,7 +23,6 @@
 
 #include "../bits.h"
 #include "../board.h"
-#include "../move.h"
 #include "../movegen.h"
 #include "../thread.h"
 #include "../util.h"

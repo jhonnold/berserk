@@ -19,7 +19,6 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "attacks.h"
 #include "bits.h"
 #include "board.h"
 #include "move.h"

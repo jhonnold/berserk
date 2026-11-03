@@ -22,9 +22,7 @@
 
 #include "../bits.h"
 #include "../board.h"
-#include "../move.h"
 #include "../movegen.h"
-#include "../util.h"
 
 const uint16_t KING_BUCKETS[64] = {15, 15, 14, 14, 14, 14, 15, 15, //
                                    15, 15, 14, 14, 14, 14, 15, 15, //

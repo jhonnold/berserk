@@ -28,7 +28,6 @@
 #include "eval.h"
 #include "history.h"
 #include "move.h"
-#include "movegen.h"
 #include "movepick.h"
 #include "nn/accumulator.h"
 #include "options.h"

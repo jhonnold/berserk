@@ -29,7 +29,6 @@
 #include "movegen.h"
 #include "nn/threats.h"
 #include "options.h"
-#include "transposition.h"
 #include "types.h"
 #include "zobrist.h"
 

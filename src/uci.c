@@ -28,8 +28,6 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
-#include "movepick.h"
-#include "nn/accumulator.h"
 #include "nn/evaluate.h"
 #include "options.h"
 #include "perft.h"

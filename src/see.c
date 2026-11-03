@@ -22,7 +22,6 @@
 #include "move.h"
 #include "movegen.h"
 #include "types.h"
-#include "util.h"
 
 const int SEE_VALUE[7] = {86, 326, 394, 593, 1047, 30000, 0};
 

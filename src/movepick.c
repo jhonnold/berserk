@@ -19,12 +19,10 @@
 #include <stdio.h>
 
 #include "board.h"
-#include "eval.h"
 #include "history.h"
 #include "move.h"
 #include "movegen.h"
 #include "see.h"
-#include "transposition.h"
 #include "types.h"
 
 INLINE Move Best(ScoredMove* current, ScoredMove* end) {

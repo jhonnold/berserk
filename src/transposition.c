@@ -25,11 +25,8 @@
 #include <sys/mman.h>
 #endif
 
-#include "bits.h"
-#include "search.h"
 #include "thread.h"
 #include "transposition.h"
-#include "types.h"
 
 // Global TT
 TTTable TT = {0};
