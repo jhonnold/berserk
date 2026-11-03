@@ -35,9 +35,9 @@
 #include "tb.h"
 #include "thread.h"
 #include "transposition.h"
+#include "tune.h"
 #include "types.h"
 #include "uci.h"
-#include "tune.h"
 #include "util.h"
 #include "zobrist.h"
 
@@ -78,7 +78,7 @@ void InitPruningAndReductionTables(void) {
     LMP[1][depth] = LMP_IMP_BASE + LMP_IMP_SCALE * depth * depth;
 
     STATIC_PRUNE[0][depth] = -SEE_QUIET * depth * depth; // quiet move cutoff
-    STATIC_PRUNE[1][depth] = -SEE_NOISY * depth;        // capture cutoff
+    STATIC_PRUNE[1][depth] = -SEE_NOISY * depth;         // capture cutoff
   }
 }
 
@@ -474,7 +474,7 @@ void Search(ThreadData* thread) {
       if (thread->previousScore == UNKNOWN)
         searchScoreDiff *= 2, prevScoreDiff = 0;
 
-      double scoreChangeFactor = TM_SCORE_BASE +                                              //
+      double scoreChangeFactor = TM_SCORE_BASE +                                             //
                                  TM_SCORE_SEARCH * searchScoreDiff * (searchScoreDiff > 0) + //
                                  TM_SCORE_PREV * prevScoreDiff * (prevScoreDiff > 0);
       scoreChangeFactor = Max(TM_SCORE_MIN, Min(TM_SCORE_MAX, scoreChangeFactor));
@@ -636,7 +636,9 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
     // Reverse Futility Pruning
     // i.e. the static eval is so far above beta we prune
     if (depth <= RFP_DEPTH && !ss->skip && eval < TB_WIN_BOUND && eval >= beta &&
-        eval - RFP_MARGIN * depth + RFP_IMPROVING * (improving && !opponentHasEasyCapture) + RFP_DECLINING * opponentDeclining >= beta &&
+        eval - RFP_MARGIN * depth + RFP_IMPROVING * (improving && !opponentHasEasyCapture) +
+            RFP_DECLINING * opponentDeclining >=
+          beta &&
         (!hashMove || GetHistory(ss, thread, hashMove) > RFP_HISTORY))
       return (eval + beta) / 2;
 
@@ -694,7 +696,8 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
     // If a relatively deep search from our TT doesn't say this node is
     // less than beta + margin, then we run a shallow search to look
     Score probBeta = beta + PROBCUT_MARGIN;
-    if (depth >= PROBCUT_DEPTH && !ss->skip && abs(beta) < TB_WIN_BOUND && !(ttHit && ttDepth >= depth - 3 && ttScore < probBeta)) {
+    if (depth >= PROBCUT_DEPTH && !ss->skip && abs(beta) < TB_WIN_BOUND &&
+        !(ttHit && ttDepth >= depth - 3 && ttScore < probBeta)) {
       InitPCMovePicker(&mp, thread, probBeta > eval);
       while ((move = NextMove(&mp, board, 1))) {
         if (!IsLegal(move, board))
@@ -931,7 +934,14 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
 
       // we're failing high
       if (alpha >= beta) {
-        UpdateHistories(ss, thread, move, depth + (bestScore > beta + HIST_BETA_MARGIN), quiets, numQuiets, captures, numCaptures);
+        UpdateHistories(ss,
+                        thread,
+                        move,
+                        depth + (bestScore > beta + HIST_BETA_MARGIN),
+                        quiets,
+                        numQuiets,
+                        captures,
+                        numCaptures);
         break;
       }
     }

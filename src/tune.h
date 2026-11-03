@@ -127,7 +127,10 @@ extern const int TUNABLES_COUNT;
 
 #else
 
-#define TUNE_INT(n, v, lo, hi)   enum { n = (v) };
+#define TUNE_INT(n, v, lo, hi) \
+  enum {                       \
+    n = (v)                    \
+  };
 #define TUNE_FLOAT(n, v, lo, hi) static const double n = (v);
 
 #endif

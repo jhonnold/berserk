@@ -445,19 +445,19 @@ typedef struct {
 } UCIOption;
 
 static const UCIOption OPTIONS[] = {
-  {"Hash",         OPT_SPIN,   16, 2,    HASH_MAX, OptHash,         NULL         },
-  {"Threads",      OPT_SPIN,   1,  1,    2048,     OptThreads,      NULL         },
-  {"SyzygyPath",   OPT_STRING, 0,  0,    0,        NULL,            OptSyzygyPath},
-  {"MultiPV",      OPT_SPIN,   1,  1,    256,      OptMultiPV,      NULL         },
-  {"Ponder",       OPT_CHECK,  0,  0,    1,        OptPonder,       NULL         },
-  {"UCI_ShowWDL",  OPT_CHECK,  1,  0,    1,        OptShowWDL,      NULL         },
-  {"UCI_Chess960", OPT_CHECK,  0,  0,    1,        OptChess960,     NULL         },
-  {"MoveOverhead", OPT_SPIN,   50, 0,    10000,    OptMoveOverhead, NULL         },
-  {"Contempt",     OPT_SPIN,   0,  -100, 100,      OptContempt,     NULL         },
-  {"EvalFile",     OPT_STRING, 0,  0,    0,        NULL,            OptEvalFile  },
-  {"Minimal",      OPT_CHECK,  0,  0,    1,        OptMinimal,      NULL         },
-  {"Normalize",    OPT_CHECK,  1,  0,    1,        OptNormalize,    NULL         },
-  {"SoftNodes",    OPT_CHECK,  0,  0,    1,        OptSoftNodes,    NULL         },
+  {"Hash", OPT_SPIN, 16, 2, HASH_MAX, OptHash, NULL},
+  {"Threads", OPT_SPIN, 1, 1, 2048, OptThreads, NULL},
+  {"SyzygyPath", OPT_STRING, 0, 0, 0, NULL, OptSyzygyPath},
+  {"MultiPV", OPT_SPIN, 1, 1, 256, OptMultiPV, NULL},
+  {"Ponder", OPT_CHECK, 0, 0, 1, OptPonder, NULL},
+  {"UCI_ShowWDL", OPT_CHECK, 1, 0, 1, OptShowWDL, NULL},
+  {"UCI_Chess960", OPT_CHECK, 0, 0, 1, OptChess960, NULL},
+  {"MoveOverhead", OPT_SPIN, 50, 0, 10000, OptMoveOverhead, NULL},
+  {"Contempt", OPT_SPIN, 0, -100, 100, OptContempt, NULL},
+  {"EvalFile", OPT_STRING, 0, 0, 0, NULL, OptEvalFile},
+  {"Minimal", OPT_CHECK, 0, 0, 1, OptMinimal, NULL},
+  {"Normalize", OPT_CHECK, 1, 0, 1, OptNormalize, NULL},
+  {"SoftNodes", OPT_CHECK, 0, 0, 1, OptSoftNodes, NULL},
 };
 
 #define NUM_OPTIONS ((int) (sizeof(OPTIONS) / sizeof(OPTIONS[0])))
@@ -682,25 +682,25 @@ typedef struct {
 } UCICommand;
 
 static const UCICommand COMMANDS[] = {
-  {"uci",        CmdUci       },
-  {"isready",    CmdIsReady   },
-  {"setoption",  CmdSetOption },
+  {"uci", CmdUci},
+  {"isready", CmdIsReady},
+  {"setoption", CmdSetOption},
   {"ucinewgame", CmdUciNewGame},
-  {"position",   CmdPosition  },
-  {"go",         CmdGo        },
-  {"stop",       CmdStop      },
-  {"ponderhit",  CmdPonderHit },
+  {"position", CmdPosition},
+  {"go", CmdGo},
+  {"stop", CmdStop},
+  {"ponderhit", CmdPonderHit},
   // non-standard
-  {"board",      CmdBoard     },
-  {"cycle",      CmdCycle     },
-  {"perft",      CmdPerft     },
-  {"bench",      CmdBench     },
-  {"threats",    CmdThreats   },
-  {"eval",       CmdEval      },
-  {"see",        CmdSee       },
-  {"apply",      CmdApply     },
+  {"board", CmdBoard},
+  {"cycle", CmdCycle},
+  {"perft", CmdPerft},
+  {"bench", CmdBench},
+  {"threats", CmdThreats},
+  {"eval", CmdEval},
+  {"see", CmdSee},
+  {"apply", CmdApply},
 #ifdef SPSA
-  {"spsa",       CmdSpsa      },
+  {"spsa", CmdSpsa},
 #endif
 };
 
