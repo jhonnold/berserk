@@ -67,7 +67,8 @@ static void PrintPV(PV* pv, Board* board);
 void PrintUCI(ThreadData* thread, Depth depth, Score alpha, Score beta, Board* board) {
   uint64_t nodes  = NodesSearched();
   uint64_t tbhits = TBHits();
-  uint64_t time   = Max(1, GetTimeMS() - Limits.start);
+  long elapsed    = GetTimeMS() - Limits.start;
+  uint64_t time   = Max(1, elapsed);
   uint64_t nps    = 1000 * nodes / time;
   int hashfull    = TTFull();
 
@@ -172,20 +173,28 @@ static void ParseGo(char* in, Board* board) {
   if ((ptrChar = strstr(in, "btime")) && board->stm == BLACK)
     time = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "movestogo")))
-    movesToGo = Max(1, Min(50, atoi(ptrChar + 10)));
+  if ((ptrChar = strstr(in, "movestogo"))) {
+    movesToGo = atoi(ptrChar + 10);
+    movesToGo = Max(1, Min(50, movesToGo));
+  }
 
   if ((ptrChar = strstr(in, "movetime")))
     moveTime = atoi(ptrChar + 9);
 
-  if ((ptrChar = strstr(in, "depth")))
-    depth = Min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+  if ((ptrChar = strstr(in, "depth"))) {
+    depth = atoi(ptrChar + 6);
+    depth = Min(MAX_SEARCH_PLY - 1, depth);
+  }
 
-  if ((ptrChar = strstr(in, "mate")))
-    mate = Min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 5));
+  if ((ptrChar = strstr(in, "mate"))) {
+    mate = atoi(ptrChar + 5);
+    mate = Min(MAX_SEARCH_PLY - 1, mate);
+  }
 
-  if ((ptrChar = strstr(in, "nodes")))
-    nodes = Max(1, strtoull(ptrChar + 6, NULL, 10));
+  if ((ptrChar = strstr(in, "nodes"))) {
+    nodes = strtoull(ptrChar + 6, NULL, 10);
+    nodes = Max(1, nodes);
+  }
 
   if ((ptrChar = strstr(in, "ponder"))) {
     if (PONDER_ENABLED)
@@ -471,9 +480,11 @@ void UCILoop(void) {
       ThreadsClearTT();
       ThreadsClearSearch();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
-      MOVE_OVERHEAD = Min(10000, Max(0, GetOptionIntValue(in)));
+      int n         = GetOptionIntValue(in);
+      MOVE_OVERHEAD = Min(10000, Max(0, n));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
-      CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
+      int n    = GetOptionIntValue(in);
+      CONTEMPT = Min(100, Max(-100, n));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
       char* path   = in + 30;
       Bool success = 0;
