@@ -113,7 +113,7 @@ Move NextMove(MovePicker* picker, Board* board, Bool skipQuiets) {
         if (move == picker->hashMove)
           continue;
 
-        else if (SEE(board, move, -score / 2))
+        else if (SEE(board, move, -score * MO_GOOD_CAPTURE / 64))
           return move;
 
         *picker->endBad++ = *(picker->current - 1);

@@ -19,7 +19,12 @@
 
 #include "types.h"
 
+#ifdef SPSA
+extern int SEE_VALUE[7];
+void InitSeeValues(void);
+#else
 extern const int SEE_VALUE[7];
+#endif
 
 // Static exchange evaluation using The Swap Algorithm -
 // https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm

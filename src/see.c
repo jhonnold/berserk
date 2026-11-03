@@ -21,9 +21,22 @@
 #include "board.h"
 #include "move.h"
 #include "movegen.h"
+#include "tune.h"
 #include "types.h"
 
-const int SEE_VALUE[7] = {86, 326, 394, 593, 1047, 30000, 0};
+#ifdef SPSA
+int SEE_VALUE[7];
+
+// SEE_VALUE is built from tunables, so it is refreshed whenever one is set
+void InitSeeValues(void) {
+  const int values[7] = {SEE_PAWN, SEE_KNIGHT, SEE_BISHOP, SEE_ROOK, SEE_QUEEN, 30000, 0};
+
+  for (int i = 0; i < 7; i++)
+    SEE_VALUE[i] = values[i];
+}
+#else
+const int SEE_VALUE[7] = {SEE_PAWN, SEE_KNIGHT, SEE_BISHOP, SEE_ROOK, SEE_QUEEN, 30000, 0};
+#endif
 
 // Static exchange evaluation using The Swap Algorithm -
 // https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm

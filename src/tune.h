@@ -85,6 +85,11 @@
   INT(DEEPER_MARGIN, 61, 0, 122)                 \
   INT(HIST_BETA_MARGIN, 75, 0, 150)              \
   INT(QS_FUTILITY, 79, 0, 158)                   \
+  INT(SEE_PAWN, 86, 0, 172)                      \
+  INT(SEE_KNIGHT, 326, 0, 652)                   \
+  INT(SEE_BISHOP, 394, 0, 788)                   \
+  INT(SEE_ROOK, 593, 0, 1186)                    \
+  INT(SEE_QUEEN, 1047, 0, 2094)                  \
                                                  \
   /* history */                                  \
   INT(HIST_BONUS_QUAD, 4, 0, 8)                  \
@@ -92,8 +97,11 @@
   INT(HIST_BONUS_BASE, -118, -236, 236)          \
   INT(HIST_BONUS_MAX, 1708, 0, 3416)             \
   INT(HIST_MALUS_SCALE, 36, 0, 72)               \
+  INT(HIST_UPDATE_DEPTH, 5, 0, 10)               \
   INT(CORR_UPDATE, 3, 0, 6)                      \
   INT(CONT_CORR_UPDATE, 4, 0, 8)                 \
+  INT(CORR_MAX, 4096, 0, 8192)                   \
+  INT(CONT_CORR_MAX, 4096, 0, 8192)              \
   INT(CORR_PAWN, 31, 0, 62)                      \
   INT(CORR_NON_PAWN, 26, 0, 52)                  \
   INT(CORR_CONT1, 17, 0, 34)                     \
@@ -107,7 +115,8 @@
   INT(MO_CH6, 17, 0, 34)                         \
   INT(MO_THREAT_FROM, 16863, 0, 33726)           \
   INT(MO_THREAT_TO, 13955, 0, 27910)             \
-  INT(MO_CAPHIST, 16, 0, 32)
+  INT(MO_CAPHIST, 16, 0, 32)                     \
+  INT(MO_GOOD_CAPTURE, 32, 0, 64)
 
 #ifdef SPSA
 

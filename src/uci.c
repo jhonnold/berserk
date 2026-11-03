@@ -495,8 +495,9 @@ static Bool SetTunable(const char* name, const char* value) {
     else
       *(int*) t->value = Max((int) t->minValue, Min((int) t->maxValue, atoi(value)));
 
-    // some tunables only feed the precomputed pruning and reduction tables
+    // some tunables only feed precomputed tables
     InitPruningAndReductionTables();
+    InitSeeValues();
     return 1;
   }
 
