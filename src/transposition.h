@@ -74,7 +74,7 @@ INLINE void TTPrefetch(Key hash) {
 }
 int TTFull(void);
 
-#define HASH_MAX ((int) (pow(2, 40) * sizeof(TTBucket) / MEGABYTE))
+#define HASH_MAX ((int) ((1ull << 40) * sizeof(TTBucket) / MEGABYTE))
 
 INLINE int TTAge(TTEntry* e) {
   return ((AGE_CYCLE + TT.age - e->agePvBound) & AGE_MASK);
