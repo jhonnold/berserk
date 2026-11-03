@@ -100,6 +100,11 @@ INLINE Bool CheckLimits(ThreadData* thread) {
   return 0;
 }
 
+// Whole plies from a reduction kept in 1/1024 plies, rounding down (also for negatives)
+INLINE int ReductionPlies(int r) {
+  return r >> 10;
+}
+
 INLINE Score AdjustEvalOnFMR(Board* board, Score eval) {
   return (EVAL_FMR_DIV - board->fmr) * eval / EVAL_FMR_DIV;
 }
@@ -747,7 +752,7 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
 
     // reduction in 1/1024 plies
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= LMR_HISTORY * history / 64;                              // adjust reduction based on historical score
+    R -= 1024 * (LMR_HISTORY * history / 65536);                  // adjust reduction based on historical score
     R += LMR_NOISY_HASH * (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
@@ -755,7 +760,7 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
-        Depth lmrDepth = Max(1, depth - R / 1024);
+        Depth lmrDepth = Max(1, depth - ReductionPlies(R));
 
         if (!killerOrCounter && lmrDepth < HP_DEPTH && history < -HP_MARGIN * (depth - 1)) {
           skipQuiets = 1;
@@ -859,7 +864,7 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
         R -= LMR_TT_DEPTH;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R             = Min(newDepth, Max(R / 1024, 1));
+      R             = Min(newDepth, Max(ReductionPlies(R), 1));
       ss->reduction = R;
 
       Depth lmrDepth = newDepth - R;
