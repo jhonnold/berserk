@@ -142,8 +142,8 @@ static void InitBetweenSquares(void) {
 static void InitPinnedMovementSquares(void) {
   int dirs[] = {W, NE, N, NW, E, SW, S, SE};
 
-  for (int pSq = 0; pSq < 64; pSq++) {
-    for (int kSq = 0; kSq < 64; kSq++) {
+  for (Square pSq = 0; pSq < 64; pSq++) {
+    for (Square kSq = 0; kSq < 64; kSq++) {
       int dir = 0;
       for (int i = 0; i < 8; i++) {
         if (dir)
@@ -182,7 +182,7 @@ static void InitPinnedMovementSquares(void) {
   }
 }
 
-static BitBoard GetGeneratedPawnAttacks(int sq, int color) {
+static BitBoard GetGeneratedPawnAttacks(Square sq, Color color) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -205,7 +205,7 @@ static void InitPawnAttacks(void) {
   }
 }
 
-static BitBoard GetGeneratedKnightAttacks(int sq) {
+static BitBoard GetGeneratedKnightAttacks(Square sq) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -236,7 +236,7 @@ static void InitKnightAttacks(void) {
     KNIGHT_ATTACKS[i] = GetGeneratedKnightAttacks(i);
 }
 
-static BitBoard GetGeneratedKingAttacks(int sq) {
+static BitBoard GetGeneratedKingAttacks(Square sq) {
   BitBoard attacks = 0, board = 0;
 
   SetBit(board, sq);
@@ -260,7 +260,7 @@ static void InitKingAttacks(void) {
 
 #ifndef USE_DUAL_HQ
 
-static BitBoard GetBishopMask(int sq) {
+static BitBoard GetBishopMask(Square sq) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
@@ -285,7 +285,7 @@ static void InitBishopMasks(void) {
 
 #endif
 
-static BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
+static BitBoard GetBishopAttacksOTF(Square sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
@@ -320,7 +320,7 @@ static BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers) {
 
 #ifndef USE_DUAL_HQ
 
-static BitBoard GetRookMask(int sq) {
+static BitBoard GetRookMask(Square sq) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
@@ -345,7 +345,7 @@ static void InitRookMasks(void) {
 
 #endif
 
-static BitBoard GetRookAttacksOTF(int sq, BitBoard blockers) {
+static BitBoard GetRookAttacksOTF(Square sq, BitBoard blockers) {
   BitBoard attacks = 0;
 
   int sr = Rank(sq);
@@ -384,7 +384,7 @@ static BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
   BitBoard occupany = 0;
 
   for (int i = 0; i < bits; i++) {
-    int sq = PopLSB(&attacks);
+    Square sq = PopLSB(&attacks);
 
     if (idx & (1 << i))
       occupany |= (1ULL << sq);
@@ -409,7 +409,7 @@ static void InitRookMagics(void) {
 static void InitBishopAttacks(void) {
   BitBoard* table = BISHOP_TABLE;
 
-  for (int sq = 0; sq < 64; sq++) {
+  for (Square sq = 0; sq < 64; sq++) {
     Magic* m = &MAGICS[sq].bishop;
     int bits = BISHOP_RELEVANT_BITS[sq];
     int n    = (1 << bits);
@@ -430,7 +430,7 @@ static void InitBishopAttacks(void) {
 static void InitRookAttacks(void) {
   BitBoard* table = ROOK_TABLE;
 
-  for (int sq = 0; sq < 64; sq++) {
+  for (Square sq = 0; sq < 64; sq++) {
     Magic* m = &MAGICS[sq].rook;
     int bits = ROOK_RELEVANT_BITS[sq];
     int n    = (1 << bits);
@@ -461,7 +461,7 @@ static uint8_t RANK_ATTACKS[8][64] ALIGN;
 
 // Every square of the ray leaving sq, out to the edge of the board. Unlike a
 // magic mask this keeps the edge squares, which hyperbola quintessence needs.
-static BitBoard RayMask(int sq, int dr, int df) {
+static BitBoard RayMask(Square sq, int dr, int df) {
   BitBoard mask = 0;
 
   for (int r = Rank(sq) + dr, f = File(sq) + df; r >= 0 && r <= 7 && f >= 0 && f <= 7; r += dr, f += df)
@@ -475,7 +475,7 @@ static void InitDualMagics(void) {
     for (int occ = 0; occ < 64; occ++)
       RANK_ATTACKS[f][occ] = (uint8_t) GetRookAttacksOTF(f, (BitBoard) occ << 1);
 
-  for (int sq = 0; sq < 64; sq++) {
+  for (Square sq = 0; sq < 64; sq++) {
     DualMagic* m = &DUAL_MAGICS[sq];
 
     m->maskFile     = RayMask(sq, 1, 0) | RayMask(sq, -1, 0);
@@ -496,7 +496,7 @@ static void InitDualMagics(void) {
 #endif
 
 static void InitSliderRays(void) {
-  for (int sq = 0; sq < 64; sq++) {
+  for (Square sq = 0; sq < 64; sq++) {
     BISHOP_RAYS[sq] = GetBishopAttacksOTF(sq, 0);
     ROOK_RAYS[sq]   = GetRookAttacksOTF(sq, 0);
   }

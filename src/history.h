@@ -53,7 +53,7 @@ INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
             Moving(move),
             To(move),
             !GetBit(board->threatened, To(move)),
-            IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
+            IsEP(move) ? PAWN : TypeOf(board->squares[To(move)]));
 }
 
 INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
@@ -71,7 +71,7 @@ INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
   thread->counters[Moving(parent)][To(parent)] = move;
 }
 
-INLINE int16_t HistoryBonus(int depth) {
+INLINE int16_t HistoryBonus(Depth depth) {
   return Min(1708, 4 * depth * depth + 191 * depth - 118);
 }
 
@@ -92,7 +92,7 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
 
 extern CorrectionHistory Correction;
 
-INLINE int GetCorrectionScore(Board* board, SearchStack* ss) {
+INLINE Score GetCorrectionScore(Board* board, SearchStack* ss) {
   const int pawn  = Correction.pawn[board->pawnZobrist & CORRECTION_MASK];
   const int white = Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & CORRECTION_MASK];
   const int black = Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & CORRECTION_MASK];
@@ -105,14 +105,14 @@ INLINE int GetCorrectionScore(Board* board, SearchStack* ss) {
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
-                     int depth,
+                     Depth depth,
                      Move quiets[],
                      int nQ,
                      Move captures[],
                      int nC);
 
-void UpdateCorrection(int raw, int real, int depth, Board* board);
-void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
+void UpdateCorrection(Score raw, Score real, Depth depth, Board* board);
+void UpdateContCorrection(Score raw, Score real, Depth depth, SearchStack* ss);
 void CorrectionClearPart(int idx, int count);
 
 #endif

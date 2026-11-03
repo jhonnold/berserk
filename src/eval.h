@@ -27,14 +27,14 @@
 // Normalization of a score to 50% WR at 100cp
 #define Normalize(s) ((s) / 1.58)
 
-INLINE int ClampEval(int eval) {
+INLINE Score ClampEval(Score eval) {
   return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
 }
 
 extern const int PHASE_VALUES[6];
 
-void SetContempt(int* dest, int stm);
-int Evaluate(Board* board, ThreadData* thread);
+void SetContempt(Score* dest, Color stm);
+Score Evaluate(Board* board, ThreadData* thread);
 void EvaluateTrace(Board* board);
 
 #endif

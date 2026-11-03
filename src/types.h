@@ -24,7 +24,18 @@
 #define MAX_MOVES      128
 
 typedef uint64_t BitBoard;
+typedef uint64_t Key; // zobrist hash
 typedef uint32_t Move;
+
+// Plain int aliases that name what a value holds; the compiler treats them all as int
+typedef int Square;    // A8 = 0 .. H1 = 63
+typedef int Color;     // WHITE, BLACK
+typedef int Piece;     // WHITE_PAWN .. BLACK_KING, colour in the low bit
+typedef int PieceType; // PAWN .. KING
+typedef int Score;     // search and eval score, centipawn-ish
+typedef int Depth;     // remaining search depth
+typedef int Ply;       // distance from the root (or game start)
+typedef int Bool;      // 0 or 1
 
 // defined in board.h, nn/defs.h and thread.h; most headers only need pointers
 typedef struct Board Board;

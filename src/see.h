@@ -23,6 +23,6 @@ extern const int SEE_VALUE[7];
 
 // Static exchange evaluation using The Swap Algorithm -
 // https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
-int SEE(Board* board, Move move, int threshold);
+Bool SEE(Board* board, Move move, Score threshold);
 
 #endif

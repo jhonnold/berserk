@@ -20,9 +20,9 @@
 #include "types.h"
 
 // search output, in UCI format
-void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board);
+void PrintUCI(ThreadData* thread, Depth depth, Score alpha, Score beta, Board* board);
 void PrintBestMove(Move bestMove, Move ponderMove, Board* board);
-void PrintCurrMove(int depth, Move move, int number, Board* board);
+void PrintCurrMove(Depth depth, Move move, int number, Board* board);
 
 void UCILoop(void);
 

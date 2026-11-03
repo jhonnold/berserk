@@ -88,8 +88,8 @@ Move ParseMove(char* moveStr, Board* board) {
 char* MoveToStr(Move move, Board* board) {
   static char buffer[6];
 
-  int from = From(move);
-  int to   = To(move);
+  Square from = From(move);
+  Square to   = To(move);
 
   if (CHESS_960 && IsCas(move))
     to = board->cr[CASTLING_ROOK[to]];

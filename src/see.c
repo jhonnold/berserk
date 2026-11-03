@@ -27,22 +27,22 @@ const int SEE_VALUE[7] = {86, 326, 394, 593, 1047, 30000, 0};
 
 // Static exchange evaluation using The Swap Algorithm -
 // https://www.chessprogramming.org/SEE_-_The_Swap_Algorithm
-int SEE(Board* board, Move move, int threshold) {
+Bool SEE(Board* board, Move move, Score threshold) {
   if (IsCas(move) || IsEP(move) || IsPromo(move))
     return 1;
 
-  int from = From(move);
-  int to   = To(move);
+  Square from = From(move);
+  Square to   = To(move);
 
-  int v = SEE_VALUE[PieceType(board->squares[to])] - threshold;
+  int v = SEE_VALUE[TypeOf(board->squares[to])] - threshold;
   if (v < 0)
     return 0;
 
-  v = SEE_VALUE[PieceType(Moving(move))] - v;
+  v = SEE_VALUE[TypeOf(Moving(move))] - v;
   if (v <= 0)
     return 1;
 
-  int stm            = board->stm;
+  Color stm          = board->stm;
   BitBoard occ       = OccBB(board, BOTH) ^ Bit(from) ^ Bit(to);
   BitBoard attackers = AttacksToSquare(board, to, occ);
   BitBoard mine, leastAttacker;

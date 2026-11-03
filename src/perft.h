@@ -19,6 +19,6 @@
 
 #include "types.h"
 
-void PerftTest(int depth, Board* board);
+void PerftTest(Depth depth, Board* board);
 
 #endif

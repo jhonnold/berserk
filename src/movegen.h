@@ -51,12 +51,17 @@ enum {
   GT_LEGAL   = 0b11,
 };
 
-INLINE ScoredMove* AddMove(ScoredMove* moves, int from, int to, int moving, int flags) {
+INLINE ScoredMove* AddMove(ScoredMove* moves, Square from, Square to, Piece moving, int flags) {
   *moves++ = (ScoredMove) {.move = BuildMove(from, to, moving, flags), .score = 0};
   return moves;
 }
 
-INLINE ScoredMove* AddPromotions(ScoredMove* moves, int from, int to, int moving, const int baseFlag, const int type) {
+INLINE ScoredMove* AddPromotions(ScoredMove* moves,
+                                 Square from,
+                                 Square to,
+                                 Piece moving,
+                                 const int baseFlag,
+                                 const int type) {
   if (type & GT_CAPTURE)
     moves = AddMove(moves, from, to, moving, baseFlag | QUEEN_PROMO_FLAG);
 
@@ -69,8 +74,8 @@ INLINE ScoredMove* AddPromotions(ScoredMove* moves, int from, int to, int moving
   return moves;
 }
 
-INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, const int stm, const int type) {
-  const int xstm = stm ^ 1;
+INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, const Color stm, const int type) {
+  const Color xstm = stm ^ 1;
 
   if (type & GT_QUIET) {
     // Quiet non-promotions
@@ -81,13 +86,13 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
     targets &= opts, dpTargets &= opts;
 
     while (targets) {
-      int to = PopLSB(&targets);
-      moves  = AddMove(moves, to - PawnDir(stm), to, Piece(PAWN, stm), QUIET_FLAG);
+      Square to = PopLSB(&targets);
+      moves     = AddMove(moves, to - PawnDir(stm), to, MakePiece(PAWN, stm), QUIET_FLAG);
     }
 
     while (dpTargets) {
-      int to = PopLSB(&dpTargets);
-      moves  = AddMove(moves, to - PawnDir(stm) - PawnDir(stm), to, Piece(PAWN, stm), QUIET_FLAG);
+      Square to = PopLSB(&dpTargets);
+      moves     = AddMove(moves, to - PawnDir(stm) - PawnDir(stm), to, MakePiece(PAWN, stm), QUIET_FLAG);
     }
   }
 
@@ -98,21 +103,21 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
     BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(board, xstm) & opts;
 
     while (eTargets) {
-      int to = PopLSB(&eTargets);
-      moves  = AddMove(moves, to - (PawnDir(stm) + E), to, Piece(PAWN, stm), CAPTURE_FLAG);
+      Square to = PopLSB(&eTargets);
+      moves     = AddMove(moves, to - (PawnDir(stm) + E), to, MakePiece(PAWN, stm), CAPTURE_FLAG);
     }
 
     while (wTargets) {
-      int to = PopLSB(&wTargets);
-      moves  = AddMove(moves, to - (PawnDir(stm) + W), to, Piece(PAWN, stm), CAPTURE_FLAG);
+      Square to = PopLSB(&wTargets);
+      moves     = AddMove(moves, to - (PawnDir(stm) + W), to, MakePiece(PAWN, stm), CAPTURE_FLAG);
     }
 
     if (board->epSquare) {
       BitBoard movers = GetPawnAttacks(board->epSquare, xstm) & valid;
 
       while (movers) {
-        int from = PopLSB(&movers);
-        moves    = AddMove(moves, from, board->epSquare, Piece(PAWN, stm), EP_FLAG);
+        Square from = PopLSB(&movers);
+        moves       = AddMove(moves, from, board->epSquare, MakePiece(PAWN, stm), EP_FLAG);
       }
     }
   }
@@ -124,18 +129,18 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
   BitBoard wTargets = ShiftPawnCapW(valid, stm) & OccBB(board, xstm) & opts;
 
   while (sTargets) {
-    int to = PopLSB(&sTargets);
-    moves  = AddPromotions(moves, to - PawnDir(stm), to, Piece(PAWN, stm), QUIET_FLAG, type);
+    Square to = PopLSB(&sTargets);
+    moves     = AddPromotions(moves, to - PawnDir(stm), to, MakePiece(PAWN, stm), QUIET_FLAG, type);
   }
 
   while (eTargets) {
-    int to = PopLSB(&eTargets);
-    moves  = AddPromotions(moves, to - (PawnDir(stm) + E), to, Piece(PAWN, stm), CAPTURE_FLAG, type);
+    Square to = PopLSB(&eTargets);
+    moves     = AddPromotions(moves, to - (PawnDir(stm) + E), to, MakePiece(PAWN, stm), CAPTURE_FLAG, type);
   }
 
   while (wTargets) {
-    int to = PopLSB(&wTargets);
-    moves  = AddPromotions(moves, to - (PawnDir(stm) + W), to, Piece(PAWN, stm), CAPTURE_FLAG, type);
+    Square to = PopLSB(&wTargets);
+    moves     = AddPromotions(moves, to - (PawnDir(stm) + W), to, MakePiece(PAWN, stm), CAPTURE_FLAG, type);
   }
 
   return moves;
@@ -144,23 +149,23 @@ INLINE ScoredMove* AddPawnMoves(ScoredMove* moves, BitBoard opts, Board* board, 
 INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
                                  BitBoard opts,
                                  Board* board,
-                                 const int stm,
+                                 const Color stm,
                                  const int type,
-                                 const int piece) {
-  const int xstm = stm ^ 1;
+                                 const PieceType piece) {
+  const Color xstm = stm ^ 1;
 
   BitBoard movers = PieceBB(board, piece, stm);
   while (movers) {
-    int from       = PopLSB(&movers);
+    Square from    = PopLSB(&movers);
     BitBoard valid = GetPieceAttacks(from, OccBB(board, BOTH), piece) & opts;
 
     if (type & GT_CAPTURE) {
       BitBoard targets = valid & OccBB(board, xstm);
 
       while (targets) {
-        int to = PopLSB(&targets);
+        Square to = PopLSB(&targets);
 
-        moves = AddMove(moves, from, to, Piece(piece, stm), CAPTURE_FLAG);
+        moves = AddMove(moves, from, to, MakePiece(piece, stm), CAPTURE_FLAG);
       }
     }
 
@@ -168,9 +173,9 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
       BitBoard targets = valid & ~OccBB(board, BOTH);
 
       while (targets) {
-        int to = PopLSB(&targets);
+        Square to = PopLSB(&targets);
 
-        moves = AddMove(moves, from, to, Piece(piece, stm), QUIET_FLAG);
+        moves = AddMove(moves, from, to, MakePiece(piece, stm), QUIET_FLAG);
       }
     }
   }
@@ -178,20 +183,20 @@ INLINE ScoredMove* AddPieceMoves(ScoredMove* moves,
   return moves;
 }
 
-INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
+INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const Color stm) {
   const int rookStart = stm == WHITE ? 0 : 2;
   const int rookEnd   = stm == WHITE ? 2 : 4;
-  const int from      = LSB(PieceBB(board, KING, stm));
+  const Square from   = LSB(PieceBB(board, KING, stm));
 
   for (int rk = rookStart; rk < rookEnd; rk++) {
     if (!CanCastle(board, CASTLE_MAP[rk][0]))
       continue;
 
-    int rookFrom = board->cr[rk];
+    Square rookFrom = board->cr[rk];
     if (GetBit(board->pinned, rookFrom))
       continue;
 
-    int to = CASTLE_MAP[rk][1], rookTo = CASTLE_MAP[rk][2];
+    Square to = CASTLE_MAP[rk][1], rookTo = CASTLE_MAP[rk][2];
 
     BitBoard kingCrossing = BetweenSquares(from, to) | Bit(to);
     BitBoard rookCrossing = BetweenSquares(rookFrom, rookTo) | Bit(rookTo);
@@ -199,15 +204,15 @@ INLINE ScoredMove* AddCastles(ScoredMove* moves, Board* board, const int stm) {
 
     if (!((OccBB(board, BOTH) ^ Bit(from) ^ Bit(rookFrom)) & between))
       if (!(kingCrossing & board->threatened))
-        moves = AddMove(moves, from, to, Piece(KING, stm), CASTLE_FLAG);
+        moves = AddMove(moves, from, to, MakePiece(KING, stm), CASTLE_FLAG);
   }
 
   return moves;
 }
 
-INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm) {
-  const int xstm            = !stm;
-  const int oppKingSq       = LSB(PieceBB(board, KING, xstm));
+INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const Color stm) {
+  const Color xstm          = !stm;
+  const Square oppKingSq    = LSB(PieceBB(board, KING, xstm));
   const BitBoard bishopMask = GetBishopAttacks(oppKingSq, OccBB(board, BOTH));
   const BitBoard rookMask   = GetRookAttacks(oppKingSq, OccBB(board, BOTH));
 
@@ -219,7 +224,7 @@ INLINE ScoredMove* AddQuietChecks(ScoredMove* moves, Board* board, const int stm
   return AddPawnMoves(moves, GetPawnAttacks(oppKingSq, xstm), board, stm, GT_QUIET);
 }
 
-INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const int color) {
+INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const int type, const Color color) {
   if (BitCount(board->checkers) > 1)
     return AddPieceMoves(moves, ~board->threatened, board, color, type, KING);
 
@@ -238,7 +243,7 @@ INLINE ScoredMove* AddPseudoLegalMoves(ScoredMove* moves, Board* board, const in
   return moves;
 }
 
-INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const int color) {
+INLINE ScoredMove* AddLegalMoves(ScoredMove* moves, Board* board, const Color color) {
   ScoredMove* curr = moves;
   BitBoard pinned  = board->pinned;
 

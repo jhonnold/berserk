@@ -80,11 +80,11 @@ INLINE vu8_t Pairwise(vi16_t a0, vi16_t a1, vi16_t b0, vi16_t b1) {
 }
 #endif
 
-INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const Color stm) {
 #if defined(SIMD)
-  const size_t WIDTH = sizeof(vi16_t) / sizeof(acc_t);
-  const size_t HALF  = N_HIDDEN / 2 / WIDTH;
-  const int views[2] = {stm, !stm};
+  const size_t WIDTH   = sizeof(vi16_t) / sizeof(acc_t);
+  const size_t HALF    = N_HIDDEN / 2 / WIDTH;
+  const Color views[2] = {stm, !stm};
 
 #if defined(__AVX512F__) && defined(__AVX512BW__) && defined(__AVX512VBMI2__)
   const __m512i increment = _mm512_set1_epi16(32);
@@ -141,7 +141,7 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   return count;
 #else
-  const int views[2] = {stm, !stm};
+  const Color views[2] = {stm, !stm};
 
   (void) nnz;
 
@@ -384,7 +384,7 @@ INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
 #endif
 }
 
-INLINE int PropagateView(Accumulator* accumulator, const int stm, const int bucket) {
+INLINE Score PropagateView(Accumulator* accumulator, const Color stm, const int bucket) {
   uint8_t x0[N_L1] ALIGN;
   // The index list is written in whole groups of up to 32, so leave room for the tail.
   uint16_t nnz[N_L1 / SPARSE_CHUNK_SIZE + 32] ALIGN;
@@ -408,7 +408,7 @@ int OutputBucket(Board* board) {
 
 // Both call sites pass a literal side, so specialising on it lets the pair of
 // perspective indices fold away instead of being read back from a local array.
-int Propagate(Accumulator* accumulator, const int stm, const int bucket) {
+Score Propagate(Accumulator* accumulator, const Color stm, const int bucket) {
   return stm == WHITE ? PropagateView(accumulator, WHITE, bucket) : PropagateView(accumulator, BLACK, bucket);
 }
 

@@ -43,16 +43,16 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
 }
 
 // Resets an accumulator from pieces on the board
-void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
+void ResetAccumulator(Accumulator* dest, Board* board, const Color perspective) {
   Delta delta[1];
   delta->r = delta->a = 0;
 
-  int kingSq = LSB(PieceBB(board, KING, perspective));
+  Square kingSq = LSB(PieceBB(board, KING, perspective));
 
   BitBoard occ = OccBB(board, BOTH);
   while (occ) {
-    int sq                 = PopLSB(&occ);
-    int pc                 = board->squares[sq];
+    Square sq              = PopLSB(&occ);
+    Piece pc               = board->squares[sq];
     delta->add[delta->a++] = FeatureIdx(pc, sq, kingSq, perspective);
   }
 

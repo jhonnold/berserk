@@ -41,8 +41,8 @@ INLINE Move TBMoveFromResult(unsigned res, Board* board) {
   unsigned to    = TB_GET_TO(res) ^ 56;
   unsigned ep    = TB_GET_EP(res);
   unsigned promo = TB_GET_PROMOTES(res);
-  int piece      = board->squares[from];
-  int capture    = board->squares[to] != NO_PIECE;
+  Piece piece    = board->squares[from];
+  Bool capture   = board->squares[to] != NO_PIECE;
 
   int flags = QUIET_FLAG;
   if (ep)

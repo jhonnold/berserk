@@ -17,8 +17,10 @@
 #ifndef BENCH_H
 #define BENCH_H
 
+#include "types.h"
+
 #define DEFAULT_BENCH_DEPTH 13
 
-void Bench(int depth);
+void Bench(Depth depth);
 
 #endif

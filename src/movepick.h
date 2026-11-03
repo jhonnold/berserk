@@ -57,7 +57,9 @@ typedef struct {
   ThreadData* thread;
   SearchStack* ss;
   Move hashMove, killer1, killer2, counter;
-  int seeCutoff, phase, genChecks;
+  Score seeCutoff;
+  int phase;
+  Bool genChecks;
 
   ScoredMove *current, *end, *endBad;
   ScoredMove moves[MAX_MOVES];
@@ -86,13 +88,13 @@ INLINE void InitNormalMovePicker(MovePicker* picker, Move hashMove, ThreadData* 
   picker->ss     = ss;
 }
 
-INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread, int threshold) {
+INLINE void InitPCMovePicker(MovePicker* picker, ThreadData* thread, Score threshold) {
   picker->phase     = PC_GEN_NOISY_MOVES;
   picker->thread    = thread;
   picker->seeCutoff = threshold;
 }
 
-INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, int genChecks) {
+INLINE void InitQSMovePicker(MovePicker* picker, ThreadData* thread, Bool genChecks) {
   picker->phase     = QS_GEN_NOISY_MOVES;
   picker->thread    = thread;
   picker->genChecks = genChecks;
@@ -114,6 +116,6 @@ INLINE void InitPerftMovePicker(MovePicker* picker, Board* board) {
   picker->end = AddPerftMoves(picker->moves, board);
 }
 
-Move NextMove(MovePicker* picker, Board* board, int skipQuiets);
+Move NextMove(MovePicker* picker, Board* board, Bool skipQuiets);
 
 #endif

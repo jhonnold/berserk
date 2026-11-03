@@ -55,7 +55,7 @@ extern const int CASTLING_ROOK[64];
 
 #define IsPromo(move)         (!!(Flags(move) & PROMO_FLAG))
 #define PromoPT(move)         ((Flags(move) & 0x3) + KNIGHT)
-#define PromoPiece(move, stm) (Piece(PromoPT(move), stm))
+#define PromoPiece(move, stm) (MakePiece(PromoPT(move), stm))
 
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move, Board* board);

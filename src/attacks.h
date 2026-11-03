@@ -113,11 +113,11 @@ INLINE __m128i DualHyperbola(const DualMagic* m, BitBoard occupancy) {
   return _mm_or_si128(_mm256_extracti128_si256(attacks, 1), _mm256_castsi256_si128(attacks));
 }
 
-INLINE BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetBishopAttacks(Square sq, BitBoard occupancy) {
   return (BitBoard) _mm_extract_epi64(DualHyperbola(&DUAL_MAGICS[sq], occupancy), 1);
 }
 
-INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetRookAttacks(Square sq, BitBoard occupancy) {
   const DualMagic* m = &DUAL_MAGICS[sq];
   return (BitBoard) _mm_cvtsi128_si64(DualHyperbola(m, occupancy)) |
          ((BitBoard) m->rankAttacks[(occupancy >> (m->shift + 1)) & 0x3f] << m->shift);
@@ -129,17 +129,17 @@ INLINE BitBoard MagicAttacks(const Magic* m, BitBoard occupancy) {
   return m->attacks[((occupancy & m->mask) * m->magic) >> m->shift];
 }
 
-INLINE BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetBishopAttacks(Square sq, BitBoard occupancy) {
   return MagicAttacks(&MAGICS[sq].bishop, occupancy);
 }
 
-INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetRookAttacks(Square sq, BitBoard occupancy) {
   return MagicAttacks(&MAGICS[sq].rook, occupancy);
 }
 
 #endif
 
-INLINE BitBoard BetweenSquares(int from, int to) {
+INLINE BitBoard BetweenSquares(Square from, Square to) {
   return BETWEEN_SQS[from][to];
 }
 
@@ -147,23 +147,23 @@ INLINE BitBoard PinnedMoves(int p, int k) {
   return PINNED_MOVES[p][k];
 }
 
-INLINE BitBoard GetPawnAttacks(int sq, int color) {
+INLINE BitBoard GetPawnAttacks(Square sq, Color color) {
   return PAWN_ATTACKS[color][sq];
 }
 
-INLINE BitBoard GetKnightAttacks(int sq) {
+INLINE BitBoard GetKnightAttacks(Square sq) {
   return KNIGHT_ATTACKS[sq];
 }
 
-INLINE BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetQueenAttacks(Square sq, BitBoard occupancy) {
   return GetBishopAttacks(sq, occupancy) | GetRookAttacks(sq, occupancy);
 }
 
-INLINE BitBoard GetKingAttacks(int sq) {
+INLINE BitBoard GetKingAttacks(Square sq) {
   return KING_ATTACKS[sq];
 }
 
-INLINE BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
+INLINE BitBoard GetPieceAttacks(Square sq, BitBoard occupancy, const PieceType type) {
   switch (type) {
     case KNIGHT: return GetKnightAttacks(sq);
     case BISHOP: return GetBishopAttacks(sq, occupancy);
@@ -176,7 +176,7 @@ INLINE BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
 }
 
 // get a bitboard of ALL pieces attacking a given square
-INLINE BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
+INLINE BitBoard AttacksToSquare(Board* board, Square sq, BitBoard occ) {
   return (GetPawnAttacks(sq, WHITE) & PieceBB(board, PAWN, BLACK)) | // White and Black Pawn atx
          (GetPawnAttacks(sq, BLACK) & PieceBB(board, PAWN, WHITE)) | //
          (GetKnightAttacks(sq) & (PieceBB(board, KNIGHT, WHITE) | PieceBB(board, KNIGHT, BLACK))) |    // Knights

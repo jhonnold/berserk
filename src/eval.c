@@ -30,20 +30,20 @@
 
 const int PHASE_VALUES[6] = {0, 3, 3, 5, 10, 0};
 
-void SetContempt(int* dest, int stm) {
-  int contempt = CONTEMPT;
+void SetContempt(Score* dest, Color stm) {
+  Score contempt = CONTEMPT;
 
   dest[stm]     = contempt;
   dest[stm ^ 1] = -contempt;
 }
 
 // Main evalution method
-int Evaluate(Board* board, ThreadData* thread) {
+Score Evaluate(Board* board, ThreadData* thread) {
   if (IsMaterialDraw(board))
     return 0;
 
   Accumulator* acc = board->accumulators;
-  for (int c = WHITE; c <= BLACK; c++) {
+  for (Color c = WHITE; c <= BLACK; c++) {
     if (!acc->correct[c]) {
       if (CanEfficientlyUpdate(acc, c))
         ApplyLazyUpdates(acc, board, c);
@@ -53,7 +53,7 @@ int Evaluate(Board* board, ThreadData* thread) {
   }
 
   const int bucket = OutputBucket(board);
-  int score        = Propagate(acc, board->stm, bucket);
+  Score score      = Propagate(acc, board->stm, bucket);
 
   // scaled based on phase [1, 1.5]
   score = (128 + board->phase) * score / 128;
@@ -82,14 +82,14 @@ void EvaluateTrace(Board* board) {
       if (f == 8)
         printf("\n|");
 
-      int sq = r * 8 + (f > 7 ? f - 8 : f);
-      int pc = board->squares[sq];
+      Square sq = r * 8 + (f > 7 ? f - 8 : f);
+      Piece pc  = board->squares[sq];
 
       if (pc == NO_PIECE) {
         printf("       |");
       } else if (f < 8) {
         printf("   %c   |", PIECE_TO_CHAR[pc]);
-      } else if (PieceType(pc) == KING) {
+      } else if (TypeOf(pc) == KING) {
         printf("       |");
       } else {
         // To calculate the piece value, we pop it
@@ -106,9 +106,9 @@ void EvaluateTrace(Board* board) {
         SetBit(OccBB(board, pc & 1), sq);
         SetBit(OccBB(board, BOTH), sq);
 
-        int diff       = base - new;
-        int normalized = Normalize(diff);
-        int v          = abs(normalized);
+        int diff         = base - new;
+        Score normalized = Normalize(diff);
+        int v            = abs(normalized);
 
         char buffer[6];
         buffer[5] = '\0';

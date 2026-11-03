@@ -31,8 +31,8 @@ typedef struct {
 
 typedef struct {
   Move move;
-  int seldepth;
-  int score, previousScore, avgScore;
+  Depth seldepth;
+  Score score, previousScore, avgScore;
   uint64_t nodes;
   PV pv;
 } RootMove;
@@ -47,17 +47,19 @@ enum {
 };
 
 struct ThreadData {
-  int idx, multiPV, depth, completedDepth, seldepth;
+  int idx, multiPV;
+  Depth depth, completedDepth, seldepth;
   atomic_uint_fast64_t nodes, tbhits;
 
-  int nmpMinPly, npmColor;
+  Ply nmpMinPly;
+  Color npmColor;
 
   Accumulator* accumulators; // base of the per ply stack; board.accumulators walks it
 
   Board board;
 
-  int contempt[2];
-  int previousScore;
+  Score contempt[2];
+  Score previousScore;
   int numRootMoves;
   RootMove rootMoves[MAX_MOVES];
 

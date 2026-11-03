@@ -23,8 +23,10 @@
 typedef int16_t PieceTo[12][64];
 
 typedef struct {
-  int ply, staticEval, de;
-  int reduction;
+  Ply ply;
+  Score staticEval;
+  int de;
+  Depth reduction;
   PieceTo* ch;
   PieceTo* cont;
   Move move, skip;
@@ -40,12 +42,12 @@ typedef struct {
   uint64_t softNodes;
   int hitrate;
 
-  int timeset;
-  int depth;
+  Bool timeset;
+  Depth depth;
   int mate;
   int multiPV;
-  int infinite;
-  int searchMoves;
+  Bool infinite;
+  Bool searchMoves;
   SimpleMoveList searchable;
 } SearchParams;
 

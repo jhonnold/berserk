@@ -51,12 +51,12 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   const BitBoard threats[3]   = {pawnThreats, minorThreats, rookThreats};
 
   while (current < picker->end) {
-    const Move move    = current->move;
-    const int from     = From(move);
-    const int to       = To(move);
-    const int pc       = Moving(move);
-    const int pt       = PieceType(pc);
-    const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
+    const Move move          = current->move;
+    const Square from        = From(move);
+    const Square to          = To(move);
+    const Piece pc           = Moving(move);
+    const PieceType pt       = TypeOf(pc);
+    const PieceType captured = IsEP(move) ? PAWN : TypeOf(board->squares[to]);
 
     if (type == ST_QUIET || type == ST_EVASION_QT) {
       current->score = ((int) HH(thread, board->stm, move, board->threatened) * 26 + //
@@ -75,7 +75,7 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
           current->score -= 13955;
       }
     } else if (type == ST_CAPTURE)
-      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
+      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[TypeOf(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
       current->score = 1e7 + SEE_VALUE[captured];
@@ -87,7 +87,7 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   }
 }
 
-Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
+Move NextMove(MovePicker* picker, Board* board, Bool skipQuiets) {
   switch (picker->phase) {
     case HASH_MOVE:
       picker->phase = GEN_NOISY_MOVES;

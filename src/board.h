@@ -22,30 +22,30 @@
 
 typedef struct {
   int castling;
-  int ep;
+  Square ep;
   int fmr;
-  int nullply;
-  uint64_t zobrist;
-  uint64_t pawnZobrist;
-  uint64_t nonPawnZobrist[2];
+  Ply nullply;
+  Key zobrist;
+  Key pawnZobrist;
+  Key nonPawnZobrist[2];
   BitBoard checkers;
   BitBoard pinned;
   BitBoard threatened;
   BitBoard threatenedBy[6];
-  int capture;
+  Piece capture;
 } BoardHistory;
 
 struct Board {
   // The below are in order of BoardHistory above for copies
-  int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
-  int epSquare; // en passant square (a8 or 0 is not valid so that marks no
-                // active ep)
-  int fmr;      // half move count for 50 move rule
-  int nullply;  // distance from last nullmove
+  int castling;    // castling mask e.g. 1111 = KQkq, 1001 = Kq
+  Square epSquare; // en passant square (a8 or 0 is not valid so that marks no
+                   // active ep)
+  int fmr;         // half move count for 50 move rule
+  Ply nullply;     // distance from last nullmove
 
-  uint64_t zobrist;           // zobrist hash of the position
-  uint64_t pawnZobrist;       // pawn zobrist hash of the position (pawns + stm)
-  uint64_t nonPawnZobrist[2]; // per color non-pawn zobrist hash (pieces + stm)
+  Key zobrist;           // zobrist hash of the position
+  Key pawnZobrist;       // pawn zobrist hash of the position (pawns + stm)
+  Key nonPawnZobrist[2]; // per color non-pawn zobrist hash (pieces + stm)
 
   BitBoard checkers; // checking piece squares
   BitBoard pinned;   // pinned pieces
@@ -53,9 +53,9 @@ struct Board {
   BitBoard threatened; // opponent "threatening" these squares
   BitBoard threatenedBy[6];
 
-  int stm;     // side to move
-  int xstm;    // not side to move
-  int histPly; // ply for historical state
+  Color stm;   // side to move
+  Color xstm;  // not side to move
+  Ply histPly; // ply for historical state
   int moveNo;  // game move number
   int phase;   // efficiently updated phase for scaling
 
@@ -78,9 +78,9 @@ struct Board {
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-#define Piece(pc, c)      (((pc) << 1) + (c))
-#define PieceType(pc)     ((pc) >> 1)
-#define PieceBB(b, pc, c) ((b)->pieces[Piece(pc, (c))])
+#define MakePiece(pc, c)  (((pc) << 1) + (c))
+#define TypeOf(pc)        ((pc) >> 1)
+#define PieceBB(b, pc, c) ((b)->pieces[MakePiece(pc, (c))])
 #define OccBB(b, c)       ((b)->occupancies[c])
 
 #define File(sq)       ((sq) & 7)
@@ -91,11 +91,11 @@ void ParseFen(const char* fen, Board* board);
 void BoardToFen(char* fen, Board* board);
 void PrintBoard(Board* board);
 
-int DoesMoveCheck(Move move, Board* board);
+Bool DoesMoveCheck(Move move, Board* board);
 
-int IsFiftyMoveRule(Board* board);
+Bool IsFiftyMoveRule(Board* board);
 
-INLINE int IsRepetition(Board* board, int ply) {
+INLINE Bool IsRepetition(Board* board, Ply ply) {
   int reps = 0, distance = Min(board->fmr, board->nullply);
 
   // Check as far back as the last non-reversible move
@@ -113,7 +113,7 @@ INLINE int IsRepetition(Board* board, int ply) {
   return 0;
 }
 
-INLINE int IsMaterialDraw(Board* board) {
+INLINE Bool IsMaterialDraw(Board* board) {
   switch (board->piecesCounts) {
     case 0x0:      // Kk
     case 0x100:    // KNk
@@ -131,25 +131,25 @@ INLINE int IsMaterialDraw(Board* board) {
   }
 }
 
-INLINE int IsDraw(Board* board, int ply) {
+INLINE Bool IsDraw(Board* board, Ply ply) {
   return IsRepetition(board, ply) || IsMaterialDraw(board) || IsFiftyMoveRule(board);
 }
 
 void MakeNullMove(Board* board);
 void UndoNullMove(Board* board);
 void MakeMove(Move move, Board* board);
-void MakeMoveUpdate(Move move, Board* board, int update);
+void MakeMoveUpdate(Move move, Board* board, Bool update);
 void UndoMove(Move move, Board* board);
-void UndoMoveUpdate(Move move, Board* board, int update);
+void UndoMoveUpdate(Move move, Board* board, Bool update);
 
-int IsPseudoLegal(Move move, Board* board);
-int IsLegal(Move move, Board* board);
+Bool IsPseudoLegal(Move move, Board* board);
+Bool IsLegal(Move move, Board* board);
 
 void InitCuckoo(void);
-int HasCycle(Board* board, int ply);
+Bool HasCycle(Board* board, Ply ply);
 
 INLINE BitBoard OpponentsEasyCaptures(Board* board) {
-  const int stm         = board->stm;
+  const Color stm       = board->stm;
   const BitBoard queens = PieceBB(board, QUEEN, stm);
   const BitBoard rooks  = queens | PieceBB(board, ROOK, stm);
   const BitBoard minors = rooks | PieceBB(board, BISHOP, stm) | PieceBB(board, KNIGHT, stm);
@@ -161,7 +161,7 @@ INLINE BitBoard OpponentsEasyCaptures(Board* board) {
   return (queens & rookThreats) | (rooks & minorThreats) | (minors & pawnThreats);
 }
 
-INLINE int HasNonPawn(Board* board, const int color) {
+INLINE Bool HasNonPawn(Board* board, const Color color) {
   return !!(OccBB(board, color) ^ PieceBB(board, KING, color) ^ PieceBB(board, PAWN, color));
 }
 

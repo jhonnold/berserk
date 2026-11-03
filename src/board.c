@@ -77,10 +77,10 @@ static void ClearBoard(Board* board) {
 
 // these must be recalculated every move for faster move legality purposes
 INLINE void SetSpecialPieces(Board* board) {
-  const int stm  = board->stm;
-  const int xstm = board->xstm;
+  const Color stm  = board->stm;
+  const Color xstm = board->xstm;
 
-  int kingSq = LSB(PieceBB(board, KING, stm));
+  Square kingSq = LSB(PieceBB(board, KING, stm));
 
   board->pinned   = 0;
   board->checkers = (GetKnightAttacks(kingSq) & PieceBB(board, KNIGHT, xstm)) | // knight and
@@ -89,7 +89,7 @@ INLINE void SetSpecialPieces(Board* board) {
   BitBoard sliders = ((PieceBB(board, BISHOP, xstm) | PieceBB(board, QUEEN, xstm)) & BISHOP_RAYS[kingSq]) |
                      ((PieceBB(board, ROOK, xstm) | PieceBB(board, QUEEN, xstm)) & ROOK_RAYS[kingSq]);
   while (sliders) {
-    int sq = PopLSB(&sliders);
+    Square sq = PopLSB(&sliders);
 
     BitBoard blockers = BetweenSquares(kingSq, sq) & OccBB(board, BOTH);
     if (!blockers)
@@ -101,8 +101,8 @@ INLINE void SetSpecialPieces(Board* board) {
 
 INLINE void SetThreats(Board* board) {
   // Invert these to be confusing.
-  const int stm  = board->xstm;
-  const int xstm = board->stm;
+  const Color stm  = board->xstm;
+  const Color xstm = board->stm;
 
   // Take the enemy king off for through threats.
   BitBoard occ = OccBB(board, BOTH) ^ PieceBB(board, KING, xstm);
@@ -145,11 +145,11 @@ void ParseFen(const char* fen, Board* board) {
 
   for (int i = 0; i < 64; i++) {
     if ((*fen >= 'a' && *fen <= 'z') || (*fen >= 'A' && *fen <= 'Z')) {
-      int piece = CHAR_TO_PIECE[(int) *fen];
+      Piece piece = CHAR_TO_PIECE[(int) *fen];
       SetBit(board->pieces[piece], i);
       board->squares[i] = piece;
 
-      board->phase += PHASE_VALUES[PieceType(piece)];
+      board->phase += PHASE_VALUES[TypeOf(piece)];
 
       if (*fen != 'K' && *fen != 'k')
         board->piecesCounts += PieceCount(piece);
@@ -172,8 +172,8 @@ void ParseFen(const char* fen, Board* board) {
   for (int i = 0; i < 4; i++)
     board->cr[i] = -1;
 
-  int whiteKing = LSB(PieceBB(board, KING, WHITE));
-  int blackKing = LSB(PieceBB(board, KING, BLACK));
+  Square whiteKing = LSB(PieceBB(board, KING, WHITE));
+  Square blackKing = LSB(PieceBB(board, KING, BLACK));
 
   BitBoard whiteRooks = PieceBB(board, ROOK, WHITE) & RANK_1;
   BitBoard blackRooks = PieceBB(board, ROOK, BLACK) & RANK_8;
@@ -247,8 +247,8 @@ void BoardToFen(char* fen, Board* board) {
   for (int r = 0; r < 8; r++) {
     int c = 0;
     for (int f = 0; f < 8; f++) {
-      int sq    = 8 * r + f;
-      int piece = board->squares[sq];
+      Square sq   = 8 * r + f;
+      Piece piece = board->squares[sq];
 
       if (piece != NO_PIECE) {
         if (c)
@@ -298,7 +298,7 @@ void PrintBoard(Board* board) {
       if (f == 8)
         printf("\n|");
 
-      int sq = r * 8 + (f > 7 ? f - 8 : f);
+      Square sq = r * 8 + (f > 7 ? f - 8 : f);
 
       if (f < 8) {
         if (board->squares[sq] == NO_PIECE)
@@ -317,21 +317,21 @@ void PrintBoard(Board* board) {
   printf("\nFEN: %s\n\n", fenBuffer);
 }
 
-INLINE void RemovePiece(Board* board, int pc, int s) {
+INLINE void RemovePiece(Board* board, Piece pc, Square s) {
   FlipBit(board->pieces[pc], s);
   FlipBit(OccBB(board, pc & 1), s);
   FlipBit(OccBB(board, BOTH), s);
   board->squares[s] = NO_PIECE;
 }
 
-INLINE void AddPiece(Board* board, int pc, int s) {
+INLINE void AddPiece(Board* board, Piece pc, Square s) {
   FlipBit(board->pieces[pc], s);
   FlipBit(OccBB(board, pc & 1), s);
   FlipBit(OccBB(board, BOTH), s);
   board->squares[s] = pc;
 }
 
-INLINE void SwapPiece(Board* board, int old, int new, int s) {
+INLINE void SwapPiece(Board* board, Piece old, Piece new, Square s) {
   FlipBit(board->pieces[old], s);
   FlipBit(OccBB(board, old & 1), s);
   FlipBit(board->pieces[new], s);
@@ -343,11 +343,11 @@ void MakeMove(Move move, Board* board) {
   MakeMoveUpdate(move, board, 1);
 }
 
-void MakeMoveUpdate(Move move, Board* board, int update) {
-  int from     = From(move);
-  int to       = To(move);
-  int piece    = Moving(move);
-  int captured = IsEP(move) ? Piece(PAWN, board->xstm) : board->squares[to];
+void MakeMoveUpdate(Move move, Board* board, Bool update) {
+  Square from    = From(move);
+  Square to      = To(move);
+  Piece piece    = Moving(move);
+  Piece captured = IsEP(move) ? MakePiece(PAWN, board->xstm) : board->squares[to];
 
   // store hard to recalculate values
   memcpy(&board->history[board->histPly], board, offsetof(Board, stm));
@@ -356,7 +356,7 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   // without an update the threats are still found, so perft runs search's board code
   uint32_t scratch[MAX_DIRTY_THREATS];
   DirtyThreatList list = {update ? board->accumulators->dirty : scratch, 0};
-  const int stm        = piece & 1;
+  const Color stm      = piece & 1;
 
   if (update) {
     board->accumulators->pawns[0][WHITE] = PieceBB(board, PAWN, WHITE);
@@ -367,16 +367,16 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   board->nullply++;
 
   board->zobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
-  if (PieceType(piece) == PAWN)
+  if (TypeOf(piece) == PAWN)
     board->pawnZobrist ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
   else
     board->nonPawnZobrist[stm] ^= ZOBRIST_PIECES[piece][from] ^ ZOBRIST_PIECES[piece][to];
 
   // each piece leaves before the next arrives, so lines through its square are open
   if (IsCas(move)) {
-    const int rookFrom = board->cr[CASTLING_ROOK[to]];
-    const int rookTo   = CASTLE_ROOK_DEST[to];
-    const int rook     = Piece(ROOK, stm);
+    const Square rookFrom = board->cr[CASTLING_ROOK[to]];
+    const Square rookTo   = CASTLE_ROOK_DEST[to];
+    const Piece rook      = MakePiece(ROOK, stm);
 
     PieceThreats(board, &list, piece, from, SUB);
     RemovePiece(board, piece, from);
@@ -390,13 +390,13 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->zobrist ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
     board->nonPawnZobrist[stm] ^= ZOBRIST_PIECES[rook][rookFrom] ^ ZOBRIST_PIECES[rook][rookTo];
   } else {
-    const int placed = IsPromo(move) ? PromoPiece(move, stm) : piece;
+    const Piece placed = IsPromo(move) ? PromoPiece(move, stm) : piece;
 
     PieceThreats(board, &list, piece, from, SUB);
     RemovePiece(board, piece, from);
 
     if (IsCap(move)) {
-      const int capSq = IsEP(move) ? to - PawnDir(stm) : to;
+      const Square capSq = IsEP(move) ? to - PawnDir(stm) : to;
 
       if (IsEP(move)) {
         PieceThreats(board, &list, captured, capSq, SUB);
@@ -409,13 +409,13 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       }
 
       board->zobrist ^= ZOBRIST_PIECES[captured][capSq];
-      if (PieceType(captured) == PAWN)
+      if (TypeOf(captured) == PAWN)
         board->pawnZobrist ^= ZOBRIST_PIECES[captured][capSq];
       else
         board->nonPawnZobrist[stm ^ 1] ^= ZOBRIST_PIECES[captured][capSq];
 
       board->piecesCounts -= PieceCount(captured);
-      board->phase -= PHASE_VALUES[PieceType(captured)];
+      board->phase -= PHASE_VALUES[TypeOf(captured)];
       board->fmr = 0;
     } else {
       AddPiece(board, placed, to);
@@ -434,22 +434,22 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
     board->zobrist ^= ZOBRIST_CASTLE_KEYS[board->castling];
   }
 
-  if (PieceType(piece) == PAWN) {
+  if (TypeOf(piece) == PAWN) {
     if ((from ^ to) == 16) {
-      int epSquare = to - PawnDir(board->stm);
+      Square epSquare = to - PawnDir(board->stm);
 
       if (GetPawnAttacks(epSquare, board->stm) & PieceBB(board, PAWN, board->xstm)) {
         board->epSquare = epSquare;
         board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];
       }
     } else if (IsPromo(move)) {
-      int promoted = PromoPiece(move, board->stm);
+      Piece promoted = PromoPiece(move, board->stm);
 
       board->zobrist ^= ZOBRIST_PIECES[piece][to] ^ ZOBRIST_PIECES[promoted][to];
       board->pawnZobrist ^= ZOBRIST_PIECES[piece][to];
       board->nonPawnZobrist[stm] ^= ZOBRIST_PIECES[promoted][to];
       board->piecesCounts += PieceCount(promoted) - PieceCount(piece);
-      board->phase += PHASE_VALUES[PieceType(promoted)];
+      board->phase += PHASE_VALUES[TypeOf(promoted)];
     }
 
     board->fmr = 0;
@@ -487,10 +487,10 @@ void UndoMove(Move move, Board* board) {
 
 // update must match the MakeMoveUpdate call being undone: without one the
 // accumulator stack was never advanced, so it must not be stepped back
-void UndoMoveUpdate(Move move, Board* board, int update) {
-  int from  = From(move);
-  int to    = To(move);
-  int piece = Moving(move);
+void UndoMoveUpdate(Move move, Board* board, Bool update) {
+  Square from = From(move);
+  Square to   = To(move);
+  Piece piece = Moving(move);
 
   board->stm = board->xstm;
   board->xstm ^= 1;
@@ -503,12 +503,12 @@ void UndoMoveUpdate(Move move, Board* board, int update) {
   memcpy(board, &board->history[board->histPly], offsetof(Board, stm));
 
   if (IsPromo(move)) {
-    int promoted = PromoPiece(move, board->stm);
+    Piece promoted = PromoPiece(move, board->stm);
     FlipBit(board->pieces[piece], to);
     FlipBit(board->pieces[promoted], to);
     board->squares[to] = piece;
     board->piecesCounts -= PieceCount(promoted) - PieceCount(piece);
-    board->phase -= PHASE_VALUES[PieceType(promoted)];
+    board->phase -= PHASE_VALUES[TypeOf(promoted)];
   }
 
   FlipBits(board->pieces[piece], to, from);
@@ -519,9 +519,9 @@ void UndoMoveUpdate(Move move, Board* board, int update) {
   board->squares[from] = piece;
 
   if (IsCas(move)) {
-    int rookFrom = board->cr[CASTLING_ROOK[to]];
-    int rookTo   = CASTLE_ROOK_DEST[to];
-    int rook     = Piece(ROOK, board->stm);
+    Square rookFrom = board->cr[CASTLING_ROOK[to]];
+    Square rookTo   = CASTLE_ROOK_DEST[to];
+    Piece rook      = MakePiece(ROOK, board->stm);
 
     FlipBits(PieceBB(board, ROOK, board->stm), rookTo, rookFrom);
     FlipBits(OccBB(board, board->stm), rookTo, rookFrom);
@@ -531,8 +531,8 @@ void UndoMoveUpdate(Move move, Board* board, int update) {
       board->squares[rookTo] = NO_PIECE;
     board->squares[rookFrom] = rook;
   } else if (IsCap(move)) {
-    int capSq    = IsEP(move) ? to - PawnDir(board->stm) : to;
-    int captured = board->history[board->histPly].capture;
+    Square capSq   = IsEP(move) ? to - PawnDir(board->stm) : to;
+    Piece captured = board->history[board->histPly].capture;
 
     FlipBit(board->pieces[captured], capSq);
     FlipBit(OccBB(board, board->xstm), capSq);
@@ -541,7 +541,7 @@ void UndoMoveUpdate(Move move, Board* board, int update) {
     board->squares[capSq] = captured;
 
     board->piecesCounts += PieceCount(captured);
-    board->phase += PHASE_VALUES[PieceType(captured)];
+    board->phase += PHASE_VALUES[TypeOf(captured)];
   }
 }
 
@@ -577,7 +577,7 @@ void UndoNullMove(Board* board) {
   memcpy(board, &board->history[board->histPly], offsetof(Board, stm));
 }
 
-int IsFiftyMoveRule(Board* board) {
+Bool IsFiftyMoveRule(Board* board) {
   if (board->fmr > 99) {
     if (board->checkers) {
       SimpleMoveList moves[1];
@@ -592,11 +592,11 @@ int IsFiftyMoveRule(Board* board) {
   return 0;
 }
 
-int IsPseudoLegal(Move move, Board* board) {
-  int from   = From(move);
-  int to     = To(move);
-  int piece  = Moving(move);
-  int pcType = PieceType(piece);
+Bool IsPseudoLegal(Move move, Board* board) {
+  Square from      = From(move);
+  Square to        = To(move);
+  Piece piece      = Moving(move);
+  PieceType pcType = TypeOf(piece);
 
   if (!move || (piece & 1) != board->stm || piece != board->squares[from])
     return 0;
@@ -611,7 +611,7 @@ int IsPseudoLegal(Move move, Board* board) {
     if (GetBit(board->pinned, board->cr[idx]))
       return 0;
 
-    int rookTo            = CASTLE_MAP[idx][2];
+    Square rookTo         = CASTLE_MAP[idx][2];
     BitBoard kingCrossing = BetweenSquares(from, to) | Bit(to);
     BitBoard rookCrossing = BetweenSquares(board->cr[idx], rookTo) | Bit(rookTo);
     BitBoard between      = kingCrossing | rookCrossing;
@@ -628,7 +628,7 @@ int IsPseudoLegal(Move move, Board* board) {
     if (BitCount(board->checkers) > 1)
       return 0;
 
-    int king       = LSB(PieceBB(board, KING, board->stm));
+    Square king    = LSB(PieceBB(board, KING, board->stm));
     BitBoard valid = board->checkers ? (board->checkers | BetweenSquares(king, LSB(board->checkers))) : ALL;
     BitBoard goal  = board->stm == WHITE ? RANK_8 : RANK_1;
     BitBoard opts  = (ShiftPawnDir(Bit(from), board->stm) & ~OccBB(board, BOTH)) |
@@ -670,9 +670,9 @@ int IsPseudoLegal(Move move, Board* board) {
     if (BitCount(board->checkers) > 1)
       return 0;
 
-    int kingsq                 = LSB(PieceBB(board, KING, board->stm));
+    Square kingsq              = LSB(PieceBB(board, KING, board->stm));
     BitBoard blocksAndCaptures = board->checkers | BetweenSquares(kingsq, LSB(board->checkers));
-    int to2                    = IsEP(move) ? to - PawnDir(board->stm) : to;
+    Square to2                 = IsEP(move) ? to - PawnDir(board->stm) : to;
     if (!GetBit(blocksAndCaptures, to2))
       return 0;
   }
@@ -682,15 +682,15 @@ int IsPseudoLegal(Move move, Board* board) {
 
 // this is NOT a legality checker for ALL moves
 // it is only used for final verification of EP and pinned moves.
-int IsLegal(Move move, Board* board) {
-  int from   = From(move);
-  int to     = To(move);
-  int kingSq = LSB(PieceBB(board, KING, board->stm));
+Bool IsLegal(Move move, Board* board) {
+  Square from   = From(move);
+  Square to     = To(move);
+  Square kingSq = LSB(PieceBB(board, KING, board->stm));
 
   if (IsEP(move)) {
     // ep is checked by just applying the move
-    int captureSq = to - PawnDir(board->stm);
-    BitBoard occ  = (OccBB(board, BOTH) ^ Bit(from) ^ Bit(captureSq)) | Bit(to);
+    Square captureSq = to - PawnDir(board->stm);
+    BitBoard occ     = (OccBB(board, BOTH) ^ Bit(from) ^ Bit(captureSq)) | Bit(to);
     // EP can only be illegal due to crazy discover checks
     return !(GetBishopAttacks(kingSq, occ) &
              (PieceBB(board, BISHOP, board->xstm) | PieceBB(board, QUEEN, board->xstm))) &&
@@ -700,32 +700,32 @@ int IsLegal(Move move, Board* board) {
   return !GetBit(board->pinned, from) || GetBit(PinnedMoves(from, kingSq), to);
 }
 
-static uint64_t cuckoo[8192];
+static Key cuckoo[8192];
 static Move cuckooMove[8192];
 
-INLINE uint64_t Hash1(uint64_t hash) {
+INLINE uint64_t Hash1(Key hash) {
   return hash & 0x1fff;
 }
 
-INLINE uint64_t Hash2(uint64_t hash) {
+INLINE uint64_t Hash2(Key hash) {
   return (hash >> 16) & 0x1fff;
 }
 
 void InitCuckoo(void) {
-  int validate = 0;
+  Bool validate = 0;
 
-  for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
-    int pcType = PieceType(pc);
+  for (Piece pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+    PieceType pcType = TypeOf(pc);
     if (pcType == PAWN)
       continue;
 
-    for (int s1 = 0; s1 < 64; s1++) {
-      for (int s2 = s1 + 1; s2 < 64; s2++) {
+    for (Square s1 = 0; s1 < 64; s1++) {
+      for (Square s2 = s1 + 1; s2 < 64; s2++) {
         if (!GetBit(GetPieceAttacks(s1, 0, pcType), s2))
           continue;
 
-        Move move     = BuildMove(s1, s2, pc, QUIET_FLAG);
-        uint64_t hash = ZOBRIST_PIECES[pc][s1] ^ ZOBRIST_PIECES[pc][s2] ^ ZOBRIST_SIDE_KEY;
+        Move move = BuildMove(s1, s2, pc, QUIET_FLAG);
+        Key hash  = ZOBRIST_PIECES[pc][s1] ^ ZOBRIST_PIECES[pc][s2] ^ ZOBRIST_SIDE_KEY;
 
         uint32_t i = Hash1(hash);
         while (1) {
@@ -756,19 +756,19 @@ void InitCuckoo(void) {
 // http://www.open-chess.org/viewtopic.php?f=5&t=2300
 // Implemented originally in SF
 // Paper no longer seems accessible @ http://marcelk.net/2013-04-06/paper/upcoming-rep-v2.pdf
-int HasCycle(Board* board, int ply) {
+Bool HasCycle(Board* board, Ply ply) {
   int distance = Min(board->fmr, board->nullply);
   if (distance < 3)
     return 0;
 
-  uint64_t original  = board->zobrist;
+  Key original       = board->zobrist;
   BoardHistory* prev = &board->history[board->histPly - 1];
 
   for (int i = 3; i <= distance; i += 2) {
     prev -= 2;
 
     uint32_t h;
-    uint64_t moveKey = original ^ prev->zobrist;
+    Key moveKey = original ^ prev->zobrist;
     if ((h = Hash1(moveKey), cuckoo[h] == moveKey) || (h = Hash2(moveKey), cuckoo[h] == moveKey)) {
       Move move        = cuckooMove[h];
       BitBoard between = BetweenSquares(From(move), To(move));
@@ -778,7 +778,7 @@ int HasCycle(Board* board, int ply) {
       if (ply > i)
         return 1;
 
-      int pc = board->squares[From(move)] != NO_PIECE ? board->squares[From(move)] : board->squares[To(move)];
+      Piece pc = board->squares[From(move)] != NO_PIECE ? board->squares[From(move)] : board->squares[To(move)];
       if ((pc & 1) != board->stm)
         continue;
 

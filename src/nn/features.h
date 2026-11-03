@@ -25,8 +25,8 @@
 
 extern const uint16_t KING_BUCKETS[64];
 
-INLINE int MoveRequiresRefresh(int piece, int from, int to) {
-  if (PieceType(piece) != KING)
+INLINE Bool MoveRequiresRefresh(Piece piece, Square from, Square to) {
+  if (TypeOf(piece) != KING)
     return 0;
 
   if ((from & 4) != (to & 4))
@@ -35,14 +35,14 @@ INLINE int MoveRequiresRefresh(int piece, int from, int to) {
 }
 
 // xor a square with this to see it from the view, mirrored so the king is on files e-h
-INLINE int FeatureFlip(int kingsq, const int view) {
+INLINE int FeatureFlip(Square kingsq, const Color view) {
   return (7 * !(kingsq & 4)) ^ (56 * view);
 }
 
-INLINE int FeatureIdx(int piece, int sq, int kingsq, const int view) {
-  int oP  = 6 * ((piece ^ view) & 0x1) + PieceType(piece);
-  int oK  = FeatureFlip(kingsq, view) ^ kingsq;
-  int oSq = FeatureFlip(kingsq, view) ^ sq;
+INLINE int FeatureIdx(Piece piece, Square sq, Square kingsq, const Color view) {
+  int oP     = 6 * ((piece ^ view) & 0x1) + TypeOf(piece);
+  Square oK  = FeatureFlip(kingsq, view) ^ kingsq;
+  Square oSq = FeatureFlip(kingsq, view) ^ sq;
 
   return KING_BUCKETS[oK] * 12 * 64 + oP * 64 + oSq;
 }

@@ -25,7 +25,7 @@
 #include "types.h"
 #include "util.h"
 
-static uint64_t Perft(int depth, Board* board) {
+static uint64_t Perft(Depth depth, Board* board) {
   if (depth == 0)
     return 1;
 
@@ -46,7 +46,7 @@ static uint64_t Perft(int depth, Board* board) {
   return nodes;
 }
 
-void PerftTest(int depth, Board* board) {
+void PerftTest(Depth depth, Board* board) {
   uint64_t total = 0;
 
   printf("\nRunning performance test to depth %d\n\n", depth);

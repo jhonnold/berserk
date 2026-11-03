@@ -51,7 +51,7 @@ static const double as[4] = {0.01538655, -1.33196512, 7.43032607, 152.07701643};
 static const double bs[4] = {-2.66442843, 18.35463702, -38.91760538, 56.27652511};
 
 // win% as permilli given score and ply
-static int WRModel(int s, int ply) {
+static int WRModel(Score s, Ply ply) {
   double m = Min(240, ply) / 64.0;
 
   double a = (((as[0] * m + as[1]) * m + as[2]) * m) + as[3];
@@ -64,7 +64,7 @@ static int WRModel(int s, int ply) {
 
 static void PrintPV(PV* pv, Board* board);
 
-void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) {
+void PrintUCI(ThreadData* thread, Depth depth, Score alpha, Score beta, Board* board) {
   uint64_t nodes  = NodesSearched();
   uint64_t tbhits = TBHits();
   uint64_t time   = Max(1, GetTimeMS() - Limits.start);
@@ -72,12 +72,12 @@ void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) 
   int hashfull    = TTFull();
 
   for (int i = 0; i < Limits.multiPV; i++) {
-    int updated = (thread->rootMoves[i].score != -CHECKMATE);
+    Bool updated = (thread->rootMoves[i].score != -CHECKMATE);
     if (depth == 1 && i > 0 && !updated)
       break;
 
-    int realDepth    = Max(1, updated ? depth : depth - 1);
-    int bounded      = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
+    Depth realDepth  = Max(1, updated ? depth : depth - 1);
+    Score bounded    = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
     int printable    = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
                        bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
                        !NORMALIZE || abs(bounded) > TB_WIN_BOUND ? // don't normalize our fake tb scores or real tb scores
@@ -97,7 +97,7 @@ void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) 
            bound);
 
     if (SHOW_WDL) {
-      int ply  = Max(0, 2 * (board->moveNo - 1)) + board->stm;
+      Ply ply  = Max(0, 2 * (board->moveNo - 1)) + board->stm;
       int wdlW = WRModel(bounded, ply);
       int wdlL = WRModel(-bounded, ply);
       int wdlD = 1000 - wdlW - wdlL;
@@ -133,13 +133,13 @@ void PrintBestMove(Move bestMove, Move ponderMove, Board* board) {
   printf("\n");
 }
 
-void PrintCurrMove(int depth, Move move, int number, Board* board) {
+void PrintCurrMove(Depth depth, Move move, int number, Board* board) {
   printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move, board), number);
 }
 
 // uci "go" command
 static int GetOptionIntValue(char* in);
-static int GetOptionBoolValue(char* in);
+static Bool GetOptionBoolValue(char* in);
 
 static void ParseGo(char* in, Board* board) {
   in += 3;
@@ -404,7 +404,7 @@ void UCILoop(void) {
       const char* d   = strtok(NULL, " ") ?: "5";
       const char* fen = strtok(NULL, "\0") ?: START_FEN;
 
-      int depth = atoi(d);
+      Depth depth = atoi(d);
       ParseFen(fen, &board);
 
       PerftTest(depth, &board);
@@ -412,7 +412,7 @@ void UCILoop(void) {
       strtok(in, " ");
       const char* d = strtok(NULL, " ") ?: "13";
 
-      int depth = atoi(d);
+      Depth depth = atoi(d);
       Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
       PrintBB(board.threatened);
@@ -446,7 +446,7 @@ void UCILoop(void) {
       ThreadsSetNumber(Max(1, Min(2048, n)));
       printf("info string set Threads to value %d\n", Threads.count);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
-      int success = tb_init(in + 32);
+      Bool success = tb_init(in + 32);
       if (success)
         printf("info string set SyzygyPath to value %s\n", in + 32);
       else
@@ -475,8 +475,8 @@ void UCILoop(void) {
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
       CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
-      char* path  = in + 30;
-      int success = 0;
+      char* path   = in + 30;
+      Bool success = 0;
 
       if (strncmp(path, "<empty>", 7))
         success = LoadNetwork(path);
@@ -516,7 +516,7 @@ static int GetOptionIntValue(char* in) {
   return n;
 }
 
-static int GetOptionBoolValue(char* in) {
+static Bool GetOptionBoolValue(char* in) {
   char opt[6] = {0};
   sscanf(in, "%*s %*s %*s %*s %5s", opt);
 

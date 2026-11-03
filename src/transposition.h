@@ -50,6 +50,8 @@ typedef struct {
   uint8_t age;
 } TTTable;
 
+typedef int HashBound;
+
 enum {
   BOUND_UNKNOWN = 0,
   BOUND_LOWER   = 1,
@@ -63,11 +65,11 @@ extern TTTable TT;
 size_t TTInit(int mb);
 void TTClearPart(int idx, int count);
 void TTUpdate(void);
-INLINE uint64_t TTIdx(uint64_t hash) {
+INLINE uint64_t TTIdx(Key hash) {
   return ((unsigned __int128) hash * (unsigned __int128) TT.count) >> 64;
 }
 
-INLINE void TTPrefetch(uint64_t hash) {
+INLINE void TTPrefetch(Key hash) {
   __builtin_prefetch(&TT.buckets[TTIdx(hash)]);
 }
 int TTFull(void);
@@ -83,7 +85,7 @@ INLINE Move TTMove(TTEntry* e) {
   return (e->evalAndMove & 0xfffff);
 }
 
-INLINE int TTEval(TTEntry* e) {
+INLINE Score TTEval(TTEntry* e) {
   // Top 12 bits for eval offset by 2048
   return ((e->evalAndMove >> 20) & 0xfff) - 2048;
 }
@@ -92,12 +94,12 @@ INLINE void TTStoreMove(TTEntry* e, Move move) {
   e->evalAndMove = (e->evalAndMove & 0xfff00000) | move;
 }
 
-INLINE void TTStoreEval(TTEntry* e, int eval) {
+INLINE void TTStoreEval(TTEntry* e, Score eval) {
   uint32_t ueval = eval + 2048;
   e->evalAndMove = (ueval << 20) | (e->evalAndMove & 0x000fffff);
 }
 
-INLINE int TTScore(TTEntry* e, int ply) {
+INLINE Score TTScore(TTEntry* e, Ply ply) {
   if (e->score == UNKNOWN)
     return UNKNOWN;
 
@@ -106,27 +108,27 @@ INLINE int TTScore(TTEntry* e, int ply) {
 
 #define DEPTH_OFFSET (-2)
 
-INLINE int TTDepth(TTEntry* e) {
+INLINE Depth TTDepth(TTEntry* e) {
   return e->depth + DEPTH_OFFSET;
 }
 
-INLINE int TTBound(TTEntry* e) {
+INLINE HashBound TTBound(TTEntry* e) {
   return e->agePvBound & BOUND_MASK; // 2 bottom bits
 }
 
-INLINE int TTPV(TTEntry* e) {
+INLINE Bool TTPV(TTEntry* e) {
   return e->agePvBound & PV_MASK; // 3rd to bottom bit
 }
 
-INLINE TTEntry* TTProbe(uint64_t hash,
-                        int ply,
-                        int* hit,
+INLINE TTEntry* TTProbe(Key hash,
+                        Ply ply,
+                        Bool* hit,
                         Move* hashMove,
-                        int* ttScore,
-                        int* ttEval,
-                        int* ttDepth,
-                        int* ttBound,
-                        int* pv) {
+                        Score* ttScore,
+                        Score* ttEval,
+                        Depth* ttDepth,
+                        HashBound* ttBound,
+                        Bool* pv) {
   TTEntry* const bucket    = TT.buckets[TTIdx(hash)].entries;
   const uint16_t shortHash = (uint16_t) hash;
 
@@ -158,7 +160,7 @@ INLINE TTEntry* TTProbe(uint64_t hash,
 }
 
 INLINE void
-TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
+TTPut(TTEntry* tt, Key hash, Depth depth, int16_t score, uint8_t bound, Move move, Ply ply, int16_t eval, Bool pv) {
   uint16_t shortHash = (uint16_t) hash;
 
   if (score >= TB_WIN_BOUND)

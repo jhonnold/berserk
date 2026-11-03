@@ -37,7 +37,7 @@ static const char* benchmarks[] = {
 
 #define NUM_BENCH_POSITIONS ((int) (sizeof(benchmarks) / sizeof(benchmarks[0])))
 
-void Bench(int depth) {
+void Bench(Depth depth) {
   Board board;
 
   ResetLimits();
@@ -45,7 +45,7 @@ void Bench(int depth) {
   Limits.hitrate = INT_MAX;
 
   Move bestMoves[NUM_BENCH_POSITIONS];
-  int scores[NUM_BENCH_POSITIONS];
+  Score scores[NUM_BENCH_POSITIONS];
   uint64_t nodes[NUM_BENCH_POSITIONS];
   long times[NUM_BENCH_POSITIONS];
 

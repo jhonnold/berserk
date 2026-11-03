@@ -29,13 +29,13 @@ CorrectionHistory Correction;
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
-                     int depth,
+                     Depth depth,
                      Move quiets[],
                      int nQ,
                      Move captures[],
                      int nC) {
   Board* board = &thread->board;
-  int stm      = board->stm;
+  Color stm    = board->stm;
 
   int16_t inc = HistoryBonus(depth);
 
@@ -55,10 +55,10 @@ void UpdateHistories(SearchStack* ss,
       UpdateCH(ss, bestMove, inc);
     }
   } else {
-    int piece    = Moving(bestMove);
-    int to       = To(bestMove);
-    int defended = !GetBit(board->threatened, to);
-    int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
+    Piece piece        = Moving(bestMove);
+    Square to          = To(bestMove);
+    int defended       = !GetBit(board->threatened, to);
+    PieceType captured = IsEP(bestMove) ? PAWN : TypeOf(board->squares[to]);
 
     AddHistoryHeuristic(&TH(thread, piece, to, defended, captured), inc);
   }
@@ -83,16 +83,16 @@ void UpdateHistories(SearchStack* ss,
     if (m == bestMove)
       continue;
 
-    int piece    = Moving(m);
-    int to       = To(m);
-    int defended = !GetBit(board->threatened, to);
-    int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
+    Piece piece        = Moving(m);
+    Square to          = To(m);
+    int defended       = !GetBit(board->threatened, to);
+    PieceType captured = IsEP(m) ? PAWN : TypeOf(board->squares[to]);
 
     AddHistoryHeuristic(&TH(thread, piece, to, defended, captured), -inc);
   }
 }
 
-void UpdateCorrection(int raw, int real, int depth, Board* board) {
+void UpdateCorrection(Score raw, Score real, Depth depth, Board* board) {
   const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
   int16_t* pawnCorrection  = &Correction.pawn[board->pawnZobrist & CORRECTION_MASK];
   AddHistoryHeuristic(pawnCorrection, correction);
@@ -103,13 +103,13 @@ void UpdateCorrection(int raw, int real, int depth, Board* board) {
   AddHistoryHeuristic(blackCorrection, correction);
 }
 
-void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
+void UpdateContCorrection(Score raw, Score real, Depth depth, SearchStack* ss) {
   if (!(ss - 1)->move)
     return;
 
   const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
-  const int moving         = Moving((ss - 1)->move);
-  const int to             = To((ss - 1)->move);
+  const Piece moving       = Moving((ss - 1)->move);
+  const Square to          = To((ss - 1)->move);
 
   if ((ss - 2)->move)
     AddHistoryHeuristic(&(*(ss - 2)->cont)[moving][to], correction);

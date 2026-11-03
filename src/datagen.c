@@ -127,8 +127,8 @@ void Genfens(char* args) {
 
   SeedRandom(seed);
 
-  Book book     = {NULL, 0};
-  int usingBook = strcmp(bookPath, "None") != 0;
+  Book book      = {NULL, 0};
+  Bool usingBook = strcmp(bookPath, "None") != 0;
 
   if (usingBook && !LoadBook(&book, bookPath)) {
     printf("info string unable to open book %s\n", bookPath);

@@ -22,7 +22,7 @@
 #define SPARSE_CHUNK_SIZE 4
 
 int OutputBucket(Board* board);
-int Propagate(Accumulator* accumulator, const int stm, const int bucket);
+Score Propagate(Accumulator* accumulator, const Color stm, const int bucket);
 
 void LoadDefaultNN(void);
 int LoadNetwork(char* path);
