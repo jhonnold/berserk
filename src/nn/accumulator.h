@@ -68,8 +68,16 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
   }
 }
 
-INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
-                            const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
+INLINE void ApplyFusedDelta(acc_t* dest,
+                            const acc_t* src,
+                            const int* pRem,
+                            const int pr,
+                            const int* pAdd,
+                            const int pa,
+                            const int* tRem,
+                            const int tr,
+                            const int* tAdd,
+                            const int ta) {
   const size_t LANES = sizeof(vi16_t) / sizeof(acc_t);
 
   for (size_t c = 0; c < N_HIDDEN / (LANES * THREAT_TILE); c++) {
@@ -161,8 +169,7 @@ INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const int
   ApplyFusedDelta(dest, src, NULL, 0, NULL, 0, NULL, 0, add, a);
 }
 
-INLINE void ThreatIndices(const Accumulator* step, const int view, const int flip, int* rem, int* r, int* add,
-                          int* a) {
+INLINE void ThreatIndices(const Accumulator* step, const int view, const int flip, int* rem, int* r, int* add, int* a) {
   for (int i = 0; i < step->nDirty; i++) {
     const uint32_t d = step->dirty[i];
     const int idx    = ThreatIdx(DirtyAttacker(d), DirtyFrom(d), DirtyVictim(d), DirtyTo(d), view, flip);
@@ -180,8 +187,13 @@ INLINE void ThreatIndices(const Accumulator* step, const int view, const int fli
 
 // The pairs of the pawns in moved (white | black), against the pawns of that position.
 // Pairs between two moved pawns are taken once, from the first of them.
-INLINE void PairDelta(BitBoard moved, const BitBoard white, const BitBoard black, const int view, const int flip,
-                      int* out, int* n) {
+INLINE void PairDelta(BitBoard moved,
+                      const BitBoard white,
+                      const BitBoard black,
+                      const int view,
+                      const int flip,
+                      int* out,
+                      int* n) {
   BitBoard partners = (white | black) & ~moved;
   while (moved) {
     const int a  = PopLSB(&moved);
@@ -259,21 +271,33 @@ INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2, const int* tRem
   ApplyFusedDelta(dest, src, rem, 1, add, 1, tRem, tr, tAdd, ta);
 }
 
-INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, const int* tRem, int tr, const int* tAdd,
-                           int ta) {
+INLINE void
+ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, const int* tRem, int tr, const int* tAdd, int ta) {
   const int rem[2] = {f1, f2}, add[1] = {f3};
   PrefetchRow(f1), PrefetchRow(f2), PrefetchRow(f3);
   ApplyFusedDelta(dest, src, rem, 2, add, 1, tRem, tr, tAdd, ta);
 }
 
-INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4, const int* tRem, int tr,
-                              const int* tAdd, int ta) {
+INLINE void ApplySubSubAddAdd(acc_t* dest,
+                              acc_t* src,
+                              int f1,
+                              int f2,
+                              int f3,
+                              int f4,
+                              const int* tRem,
+                              int tr,
+                              const int* tAdd,
+                              int ta) {
   const int rem[2] = {f1, f2}, add[2] = {f3, f4};
   PrefetchRow(f1), PrefetchRow(f2), PrefetchRow(f3), PrefetchRow(f4);
   ApplyFusedDelta(dest, src, rem, 2, add, 2, tRem, tr, tAdd, ta);
 }
 
-INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumulator* step, const int view,
+INLINE void ApplyUpdates(acc_t* output,
+                         acc_t* prev,
+                         Board* board,
+                         const Accumulator* step,
+                         const int view,
                          const int flip) {
   const Move move      = step->move;
   const int captured   = step->captured;

@@ -65,7 +65,6 @@ typedef struct {
 
 extern DualMagic DUAL_MAGICS[64];
 
-
 #else
 
 // Slider attacks use "fancy" magics: every square owns a slice of a single
@@ -90,8 +89,6 @@ extern SquareMagics MAGICS[64];
 
 void InitAttacks(void);
 
-
-
 #ifdef USE_DUAL_HQ
 
 // Returns the rook's file attacks in the low quadword and the bishop's full
@@ -100,14 +97,16 @@ void InitAttacks(void);
 INLINE __m128i DualHyperbola(const DualMagic* m, BitBoard occupancy) {
   // Reverses the 16 bytes of each 128 bit half, which both swaps the two
   // quadwords and reverses the bytes within them.
+  // clang-format off
   const __m256i rev8 = _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, //
                                        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+  // clang-format on
 
   const __m256i mask = _mm256_load_si256((const __m256i*) m);
   const __m256i occ  = _mm256_and_si256(mask, _mm256_set1_epi64x((long long) occupancy));
   const __m256i fwd  = _mm256_sub_epi64(occ, _mm256_set1_epi64x((long long) m->r));
-  const __m256i rev  = _mm256_shuffle_epi8(
-    _mm256_sub_epi64(_mm256_shuffle_epi8(occ, rev8), _mm256_set1_epi64x((long long) m->rr)), rev8);
+  const __m256i rev =
+    _mm256_shuffle_epi8(_mm256_sub_epi64(_mm256_shuffle_epi8(occ, rev8), _mm256_set1_epi64x((long long) m->rr)), rev8);
   const __m256i attacks = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
 
   // Low half holds [file, diagonal], high half [0, antidiagonal].
@@ -139,7 +138,6 @@ INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
 }
 
 #endif
-
 
 INLINE BitBoard BetweenSquares(int from, int to) {
   return BETWEEN_SQS[from][to];

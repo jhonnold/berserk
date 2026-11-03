@@ -97,11 +97,9 @@ void UpdateCorrection(int raw, int real, int depth, Board* board) {
   int16_t* pawnCorrection  = &Correction.pawn[board->pawnZobrist & CORRECTION_MASK];
   AddHistoryHeuristic(pawnCorrection, correction);
 
-  int16_t* whiteCorrection =
-    &Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & CORRECTION_MASK];
+  int16_t* whiteCorrection = &Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & CORRECTION_MASK];
   AddHistoryHeuristic(whiteCorrection, correction);
-  int16_t* blackCorrection =
-    &Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & CORRECTION_MASK];
+  int16_t* blackCorrection = &Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & CORRECTION_MASK];
   AddHistoryHeuristic(blackCorrection, correction);
 }
 

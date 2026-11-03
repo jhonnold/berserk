@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef NN_DEFS_H
 #define NN_DEFS_H
 
@@ -22,16 +21,16 @@
 
 #define N_KING_BUCKETS 16
 
-#define N_FEATURES (N_KING_BUCKETS * 12 * 64)
+#define N_FEATURES      (N_KING_BUCKETS * 12 * 64)
 #define N_PIECE_THREATS 59808
 #define N_PAIRS         4560 // 96 pawn ids, one feature per unordered pair
 #define N_THREATS       (N_PIECE_THREATS + N_PAIRS)
-#define N_HIDDEN   512
+#define N_HIDDEN        512
 // Pairwise multiplication halves each perspective to N_HIDDEN / 2 units, so the
 // two of them together are N_HIDDEN wide. See nn/evaluate.c, FT_SHIFT.
-#define N_L1       N_HIDDEN
-#define N_L2       16
-#define N_L3       32
+#define N_L1             N_HIDDEN
+#define N_L2             16
+#define N_L3             32
 #define N_OUTPUT_BUCKETS 8
 
 enum {

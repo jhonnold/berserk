@@ -26,5 +26,4 @@ void PrintCurrMove(int depth, Move move, int number, Board* board);
 
 void UCILoop(void);
 
-
 #endif

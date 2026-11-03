@@ -57,8 +57,8 @@ typedef struct {
   int fmr;      // half move count for 50 move rule
   int nullply;  // distance from last nullmove
 
-  uint64_t zobrist;     // zobrist hash of the position
-  uint64_t pawnZobrist; // pawn zobrist hash of the position (pawns + stm)
+  uint64_t zobrist;           // zobrist hash of the position
+  uint64_t pawnZobrist;       // pawn zobrist hash of the position (pawns + stm)
   uint64_t nonPawnZobrist[2]; // per color non-pawn zobrist hash (pieces + stm)
 
   BitBoard checkers; // checking piece squares

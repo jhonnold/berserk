@@ -68,8 +68,6 @@ void StartSearch(Board* board, uint8_t ponder);
 void MainSearch(void);
 void Search(ThreadData* thread);
 
-
-
 void SearchClearThread(ThreadData* thread);
 
 #endif

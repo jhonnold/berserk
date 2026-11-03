@@ -122,7 +122,7 @@ INLINE int StaticEval(ThreadData* thread,
                       int* rawEval) {
   Board* board = &thread->board;
 
-  *rawEval = ttHit && ttEval != EVAL_UNKNOWN ? ttEval : Evaluate(board, thread);
+  *rawEval       = ttHit && ttEval != EVAL_UNKNOWN ? ttEval : Evaluate(board, thread);
   ss->staticEval = ClampEval(*rawEval + GetCorrectionScore(board, ss));
 
   int eval = AdjustEvalOnFMR(board, ss->staticEval);
@@ -276,9 +276,9 @@ void MainSearch(void) {
   int bestVoteScore      = voteMap[FromTo(bestThread->rootMoves[0].move)];
 
   for (int i = 1; i < Threads.count; i++) {
-    ThreadData* curr    = Threads.threads[i];
-    int currScore       = curr->rootMoves[0].score;
-    int currVoteScore   = voteMap[FromTo(curr->rootMoves[0].move)];
+    ThreadData* curr  = Threads.threads[i];
+    int currScore     = curr->rootMoves[0].score;
+    int currVoteScore = voteMap[FromTo(curr->rootMoves[0].move)];
 
     // Always choose the fastest mate or longest avoidance of mate
     if (abs(bestScore) >= TB_WIN_BOUND) {
@@ -348,7 +348,9 @@ void Search(ThreadData* thread) {
   int searchStability   = 0;
   Move previousBestMove = NULL_MOVE;
 
-  enum { searchOffset = 6 };
+  enum {
+    searchOffset = 6
+  };
   SearchStack searchStack[MAX_SEARCH_PLY + searchOffset];
   SearchStack* ss = searchStack + searchOffset;
   memset(searchStack, 0, (searchOffset + 1) * sizeof(SearchStack));
@@ -1118,5 +1120,3 @@ void SearchClearThread(ThreadData* thread) {
   thread->board.accumulators = thread->accumulators;
   thread->previousScore      = UNKNOWN;
 }
-
-

@@ -76,14 +76,14 @@ void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) 
     if (depth == 1 && i > 0 && !updated)
       break;
 
-    int realDepth = Max(1, updated ? depth : depth - 1);
-    int bounded   = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
-    int printable = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
-                    bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
-                    !NORMALIZE || abs(bounded) > TB_WIN_BOUND ? // don't normalize our fake tb scores or real tb scores
+    int realDepth    = Max(1, updated ? depth : depth - 1);
+    int bounded      = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
+    int printable    = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
+                       bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
+                       !NORMALIZE || abs(bounded) > TB_WIN_BOUND ? // don't normalize our fake tb scores or real tb scores
                       bounded :
-                      Normalize(bounded); // convert to 50% WR at 100cp
-    const char* type  = abs(bounded) > MATE_BOUND ? "mate" : "cp";
+                         Normalize(bounded); // convert to 50% WR at 100cp
+    const char* type = abs(bounded) > MATE_BOUND ? "mate" : "cp";
     const char* bound = " ";
     if (updated)
       bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
@@ -436,7 +436,7 @@ void UCILoop(void) {
       mb                      = Max(2, Min(HASH_MAX, mb));
       uint64_t bytesAllocated = TTInit(mb);
       ThreadsClearTT();
-      uint64_t totalEntries   = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
+      uint64_t totalEntries = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
       printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",
              mb,
              bytesAllocated,

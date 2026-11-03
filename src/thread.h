@@ -87,7 +87,6 @@ void ThreadsSetNumber(int n);
 void ThreadsExit(void);
 void ThreadsInit(void);
 
-
 void ThreadsClearTT(void);
 void ThreadsClearSearch(void);
 void ThreadsResetRefreshTables(void);

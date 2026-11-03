@@ -58,9 +58,9 @@ static void ClearBoard(Board* board) {
   for (int i = 0; i < 64; i++)
     board->squares[i] = NO_PIECE;
 
-  board->piecesCounts = 0ULL;
-  board->zobrist      = 0ULL;
-  board->pawnZobrist  = 0ULL;
+  board->piecesCounts          = 0ULL;
+  board->zobrist               = 0ULL;
+  board->pawnZobrist           = 0ULL;
   board->nonPawnZobrist[WHITE] = board->nonPawnZobrist[BLACK] = 0ULL;
 
   board->stm  = WHITE;
@@ -237,8 +237,8 @@ void ParseFen(const char* fen, Board* board) {
   SetSpecialPieces(board);
   SetThreats(board);
 
-  board->zobrist     = Zobrist(board);
-  board->pawnZobrist = PawnZobrist(board);
+  board->zobrist               = Zobrist(board);
+  board->pawnZobrist           = PawnZobrist(board);
   board->nonPawnZobrist[WHITE] = NonPawnZobrist(board, WHITE);
   board->nonPawnZobrist[BLACK] = NonPawnZobrist(board, BLACK);
 }

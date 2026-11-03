@@ -109,7 +109,7 @@ static void* ThreadInit(void* arg) {
 #endif
 
   // Alloc all the necessary accumulators
-  thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
+  thread->accumulators       = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
   thread->board.accumulators = thread->accumulators;
   thread->board.refreshTable =
     (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);

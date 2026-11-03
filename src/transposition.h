@@ -118,7 +118,6 @@ INLINE int TTPV(TTEntry* e) {
   return e->agePvBound & PV_MASK; // 3rd to bottom bit
 }
 
-
 INLINE TTEntry* TTProbe(uint64_t hash,
                         int ply,
                         int* hit,
@@ -158,7 +157,8 @@ INLINE TTEntry* TTProbe(uint64_t hash,
   return replace;
 }
 
-INLINE void TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
+INLINE void
+TTPut(TTEntry* tt, uint64_t hash, int depth, int16_t score, uint8_t bound, Move move, int ply, int16_t eval, int pv) {
   uint16_t shortHash = (uint16_t) hash;
 
   if (score >= TB_WIN_BOUND)
