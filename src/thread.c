@@ -110,13 +110,10 @@ static void* ThreadInit(void* arg) {
 
   // Alloc all the necessary accumulators
   thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
-  thread->refreshTable =
-    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
-  ResetRefreshTable(thread->refreshTable);
-
-  // Copy these onto the board for easier access within the engine
   thread->board.accumulators = thread->accumulators;
-  thread->board.refreshTable = thread->refreshTable;
+  thread->board.refreshTable =
+    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
+  ResetRefreshTable(thread->board.refreshTable);
 
   pthread_mutex_init(&thread->mutex, NULL);
   pthread_cond_init(&thread->sleep, NULL);
@@ -166,7 +163,7 @@ static void ThreadDestroy(ThreadData* thread) {
   pthread_mutex_destroy(&thread->mutex);
 
   AlignedFree(thread->accumulators);
-  AlignedFree(thread->refreshTable);
+  AlignedFree(thread->board.refreshTable);
 
   free(thread);
 }
@@ -219,7 +216,7 @@ void ThreadsClearSearch(void) {
 
 void ThreadsResetRefreshTables(void) {
   for (int i = 0; i < Threads.count; i++)
-    ResetRefreshTable(Threads.threads[i]->refreshTable);
+    ResetRefreshTable(Threads.threads[i]->board.refreshTable);
 }
 
 // sum node counts

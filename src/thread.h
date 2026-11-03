@@ -45,8 +45,7 @@ struct ThreadData {
 
   int nmpMinPly, npmColor;
 
-  Accumulator* accumulators;
-  AccumulatorKingState* refreshTable;
+  Accumulator* accumulators; // base of the per ply stack; board.accumulators walks it
 
   Board board;
 
