@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include "bench.h"
 #include "board.h"
@@ -36,6 +37,7 @@
 #include "see.h"
 #include "thread.h"
 #include "transposition.h"
+#include "tune.h"
 #include "util.h"
 
 static int MOVE_OVERHEAD  = 50;
@@ -139,79 +141,63 @@ void PrintCurrMove(Depth depth, Move move, int number, Board* board) {
 }
 
 // uci "go" command
-static int GetOptionIntValue(char* in);
-static Bool GetOptionBoolValue(char* in);
-
-static void ParseGo(char* in, Board* board) {
-  in += 3;
-
+static void CmdGo(char* args, Board* board) {
   ResetLimits();
   Limits.multiPV = MULTI_PV;
 
-  char* ptrChar = in;
   int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, ponder = 0, mate = 0;
   uint64_t nodes = 0;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
 
-  if ((ptrChar = strstr(in, "infinite")))
-    Limits.infinite = 1;
-
-  if ((ptrChar = strstr(in, "perft")))
-    perft = atoi(ptrChar + 6);
-
-  if ((ptrChar = strstr(in, "binc")) && board->stm == BLACK)
-    inc = atoi(ptrChar + 5);
-
-  if ((ptrChar = strstr(in, "winc")) && board->stm == WHITE)
-    inc = atoi(ptrChar + 5);
-
-  if ((ptrChar = strstr(in, "wtime")) && board->stm == WHITE)
-    time = atoi(ptrChar + 6);
-
-  if ((ptrChar = strstr(in, "btime")) && board->stm == BLACK)
-    time = atoi(ptrChar + 6);
-
-  if ((ptrChar = strstr(in, "movestogo"))) {
-    movesToGo = atoi(ptrChar + 10);
-    movesToGo = Max(1, Min(50, movesToGo));
-  }
-
-  if ((ptrChar = strstr(in, "movetime")))
-    moveTime = atoi(ptrChar + 9);
-
-  if ((ptrChar = strstr(in, "depth"))) {
-    depth = atoi(ptrChar + 6);
-    depth = Min(MAX_SEARCH_PLY - 1, depth);
-  }
-
-  if ((ptrChar = strstr(in, "mate"))) {
-    mate = atoi(ptrChar + 5);
-    mate = Min(MAX_SEARCH_PLY - 1, mate);
-  }
-
-  if ((ptrChar = strstr(in, "nodes"))) {
-    nodes = strtoull(ptrChar + 6, NULL, 10);
-    nodes = Max(1, nodes);
-  }
-
-  if ((ptrChar = strstr(in, "ponder"))) {
-    if (PONDER_ENABLED)
+  char* save;
+  for (char* tok = strtok_r(args, " \t", &save); tok; tok = strtok_r(NULL, " \t", &save)) {
+    if (!strcmp(tok, "infinite")) {
+      Limits.infinite = 1;
+    } else if (!strcmp(tok, "ponder")) {
       ponder = 1;
-    else {
-      printf("info string Enable option Ponder to use 'ponder'\n");
-      return;
+    } else if (!strcmp(tok, "searchmoves")) {
+      Limits.searchMoves = 1;
+
+      for (char* moves = strtok_r(NULL, " \t", &save); moves; moves = strtok_r(NULL, " \t", &save))
+        for (int i = 0; i < rootMoves.count; i++)
+          if (!strcmp(MoveToStr(rootMoves.moves[i], board), moves))
+            Limits.searchable.moves[Limits.searchable.count++] = rootMoves.moves[i];
+
+      break;
+    } else {
+      // every other keyword takes a value
+      char* value = strtok_r(NULL, " \t", &save);
+      if (!value)
+        break;
+
+      if (!strcmp(tok, "perft"))
+        perft = atoi(value);
+      else if (!strcmp(tok, "wtime") && board->stm == WHITE)
+        time = atoi(value);
+      else if (!strcmp(tok, "btime") && board->stm == BLACK)
+        time = atoi(value);
+      else if (!strcmp(tok, "winc") && board->stm == WHITE)
+        inc = atoi(value);
+      else if (!strcmp(tok, "binc") && board->stm == BLACK)
+        inc = atoi(value);
+      else if (!strcmp(tok, "movestogo"))
+        movesToGo = Max(1, Min(50, atoi(value)));
+      else if (!strcmp(tok, "movetime"))
+        moveTime = atoi(value);
+      else if (!strcmp(tok, "depth"))
+        depth = Min(MAX_SEARCH_PLY - 1, atoi(value));
+      else if (!strcmp(tok, "mate"))
+        mate = Min(MAX_SEARCH_PLY - 1, atoi(value));
+      else if (!strcmp(tok, "nodes"))
+        nodes = Max(1, strtoull(value, NULL, 10));
     }
   }
 
-  if ((ptrChar = strstr(in, "searchmoves"))) {
-    Limits.searchMoves = 1;
-
-    for (char* moves = strtok(ptrChar + 12, " "); moves != NULL; moves = strtok(NULL, " "))
-      for (int i = 0; i < rootMoves.count; i++)
-        if (!strcmp(MoveToStr(rootMoves.moves[i], board), moves))
-          Limits.searchable.moves[Limits.searchable.count++] = rootMoves.moves[i];
+  if (ponder && !PONDER_ENABLED) {
+    printf("info string Enable option Ponder to use 'ponder'\n");
+    return;
   }
 
   if (perft) {
@@ -246,8 +232,8 @@ static void ParseGo(char* in, Board* board) {
       if (movesToGo == -1) {
         int total = Max(1, time + 50 * inc - 50 * MOVE_OVERHEAD);
 
-        Limits.alloc = Min(time * 0.4193, total * 0.0575);
-        Limits.max   = Min(time * 0.9221 - MOVE_OVERHEAD, Limits.alloc * 5.9280) - 10;
+        Limits.alloc = Min(time * TM_ALLOC_TIME, total * TM_ALLOC_TOTAL);
+        Limits.max   = Min(time * TM_MAX_TIME - MOVE_OVERHEAD, Limits.alloc * TM_MAX_ALLOC) - 10;
       } else {
         int total = Max(1, time + movesToGo * inc - MOVE_OVERHEAD);
 
@@ -283,14 +269,13 @@ static void ParseGo(char* in, Board* board) {
 }
 
 // uci "position" command
-static void ParsePosition(char* in, Board* board) {
-  in += 9;
-  char* ptrChar = in;
+static void CmdPosition(char* args, Board* board) {
+  char* ptrChar = args;
 
-  if (strncmp(in, "startpos", 8) == 0) {
+  if (strncmp(args, "startpos", 8) == 0) {
     ParseFen(START_FEN, board);
   } else {
-    ptrChar = strstr(in, "fen");
+    ptrChar = strstr(args, "fen");
     if (ptrChar == NULL)
       ParseFen(START_FEN, board);
     else {
@@ -299,14 +284,15 @@ static void ParsePosition(char* in, Board* board) {
     }
   }
 
-  ptrChar = strstr(in, "moves");
+  ptrChar = strstr(args, "moves");
 
   if (ptrChar == NULL)
     return;
 
   ptrChar += 6;
 
-  for (char* moves = strtok(ptrChar, " "); moves != NULL; moves = strtok(NULL, " ")) {
+  char* save;
+  for (char* moves = strtok_r(ptrChar, " \t", &save); moves != NULL; moves = strtok_r(NULL, " \t", &save)) {
     Move enteredMove = ParseMove(moves, board);
     if (!enteredMove)
       break;
@@ -316,36 +302,6 @@ static void ParsePosition(char* in, Board* board) {
     if (board->fmr == 0)
       board->histPly = board->nullply = 0;
   }
-}
-
-static void PrintUCIOptions(void) {
-  printf("id name Berserk " VERSION "\n");
-  printf("id author Jay Honnold\n");
-  printf("option name Hash type spin default 16 min 2 max %d\n", HASH_MAX);
-  printf("option name Threads type spin default 1 min 1 max 2048\n");
-  printf("option name SyzygyPath type string default <empty>\n");
-  printf("option name MultiPV type spin default 1 min 1 max 256\n");
-  printf("option name Ponder type check default false\n");
-  printf("option name UCI_ShowWDL type check default true\n");
-  printf("option name UCI_Chess960 type check default false\n");
-  printf("option name MoveOverhead type spin default 50 min 0 max 10000\n");
-  printf("option name Contempt type spin default 0 min -100 max 100\n");
-  printf("option name EvalFile type string default <empty>\n");
-  printf("option name Minimal type check default false\n");
-  printf("option name Normalize type check default true\n");
-  printf("option name SoftNodes type check default false\n");
-  printf("uciok\n");
-}
-
-static int ReadLine(char* in) {
-  if (fgets(in, 8192, stdin) == NULL)
-    return 0;
-
-  size_t c = strcspn(in, "\r\n");
-  if (c < strlen(in))
-    in[c] = '\0';
-
-  return 1;
 }
 
 // Stop a running search, waking the main thread if it is parked on ponder or infinite
@@ -361,6 +317,407 @@ static void StopSearch(void) {
   pthread_mutex_unlock(&Threads.lock);
 }
 
+// ---- options ----
+
+static void OptHash(int mb, Board* board) {
+  (void) board;
+
+  uint64_t bytesAllocated = TTInit(mb);
+  ThreadsClearTT();
+  uint64_t totalEntries = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
+  printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",
+         mb,
+         bytesAllocated,
+         totalEntries);
+}
+
+static void OptThreads(int n, Board* board) {
+  (void) board;
+
+  ThreadsSetNumber(n);
+  printf("info string set Threads to value %d\n", Threads.count);
+}
+
+static void OptSyzygyPath(char* path, Board* board) {
+  (void) board;
+
+  if (tb_init(path))
+    printf("info string set SyzygyPath to value %s\n", path);
+  else
+    printf("info string FAILED!\n");
+}
+
+static void OptMultiPV(int n, Board* board) {
+  (void) board;
+
+  MULTI_PV = n;
+  printf("info string set MultiPV to value %d\n", MULTI_PV);
+}
+
+static void OptPonder(int b, Board* board) {
+  (void) board;
+
+  PONDER_ENABLED = b;
+  printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
+}
+
+static void OptShowWDL(int b, Board* board) {
+  (void) board;
+
+  SHOW_WDL = b;
+  printf("info string set SHOW_WDL to value %s\n", SHOW_WDL ? "true" : "false");
+}
+
+static void OptChess960(int b, Board* board) {
+  CHESS_960 = b;
+  printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
+  printf("info string Resetting board...\n");
+
+  ParseFen(START_FEN, board);
+  ThreadsClearTT();
+  ThreadsClearSearch();
+}
+
+static void OptMoveOverhead(int n, Board* board) {
+  (void) board;
+
+  MOVE_OVERHEAD = n;
+}
+
+static void OptContempt(int n, Board* board) {
+  (void) board;
+
+  CONTEMPT = n;
+}
+
+static void OptEvalFile(char* path, Board* board) {
+  (void) board;
+
+  Bool success = 0;
+
+  if (strncmp(path, "<empty>", 7))
+    success = LoadNetwork(path);
+  else {
+    LoadDefaultNN();
+    success = 1;
+  }
+
+  if (success) {
+    // the refresh tables cache accumulators built from the previous network's weights
+    ThreadsResetRefreshTables();
+    printf("info string set EvalFile to value %s\n", path);
+  }
+}
+
+static void OptMinimal(int b, Board* board) {
+  (void) board;
+
+  MINIMAL = b;
+  printf("info string set Minimal to value %s\n", MINIMAL ? "true" : "false");
+}
+
+static void OptNormalize(int b, Board* board) {
+  (void) board;
+
+  NORMALIZE = b;
+  printf("info string set Normalize to value %s\n", NORMALIZE ? "true" : "false");
+}
+
+static void OptSoftNodes(int b, Board* board) {
+  (void) board;
+
+  SOFT_NODES = b;
+  printf("info string set SoftNodes to value %s\n", SOFT_NODES ? "true" : "false");
+}
+
+typedef enum {
+  OPT_SPIN,
+  OPT_CHECK,
+  OPT_STRING
+} OptionType;
+
+typedef struct {
+  const char* name;
+  OptionType type;
+  int def, min, max;                // spin and check (0/1) only
+  void (*setInt)(int, Board*);      // spin and check, value clamped to [min, max]
+  void (*setString)(char*, Board*); // string
+} UCIOption;
+
+static const UCIOption OPTIONS[] = {
+  {"Hash", OPT_SPIN, 16, 2, HASH_MAX, OptHash, NULL},
+  {"Threads", OPT_SPIN, 1, 1, 2048, OptThreads, NULL},
+  {"SyzygyPath", OPT_STRING, 0, 0, 0, NULL, OptSyzygyPath},
+  {"MultiPV", OPT_SPIN, 1, 1, 256, OptMultiPV, NULL},
+  {"Ponder", OPT_CHECK, 0, 0, 1, OptPonder, NULL},
+  {"UCI_ShowWDL", OPT_CHECK, 1, 0, 1, OptShowWDL, NULL},
+  {"UCI_Chess960", OPT_CHECK, 0, 0, 1, OptChess960, NULL},
+  {"MoveOverhead", OPT_SPIN, 50, 0, 10000, OptMoveOverhead, NULL},
+  {"Contempt", OPT_SPIN, 0, -100, 100, OptContempt, NULL},
+  {"EvalFile", OPT_STRING, 0, 0, 0, NULL, OptEvalFile},
+  {"Minimal", OPT_CHECK, 0, 0, 1, OptMinimal, NULL},
+  {"Normalize", OPT_CHECK, 1, 0, 1, OptNormalize, NULL},
+  {"SoftNodes", OPT_CHECK, 0, 0, 1, OptSoftNodes, NULL},
+};
+
+#define NUM_OPTIONS ((int) (sizeof(OPTIONS) / sizeof(OPTIONS[0])))
+
+#ifdef SPSA
+// OpenBench SPSA input: name, type, value, min, max, C_end, R_end
+static double TunableStep(const Tunable* t) {
+  double step = fabs(t->defValue) / 10;
+  return t->isFloat ? step : Max(0.5, step);
+}
+
+static void CmdSpsa(char* args, Board* board) {
+  (void) args, (void) board;
+
+  for (int i = 0; i < TUNABLES_COUNT; i++) {
+    const Tunable* t = &TUNABLES_TABLE[i];
+    printf("%s, %s, %s, %s, %s, %g, 0.002\n",
+           t->name,
+           t->isFloat ? "float" : "int",
+           t->def,
+           t->min,
+           t->max,
+           TunableStep(t));
+  }
+}
+
+static Bool SetTunable(const char* name, const char* value) {
+  for (int i = 0; i < TUNABLES_COUNT; i++) {
+    const Tunable* t = &TUNABLES_TABLE[i];
+    if (strcasecmp(t->name, name))
+      continue;
+
+    if (t->isFloat)
+      *(double*) t->value = Max(t->minValue, Min(t->maxValue, atof(value)));
+    else
+      *(int*) t->value = Max((int) t->minValue, Min((int) t->maxValue, atoi(value)));
+
+    // some tunables only feed precomputed tables
+    InitPruningAndReductionTables();
+    InitSeeValues();
+    return 1;
+  }
+
+  return 0;
+}
+#endif
+
+static void CmdUci(char* args, Board* board) {
+  (void) args, (void) board;
+
+  printf("id name Berserk " VERSION "\n");
+  printf("id author Jay Honnold\n");
+
+  for (int i = 0; i < NUM_OPTIONS; i++) {
+    const UCIOption* o = &OPTIONS[i];
+
+    if (o->type == OPT_SPIN)
+      printf("option name %s type spin default %d min %d max %d\n", o->name, o->def, o->min, o->max);
+    else if (o->type == OPT_CHECK)
+      printf("option name %s type check default %s\n", o->name, o->def ? "true" : "false");
+    else
+      printf("option name %s type string default <empty>\n", o->name);
+  }
+
+#ifdef SPSA
+  for (int i = 0; i < TUNABLES_COUNT; i++) {
+    const Tunable* t = &TUNABLES_TABLE[i];
+
+    if (t->isFloat)
+      printf("option name %s type string default %s\n", t->name, t->def);
+    else
+      printf("option name %s type spin default %s min %s max %s\n", t->name, t->def, t->min, t->max);
+  }
+#endif
+
+  printf("uciok\n");
+}
+
+// setoption name <name> [value <value>]
+static void CmdSetOption(char* args, Board* board) {
+  if (strncmp(args, "name ", 5)) {
+    printf("info string Invalid setoption: %s\n", args);
+    return;
+  }
+
+  char* name  = args + 5;
+  char* value = strstr(name, " value ");
+  if (value) {
+    *value = '\0';
+    value += 7;
+  } else {
+    static char none[1];
+    value = none;
+  }
+
+  for (int i = 0; i < NUM_OPTIONS; i++) {
+    const UCIOption* o = &OPTIONS[i];
+    if (strcasecmp(o->name, name))
+      continue;
+
+    if (o->type == OPT_SPIN)
+      o->setInt(Max(o->min, Min(o->max, atoi(value))), board);
+    else if (o->type == OPT_CHECK)
+      o->setInt(!strncasecmp(value, "true", 4), board);
+    else
+      o->setString(value, board);
+
+    return;
+  }
+
+#ifdef SPSA
+  if (SetTunable(name, value))
+    return;
+#endif
+
+  printf("info string Unknown option: %s\n", name);
+}
+
+// ---- commands ----
+
+static void CmdIsReady(char* args, Board* board) {
+  (void) args, (void) board;
+
+  printf("readyok\n");
+}
+
+static void CmdUciNewGame(char* args, Board* board) {
+  (void) args;
+
+  ParseFen(START_FEN, board);
+  ThreadsClearTT();
+  ThreadsClearSearch();
+}
+
+static void CmdStop(char* args, Board* board) {
+  (void) args, (void) board;
+
+  StopSearch();
+}
+
+static void CmdPonderHit(char* args, Board* board) {
+  (void) args, (void) board;
+
+  Threads.ponder = 0;
+  if (Threads.stopOnPonderHit)
+    Threads.stop = 1;
+  pthread_mutex_lock(&Threads.lock);
+  if (Threads.sleeping) {
+    Threads.stop = 1;
+    ThreadWake(Threads.threads[0], THREAD_RESUME);
+    Threads.sleeping = 0;
+  }
+  pthread_mutex_unlock(&Threads.lock);
+}
+
+static void CmdBoard(char* args, Board* board) {
+  (void) args;
+
+  PrintBoard(board);
+}
+
+static void CmdCycle(char* args, Board* board) {
+  (void) args;
+
+  int cycle = HasCycle(board, MAX_SEARCH_PLY);
+  printf(cycle ? "yes\n" : "no\n");
+}
+
+// perft [depth] [fen]
+static void CmdPerft(char* args, Board* board) {
+  char* save;
+  const char* d   = strtok_r(args, " ", &save) ?: "5";
+  const char* fen = strtok_r(NULL, "\0", &save) ?: START_FEN;
+
+  Depth depth = atoi(d);
+  ParseFen(fen, board);
+
+  PerftTest(depth, board);
+}
+
+// bench [depth]
+static void CmdBench(char* args, Board* board) {
+  (void) board;
+
+  char* save;
+  const char* d = strtok_r(args, " ", &save);
+
+  Bench(d ? atoi(d) : DEFAULT_BENCH_DEPTH);
+}
+
+static void CmdThreats(char* args, Board* board) {
+  (void) args;
+
+  PrintBB(board->threatened);
+}
+
+static void CmdEval(char* args, Board* board) {
+  (void) args;
+
+  EvaluateTrace(board);
+}
+
+static void CmdSee(char* args, Board* board) {
+  Move m = ParseMove(args, board);
+  if (m)
+    printf("info string SEE result: %d\n", SEE(board, m, 0));
+  else
+    printf("info string Invalid move!\n");
+}
+
+static void CmdApply(char* args, Board* board) {
+  Move m = ParseMove(args, board);
+  if (m) {
+    MakeMoveUpdate(m, board, 0);
+    PrintBoard(board);
+  } else
+    printf("info string Invalid move!\n");
+}
+
+typedef struct {
+  const char* name;
+  void (*run)(char* args, Board* board); // args is the rest of the line after the command
+} UCICommand;
+
+static const UCICommand COMMANDS[] = {
+  {"uci", CmdUci},
+  {"isready", CmdIsReady},
+  {"setoption", CmdSetOption},
+  {"ucinewgame", CmdUciNewGame},
+  {"position", CmdPosition},
+  {"go", CmdGo},
+  {"stop", CmdStop},
+  {"ponderhit", CmdPonderHit},
+  // non-standard
+  {"board", CmdBoard},
+  {"cycle", CmdCycle},
+  {"perft", CmdPerft},
+  {"bench", CmdBench},
+  {"threats", CmdThreats},
+  {"eval", CmdEval},
+  {"see", CmdSee},
+  {"apply", CmdApply},
+#ifdef SPSA
+  {"spsa", CmdSpsa},
+#endif
+};
+
+#define NUM_COMMANDS ((int) (sizeof(COMMANDS) / sizeof(COMMANDS[0])))
+
+static int ReadLine(char* in) {
+  if (fgets(in, 8192, stdin) == NULL)
+    return 0;
+
+  size_t c = strcspn(in, "\r\n");
+  if (c < strlen(in))
+    in[c] = '\0';
+
+  return 1;
+}
+
 void UCILoop(void) {
   static char in[8192];
 
@@ -372,164 +729,33 @@ void UCILoop(void) {
   Threads.searching = Threads.sleeping = 0;
 
   while (ReadLine(in)) {
-    if (!in[0])
+    // split "<command> <args>"
+    char* cmd = in + strspn(in, " \t");
+    if (!*cmd)
       continue;
 
-    if (!strncmp(in, "isready", 7)) {
-      printf("readyok\n");
-    } else if (!strncmp(in, "position", 8)) {
-      ParsePosition(in, &board);
-    } else if (!strncmp(in, "ucinewgame", 10)) {
-      ParseFen(START_FEN, &board);
-      ThreadsClearTT();
-      ThreadsClearSearch();
-    } else if (!strncmp(in, "go", 2)) {
-      ParseGo(in, &board);
-    } else if (!strncmp(in, "stop", 4)) {
-      StopSearch();
-    } else if (!strncmp(in, "quit", 4)) {
+    char* args = cmd + strcspn(cmd, " \t");
+    if (*args)
+      *args++ = '\0';
+    args += strspn(args, " \t");
+
+    if (!strcmp(cmd, "quit")) {
       StopSearch();
       break;
-    } else if (!strncmp(in, "uci", 3)) {
-      PrintUCIOptions();
-    } else if (!strncmp(in, "ponderhit", 9)) {
-      Threads.ponder = 0;
-      if (Threads.stopOnPonderHit)
-        Threads.stop = 1;
-      pthread_mutex_lock(&Threads.lock);
-      if (Threads.sleeping) {
-        Threads.stop = 1;
-        ThreadWake(Threads.threads[0], THREAD_RESUME);
-        Threads.sleeping = 0;
-      }
-      pthread_mutex_unlock(&Threads.lock);
-    } else if (!strncmp(in, "board", 5)) {
-      PrintBoard(&board);
-    } else if (!strncmp(in, "cycle", 5)) {
-      int cycle = HasCycle(&board, MAX_SEARCH_PLY);
-      printf(cycle ? "yes\n" : "no\n");
-    } else if (!strncmp(in, "perft", 5)) {
-      strtok(in, " ");
-      const char* d   = strtok(NULL, " ") ?: "5";
-      const char* fen = strtok(NULL, "\0") ?: START_FEN;
+    }
 
-      Depth depth = atoi(d);
-      ParseFen(fen, &board);
+    int i = 0;
+    while (i < NUM_COMMANDS && strcmp(COMMANDS[i].name, cmd))
+      i++;
 
-      PerftTest(depth, &board);
-    } else if (!strncmp(in, "bench", 5)) {
-      strtok(in, " ");
-      const char* d = strtok(NULL, " ") ?: "13";
-
-      Depth depth = atoi(d);
-      Bench(depth);
-    } else if (!strncmp(in, "threats", 7)) {
-      PrintBB(board.threatened);
-    } else if (!strncmp(in, "eval", 4)) {
-      EvaluateTrace(&board);
-    } else if (!strncmp(in, "see ", 4)) {
-      Move m = ParseMove(in + 4, &board);
-      if (m)
-        printf("info string SEE result: %d\n", SEE(&board, m, 0));
-      else
-        printf("info string Invalid move!\n");
-    } else if (!strncmp(in, "apply ", 6)) {
-      Move m = ParseMove(in + 6, &board);
-      if (m) {
-        MakeMoveUpdate(m, &board, 0);
-        PrintBoard(&board);
-      } else
-        printf("info string Invalid move!\n");
-    } else if (!strncmp(in, "setoption name Hash value ", 26)) {
-      int mb                  = GetOptionIntValue(in);
-      mb                      = Max(2, Min(HASH_MAX, mb));
-      uint64_t bytesAllocated = TTInit(mb);
-      ThreadsClearTT();
-      uint64_t totalEntries = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
-      printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",
-             mb,
-             bytesAllocated,
-             totalEntries);
-    } else if (!strncmp(in, "setoption name Threads value ", 29)) {
-      int n = GetOptionIntValue(in);
-      ThreadsSetNumber(Max(1, Min(2048, n)));
-      printf("info string set Threads to value %d\n", Threads.count);
-    } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
-      Bool success = tb_init(in + 32);
-      if (success)
-        printf("info string set SyzygyPath to value %s\n", in + 32);
-      else
-        printf("info string FAILED!\n");
-    } else if (!strncmp(in, "setoption name MultiPV value ", 29)) {
-      int n = GetOptionIntValue(in);
-
-      MULTI_PV = Max(1, Min(256, n));
-      printf("info string set MultiPV to value %d\n", MULTI_PV);
-    } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
-      PONDER_ENABLED = GetOptionBoolValue(in);
-      printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
-    } else if (!strncmp(in, "setoption name UCI_ShowWDL value ", 33)) {
-      SHOW_WDL = GetOptionBoolValue(in);
-      printf("info string set SHOW_WDL to value %s\n", SHOW_WDL ? "true" : "false");
-    } else if (!strncmp(in, "setoption name UCI_Chess960 value ", 34)) {
-      CHESS_960 = GetOptionBoolValue(in);
-      printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
-      printf("info string Resetting board...\n");
-
-      ParseFen(START_FEN, &board);
-      ThreadsClearTT();
-      ThreadsClearSearch();
-    } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
-      int n         = GetOptionIntValue(in);
-      MOVE_OVERHEAD = Min(10000, Max(0, n));
-    } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
-      int n    = GetOptionIntValue(in);
-      CONTEMPT = Min(100, Max(-100, n));
-    } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
-      char* path   = in + 30;
-      Bool success = 0;
-
-      if (strncmp(path, "<empty>", 7))
-        success = LoadNetwork(path);
-      else {
-        LoadDefaultNN();
-        success = 1;
-      }
-
-      if (success) {
-        // the refresh tables cache accumulators built from the previous network's weights
-        ThreadsResetRefreshTables();
-        printf("info string set EvalFile to value %s\n", path);
-      }
-    } else if (!strncmp(in, "setoption name Minimal value ", 29)) {
-      MINIMAL = GetOptionBoolValue(in);
-      printf("info string set Minimal to value %s\n", MINIMAL ? "true" : "false");
-    } else if (!strncmp(in, "setoption name Normalize value ", 31)) {
-      NORMALIZE = GetOptionBoolValue(in);
-      printf("info string set Normalize to value %s\n", NORMALIZE ? "true" : "false");
-    } else if (!strncmp(in, "setoption name SoftNodes value ", 31)) {
-      SOFT_NODES = GetOptionBoolValue(in);
-      printf("info string set SoftNodes to value %s\n", SOFT_NODES ? "true" : "false");
-    } else
-      printf("Unknown command: %s \n", in);
+    if (i < NUM_COMMANDS)
+      COMMANDS[i].run(args, &board);
+    else
+      printf("Unknown command: %s \n", cmd);
   }
 
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
 
   ThreadsExit();
-}
-
-static int GetOptionIntValue(char* in) {
-  int n;
-  sscanf(in, "%*s %*s %*s %*s %d", &n);
-
-  return n;
-}
-
-static Bool GetOptionBoolValue(char* in) {
-  char opt[6] = {0};
-  sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-  return !strncmp(opt, "true", 4);
 }

@@ -23,6 +23,7 @@
 #include "nn/threats.h"
 #include "random.h"
 #include "search.h"
+#include "see.h"
 #include "thread.h"
 #include "transposition.h"
 #include "uci.h"
@@ -35,6 +36,9 @@ int main(int argc, char** argv) {
 
   InitZobristKeys();
   InitPruningAndReductionTables();
+#ifdef SPSA
+  InitSeeValues();
+#endif
   InitAttacks();
   InitThreats();
   InitCuckoo();

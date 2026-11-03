@@ -22,6 +22,7 @@
 #include "move.h"
 #include "search.h"
 #include "thread.h"
+#include "tune.h"
 #include "types.h"
 #include "util.h"
 
@@ -72,7 +73,7 @@ INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
 }
 
 INLINE int16_t HistoryBonus(Depth depth) {
-  return Min(1708, 4 * depth * depth + 191 * depth - 118);
+  return Min(HIST_BONUS_MAX, HIST_BONUS_QUAD * depth * depth + HIST_BONUS_LINEAR * depth + HIST_BONUS_BASE);
 }
 
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
@@ -99,7 +100,7 @@ INLINE Score GetCorrectionScore(Board* board, SearchStack* ss) {
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
   const int cont2 = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
-  return (31 * pawn + 26 * (white + black) + 17 * cont1 + 46 * cont2) / 8192;
+  return (CORR_PAWN * pawn + CORR_NON_PAWN * (white + black) + CORR_CONT1 * cont1 + CORR_CONT2 * cont2) / 8192;
 }
 
 void UpdateHistories(SearchStack* ss,

@@ -23,6 +23,7 @@
 #include "move.h"
 #include "movegen.h"
 #include "see.h"
+#include "tune.h"
 #include "types.h"
 
 INLINE Move Best(ScoredMove* current, ScoredMove* end) {
@@ -59,23 +60,24 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
     const PieceType captured = IsEP(move) ? PAWN : TypeOf(board->squares[to]);
 
     if (type == ST_QUIET || type == ST_EVASION_QT) {
-      current->score = ((int) HH(thread, board->stm, move, board->threatened) * 26 + //
-                        (int) (*(ss - 1)->ch)[pc][to] * 36 +                         //
-                        (int) (*(ss - 2)->ch)[pc][to] * 35 +                         //
-                        (int) (*(ss - 4)->ch)[pc][to] * 19 +                         //
-                        (int) (*(ss - 6)->ch)[pc][to] * 17) /
+      current->score = ((int) HH(thread, board->stm, move, board->threatened) * MO_HH + //
+                        (int) (*(ss - 1)->ch)[pc][to] * MO_CH1 +                        //
+                        (int) (*(ss - 2)->ch)[pc][to] * MO_CH2 +                        //
+                        (int) (*(ss - 4)->ch)[pc][to] * MO_CH4 +                        //
+                        (int) (*(ss - 6)->ch)[pc][to] * MO_CH6) /
                        16;
 
       if (pt != PAWN && pt != KING) {
         const BitBoard danger = threats[Max(0, pt - BISHOP)];
 
         if (GetBit(danger, from))
-          current->score += 16863;
+          current->score += MO_THREAT_FROM;
         if (GetBit(danger, to))
-          current->score -= 13955;
+          current->score -= MO_THREAT_TO;
       }
     } else if (type == ST_CAPTURE)
-      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[TypeOf(board->squares[To(move)])];
+      current->score =
+        MO_CAPHIST * GetCaptureHistory(picker->thread, move) / 256 + SEE_VALUE[TypeOf(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
       current->score = 1e7 + SEE_VALUE[captured];
@@ -111,7 +113,7 @@ Move NextMove(MovePicker* picker, Board* board, Bool skipQuiets) {
         if (move == picker->hashMove)
           continue;
 
-        else if (SEE(board, move, -score / 2))
+        else if (SEE(board, move, -score * MO_GOOD_CAPTURE / 64))
           return move;
 
         *picker->endBad++ = *(picker->current - 1);
