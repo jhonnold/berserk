@@ -107,7 +107,7 @@
   INT(MO_CH6, 17, 0, 34)                         \
   INT(MO_THREAT_FROM, 16863, 0, 33726)           \
   INT(MO_THREAT_TO, 13955, 0, 27910)             \
-  INT(MO_CAPHIST_DIV, 16, 1, 32)
+  INT(MO_CAPHIST, 16, 0, 32)
 
 #ifdef SPSA
 

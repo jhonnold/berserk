@@ -77,7 +77,7 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
       }
     } else if (type == ST_CAPTURE)
       current->score =
-        GetCaptureHistory(picker->thread, move) / MO_CAPHIST_DIV + SEE_VALUE[TypeOf(board->squares[To(move)])];
+        MO_CAPHIST * GetCaptureHistory(picker->thread, move) / 256 + SEE_VALUE[TypeOf(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
       current->score = 1e7 + SEE_VALUE[captured];
