@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,24 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "types.h"
+#include "util.h"
 
 #ifdef WIN32
 #include <windows.h>
 
-long GetTimeMS() {
+long GetTimeMS(void) {
   return GetTickCount();
 }
 
 #else
-#include <stddef.h>
-#include <sys/time.h>
+#include <time.h>
 
-long GetTimeMS() {
-  struct timeval time;
-  gettimeofday(&time, NULL);
+// monotonic, so a wall clock adjustment mid search cannot skew time management
+long GetTimeMS(void) {
+  struct timespec time;
+  clock_gettime(CLOCK_MONOTONIC, &time);
 
-  return time.tv_sec * 1000 + time.tv_usec / 1000;
+  return time.tv_sec * 1000 + time.tv_nsec / 1000000;
 }
 
 #endif

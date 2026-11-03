@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,14 @@
 #ifndef MOVE_H
 #define MOVE_H
 
+#include "board.h"
 #include "types.h"
+#include "util.h"
+
+typedef struct {
+  int count;
+  Move moves[MAX_MOVES];
+} SimpleMoveList;
 
 #define NULL_MOVE 0
 
@@ -33,25 +40,58 @@
 
 extern const int CHAR_TO_PIECE[];
 extern const char* PIECE_TO_CHAR;
-extern const char* PROMOTION_TO_CHAR;
 extern const char* SQ_TO_COORD[64];
 extern const int CASTLE_ROOK_DEST[64];
 extern const int CASTLING_ROOK[64];
 
-#define BuildMove(from, to, piece, flags) (from) | ((to) << 6) | ((piece) << 12) | ((flags) << 16)
-#define FromTo(move)                      (((int) (move) &0x00fff) >> 0)
-#define From(move)                        (((int) (move) &0x0003f) >> 0)
-#define To(move)                          (((int) (move) &0x00fc0) >> 6)
-#define Moving(move)                      (((int) (move) &0x0f000) >> 12)
-#define Flags(move)                       (((int) (move) &0xf0000) >> 16)
+// from | to << 6 | piece << 12 | flags << 16
+INLINE Move BuildMove(Square from, Square to, Piece piece, int flags) {
+  return from | (to << 6) | (piece << 12) | (flags << 16);
+}
 
-#define IsCap(move) (!!(Flags(move) & CAPTURE_FLAG))
-#define IsEP(move)  (Flags(move) == EP_FLAG)
-#define IsCas(move) (Flags(move) == CASTLE_FLAG)
+INLINE int FromTo(Move move) {
+  return (int) move & 0x00fff;
+}
 
-#define IsPromo(move)         (!!(Flags(move) & PROMO_FLAG))
-#define PromoPT(move)         ((Flags(move) & 0x3) + KNIGHT)
-#define PromoPiece(move, stm) (Piece(PromoPT(move), stm))
+INLINE Square From(Move move) {
+  return (int) move & 0x0003f;
+}
+
+INLINE Square To(Move move) {
+  return ((int) move & 0x00fc0) >> 6;
+}
+
+INLINE Piece Moving(Move move) {
+  return ((int) move & 0x0f000) >> 12;
+}
+
+INLINE int Flags(Move move) {
+  return ((int) move & 0xf0000) >> 16;
+}
+
+INLINE Bool IsCap(Move move) {
+  return !!(Flags(move) & CAPTURE_FLAG);
+}
+
+INLINE Bool IsEP(Move move) {
+  return Flags(move) == EP_FLAG;
+}
+
+INLINE Bool IsCas(Move move) {
+  return Flags(move) == CASTLE_FLAG;
+}
+
+INLINE Bool IsPromo(Move move) {
+  return !!(Flags(move) & PROMO_FLAG);
+}
+
+INLINE PieceType PromoPT(Move move) {
+  return (Flags(move) & 0x3) + KNIGHT;
+}
+
+INLINE Piece PromoPiece(Move move, Color stm) {
+  return MakePiece(PromoPT(move), stm);
+}
 
 Move ParseMove(char* moveStr, Board* board);
 char* MoveToStr(Move move, Board* board);

@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,16 +22,20 @@
 
 #include "types.h"
 
+#define ALIGN_ON 64
+#define ALIGN    __attribute__((aligned(ALIGN_ON)))
+
 #define Min(a, b) (((a) < (b)) ? (a) : (b))
 #define Max(a, b) (((a) > (b)) ? (a) : (b))
 
-#define INLINE static inline __attribute__((always_inline))
+#define INLINE   static inline __attribute__((always_inline))
+#define NOINLINE __attribute__((noinline))
 
 #define LoadRlx(x) atomic_load_explicit(&(x), memory_order_relaxed)
-#define IncRlx(x)  atomic_fetch_add_explicit(&(x), 1, memory_order_relaxed)
-#define DecRlx(x)  atomic_fetch_sub_explicit(&(x), 1, memory_order_relaxed)
+// single writer (the owning thread), so a relaxed load + store avoids a locked RMW
+#define IncRlx(x) atomic_store_explicit(&(x), LoadRlx(x) + 1, memory_order_relaxed)
 
-long GetTimeMS();
+long GetTimeMS(void);
 
 INLINE void* AlignedMalloc(uint64_t size, const size_t on) {
   void* mem  = malloc(size + on + sizeof(void*));

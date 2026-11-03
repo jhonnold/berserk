@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,12 +22,13 @@
 #include <string.h>
 
 #include "board.h"
+#include "movegen.h"
+#include "options.h"
 #include "random.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
 #include "types.h"
-#include "uci.h"
 #include "util.h"
 
 #define VERIFICATION_DEPTH 10
@@ -88,20 +89,12 @@ static int PlayRandomMoves(Board* board, int n) {
 }
 
 static int VerificationSearch(Board* board) {
-  Limits.depth       = VERIFICATION_DEPTH;
-  Limits.multiPV     = 1;
-  Limits.nodes       = VERIFICATION_NODES;
-  Limits.softNodes   = 0;
-  Limits.hitrate     = 1000;
-  Limits.max         = INT_MAX;
-  Limits.timeset     = 0;
-  Limits.mate        = 0;
-  Limits.infinite    = 0;
-  Limits.searchMoves = 0;
-  Limits.start       = GetTimeMS();
+  ResetLimits();
+  Limits.depth = VERIFICATION_DEPTH;
+  Limits.nodes = VERIFICATION_NODES;
 
-  TTClear();
-  SearchClear();
+  ThreadsClearTT();
+  ThreadsClearSearch();
 
   StartSearch(board, 0);
   ThreadWaitUntilSleep(Threads.threads[0]);
@@ -134,8 +127,8 @@ void Genfens(char* args) {
 
   SeedRandom(seed);
 
-  Book book     = {NULL, 0};
-  int usingBook = strcmp(bookPath, "None") != 0;
+  Book book      = {NULL, 0};
+  Bool usingBook = strcmp(bookPath, "None") != 0;
 
   if (usingBook && !LoadBook(&book, bookPath)) {
     printf("info string unable to open book %s\n", bookPath);

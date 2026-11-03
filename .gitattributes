@@ -1,0 +1,5 @@
+# Keep sources LF on every platform
+*.c text eol=lf
+*.h text eol=lf
+*.csv text eol=lf
+makefile text eol=lf

@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,27 +19,11 @@
 
 #include "types.h"
 
-extern int SHOW_WDL;
-extern int CHESS_960;
-extern int CONTEMPT;
-extern int MINIMAL;
-extern int NORMALIZE;
-extern SearchParams Limits;
+// search output, in UCI format
+void PrintUCI(ThreadData* thread, Depth depth, Score alpha, Score beta, Board* board);
+void PrintBestMove(Move bestMove, Move ponderMove, Board* board);
+void PrintCurrMove(Depth depth, Move move, int number, Board* board);
 
-// Normalization of a score to 50% WR at 100cp
-#define Normalize(s) ((s) / 1.58)
-
-int WRModel(Score s, int ply);
-
-void RootMoves(SimpleMoveList* moves, Board* board);
-
-void ParseGo(char* in, Board* board);
-void ParsePosition(char* in, Board* board);
-void PrintUCIOptions();
-
-int ReadLine(char* in);
-void UCILoop();
-
-int GetOptionIntValue(char* in);
+void UCILoop(void);
 
 #endif

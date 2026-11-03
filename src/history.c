@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,13 +29,13 @@ CorrectionHistory Correction;
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
-                     int depth,
+                     Depth depth,
                      Move quiets[],
                      int nQ,
                      Move captures[],
                      int nC) {
   Board* board = &thread->board;
-  int stm      = board->stm;
+  Color stm    = board->stm;
 
   int16_t inc = HistoryBonus(depth);
 
@@ -51,16 +51,16 @@ void UpdateHistories(SearchStack* ss,
     // wasn't trivial. This idea was first thought of
     // by Alayan in Ethereal
     if (nQ > 1 || depth > 5) {
-      AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+      AddHistoryHeuristic(&HH(thread, stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
   } else {
-    int piece    = Moving(bestMove);
-    int to       = To(bestMove);
-    int defended = !GetBit(board->threatened, to);
-    int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
+    Piece piece        = Moving(bestMove);
+    Square to          = To(bestMove);
+    int defended       = !GetBit(board->threatened, to);
+    PieceType captured = IsEP(bestMove) ? PAWN : TypeOf(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, defended, captured), inc);
+    AddHistoryHeuristic(&TH(thread, piece, to, defended, captured), inc);
   }
 
   // Update quiets
@@ -72,7 +72,7 @@ void UpdateHistories(SearchStack* ss,
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, board->threatened), malus);
+      AddHistoryHeuristic(&HH(thread, stm, m, board->threatened), malus);
       UpdateCH(ss, m, malus);
     }
   }
@@ -83,72 +83,45 @@ void UpdateHistories(SearchStack* ss,
     if (m == bestMove)
       continue;
 
-    int piece    = Moving(m);
-    int to       = To(m);
-    int defended = !GetBit(board->threatened, to);
-    int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
+    Piece piece        = Moving(m);
+    Square to          = To(m);
+    int defended       = !GetBit(board->threatened, to);
+    PieceType captured = IsEP(m) ? PAWN : TypeOf(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);
+    AddHistoryHeuristic(&TH(thread, piece, to, defended, captured), -inc);
   }
 }
 
-void UpdateCorrection(int raw, int real, int depth, Board* board) {
+void UpdateCorrection(Score raw, Score real, Depth depth, Board* board) {
   const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
-  int16_t* pawnCorrection  = &Correction.pawn[board->pawnZobrist & Correction.mask];
+  int16_t* pawnCorrection  = &Correction.pawn[board->pawnZobrist & CORRECTION_MASK];
   AddHistoryHeuristic(pawnCorrection, correction);
 
-  int16_t* whiteCorrection =
-    &Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & Correction.mask];
+  int16_t* whiteCorrection = &Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & CORRECTION_MASK];
   AddHistoryHeuristic(whiteCorrection, correction);
-  int16_t* blackCorrection =
-    &Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & Correction.mask];
+  int16_t* blackCorrection = &Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & CORRECTION_MASK];
   AddHistoryHeuristic(blackCorrection, correction);
 }
 
-void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
-  if ((ss - 1)->move && (ss - 2)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
-    int16_t* contCorrection  = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    AddHistoryHeuristic(contCorrection, correction);
-  }
+void UpdateContCorrection(Score raw, Score real, Depth depth, SearchStack* ss) {
+  if (!(ss - 1)->move)
+    return;
 
-  if ((ss - 1)->move && (ss - 3)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
-    int16_t* contCorrection  = &(*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    AddHistoryHeuristic(contCorrection, correction);
-  }
-}
+  const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
+  const Piece moving       = Moving((ss - 1)->move);
+  const Square to          = To((ss - 1)->move);
 
-void CorrectionFree() {
-  if (Correction.pawn) {
-    AlignedFree(Correction.pawn);
-    AlignedFree(Correction.nonPawn[WHITE]);
-    AlignedFree(Correction.nonPawn[BLACK]);
-  }
+  if ((ss - 2)->move)
+    AddHistoryHeuristic(&(*(ss - 2)->cont)[moving][to], correction);
 
-  Correction.pawn = Correction.nonPawn[WHITE] = Correction.nonPawn[BLACK] = NULL;
-  Correction.size = Correction.mask = 0;
-}
-
-// Allocate the shared tables at a fixed CORRECTION_SIZE, regardless of thread count
-void CorrectionInit() {
-  const uint64_t size = CORRECTION_SIZE;
-
-  CorrectionFree();
-
-  Correction.size           = size;
-  Correction.mask           = size - 1;
-  Correction.pawn           = AlignedMalloc(size * sizeof(int16_t), 64);
-  Correction.nonPawn[WHITE] = AlignedMalloc(size * sizeof(int16_t), 64);
-  Correction.nonPawn[BLACK] = AlignedMalloc(size * sizeof(int16_t), 64);
-
-  CorrectionClearPart(0, 1);
+  if ((ss - 3)->move)
+    AddHistoryHeuristic(&(*(ss - 3)->cont)[moving][to], correction);
 }
 
 // Zero this thread's slice of the shared tables
 void CorrectionClearPart(int idx, int count) {
-  const uint64_t begin = idx * Correction.size / count;
-  const uint64_t end   = (idx + 1) * Correction.size / count;
+  const uint64_t begin = idx * CORRECTION_SIZE / count;
+  const uint64_t end   = (idx + 1) * CORRECTION_SIZE / count;
   const uint64_t bytes = (end - begin) * sizeof(int16_t);
 
   memset(Correction.pawn + begin, 0, bytes);

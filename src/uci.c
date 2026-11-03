@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,9 +28,8 @@
 #include "eval.h"
 #include "move.h"
 #include "movegen.h"
-#include "movepick.h"
-#include "nn/accumulator.h"
 #include "nn/evaluate.h"
+#include "options.h"
 #include "perft.h"
 #include "pyrrhic/tbprobe.h"
 #include "search.h"
@@ -39,27 +38,20 @@
 #include "transposition.h"
 #include "util.h"
 
-int MOVE_OVERHEAD  = 50;
-int MULTI_PV       = 1;
-int PONDER_ENABLED = 0;
-int CHESS_960      = 0;
-int CONTEMPT       = 0;
-int SHOW_WDL       = 1;
-int MINIMAL        = 0;
-int NORMALIZE      = 1;
-int SOFT_NODES     = 0;
-
-SearchParams Limits;
+static int MOVE_OVERHEAD  = 50;
+static int MULTI_PV       = 1;
+static int PONDER_ENABLED = 0;
+static int SOFT_NODES     = 0;
 
 // All WDL work below is thanks to the work of vondele@ and
 // this repo: https://github.com/vondele/WLD_model
 
 // Third order polynomial fit of Berserk data
-const double as[4] = {0.01538655, -1.33196512, 7.43032607, 152.07701643};
-const double bs[4] = {-2.66442843, 18.35463702, -38.91760538, 56.27652511};
+static const double as[4] = {0.01538655, -1.33196512, 7.43032607, 152.07701643};
+static const double bs[4] = {-2.66442843, 18.35463702, -38.91760538, 56.27652511};
 
 // win% as permilli given score and ply
-int WRModel(Score s, int ply) {
+static int WRModel(Score s, Ply ply) {
   double m = Min(240, ply) / 64.0;
 
   double a = (((as[0] * m + as[1]) * m + as[2]) * m) + as[3];
@@ -70,34 +62,95 @@ int WRModel(Score s, int ply) {
   return 0.5 + 1000 / (1 + exp((a - x) / b));
 }
 
-void RootMoves(SimpleMoveList* moves, Board* board) {
-  moves->count = 0;
+static void PrintPV(PV* pv, Board* board);
 
-  MovePicker mp;
-  InitPerftMovePicker(&mp, board);
+void PrintUCI(ThreadData* thread, Depth depth, Score alpha, Score beta, Board* board) {
+  uint64_t nodes  = NodesSearched();
+  uint64_t tbhits = TBHits();
+  long elapsed    = GetTimeMS() - Limits.start;
+  uint64_t time   = Max(1, elapsed);
+  uint64_t nps    = 1000 * nodes / time;
+  int hashfull    = TTFull();
 
-  Move mv;
-  while ((mv = NextMove(&mp, board, 0)))
-    moves->moves[moves->count++] = mv;
+  for (int i = 0; i < Limits.multiPV; i++) {
+    Bool updated = (thread->rootMoves[i].score != -CHECKMATE);
+    if (depth == 1 && i > 0 && !updated)
+      break;
+
+    Depth realDepth  = Max(1, updated ? depth : depth - 1);
+    Score bounded    = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
+    int printable    = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
+                       bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
+                       !NORMALIZE || abs(bounded) > TB_WIN_BOUND ? // don't normalize our fake tb scores or real tb scores
+                      bounded :
+                         Normalize(bounded); // convert to 50% WR at 100cp
+    const char* type = abs(bounded) > MATE_BOUND ? "mate" : "cp";
+    const char* bound = " ";
+    if (updated)
+      bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
+
+    printf("info depth %d seldepth %d multipv %d score %s %d%s",
+           realDepth,
+           thread->rootMoves[i].seldepth,
+           i + 1,
+           type,
+           printable,
+           bound);
+
+    if (SHOW_WDL) {
+      Ply ply  = Max(0, 2 * (board->moveNo - 1)) + board->stm;
+      int wdlW = WRModel(bounded, ply);
+      int wdlL = WRModel(-bounded, ply);
+      int wdlD = 1000 - wdlW - wdlL;
+
+      printf("wdl %d %d %d ", wdlW, wdlD, wdlL);
+    }
+
+    printf("nodes %" PRIu64 " nps %" PRIu64 " hashfull %d tbhits %" PRIu64 " time %" PRIu64 " pv ",
+           nodes,
+           nps,
+           hashfull,
+           tbhits,
+           time);
+
+    PV* pv = &thread->rootMoves[i].pv;
+    if (pv->count)
+      PrintPV(pv, board);
+    else
+      printf("%s\n", MoveToStr(pv->moves[0], board));
+  }
+}
+
+static void PrintPV(PV* pv, Board* board) {
+  for (int i = 0; i < pv->count; i++)
+    printf("%s ", MoveToStr(pv->moves[i], board));
+  printf("\n");
+}
+
+void PrintBestMove(Move bestMove, Move ponderMove, Board* board) {
+  printf("bestmove %s", MoveToStr(bestMove, board));
+  if (ponderMove)
+    printf(" ponder %s", MoveToStr(ponderMove, board));
+  printf("\n");
+}
+
+void PrintCurrMove(Depth depth, Move move, int number, Board* board) {
+  printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move, board), number);
 }
 
 // uci "go" command
-void ParseGo(char* in, Board* board) {
+static int GetOptionIntValue(char* in);
+static Bool GetOptionBoolValue(char* in);
+
+static void ParseGo(char* in, Board* board) {
   in += 3;
 
-  Limits.depth            = MAX_SEARCH_PLY;
-  Limits.start            = GetTimeMS();
-  Limits.timeset          = 0;
-  Limits.stopped          = 0;
-  Limits.quit             = 0;
-  Limits.multiPV          = MULTI_PV;
-  Limits.searchMoves      = 0;
-  Limits.searchable.count = 0;
-  Limits.infinite         = 0;
-  Limits.mate             = 0;
+  ResetLimits();
+  Limits.multiPV = MULTI_PV;
 
   char* ptrChar = in;
-  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, nodes = 0, ponder = 0, mate = 0;
+  int perft = 0, movesToGo = -1, moveTime = -1, time = -1, inc = 0, depth = -1, ponder = 0, mate = 0;
+  uint64_t nodes = 0;
 
   SimpleMoveList rootMoves;
   RootMoves(&rootMoves, board);
@@ -120,20 +173,28 @@ void ParseGo(char* in, Board* board) {
   if ((ptrChar = strstr(in, "btime")) && board->stm == BLACK)
     time = atoi(ptrChar + 6);
 
-  if ((ptrChar = strstr(in, "movestogo")))
-    movesToGo = Max(1, Min(50, atoi(ptrChar + 10)));
+  if ((ptrChar = strstr(in, "movestogo"))) {
+    movesToGo = atoi(ptrChar + 10);
+    movesToGo = Max(1, Min(50, movesToGo));
+  }
 
   if ((ptrChar = strstr(in, "movetime")))
     moveTime = atoi(ptrChar + 9);
 
-  if ((ptrChar = strstr(in, "depth")))
-    depth = Min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 6));
+  if ((ptrChar = strstr(in, "depth"))) {
+    depth = atoi(ptrChar + 6);
+    depth = Min(MAX_SEARCH_PLY - 1, depth);
+  }
 
-  if ((ptrChar = strstr(in, "mate")))
-    mate = Min(MAX_SEARCH_PLY - 1, atoi(ptrChar + 5));
+  if ((ptrChar = strstr(in, "mate"))) {
+    mate = atoi(ptrChar + 5);
+    mate = Min(MAX_SEARCH_PLY - 1, mate);
+  }
 
-  if ((ptrChar = strstr(in, "nodes")))
-    nodes = Max(1, atol(ptrChar + 6));
+  if ((ptrChar = strstr(in, "nodes"))) {
+    nodes = strtoull(ptrChar + 6, NULL, 10);
+    nodes = Max(1, nodes);
+  }
 
   if ((ptrChar = strstr(in, "ponder"))) {
     if (PONDER_ENABLED)
@@ -222,7 +283,7 @@ void ParseGo(char* in, Board* board) {
 }
 
 // uci "position" command
-void ParsePosition(char* in, Board* board) {
+static void ParsePosition(char* in, Board* board) {
   in += 9;
   char* ptrChar = in;
 
@@ -257,7 +318,7 @@ void ParsePosition(char* in, Board* board) {
   }
 }
 
-void PrintUCIOptions() {
+static void PrintUCIOptions(void) {
   printf("id name Berserk " VERSION "\n");
   printf("id author Jay Honnold\n");
   printf("option name Hash type spin default 16 min 2 max %d\n", HASH_MAX);
@@ -276,7 +337,7 @@ void PrintUCIOptions() {
   printf("uciok\n");
 }
 
-int ReadLine(char* in) {
+static int ReadLine(char* in) {
   if (fgets(in, 8192, stdin) == NULL)
     return 0;
 
@@ -287,7 +348,20 @@ int ReadLine(char* in) {
   return 1;
 }
 
-void UCILoop() {
+// Stop a running search, waking the main thread if it is parked on ponder or infinite
+static void StopSearch(void) {
+  if (!Threads.searching)
+    return;
+
+  Threads.stop = 1;
+  pthread_mutex_lock(&Threads.lock);
+  if (Threads.sleeping)
+    ThreadWake(Threads.threads[0], THREAD_RESUME);
+  Threads.sleeping = 0;
+  pthread_mutex_unlock(&Threads.lock);
+}
+
+void UCILoop(void) {
   static char in[8192];
 
   Board board;
@@ -298,7 +372,7 @@ void UCILoop() {
   Threads.searching = Threads.sleeping = 0;
 
   while (ReadLine(in)) {
-    if (in[0] == '\n')
+    if (!in[0])
       continue;
 
     if (!strncmp(in, "isready", 7)) {
@@ -306,29 +380,15 @@ void UCILoop() {
     } else if (!strncmp(in, "position", 8)) {
       ParsePosition(in, &board);
     } else if (!strncmp(in, "ucinewgame", 10)) {
-      ParsePosition("position startpos\n", &board);
-      TTClear();
-      SearchClear();
+      ParseFen(START_FEN, &board);
+      ThreadsClearTT();
+      ThreadsClearSearch();
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &board);
     } else if (!strncmp(in, "stop", 4)) {
-      if (Threads.searching) {
-        Threads.stop = 1;
-        pthread_mutex_lock(&Threads.lock);
-        if (Threads.sleeping)
-          ThreadWake(Threads.threads[0], THREAD_RESUME);
-        Threads.sleeping = 0;
-        pthread_mutex_unlock(&Threads.lock);
-      }
+      StopSearch();
     } else if (!strncmp(in, "quit", 4)) {
-      if (Threads.searching) {
-        Threads.stop = 1;
-        pthread_mutex_lock(&Threads.lock);
-        if (Threads.sleeping)
-          ThreadWake(Threads.threads[0], THREAD_RESUME);
-        Threads.sleeping = 0;
-        pthread_mutex_unlock(&Threads.lock);
-      }
+      StopSearch();
       break;
     } else if (!strncmp(in, "uci", 3)) {
       PrintUCIOptions();
@@ -350,18 +410,18 @@ void UCILoop() {
       printf(cycle ? "yes\n" : "no\n");
     } else if (!strncmp(in, "perft", 5)) {
       strtok(in, " ");
-      char* d   = strtok(NULL, " ") ?: "5";
-      char* fen = strtok(NULL, "\0") ?: START_FEN;
+      const char* d   = strtok(NULL, " ") ?: "5";
+      const char* fen = strtok(NULL, "\0") ?: START_FEN;
 
-      int depth = atoi(d);
+      Depth depth = atoi(d);
       ParseFen(fen, &board);
 
       PerftTest(depth, &board);
     } else if (!strncmp(in, "bench", 5)) {
       strtok(in, " ");
-      char* d = strtok(NULL, " ") ?: "13";
+      const char* d = strtok(NULL, " ") ?: "13";
 
-      int depth = atoi(d);
+      Depth depth = atoi(d);
       Bench(depth);
     } else if (!strncmp(in, "threats", 7)) {
       PrintBB(board.threatened);
@@ -384,7 +444,8 @@ void UCILoop() {
       int mb                  = GetOptionIntValue(in);
       mb                      = Max(2, Min(HASH_MAX, mb));
       uint64_t bytesAllocated = TTInit(mb);
-      uint64_t totalEntries   = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
+      ThreadsClearTT();
+      uint64_t totalEntries = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
       printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",
              mb,
              bytesAllocated,
@@ -394,7 +455,7 @@ void UCILoop() {
       ThreadsSetNumber(Max(1, Min(2048, n)));
       printf("info string set Threads to value %d\n", Threads.count);
     } else if (!strncmp(in, "setoption name SyzygyPath value ", 32)) {
-      int success = tb_init(in + 32);
+      Bool success = tb_init(in + 32);
       if (success)
         printf("info string set SyzygyPath to value %s\n", in + 32);
       else
@@ -405,35 +466,28 @@ void UCILoop() {
       MULTI_PV = Max(1, Min(256, n));
       printf("info string set MultiPV to value %d\n", MULTI_PV);
     } else if (!strncmp(in, "setoption name Ponder value ", 28)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      PONDER_ENABLED = !strncmp(opt, "true", 4);
+      PONDER_ENABLED = GetOptionBoolValue(in);
       printf("info string set Ponder to value %s\n", PONDER_ENABLED ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_ShowWDL value ", 33)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      SHOW_WDL = !strncmp(opt, "true", 4);
+      SHOW_WDL = GetOptionBoolValue(in);
       printf("info string set SHOW_WDL to value %s\n", SHOW_WDL ? "true" : "false");
     } else if (!strncmp(in, "setoption name UCI_Chess960 value ", 34)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      CHESS_960 = !strncmp(opt, "true", 4);
+      CHESS_960 = GetOptionBoolValue(in);
       printf("info string set UCI_Chess960 to value %s\n", CHESS_960 ? "true" : "false");
       printf("info string Resetting board...\n");
 
-      ParsePosition("position startpos\n", &board);
-      TTClear();
-      SearchClear();
+      ParseFen(START_FEN, &board);
+      ThreadsClearTT();
+      ThreadsClearSearch();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
-      MOVE_OVERHEAD = Min(10000, Max(0, GetOptionIntValue(in)));
+      int n         = GetOptionIntValue(in);
+      MOVE_OVERHEAD = Min(10000, Max(0, n));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {
-      CONTEMPT = Min(100, Max(-100, GetOptionIntValue(in)));
+      int n    = GetOptionIntValue(in);
+      CONTEMPT = Min(100, Max(-100, n));
     } else if (!strncmp(in, "setoption name EvalFile value ", 30)) {
-      char* path  = in + 30;
-      int success = 0;
+      char* path   = in + 30;
+      Bool success = 0;
 
       if (strncmp(path, "<empty>", 7))
         success = LoadNetwork(path);
@@ -442,25 +496,19 @@ void UCILoop() {
         success = 1;
       }
 
-      if (success)
+      if (success) {
+        // the refresh tables cache accumulators built from the previous network's weights
+        ThreadsResetRefreshTables();
         printf("info string set EvalFile to value %s\n", path);
+      }
     } else if (!strncmp(in, "setoption name Minimal value ", 29)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      MINIMAL = !strncmp(opt, "true", 4);
+      MINIMAL = GetOptionBoolValue(in);
       printf("info string set Minimal to value %s\n", MINIMAL ? "true" : "false");
     } else if (!strncmp(in, "setoption name Normalize value ", 31)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      NORMALIZE = !strncmp(opt, "true", 4);
+      NORMALIZE = GetOptionBoolValue(in);
       printf("info string set Normalize to value %s\n", NORMALIZE ? "true" : "false");
     } else if (!strncmp(in, "setoption name SoftNodes value ", 31)) {
-      char opt[6];
-      sscanf(in, "%*s %*s %*s %*s %5s", opt);
-
-      SOFT_NODES = !strncmp(opt, "true", 4);
+      SOFT_NODES = GetOptionBoolValue(in);
       printf("info string set SoftNodes to value %s\n", SOFT_NODES ? "true" : "false");
     } else
       printf("Unknown command: %s \n", in);
@@ -469,13 +517,19 @@ void UCILoop() {
   if (Threads.searching)
     ThreadWaitUntilSleep(Threads.threads[0]);
 
-  pthread_mutex_destroy(&Threads.lock);
   ThreadsExit();
 }
 
-int GetOptionIntValue(char* in) {
+static int GetOptionIntValue(char* in) {
   int n;
   sscanf(in, "%*s %*s %*s %*s %d", &n);
 
   return n;
+}
+
+static Bool GetOptionBoolValue(char* in) {
+  char opt[6] = {0};
+  sscanf(in, "%*s %*s %*s %*s %5s", opt);
+
+  return !strncmp(opt, "true", 4);
 }

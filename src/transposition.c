@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,16 +25,12 @@
 #include <sys/mman.h>
 #endif
 
-#include "bits.h"
-#include "search.h"
-#include "thread.h"
 #include "transposition.h"
-#include "types.h"
-
-const int DEPTH_OFFSET = -2;
 
 // Global TT
 TTTable TT = {0};
+
+static void TTFree(void);
 
 size_t TTInit(int mb) {
   if (TT.mem)
@@ -57,17 +53,20 @@ size_t TTInit(int mb) {
   TT.buckets = (TTBucket*) TT.mem;
   TT.count   = size / sizeof(TTBucket);
 
-  TTClear();
   return size;
 }
 
-void TTFree() {
-  AlignedFree(TT.mem);
+static void TTFree(void) {
+  if (TT.mem)
+    AlignedFree(TT.mem);
+
+  TT.mem     = NULL;
+  TT.buckets = NULL;
+  TT.count   = 0;
 }
 
-void TTClearPart(int idx) {
-  int count = Threads.count;
-
+// Zero slice idx of count, in whole 2MB pages so each thread touches its own
+void TTClearPart(int idx, int count) {
   const uint64_t size   = TT.count * sizeof(TTBucket);
   const uint64_t slice  = (size + count - 1) / count;
   const uint64_t blocks = (slice + 2 * MEGABYTE - 1) / (2 * MEGABYTE);
@@ -77,18 +76,11 @@ void TTClearPart(int idx) {
   memset(TT.buckets + begin / sizeof(TTBucket), 0, end - begin);
 }
 
-inline void TTClear() {
-  for (int i = 0; i < Threads.count; i++)
-    ThreadWake(Threads.threads[i], THREAD_TT_CLEAR);
-  for (int i = 0; i < Threads.count; i++)
-    ThreadWaitUntilSleep(Threads.threads[i]);
-}
-
-inline void TTUpdate() {
+void TTUpdate(void) {
   TT.age += AGE_INC;
 }
 
-int TTFull() {
+int TTFull(void) {
   int c = 0;
 
   for (int i = 0; i < 1000; i++)

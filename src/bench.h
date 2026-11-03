@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,8 +17,10 @@
 #ifndef BENCH_H
 #define BENCH_H
 
+#include "types.h"
+
 #define DEFAULT_BENCH_DEPTH 13
 
-void Bench(int depth);
+void Bench(Depth depth);
 
 #endif

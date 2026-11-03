@@ -1,9 +1,9 @@
 # General
 EXE      = berserk
-SRC      = attacks.c bench.c berserk.c bits.c board.c datagen.c eval.c history.c move.c movegen.c movepick.c perft.c random.c \
+SRC      = attacks.c bench.c berserk.c board.c datagen.c eval.c history.c move.c movegen.c movepick.c options.c perft.c random.c \
 		   search.c see.c tb.c thread.c transposition.c uci.c util.c zobrist.c nn/accumulator.c nn/evaluate.c nn/threats.c pyrrhic/tbprobe.c
 CC       = clang
-VERSION  = 20261101d
+VERSION  = 20261103
 MAIN_NETWORK = berserk-4455e1526c02.nn
 EVALFILE = $(MAIN_NETWORK)
 NETWORK_BASE = https://github.com/jhonnold/berserk-networks/releases/download/networks
@@ -12,7 +12,7 @@ DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 # Flags
 STD    = -std=gnu11
 LIBS   = -pthread -lm
-WARN   = -Wall -Wextra -Wshadow
+WARN   = -Wall -Wextra -Wshadow -Wstrict-prototypes -Wwrite-strings -Wvla -Wcast-qual
 
 FLAGS   = $(STD) $(WARN) -g -O3 -flto $(PGOFLAGS) $(DEFS)
 M64     = -m64 -mpopcnt

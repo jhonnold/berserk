@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -24,14 +24,18 @@
 
 #define EVAL_UNKNOWN 2046
 
-INLINE int ClampEval(int eval) {
+// Normalization of a score to 50% WR at 100cp
+INLINE double Normalize(Score s) {
+  return s / 1.58;
+}
+
+INLINE Score ClampEval(Score eval) {
   return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));
 }
 
 extern const int PHASE_VALUES[6];
-extern const int MAX_PHASE;
 
-void SetContempt(int* dest, int stm);
+void SetContempt(Score* dest, Color stm);
 Score Evaluate(Board* board, ThreadData* thread);
 void EvaluateTrace(Board* board);
 

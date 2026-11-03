@@ -19,6 +19,13 @@ jobs:
     - name: Compile
       run: cd src && make build ARCH=avx2 CC=clang-${{matrix.version}}
 
+    - name: Strict warnings
+      run: |
+        cd src
+        clang-${{matrix.version}} -std=gnu11 -march=x86-64-v3 -fsyntax-only -Werror \
+          -Wall -Wextra -Wshadow -Wstrict-prototypes -Wmissing-prototypes -Wmissing-variable-declarations \
+          -Wwrite-strings -Wvla -Wcast-qual -DVERSION='"ci"' -DEVALFILE='"none"' *.c nn/*.c
+
     - name: Bench
       run: |
         bench=$(git show --summary | grep -Po '(?<=Bench: )[0-9]+?(?=$)')
@@ -37,6 +44,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: RafikFarhad/clang-format-github-action@v2.1.0
-        with:
-          sources: 'src/*.c,src/*.h'
+      # Pinned: the previous action ran clang-format 12, which cannot parse .clang-format and passed everything.
+      # pyrrhic and incbin.h are vendored.
+      - name: Check formatting
+        run: |
+          python3 -m venv /tmp/cf && /tmp/cf/bin/pip install -q clang-format==21.1.8
+          /tmp/cf/bin/clang-format --dry-run --Werror \
+            $(git ls-files 'src/*.c' 'src/*.h' | grep -v -e '^src/pyrrhic/' -e '^src/incbin.h$')

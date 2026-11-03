@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,9 +22,9 @@
 #include "../bits.h"
 #include "../board.h"
 #include "../move.h"
-#include "../movegen.h"
 #include "../types.h"
 #include "../util.h"
+#include "features.h"
 #include "simd.h"
 #include "threats.h"
 
@@ -68,8 +68,16 @@ INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
   }
 }
 
-INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, const int pr, const int* pAdd,
-                            const int pa, const int* tRem, const int tr, const int* tAdd, const int ta) {
+INLINE void ApplyFusedDelta(acc_t* dest,
+                            const acc_t* src,
+                            const int* pRem,
+                            const int pr,
+                            const int* pAdd,
+                            const int pa,
+                            const int* tRem,
+                            const int tr,
+                            const int* tAdd,
+                            const int ta) {
   const size_t LANES = sizeof(vi16_t) / sizeof(acc_t);
 
   for (size_t c = 0; c < N_HIDDEN / (LANES * THREAT_TILE); c++) {
@@ -154,15 +162,15 @@ INLINE void ApplyFusedDelta(acc_t* dest, const acc_t* src, const int* pRem, cons
   }
 }
 
-INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const int view) {
+INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const Color view) {
   int add[256];
   const int a = ActiveThreats(board, view, add);
 
   ApplyFusedDelta(dest, src, NULL, 0, NULL, 0, NULL, 0, add, a);
 }
 
-INLINE void ThreatIndices(const Accumulator* step, const int view, const int flip, int* rem, int* r, int* add,
-                          int* a) {
+INLINE void
+ThreatIndices(const Accumulator* step, const Color view, const int flip, int* rem, int* r, int* add, int* a) {
   for (int i = 0; i < step->nDirty; i++) {
     const uint32_t d = step->dirty[i];
     const int idx    = ThreatIdx(DirtyAttacker(d), DirtyFrom(d), DirtyVictim(d), DirtyTo(d), view, flip);
@@ -180,8 +188,13 @@ INLINE void ThreatIndices(const Accumulator* step, const int view, const int fli
 
 // The pairs of the pawns in moved (white | black), against the pawns of that position.
 // Pairs between two moved pawns are taken once, from the first of them.
-INLINE void PairDelta(BitBoard moved, const BitBoard white, const BitBoard black, const int view, const int flip,
-                      int* out, int* n) {
+INLINE void PairDelta(BitBoard moved,
+                      const BitBoard white,
+                      const BitBoard black,
+                      const Color view,
+                      const int flip,
+                      int* out,
+                      int* n) {
   BitBoard partners = (white | black) & ~moved;
   while (moved) {
     const int a  = PopLSB(&moved);
@@ -197,7 +210,7 @@ INLINE void PairDelta(BitBoard moved, const BitBoard white, const BitBoard black
   }
 }
 
-INLINE void PairIndices(const Accumulator* step, const int view, const int flip, int* rem, int* r, int* add, int* a) {
+INLINE void PairIndices(const Accumulator* step, const Color view, const int flip, int* rem, int* r, int* add, int* a) {
   const BitBoard bw = step->pawns[0][WHITE], bb = step->pawns[0][BLACK];
   const BitBoard aw = step->pawns[1][WHITE], ab = step->pawns[1][BLACK];
   if (bw == aw && bb == ab)
@@ -208,19 +221,19 @@ INLINE void PairIndices(const Accumulator* step, const int view, const int flip,
 }
 
 void ResetRefreshTable(AccumulatorKingState* refreshTable);
-void ResetAccumulator(Accumulator* dest, Board* board, const int perspective);
+void ResetAccumulator(Accumulator* dest, Board* board, const Color perspective);
 
-INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const int perspective) {
+INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const Color perspective) {
   Delta delta[1];
   delta->r = delta->a = 0;
 
-  int kingSq     = LSB(PieceBB(KING, perspective));
+  Square kingSq  = LSB(PieceBB(board, KING, perspective));
   int pBucket    = perspective == WHITE ? 0 : 2 * N_KING_BUCKETS;
   int kingBucket = KING_BUCKETS[kingSq ^ (56 * perspective)] + N_KING_BUCKETS * (File(kingSq) > 3);
 
   AccumulatorKingState* state = &board->refreshTable[pBucket + kingBucket];
 
-  for (int pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
+  for (Piece pc = WHITE_PAWN; pc <= BLACK_KING; pc++) {
     BitBoard curr = board->pieces[pc];
     BitBoard prev = state->pcs[pc];
 
@@ -228,12 +241,12 @@ INLINE void RefreshAccumulator(Accumulator* dest, Board* board, const int perspe
     BitBoard add = curr & ~prev;
 
     while (rem) {
-      int sq                 = PopLSB(&rem);
+      Square sq              = PopLSB(&rem);
       delta->rem[delta->r++] = FeatureIdx(pc, sq, kingSq, perspective);
     }
 
     while (add) {
-      int sq                 = PopLSB(&add);
+      Square sq              = PopLSB(&add);
       delta->add[delta->a++] = FeatureIdx(pc, sq, kingSq, perspective);
     }
 
@@ -259,26 +272,38 @@ INLINE void ApplySubAdd(acc_t* dest, acc_t* src, int f1, int f2, const int* tRem
   ApplyFusedDelta(dest, src, rem, 1, add, 1, tRem, tr, tAdd, ta);
 }
 
-INLINE void ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, const int* tRem, int tr, const int* tAdd,
-                           int ta) {
+INLINE void
+ApplySubSubAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, const int* tRem, int tr, const int* tAdd, int ta) {
   const int rem[2] = {f1, f2}, add[1] = {f3};
   PrefetchRow(f1), PrefetchRow(f2), PrefetchRow(f3);
   ApplyFusedDelta(dest, src, rem, 2, add, 1, tRem, tr, tAdd, ta);
 }
 
-INLINE void ApplySubSubAddAdd(acc_t* dest, acc_t* src, int f1, int f2, int f3, int f4, const int* tRem, int tr,
-                              const int* tAdd, int ta) {
+INLINE void ApplySubSubAddAdd(acc_t* dest,
+                              acc_t* src,
+                              int f1,
+                              int f2,
+                              int f3,
+                              int f4,
+                              const int* tRem,
+                              int tr,
+                              const int* tAdd,
+                              int ta) {
   const int rem[2] = {f1, f2}, add[2] = {f3, f4};
   PrefetchRow(f1), PrefetchRow(f2), PrefetchRow(f3), PrefetchRow(f4);
   ApplyFusedDelta(dest, src, rem, 2, add, 2, tRem, tr, tAdd, ta);
 }
 
-INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumulator* step, const int view,
+INLINE void ApplyUpdates(acc_t* output,
+                         acc_t* prev,
+                         Board* board,
+                         const Accumulator* step,
+                         const Color view,
                          const int flip) {
-  const Move move      = step->move;
-  const int captured   = step->captured;
-  const int king       = LSB(PieceBB(KING, view));
-  const int movingSide = Moving(move) & 1;
+  const Move move        = step->move;
+  const Piece captured   = step->captured;
+  const Square king      = LSB(PieceBB(board, KING, view));
+  const Color movingSide = Moving(move) & 1;
 
   int tRem[MAX_DIRTY_THREATS + MAX_PAIR_DELTA], tAdd[MAX_DIRTY_THREATS + MAX_PAIR_DELTA], tr = 0, ta = 0;
   ThreatIndices(step, view, flip, tRem, &tr, tAdd, &ta);
@@ -288,12 +313,12 @@ INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumul
   int to   = FeatureIdx(IsPromo(move) ? PromoPiece(move, movingSide) : Moving(move), To(move), king, view);
 
   if (IsCas(move)) {
-    int rookFrom = FeatureIdx(Piece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
-    int rookTo   = FeatureIdx(Piece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
+    int rookFrom = FeatureIdx(MakePiece(ROOK, movingSide), board->cr[CASTLING_ROOK[To(move)]], king, view);
+    int rookTo   = FeatureIdx(MakePiece(ROOK, movingSide), CASTLE_ROOK_DEST[To(move)], king, view);
 
     ApplySubSubAddAdd(output, prev, from, rookFrom, to, rookTo, tRem, tr, tAdd, ta);
   } else if (IsCap(move)) {
-    int capSq      = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
+    Square capSq   = IsEP(move) ? To(move) - PawnDir(movingSide) : To(move);
     int capturedTo = FeatureIdx(captured, capSq, king, view);
 
     ApplySubSubAdd(output, prev, from, capturedTo, to, tRem, tr, tAdd, ta);
@@ -302,12 +327,12 @@ INLINE void ApplyUpdates(acc_t* output, acc_t* prev, Board* board, const Accumul
   }
 }
 
-INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
+INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const Color view) {
   Accumulator* curr = live;
   while (!(--curr)->correct[view])
     ; // go back to the latest correct accumulator
 
-  const int flip = FeatureFlip(LSB(PieceBB(KING, view)), view);
+  const int flip = FeatureFlip(LSB(PieceBB(board, KING, view)), view);
 
   do {
     ApplyUpdates((curr + 1)->values[view], curr->values[view], board, curr, view, flip);
@@ -315,15 +340,15 @@ INLINE void ApplyLazyUpdates(Accumulator* live, Board* board, const int view) {
   } while (++curr != live);
 }
 
-INLINE int CanEfficientlyUpdate(Accumulator* live, const int view) {
+INLINE Bool CanEfficientlyUpdate(Accumulator* live, const Color view) {
   Accumulator* curr = live;
 
   while (1) {
     curr--;
 
-    int from  = From(curr->move) ^ (56 * view); // invert for black
-    int to    = To(curr->move) ^ (56 * view);   // invert for black
-    int piece = Moving(curr->move);
+    Square from = From(curr->move) ^ (56 * view); // invert for black
+    Square to   = To(curr->move) ^ (56 * view);   // invert for black
+    Piece piece = Moving(curr->move);
 
     if ((piece & 1) == view && MoveRequiresRefresh(piece, from, to))
       return 0; // refresh only necessary for our view
@@ -331,8 +356,5 @@ INLINE int CanEfficientlyUpdate(Accumulator* live, const int view) {
       return 1;
   }
 }
-
-void LoadDefaultNN();
-int LoadNetwork(char* path);
 
 #endif

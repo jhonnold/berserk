@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,14 +22,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "eval.h"
-#include "history.h"
 #include "nn/accumulator.h"
 #include "search.h"
-#include "tb.h"
 #include "transposition.h"
 #include "types.h"
-#include "uci.h"
 #include "util.h"
 
 // Below is an implementation of CFish's Sleeping Threads
@@ -71,7 +67,7 @@ void ThreadWake(ThreadData* thread, int action) {
 }
 
 // Idle loop that wakes into an action
-void ThreadIdle(ThreadData* thread) {
+static void ThreadIdle(ThreadData* thread) {
   while (1) {
     pthread_mutex_lock(&thread->mutex);
 
@@ -85,7 +81,7 @@ void ThreadIdle(ThreadData* thread) {
     if (thread->action == THREAD_EXIT)
       break;
     else if (thread->action == THREAD_TT_CLEAR) {
-      TTClearPart(thread->idx);
+      TTClearPart(thread->idx, Threads.count);
     } else if (thread->action == THREAD_SEARCH_CLEAR) {
       SearchClearThread(thread);
     } else {
@@ -100,7 +96,7 @@ void ThreadIdle(ThreadData* thread) {
 }
 
 // Build a thread
-void* ThreadInit(void* arg) {
+static void* ThreadInit(void* arg) {
   int i = (intptr_t) arg;
 
   ThreadData* thread = calloc(1, sizeof(ThreadData));
@@ -113,14 +109,11 @@ void* ThreadInit(void* arg) {
 #endif
 
   // Alloc all the necessary accumulators
-  thread->accumulators = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
-  thread->refreshTable =
-    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
-  ResetRefreshTable(thread->refreshTable);
-
-  // Copy these onto the board for easier access within the engine
+  thread->accumulators       = (Accumulator*) AlignedMalloc(sizeof(Accumulator) * (MAX_SEARCH_PLY + 1), alignment);
   thread->board.accumulators = thread->accumulators;
-  thread->board.refreshTable = thread->refreshTable;
+  thread->board.refreshTable =
+    (AccumulatorKingState*) AlignedMalloc(sizeof(AccumulatorKingState) * 2 * 2 * N_KING_BUCKETS, alignment);
+  ResetRefreshTable(thread->board.refreshTable);
 
   pthread_mutex_init(&thread->mutex, NULL);
   pthread_cond_init(&thread->sleep, NULL);
@@ -138,7 +131,7 @@ void* ThreadInit(void* arg) {
 }
 
 // Create a thread with idx i
-void ThreadCreate(int i) {
+static void ThreadCreate(int i) {
   pthread_t thread;
 
   // Don't trust the platform default (musl gives 128KB)
@@ -159,7 +152,7 @@ void ThreadCreate(int i) {
 }
 
 // Teardown and free a thread
-void ThreadDestroy(ThreadData* thread) {
+static void ThreadDestroy(ThreadData* thread) {
   pthread_mutex_lock(&thread->mutex);
   thread->action = THREAD_EXIT;
   pthread_cond_signal(&thread->sleep);
@@ -170,7 +163,7 @@ void ThreadDestroy(ThreadData* thread) {
   pthread_mutex_destroy(&thread->mutex);
 
   AlignedFree(thread->accumulators);
-  AlignedFree(thread->refreshTable);
+  AlignedFree(thread->board.refreshTable);
 
   free(thread);
 }
@@ -187,84 +180,47 @@ void ThreadsSetNumber(int n) {
 }
 
 // End
-void ThreadsExit() {
+void ThreadsExit(void) {
   ThreadsSetNumber(0);
-  CorrectionFree();
 
   pthread_cond_destroy(&Threads.sleep);
   pthread_mutex_destroy(&Threads.mutex);
+  pthread_mutex_destroy(&Threads.lock);
 }
 
 // Start
-void ThreadsInit() {
+void ThreadsInit(void) {
   pthread_mutex_init(&Threads.mutex, NULL);
+  pthread_mutex_init(&Threads.lock, NULL);
   pthread_cond_init(&Threads.sleep, NULL);
 
   Threads.count = 1;
   ThreadCreate(0);
-  CorrectionInit();
 }
 
-INLINE void InitRootMove(RootMove* rm, Move move) {
-  rm->move = move;
-
-  rm->previousScore = rm->score = rm->avgScore = -CHECKMATE;
-
-  rm->pv.moves[0] = move;
-  rm->pv.count    = 1;
-
-  rm->nodes = 0;
+// Run an action on every thread at once and wait until all are done
+static void ThreadsRun(int action) {
+  for (int i = 0; i < Threads.count; i++)
+    ThreadWake(Threads.threads[i], action);
+  for (int i = 0; i < Threads.count; i++)
+    ThreadWaitUntilSleep(Threads.threads[i]);
 }
 
-void SetupMainThread(Board* board) {
-  ThreadData* mainThread = Threads.threads[0];
-  mainThread->calls      = Limits.hitrate;
-  mainThread->nodes      = 0;
-  mainThread->tbhits     = 0;
-  mainThread->nmpMinPly  = 0;
-
-  memcpy(&mainThread->board, board, offsetof(Board, accumulators));
-
-  if (Limits.searchMoves) {
-    for (int i = 0; i < Limits.searchable.count; i++)
-      InitRootMove(&mainThread->rootMoves[i], Limits.searchable.moves[i]);
-
-    mainThread->numRootMoves = Limits.searchable.count;
-  } else {
-    SimpleMoveList ml[1];
-    TBRootMoves(ml, board);
-
-    if (!ml->count)
-      RootMoves(ml, board);
-
-    for (int i = 0; i < ml->count; i++)
-      InitRootMove(&mainThread->rootMoves[i], ml->moves[i]);
-
-    mainThread->numRootMoves = ml->count;
-  }
+void ThreadsClearTT(void) {
+  ThreadsRun(THREAD_TT_CLEAR);
 }
 
-void SetupOtherThreads(Board* board) {
-  ThreadData* mainThread = Threads.threads[0];
+void ThreadsClearSearch(void) {
+  ThreadsRun(THREAD_SEARCH_CLEAR);
+}
 
-  for (int i = 1; i < Threads.count; i++) {
-    ThreadData* thread = Threads.threads[i];
-    thread->calls      = Limits.hitrate;
-    thread->nodes      = 0;
-    thread->tbhits     = 0;
-    thread->nmpMinPly  = 0;
-
-    for (int j = 0; j < mainThread->numRootMoves; j++)
-      InitRootMove(&thread->rootMoves[j], mainThread->rootMoves[j].move);
-
-    thread->numRootMoves = mainThread->numRootMoves;
-
-    memcpy(&thread->board, board, offsetof(Board, accumulators));
-  }
+void ThreadsResetRefreshTables(void) {
+  for (int i = 0; i < Threads.count; i++)
+    ResetRefreshTable(Threads.threads[i]->board.refreshTable);
 }
 
 // sum node counts
-uint64_t NodesSearched() {
+uint64_t NodesSearched(void) {
   uint64_t nodes = 0;
   for (int i = 0; i < Threads.count; i++)
     nodes += LoadRlx(Threads.threads[i]->nodes);
@@ -272,7 +228,7 @@ uint64_t NodesSearched() {
   return nodes;
 }
 
-uint64_t TBHits() {
+uint64_t TBHits(void) {
   uint64_t tbhits = 0;
   for (int i = 0; i < Threads.count; i++)
     tbhits += LoadRlx(Threads.threads[i]->tbhits);
