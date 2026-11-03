@@ -51,7 +51,7 @@ static const double as[4] = {0.01538655, -1.33196512, 7.43032607, 152.07701643};
 static const double bs[4] = {-2.66442843, 18.35463702, -38.91760538, 56.27652511};
 
 // win% as permilli given score and ply
-int WRModel(int s, int ply) {
+static int WRModel(int s, int ply) {
   double m = Min(240, ply) / 64.0;
 
   double a = (((as[0] * m + as[1]) * m + as[2]) * m) + as[3];
@@ -60,6 +60,81 @@ int WRModel(int s, int ply) {
   double x = Min(4000.0, Max(-4000.0, s));
 
   return 0.5 + 1000 / (1 + exp((a - x) / b));
+}
+
+static void PrintPV(PV* pv, Board* board);
+
+void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) {
+  uint64_t nodes  = NodesSearched();
+  uint64_t tbhits = TBHits();
+  uint64_t time   = Max(1, GetTimeMS() - Limits.start);
+  uint64_t nps    = 1000 * nodes / time;
+  int hashfull    = TTFull();
+
+  for (int i = 0; i < Limits.multiPV; i++) {
+    int updated = (thread->rootMoves[i].score != -CHECKMATE);
+    if (depth == 1 && i > 0 && !updated)
+      break;
+
+    int realDepth = Max(1, updated ? depth : depth - 1);
+    int bounded   = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
+    int printable = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
+                    bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
+                    !NORMALIZE || abs(bounded) > TB_WIN_BOUND ? // don't normalize our fake tb scores or real tb scores
+                      bounded :
+                      Normalize(bounded); // convert to 50% WR at 100cp
+    const char* type  = abs(bounded) > MATE_BOUND ? "mate" : "cp";
+    const char* bound = " ";
+    if (updated)
+      bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
+
+    printf("info depth %d seldepth %d multipv %d score %s %d%s",
+           realDepth,
+           thread->rootMoves[i].seldepth,
+           i + 1,
+           type,
+           printable,
+           bound);
+
+    if (SHOW_WDL) {
+      int ply  = Max(0, 2 * (board->moveNo - 1)) + board->stm;
+      int wdlW = WRModel(bounded, ply);
+      int wdlL = WRModel(-bounded, ply);
+      int wdlD = 1000 - wdlW - wdlL;
+
+      printf("wdl %d %d %d ", wdlW, wdlD, wdlL);
+    }
+
+    printf("nodes %" PRIu64 " nps %" PRIu64 " hashfull %d tbhits %" PRIu64 " time %" PRIu64 " pv ",
+           nodes,
+           nps,
+           hashfull,
+           tbhits,
+           time);
+
+    PV* pv = &thread->rootMoves[i].pv;
+    if (pv->count)
+      PrintPV(pv, board);
+    else
+      printf("%s\n", MoveToStr(pv->moves[0], board));
+  }
+}
+
+static void PrintPV(PV* pv, Board* board) {
+  for (int i = 0; i < pv->count; i++)
+    printf("%s ", MoveToStr(pv->moves[i], board));
+  printf("\n");
+}
+
+void PrintBestMove(Move bestMove, Move ponderMove, Board* board) {
+  printf("bestmove %s", MoveToStr(bestMove, board));
+  if (ponderMove)
+    printf(" ponder %s", MoveToStr(ponderMove, board));
+  printf("\n");
+}
+
+void PrintCurrMove(int depth, Move move, int number, Board* board) {
+  printf("info depth %d currmove %s currmovenumber %d\n", depth, MoveToStr(move, board), number);
 }
 
 // uci "go" command

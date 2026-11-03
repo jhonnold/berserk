@@ -17,9 +17,12 @@
 #ifndef UCI_H
 #define UCI_H
 
+#include "types.h"
 
-int WRModel(int s, int ply);
-
+// search output, in UCI format
+void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board);
+void PrintBestMove(Move bestMove, Move ponderMove, Board* board);
+void PrintCurrMove(int depth, Move move, int number, Board* board);
 
 void UCILoop(void);
 

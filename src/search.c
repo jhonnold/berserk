@@ -16,11 +16,9 @@
 
 #include "search.h"
 
-#include <inttypes.h>
 #include <math.h>
 #include <pthread.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -51,8 +49,6 @@ static int STATIC_PRUNE[2][MAX_SEARCH_PLY];
 
 static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
 static int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss);
-static void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board);
-static void PrintPV(PV* pv, Board* board);
 static void SortRootMoves(ThreadData* thread, int offset);
 static int ValidRootMove(ThreadData* thread, Move move);
 
@@ -334,10 +330,7 @@ void MainSearch(void) {
     UndoMove(bestMove, board);
   }
 
-  printf("bestmove %s", MoveToStr(bestMove, board));
-  if (ponderMove)
-    printf(" ponder %s", MoveToStr(ponderMove, board));
-  printf("\n");
+  PrintBestMove(bestMove, ponderMove, board);
 }
 
 void Search(ThreadData* thread) {
@@ -773,10 +766,7 @@ static int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thre
     playedMoves++;
 
     if (isRoot && !thread->idx && GetTimeMS() - Limits.start > 2500)
-      printf("info depth %d currmove %s currmovenumber %d\n",
-             thread->depth,
-             MoveToStr(move, board),
-             playedMoves + thread->multiPV);
+      PrintCurrMove(thread->depth, move, playedMoves + thread->multiPV, board);
 
     if (!IsCap(move) && numQuiets < 64)
       quiets[numQuiets++] = move;
@@ -1091,68 +1081,6 @@ static int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchSta
   TTPut(tt, board->zobrist, 0, bestScore, bound, bestMove, ss->ply, rawEval, ttPv);
 
   return bestScore;
-}
-
-static void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board) {
-  uint64_t nodes  = NodesSearched();
-  uint64_t tbhits = TBHits();
-  uint64_t time   = Max(1, GetTimeMS() - Limits.start);
-  uint64_t nps    = 1000 * nodes / time;
-  int hashfull    = TTFull();
-
-  for (int i = 0; i < Limits.multiPV; i++) {
-    int updated = (thread->rootMoves[i].score != -CHECKMATE);
-    if (depth == 1 && i > 0 && !updated)
-      break;
-
-    int realDepth = Max(1, updated ? depth : depth - 1);
-    int bounded   = updated ? Max(alpha, Min(beta, thread->rootMoves[i].score)) : thread->rootMoves[i].previousScore;
-    int printable = bounded > MATE_BOUND  ? (CHECKMATE - bounded + 1) / 2 :
-                    bounded < -MATE_BOUND ? -(CHECKMATE + bounded) / 2 :
-                    !NORMALIZE || abs(bounded) > TB_WIN_BOUND ? // don't normalize our fake tb scores or real tb scores
-                      bounded :
-                      Normalize(bounded); // convert to 50% WR at 100cp
-    const char* type  = abs(bounded) > MATE_BOUND ? "mate" : "cp";
-    const char* bound = " ";
-    if (updated)
-      bound = bounded >= beta ? " lowerbound " : bounded <= alpha ? " upperbound " : " ";
-
-    printf("info depth %d seldepth %d multipv %d score %s %d%s",
-           realDepth,
-           thread->rootMoves[i].seldepth,
-           i + 1,
-           type,
-           printable,
-           bound);
-
-    if (SHOW_WDL) {
-      int ply  = Max(0, 2 * (board->moveNo - 1)) + board->stm;
-      int wdlW = WRModel(bounded, ply);
-      int wdlL = WRModel(-bounded, ply);
-      int wdlD = 1000 - wdlW - wdlL;
-
-      printf("wdl %d %d %d ", wdlW, wdlD, wdlL);
-    }
-
-    printf("nodes %" PRIu64 " nps %" PRIu64 " hashfull %d tbhits %" PRIu64 " time %" PRIu64 " pv ",
-           nodes,
-           nps,
-           hashfull,
-           tbhits,
-           time);
-
-    PV* pv = &thread->rootMoves[i].pv;
-    if (pv->count)
-      PrintPV(pv, board);
-    else
-      printf("%s\n", MoveToStr(pv->moves[0], board));
-  }
-}
-
-static void PrintPV(PV* pv, Board* board) {
-  for (int i = 0; i < pv->count; i++)
-    printf("%s ", MoveToStr(pv->moves[i], board));
-  printf("\n");
 }
 
 static void SortRootMoves(ThreadData* thread, int offset) {
