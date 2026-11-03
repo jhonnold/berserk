@@ -24,7 +24,6 @@
 #include "../bits.h"
 #include "../board.h"
 #include "../movegen.h"
-#include "../thread.h"
 #include "../util.h"
 #include "accumulator.h"
 
@@ -574,9 +573,6 @@ int LoadNetwork(char* path) {
 
   CopyData(data);
   free(data);
-
-  for (int i = 0; i < Threads.count; i++)
-    ResetRefreshTable(Threads.threads[i]->refreshTable);
 
   return 1;
 }

@@ -91,6 +91,7 @@ void ThreadsInit(void);
 void SetupMainThread(Board* board);
 void SetupOtherThreads(Board* board);
 
+void ThreadsResetRefreshTables(void);
 uint64_t NodesSearched(void);
 uint64_t TBHits(void);
 

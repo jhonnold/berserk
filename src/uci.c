@@ -409,8 +409,11 @@ void UCILoop(void) {
         success = 1;
       }
 
-      if (success)
+      if (success) {
+        // the refresh tables cache accumulators built from the previous network's weights
+        ThreadsResetRefreshTables();
         printf("info string set EvalFile to value %s\n", path);
+      }
     } else if (!strncmp(in, "setoption name Minimal value ", 29)) {
       MINIMAL = GetOptionBoolValue(in);
       printf("info string set Minimal to value %s\n", MINIMAL ? "true" : "false");

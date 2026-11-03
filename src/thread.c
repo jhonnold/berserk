@@ -261,6 +261,11 @@ void SetupOtherThreads(Board* board) {
   }
 }
 
+void ThreadsResetRefreshTables(void) {
+  for (int i = 0; i < Threads.count; i++)
+    ResetRefreshTable(Threads.threads[i]->refreshTable);
+}
+
 // sum node counts
 uint64_t NodesSearched(void) {
   uint64_t nodes = 0;
