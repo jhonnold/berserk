@@ -24,7 +24,9 @@
 #include "movegen.h"
 #include "pyrrhic/tbprobe.h"
 
-#define ByteSwap(bb) __builtin_bswap64((bb))
+INLINE BitBoard ByteSwap(BitBoard bb) {
+  return __builtin_bswap64(bb);
+}
 
 // Pyrrhic's eight board arguments: both colours, then each piece type, in a1 = 0 order
 #define TB_PIECES(board)                                                     \

@@ -25,7 +25,9 @@
 #define EVAL_UNKNOWN 2046
 
 // Normalization of a score to 50% WR at 100cp
-#define Normalize(s) ((s) / 1.58)
+INLINE double Normalize(Score s) {
+  return s / 1.58;
+}
 
 INLINE Score ClampEval(Score eval) {
   return Min(EVAL_UNKNOWN - 1, Max(-EVAL_UNKNOWN + 1, eval));

@@ -78,15 +78,34 @@ struct Board {
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-#define MakePiece(pc, c)  (((pc) << 1) + (c))
-#define TypeOf(pc)        ((pc) >> 1)
+INLINE Piece MakePiece(PieceType pt, Color c) {
+  return (pt << 1) + c;
+}
+
+INLINE PieceType TypeOf(Piece pc) {
+  return pc >> 1;
+}
+
+// These are assigned to, so they stay macros
 #define PieceBB(b, pc, c) ((b)->pieces[MakePiece(pc, (c))])
 #define OccBB(b, c)       ((b)->occupancies[c])
 
-#define File(sq)         ((sq) & 7)
-#define Rank(sq)         ((sq) >> 3)
-#define MakeSquare(r, f) ((r) * 8 + (f))
-#define PieceCount(pc)   (1ull << ((pc) * 4))
+INLINE int File(Square sq) {
+  return sq & 7;
+}
+
+INLINE int Rank(Square sq) {
+  return sq >> 3;
+}
+
+INLINE Square MakeSquare(int rank, int file) {
+  return rank * 8 + file;
+}
+
+// The piece's 4 bit lane in the material key
+INLINE uint64_t PieceCount(Piece pc) {
+  return 1ull << (pc * 4);
+}
 
 void ParseFen(const char* fen, Board* board);
 void BoardToFen(char* fen, Board* board);

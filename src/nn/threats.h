@@ -25,11 +25,25 @@
 #include "defs.h"
 
 // from | to << 8 | attacker << 16 | victim << 20 | add << 31
-#define DirtyFrom(d)     ((d) & 63)
-#define DirtyTo(d)       (((d) >> 8) & 63)
-#define DirtyAttacker(d) (((d) >> 16) & 15)
-#define DirtyVictim(d)   (((d) >> 20) & 15)
-#define DirtyAdd(d)      ((d) >> 31)
+INLINE Square DirtyFrom(uint32_t d) {
+  return d & 63;
+}
+
+INLINE Square DirtyTo(uint32_t d) {
+  return (d >> 8) & 63;
+}
+
+INLINE Piece DirtyAttacker(uint32_t d) {
+  return (d >> 16) & 15;
+}
+
+INLINE Piece DirtyVictim(uint32_t d) {
+  return (d >> 20) & 15;
+}
+
+INLINE Bool DirtyAdd(uint32_t d) {
+  return d >> 31;
+}
 
 extern int8_t THREAT_WEIGHTS[N_THREATS * N_HIDDEN];
 

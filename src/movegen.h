@@ -31,8 +31,13 @@ typedef struct {
 
 extern const int CASTLE_MAP[4][3];
 
-#define PromoRank(c) ((c) == WHITE ? RANK_7 : RANK_2)
-#define DPRank(c)    ((c) == WHITE ? RANK_3 : RANK_6)
+INLINE BitBoard PromoRank(Color c) {
+  return c == WHITE ? RANK_7 : RANK_2;
+}
+
+INLINE BitBoard DPRank(Color c) {
+  return c == WHITE ? RANK_3 : RANK_6;
+}
 
 #define ALL -1ULL
 
@@ -41,7 +46,9 @@ extern const int CASTLE_MAP[4][3];
 #define BLACK_KS 0x2
 #define BLACK_QS 0x1
 
-#define CanCastle(b, dir) ((b)->castling & (dir))
+INLINE Bool CanCastle(Board* board, int dir) {
+  return !!(board->castling & dir);
+}
 
 // Note: Any usage of & that matches 1 or 2 will match 3
 //       thus making GT_LEGAL generate all.
