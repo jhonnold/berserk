@@ -71,6 +71,14 @@
   INT(PROBCUT_DEPTH, 6, 0, 12)                   \
   INT(PROBCUT_MARGIN, 168, 0, 336)               \
   INT(LMR_HISTORY, 8, 0, 16)                     \
+  INT(LMR_NOISY_HASH, 1024, 0, 2048)             \
+  INT(LMR_NOT_PV, 2048, 0, 4096)                 \
+  INT(LMR_NOT_IMPROVING, 1024, 0, 2048)          \
+  INT(LMR_KILLER, 2048, 0, 4096)                 \
+  INT(LMR_CHECK, 1024, 0, 2048)                  \
+  INT(LMR_CUTNODE, 1024, 0, 2048)                \
+  INT(LMR_CUTNODE_QUIET, 1024, 0, 2048)          \
+  INT(LMR_TT_DEPTH, 1024, 0, 2048)               \
   INT(HP_DEPTH, 4, 0, 8)                         \
   INT(HP_MARGIN, 2850, 0, 5700)                  \
   INT(FP_DEPTH, 10, 0, 20)                       \

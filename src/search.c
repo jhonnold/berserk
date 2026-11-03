@@ -66,7 +66,7 @@ void ResetLimits(void) {
 void InitPruningAndReductionTables(void) {
   for (Depth depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = log(depth) * log(moves) / LMR_DIV + LMR_BASE;
+      LMR[depth][moves] = (log(depth) * log(moves) / LMR_DIV + LMR_BASE) * 1024; // in 1/1024 plies
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
@@ -745,16 +745,17 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
     Bool killerOrCounter = move == mp.killer1 || move == mp.killer2 || move == mp.counter;
     int history          = GetHistory(ss, thread, move);
 
-    Depth R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= LMR_HISTORY * history / 65536;          // adjust reduction based on historical score
-    R += (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
+    // reduction in 1/1024 plies
+    int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
+    R -= LMR_HISTORY * history / 64;                              // adjust reduction based on historical score
+    R += LMR_NOISY_HASH * (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
       if (!isRoot && legalMoves >= LMP[improving][depth])
         skipQuiets = 1;
 
       if (!IsCap(move) && PromoPT(move) != QUEEN) {
-        Depth lmrDepth = Max(1, depth - R);
+        Depth lmrDepth = Max(1, depth - R / 1024);
 
         if (!killerOrCounter && lmrDepth < HP_DEPTH && history < -HP_MARGIN * (depth - 1)) {
           skipQuiets = 1;
@@ -833,32 +834,32 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
     if (depth > 1 && legalMoves > 1 && !(isPV && IsCap(move))) {
       // increase reduction on non-pv
       if (!ttPv)
-        R += 2;
+        R += LMR_NOT_PV;
 
       // increase reduction if our eval is declining
       if (!improving)
-        R++;
+        R += LMR_NOT_IMPROVING;
 
       // reduce these special quiets less
       if (killerOrCounter)
-        R -= 2;
+        R -= LMR_KILLER;
 
       // move GAVE check
       if (board->checkers)
-        R--;
+        R -= LMR_CHECK;
 
       // Reduce more on expected cut nodes
       // idea from komodo/sf, explained by Don Daily here
       // https://talkchess.com/forum3/viewtopic.php?f=7&t=47577&start=10#p519741
       // and https://www.chessprogramming.org/Node_Types
       if (cutnode)
-        R += 1 + !IsCap(move);
+        R += LMR_CUTNODE + LMR_CUTNODE_QUIET * !IsCap(move);
 
       if (ttDepth >= depth)
-        R--;
+        R -= LMR_TT_DEPTH;
 
       // prevent dropping into QS, extending, or reducing all extensions
-      R             = Min(newDepth, Max(R, 1));
+      R             = Min(newDepth, Max(R / 1024, 1));
       ss->reduction = R;
 
       Depth lmrDepth = newDepth - R;
