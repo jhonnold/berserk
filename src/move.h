@@ -19,6 +19,11 @@
 
 #include "types.h"
 
+typedef struct {
+  int count;
+  Move moves[MAX_MOVES];
+} SimpleMoveList;
+
 #define NULL_MOVE 0
 
 #define QUIET_FLAG        0b0000

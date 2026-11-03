@@ -22,6 +22,9 @@
 
 #include "types.h"
 
+#define ALIGN_ON 64
+#define ALIGN    __attribute__((aligned(ALIGN_ON)))
+
 #define Min(a, b) (((a) < (b)) ? (a) : (b))
 #define Max(a, b) (((a) > (b)) ? (a) : (b))
 

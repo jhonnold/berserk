@@ -20,7 +20,14 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
+#include "board.h"
 #include "types.h"
+
+// Tracking the principal variation
+typedef struct {
+  int count;
+  Move moves[MAX_SEARCH_PLY];
+} PV;
 
 typedef struct {
   Move move;

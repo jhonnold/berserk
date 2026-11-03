@@ -22,6 +22,7 @@
 
 #include "../attacks.h"
 #include "../board.h"
+#include "../util.h"
 #include "features.h"
 
 int8_t THREAT_WEIGHTS[N_THREATS * N_HIDDEN] ALIGN;

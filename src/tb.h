@@ -17,6 +17,7 @@
 #ifndef TB_H
 #define TB_H
 
+#include "move.h"
 #include "types.h"
 
 void TBRootMoves(SimpleMoveList* moves, Board* board);

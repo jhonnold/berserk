@@ -17,6 +17,7 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
+#include "move.h"
 #include "types.h"
 
 typedef int16_t PieceTo[12][64];

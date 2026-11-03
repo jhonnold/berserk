@@ -23,6 +23,7 @@
 #include "bits.h"
 #include "board.h"
 #include "movegen.h"
+#include "util.h"
 
 // This file was built using all the logic found in the BBC video guide on
 // youtube I highly recommend it to understand how magic bitboards

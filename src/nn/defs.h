@@ -18,6 +18,7 @@
 #define NN_DEFS_H
 
 #include "../types.h"
+#include "../util.h"
 
 #define N_KING_BUCKETS 16
 

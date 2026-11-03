@@ -20,6 +20,60 @@
 #include "types.h"
 #include "util.h"
 
+typedef struct {
+  int castling;
+  int ep;
+  int fmr;
+  int nullply;
+  uint64_t zobrist;
+  uint64_t pawnZobrist;
+  uint64_t nonPawnZobrist[2];
+  BitBoard checkers;
+  BitBoard pinned;
+  BitBoard threatened;
+  BitBoard threatenedBy[6];
+  int capture;
+} BoardHistory;
+
+struct Board {
+  // The below are in order of BoardHistory above for copies
+  int castling; // castling mask e.g. 1111 = KQkq, 1001 = Kq
+  int epSquare; // en passant square (a8 or 0 is not valid so that marks no
+                // active ep)
+  int fmr;      // half move count for 50 move rule
+  int nullply;  // distance from last nullmove
+
+  uint64_t zobrist;           // zobrist hash of the position
+  uint64_t pawnZobrist;       // pawn zobrist hash of the position (pawns + stm)
+  uint64_t nonPawnZobrist[2]; // per color non-pawn zobrist hash (pieces + stm)
+
+  BitBoard checkers; // checking piece squares
+  BitBoard pinned;   // pinned pieces
+
+  BitBoard threatened; // opponent "threatening" these squares
+  BitBoard threatenedBy[6];
+
+  int stm;     // side to move
+  int xstm;    // not side to move
+  int histPly; // ply for historical state
+  int moveNo;  // game move number
+  int phase;   // efficiently updated phase for scaling
+
+  uint64_t piecesCounts; // "material key" - pieces left on the board
+
+  uint8_t squares[64];     // piece per square
+  BitBoard occupancies[3]; // 0 - white pieces, 1 - black pieces, 2 - both
+  BitBoard pieces[12];     // individual piece data
+
+  int cr[4];
+  int castlingRights[64];
+
+  BoardHistory history[MAX_SEARCH_PLY + 100];
+
+  Accumulator* accumulators;
+  AccumulatorKingState* refreshTable;
+};
+
 #define NO_PIECE 12
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
