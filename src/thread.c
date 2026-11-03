@@ -22,10 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "movegen.h"
 #include "nn/accumulator.h"
 #include "search.h"
-#include "tb.h"
 #include "transposition.h"
 #include "types.h"
 #include "util.h"
@@ -201,64 +199,6 @@ void ThreadsInit(void) {
 
   Threads.count = 1;
   ThreadCreate(0);
-}
-
-INLINE void InitRootMove(RootMove* rm, Move move) {
-  rm->move = move;
-
-  rm->previousScore = rm->score = rm->avgScore = -CHECKMATE;
-
-  rm->pv.moves[0] = move;
-  rm->pv.count    = 1;
-
-  rm->nodes = 0;
-}
-
-void SetupMainThread(Board* board) {
-  ThreadData* mainThread = Threads.threads[0];
-  mainThread->calls      = Limits.hitrate;
-  mainThread->nodes      = 0;
-  mainThread->tbhits     = 0;
-  mainThread->nmpMinPly  = 0;
-
-  memcpy(&mainThread->board, board, offsetof(Board, accumulators));
-
-  if (Limits.searchMoves) {
-    for (int i = 0; i < Limits.searchable.count; i++)
-      InitRootMove(&mainThread->rootMoves[i], Limits.searchable.moves[i]);
-
-    mainThread->numRootMoves = Limits.searchable.count;
-  } else {
-    SimpleMoveList ml[1];
-    TBRootMoves(ml, board);
-
-    if (!ml->count)
-      RootMoves(ml, board);
-
-    for (int i = 0; i < ml->count; i++)
-      InitRootMove(&mainThread->rootMoves[i], ml->moves[i]);
-
-    mainThread->numRootMoves = ml->count;
-  }
-}
-
-void SetupOtherThreads(Board* board) {
-  ThreadData* mainThread = Threads.threads[0];
-
-  for (int i = 1; i < Threads.count; i++) {
-    ThreadData* thread = Threads.threads[i];
-    thread->calls      = Limits.hitrate;
-    thread->nodes      = 0;
-    thread->tbhits     = 0;
-    thread->nmpMinPly  = 0;
-
-    for (int j = 0; j < mainThread->numRootMoves; j++)
-      InitRootMove(&thread->rootMoves[j], mainThread->rootMoves[j].move);
-
-    thread->numRootMoves = mainThread->numRootMoves;
-
-    memcpy(&thread->board, board, offsetof(Board, accumulators));
-  }
 }
 
 // Run an action on every thread at once and wait until all are done

@@ -88,8 +88,6 @@ void ThreadsSetNumber(int n);
 void ThreadsExit(void);
 void ThreadsInit(void);
 
-void SetupMainThread(Board* board);
-void SetupOtherThreads(Board* board);
 
 void ThreadsClearTT(void);
 void ThreadsClearSearch(void);

@@ -28,6 +28,7 @@
 #include "eval.h"
 #include "history.h"
 #include "move.h"
+#include "movegen.h"
 #include "movepick.h"
 #include "nn/accumulator.h"
 #include "options.h"
@@ -160,6 +161,64 @@ INLINE void PlayNullMove(ThreadData* thread, SearchStack* ss) {
   ss->cont = &thread->contCorrection[WHITE_PAWN][A1];
   IncRlx(thread->nodes);
   MakeNullMove(board);
+}
+
+INLINE void InitRootMove(RootMove* rm, Move move) {
+  rm->move = move;
+
+  rm->previousScore = rm->score = rm->avgScore = -CHECKMATE;
+
+  rm->pv.moves[0] = move;
+  rm->pv.count    = 1;
+
+  rm->nodes = 0;
+}
+
+static void SetupMainThread(Board* board) {
+  ThreadData* mainThread = Threads.threads[0];
+  mainThread->calls      = Limits.hitrate;
+  mainThread->nodes      = 0;
+  mainThread->tbhits     = 0;
+  mainThread->nmpMinPly  = 0;
+
+  memcpy(&mainThread->board, board, offsetof(Board, accumulators));
+
+  if (Limits.searchMoves) {
+    for (int i = 0; i < Limits.searchable.count; i++)
+      InitRootMove(&mainThread->rootMoves[i], Limits.searchable.moves[i]);
+
+    mainThread->numRootMoves = Limits.searchable.count;
+  } else {
+    SimpleMoveList ml[1];
+    TBRootMoves(ml, board);
+
+    if (!ml->count)
+      RootMoves(ml, board);
+
+    for (int i = 0; i < ml->count; i++)
+      InitRootMove(&mainThread->rootMoves[i], ml->moves[i]);
+
+    mainThread->numRootMoves = ml->count;
+  }
+}
+
+static void SetupOtherThreads(Board* board) {
+  ThreadData* mainThread = Threads.threads[0];
+
+  for (int i = 1; i < Threads.count; i++) {
+    ThreadData* thread = Threads.threads[i];
+    thread->calls      = Limits.hitrate;
+    thread->nodes      = 0;
+    thread->tbhits     = 0;
+    thread->nmpMinPly  = 0;
+
+    for (int j = 0; j < mainThread->numRootMoves; j++)
+      InitRootMove(&thread->rootMoves[j], mainThread->rootMoves[j].move);
+
+    thread->numRootMoves = mainThread->numRootMoves;
+
+    memcpy(&thread->board, board, offsetof(Board, accumulators));
+  }
 }
 
 void StartSearch(Board* board, uint8_t ponder) {
