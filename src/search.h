@@ -71,6 +71,5 @@ void Search(ThreadData* thread);
 
 
 void SearchClearThread(ThreadData* thread);
-void SearchClear(void);
 
 #endif

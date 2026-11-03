@@ -53,8 +53,8 @@ void Bench(int depth) {
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
     ParseFen(benchmarks[i], &board);
 
-    TTClear();
-    SearchClear();
+    ThreadsClearTT();
+    ThreadsClearSearch();
 
     Limits.start = GetTimeMS();
     StartSearch(&board, 0);

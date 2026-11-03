@@ -93,8 +93,8 @@ static int VerificationSearch(Board* board) {
   Limits.depth = VERIFICATION_DEPTH;
   Limits.nodes = VERIFICATION_NODES;
 
-  TTClear();
-  SearchClear();
+  ThreadsClearTT();
+  ThreadsClearSearch();
 
   StartSearch(board, 0);
   ThreadWaitUntilSleep(Threads.threads[0]);

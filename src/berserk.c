@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
   LoadDefaultNN();
   ThreadsInit();
   TTInit(16);
+  ThreadsClearTT();
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {

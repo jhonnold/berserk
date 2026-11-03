@@ -25,7 +25,6 @@
 #include <sys/mman.h>
 #endif
 
-#include "thread.h"
 #include "transposition.h"
 
 // Global TT
@@ -54,7 +53,6 @@ size_t TTInit(int mb) {
   TT.buckets = (TTBucket*) TT.mem;
   TT.count   = size / sizeof(TTBucket);
 
-  TTClear();
   return size;
 }
 
@@ -67,9 +65,8 @@ static void TTFree(void) {
   TT.count   = 0;
 }
 
-void TTClearPart(int idx) {
-  int count = Threads.count;
-
+// Zero slice idx of count, in whole 2MB pages so each thread touches its own
+void TTClearPart(int idx, int count) {
   const uint64_t size   = TT.count * sizeof(TTBucket);
   const uint64_t slice  = (size + count - 1) / count;
   const uint64_t blocks = (slice + 2 * MEGABYTE - 1) / (2 * MEGABYTE);
@@ -77,13 +74,6 @@ void TTClearPart(int idx) {
   const uint64_t end    = Min(size, begin + blocks * 2 * MEGABYTE);
 
   memset(TT.buckets + begin / sizeof(TTBucket), 0, end - begin);
-}
-
-void TTClear(void) {
-  for (int i = 0; i < Threads.count; i++)
-    ThreadWake(Threads.threads[i], THREAD_TT_CLEAR);
-  for (int i = 0; i < Threads.count; i++)
-    ThreadWaitUntilSleep(Threads.threads[i]);
 }
 
 void TTUpdate(void) {

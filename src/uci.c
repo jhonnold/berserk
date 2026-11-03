@@ -297,8 +297,8 @@ void UCILoop(void) {
       ParsePosition(in, &board);
     } else if (!strncmp(in, "ucinewgame", 10)) {
       ParseFen(START_FEN, &board);
-      TTClear();
-      SearchClear();
+      ThreadsClearTT();
+      ThreadsClearSearch();
     } else if (!strncmp(in, "go", 2)) {
       ParseGo(in, &board);
     } else if (!strncmp(in, "stop", 4)) {
@@ -360,6 +360,7 @@ void UCILoop(void) {
       int mb                  = GetOptionIntValue(in);
       mb                      = Max(2, Min(HASH_MAX, mb));
       uint64_t bytesAllocated = TTInit(mb);
+      ThreadsClearTT();
       uint64_t totalEntries   = BUCKET_SIZE * bytesAllocated / sizeof(TTBucket);
       printf("info string set Hash to value %d (%" PRIu64 " bytes) (%" PRIu64 " entries)\n",
              mb,
@@ -392,8 +393,8 @@ void UCILoop(void) {
       printf("info string Resetting board...\n");
 
       ParseFen(START_FEN, &board);
-      TTClear();
-      SearchClear();
+      ThreadsClearTT();
+      ThreadsClearSearch();
     } else if (!strncmp(in, "setoption name MoveOverhead value ", 34)) {
       MOVE_OVERHEAD = Min(10000, Max(0, GetOptionIntValue(in)));
     } else if (!strncmp(in, "setoption name Contempt value ", 30)) {

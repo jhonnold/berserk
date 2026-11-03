@@ -59,9 +59,9 @@ enum {
 
 extern TTTable TT;
 
+// allocates the table uncleared; clear it with ThreadsClearTT
 size_t TTInit(int mb);
-void TTClearPart(int idx);
-void TTClear(void);
+void TTClearPart(int idx, int count);
 void TTUpdate(void);
 INLINE uint64_t TTIdx(uint64_t hash) {
   return ((unsigned __int128) hash * (unsigned __int128) TT.count) >> 64;

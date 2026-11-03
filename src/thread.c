@@ -83,7 +83,7 @@ static void ThreadIdle(ThreadData* thread) {
     if (thread->action == THREAD_EXIT)
       break;
     else if (thread->action == THREAD_TT_CLEAR) {
-      TTClearPart(thread->idx);
+      TTClearPart(thread->idx, Threads.count);
     } else if (thread->action == THREAD_SEARCH_CLEAR) {
       SearchClearThread(thread);
     } else {
@@ -259,6 +259,22 @@ void SetupOtherThreads(Board* board) {
 
     memcpy(&thread->board, board, offsetof(Board, accumulators));
   }
+}
+
+// Run an action on every thread at once and wait until all are done
+static void ThreadsRun(int action) {
+  for (int i = 0; i < Threads.count; i++)
+    ThreadWake(Threads.threads[i], action);
+  for (int i = 0; i < Threads.count; i++)
+    ThreadWaitUntilSleep(Threads.threads[i]);
+}
+
+void ThreadsClearTT(void) {
+  ThreadsRun(THREAD_TT_CLEAR);
+}
+
+void ThreadsClearSearch(void) {
+  ThreadsRun(THREAD_SEARCH_CLEAR);
 }
 
 void ThreadsResetRefreshTables(void) {

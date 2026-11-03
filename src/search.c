@@ -1132,9 +1132,4 @@ void SearchClearThread(ThreadData* thread) {
   thread->previousScore      = UNKNOWN;
 }
 
-void SearchClear(void) {
-  for (int i = 0; i < Threads.count; i++)
-    ThreadWake(Threads.threads[i], THREAD_SEARCH_CLEAR);
-  for (int i = 0; i < Threads.count; i++)
-    ThreadWaitUntilSleep(Threads.threads[i]);
-}
+
