@@ -83,9 +83,10 @@ struct Board {
 #define PieceBB(b, pc, c) ((b)->pieces[MakePiece(pc, (c))])
 #define OccBB(b, c)       ((b)->occupancies[c])
 
-#define File(sq)       ((sq) & 7)
-#define Rank(sq)       ((sq) >> 3)
-#define PieceCount(pc) (1ull << ((pc) * 4))
+#define File(sq)         ((sq) & 7)
+#define Rank(sq)         ((sq) >> 3)
+#define MakeSquare(r, f) ((r) * 8 + (f))
+#define PieceCount(pc)   (1ull << ((pc) * 4))
 
 void ParseFen(const char* fen, Board* board);
 void BoardToFen(char* fen, Board* board);

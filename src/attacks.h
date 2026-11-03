@@ -143,7 +143,7 @@ INLINE BitBoard BetweenSquares(Square from, Square to) {
   return BETWEEN_SQS[from][to];
 }
 
-INLINE BitBoard PinnedMoves(int p, int k) {
+INLINE BitBoard PinnedMoves(Square p, Square k) {
   return PINNED_MOVES[p][k];
 }
 

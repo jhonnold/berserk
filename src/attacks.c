@@ -103,39 +103,39 @@ static const uint64_t BISHOP_MAGIC_NUMBERS[64] = {
 #endif
 
 static void InitBetweenSquares(void) {
-  int i;
-  for (int f = 0; f < 64; f++) {
-    for (int t = f + 1; t < 64; t++) {
+  Square i;
+  for (Square f = 0; f < 64; f++) {
+    for (Square t = f + 1; t < 64; t++) {
       if (Rank(f) == Rank(t)) {
         i = t + W;
         while (i > f) {
-          BETWEEN_SQS[f][t] |= (1ULL << i);
+          SetBit(BETWEEN_SQS[f][t], i);
           i += W;
         }
       } else if (File(f) == File(t)) {
         i = t + N;
         while (i > f) {
-          BETWEEN_SQS[f][t] |= (1ULL << i);
+          SetBit(BETWEEN_SQS[f][t], i);
           i += N;
         }
       } else if ((t - f) % 9 == 0 && (File(t) > File(f))) {
         i = t + NW;
         while (i > f) {
-          BETWEEN_SQS[f][t] |= (1ULL << i);
+          SetBit(BETWEEN_SQS[f][t], i);
           i += NW;
         }
       } else if ((t - f) % 7 == 0 && (File(t) < File(f))) {
         i = t + NE;
         while (i > f) {
-          BETWEEN_SQS[f][t] |= (1ULL << i);
+          SetBit(BETWEEN_SQS[f][t], i);
           i += NE;
         }
       }
     }
   }
 
-  for (int f = 0; f < 64; f++)
-    for (int t = 0; t < f; t++)
+  for (Square f = 0; f < 64; f++)
+    for (Square t = 0; t < f; t++)
       BETWEEN_SQS[f][t] = BETWEEN_SQS[t][f];
 }
 
@@ -149,7 +149,7 @@ static void InitPinnedMovementSquares(void) {
         if (dir)
           break;
 
-        for (int xray = kSq + dirs[i]; xray >= 0 && xray < 64; xray += dirs[i]) {
+        for (Square xray = kSq + dirs[i]; xray >= 0 && xray < 64; xray += dirs[i]) {
           if (dirs[i] == E || dirs[i] == SE || dirs[i] == NE)
             if (File(xray) == 0)
               break;
@@ -166,8 +166,8 @@ static void InitPinnedMovementSquares(void) {
       }
 
       if (dir) {
-        for (int xray = kSq + dir; xray >= 0 && xray < 64; xray += dir) {
-          PINNED_MOVES[pSq][kSq] |= (1ULL << xray);
+        for (Square xray = kSq + dir; xray >= 0 && xray < 64; xray += dir) {
+          SetBit(PINNED_MOVES[pSq][kSq], xray);
 
           if (dir == E || dir == SE || dir == NE)
             if (File(xray) == 7)
@@ -183,9 +183,8 @@ static void InitPinnedMovementSquares(void) {
 }
 
 static BitBoard GetGeneratedPawnAttacks(Square sq, Color color) {
-  BitBoard attacks = 0, board = 0;
-
-  SetBit(board, sq);
+  const BitBoard board = Bit(sq);
+  BitBoard attacks     = 0;
 
   if (color == WHITE) {
     attacks |= ShiftNW(board);
@@ -199,47 +198,36 @@ static BitBoard GetGeneratedPawnAttacks(Square sq, Color color) {
 }
 
 static void InitPawnAttacks(void) {
-  for (int i = 0; i < 64; i++) {
-    PAWN_ATTACKS[WHITE][i] = GetGeneratedPawnAttacks(i, WHITE);
-    PAWN_ATTACKS[BLACK][i] = GetGeneratedPawnAttacks(i, BLACK);
+  for (Square sq = 0; sq < 64; sq++) {
+    PAWN_ATTACKS[WHITE][sq] = GetGeneratedPawnAttacks(sq, WHITE);
+    PAWN_ATTACKS[BLACK][sq] = GetGeneratedPawnAttacks(sq, BLACK);
   }
 }
 
 static BitBoard GetGeneratedKnightAttacks(Square sq) {
-  BitBoard attacks = 0, board = 0;
+  const BitBoard board = Bit(sq);
+  BitBoard attacks     = 0;
 
-  SetBit(board, sq);
-
-  if ((board >> 17) & ~H_FILE)
-    attacks |= (board >> 17);
-  if ((board >> 15) & ~A_FILE)
-    attacks |= (board >> 15);
-  if ((board >> 10) & ~(G_FILE | H_FILE))
-    attacks |= (board >> 10);
-  if ((board >> 6) & ~(A_FILE | B_FILE))
-    attacks |= (board >> 6);
-
-  if ((board << 17) & ~A_FILE)
-    attacks |= (board << 17);
-  if ((board << 15) & ~H_FILE)
-    attacks |= (board << 15);
-  if ((board << 10) & ~(A_FILE | B_FILE))
-    attacks |= (board << 10);
-  if ((board << 6) & ~(G_FILE | H_FILE))
-    attacks |= (board << 6);
+  attacks |= ShiftN(ShiftNE(board));
+  attacks |= ShiftE(ShiftNE(board));
+  attacks |= ShiftE(ShiftSE(board));
+  attacks |= ShiftS(ShiftSE(board));
+  attacks |= ShiftS(ShiftSW(board));
+  attacks |= ShiftW(ShiftSW(board));
+  attacks |= ShiftW(ShiftNW(board));
+  attacks |= ShiftN(ShiftNW(board));
 
   return attacks;
 }
 
 static void InitKnightAttacks(void) {
-  for (int i = 0; i < 64; i++)
-    KNIGHT_ATTACKS[i] = GetGeneratedKnightAttacks(i);
+  for (Square sq = 0; sq < 64; sq++)
+    KNIGHT_ATTACKS[sq] = GetGeneratedKnightAttacks(sq);
 }
 
 static BitBoard GetGeneratedKingAttacks(Square sq) {
-  BitBoard attacks = 0, board = 0;
-
-  SetBit(board, sq);
+  const BitBoard board = Bit(sq);
+  BitBoard attacks     = 0;
 
   attacks |= ShiftN(board);
   attacks |= ShiftNE(board);
@@ -254,8 +242,8 @@ static BitBoard GetGeneratedKingAttacks(Square sq) {
 }
 
 static void InitKingAttacks(void) {
-  for (int i = 0; i < 64; i++)
-    KING_ATTACKS[i] = GetGeneratedKingAttacks(i);
+  for (Square sq = 0; sq < 64; sq++)
+    KING_ATTACKS[sq] = GetGeneratedKingAttacks(sq);
 }
 
 #ifndef USE_DUAL_HQ
@@ -267,20 +255,20 @@ static BitBoard GetBishopMask(Square sq) {
   int sf = File(sq);
 
   for (int r = sr + 1, f = sf + 1; r <= 6 && f <= 6; r++, f++)
-    attacks |= (1ULL << (r * 8 + f));
+    SetBit(attacks, MakeSquare(r, f));
   for (int r = sr - 1, f = sf + 1; r >= 1 && f <= 6; r--, f++)
-    attacks |= (1ULL << (r * 8 + f));
+    SetBit(attacks, MakeSquare(r, f));
   for (int r = sr + 1, f = sf - 1; r <= 6 && f >= 1; r++, f--)
-    attacks |= (1ULL << (r * 8 + f));
+    SetBit(attacks, MakeSquare(r, f));
   for (int r = sr - 1, f = sf - 1; r >= 1 && f >= 1; r--, f--)
-    attacks |= (1ULL << (r * 8 + f));
+    SetBit(attacks, MakeSquare(r, f));
 
   return attacks;
 }
 
 static void InitBishopMasks(void) {
-  for (int i = 0; i < 64; i++)
-    MAGICS[i].bishop.mask = GetBishopMask(i);
+  for (Square sq = 0; sq < 64; sq++)
+    MAGICS[sq].bishop.mask = GetBishopMask(sq);
 }
 
 #endif
@@ -292,26 +280,26 @@ static BitBoard GetBishopAttacksOTF(Square sq, BitBoard blockers) {
   int sf = File(sq);
 
   for (int r = sr + 1, f = sf + 1; r <= 7 && f <= 7; r++, f++) {
-    attacks |= (1ULL << (r * 8 + f));
-    if (GetBit(blockers, r * 8 + f))
+    SetBit(attacks, MakeSquare(r, f));
+    if (GetBit(blockers, MakeSquare(r, f)))
       break;
   }
 
   for (int r = sr - 1, f = sf + 1; r >= 0 && f <= 7; r--, f++) {
-    attacks |= (1ULL << (r * 8 + f));
-    if (GetBit(blockers, r * 8 + f))
+    SetBit(attacks, MakeSquare(r, f));
+    if (GetBit(blockers, MakeSquare(r, f)))
       break;
   }
 
   for (int r = sr + 1, f = sf - 1; r <= 7 && f >= 0; r++, f--) {
-    attacks |= (1ULL << (r * 8 + f));
-    if (GetBit(blockers, r * 8 + f))
+    SetBit(attacks, MakeSquare(r, f));
+    if (GetBit(blockers, MakeSquare(r, f)))
       break;
   }
 
   for (int r = sr - 1, f = sf - 1; r >= 0 && f >= 0; r--, f--) {
-    attacks |= (1ULL << (r * 8 + f));
-    if (GetBit(blockers, r * 8 + f))
+    SetBit(attacks, MakeSquare(r, f));
+    if (GetBit(blockers, MakeSquare(r, f)))
       break;
   }
 
@@ -327,20 +315,20 @@ static BitBoard GetRookMask(Square sq) {
   int sf = File(sq);
 
   for (int r = sr + 1; r <= 6; r++)
-    attacks |= (1ULL << (r * 8 + sf));
+    SetBit(attacks, MakeSquare(r, sf));
   for (int r = sr - 1; r >= 1; r--)
-    attacks |= (1ULL << (r * 8 + sf));
+    SetBit(attacks, MakeSquare(r, sf));
   for (int f = sf + 1; f <= 6; f++)
-    attacks |= (1ULL << (sr * 8 + f));
+    SetBit(attacks, MakeSquare(sr, f));
   for (int f = sf - 1; f >= 1; f--)
-    attacks |= (1ULL << (sr * 8 + f));
+    SetBit(attacks, MakeSquare(sr, f));
 
   return attacks;
 }
 
 static void InitRookMasks(void) {
-  for (int i = 0; i < 64; i++)
-    MAGICS[i].rook.mask = GetRookMask(i);
+  for (Square sq = 0; sq < 64; sq++)
+    MAGICS[sq].rook.mask = GetRookMask(sq);
 }
 
 #endif
@@ -352,26 +340,26 @@ static BitBoard GetRookAttacksOTF(Square sq, BitBoard blockers) {
   int sf = File(sq);
 
   for (int r = sr + 1; r <= 7; r++) {
-    attacks |= (1ULL << (r * 8 + sf));
-    if (GetBit(blockers, r * 8 + sf))
+    SetBit(attacks, MakeSquare(r, sf));
+    if (GetBit(blockers, MakeSquare(r, sf)))
       break;
   }
 
   for (int r = sr - 1; r >= 0; r--) {
-    attacks |= (1ULL << (r * 8 + sf));
-    if (GetBit(blockers, r * 8 + sf))
+    SetBit(attacks, MakeSquare(r, sf));
+    if (GetBit(blockers, MakeSquare(r, sf)))
       break;
   }
 
   for (int f = sf + 1; f <= 7; f++) {
-    attacks |= (1ULL << (sr * 8 + f));
-    if (GetBit(blockers, sr * 8 + f))
+    SetBit(attacks, MakeSquare(sr, f));
+    if (GetBit(blockers, MakeSquare(sr, f)))
       break;
   }
 
   for (int f = sf - 1; f >= 0; f--) {
-    attacks |= (1ULL << (sr * 8 + f));
-    if (GetBit(blockers, sr * 8 + f))
+    SetBit(attacks, MakeSquare(sr, f));
+    if (GetBit(blockers, MakeSquare(sr, f)))
       break;
   }
 
@@ -387,7 +375,7 @@ static BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
     Square sq = PopLSB(&attacks);
 
     if (idx & (1 << i))
-      occupany |= (1ULL << sq);
+      SetBit(occupany, sq);
   }
 
   return occupany;
@@ -397,13 +385,13 @@ static BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks) {
 // startup does not pay for the search. Correctness is covered by the perft
 // suite, which exercises every slider lookup.
 static void InitBishopMagics(void) {
-  for (int i = 0; i < 64; i++)
-    MAGICS[i].bishop.magic = BISHOP_MAGIC_NUMBERS[i];
+  for (Square sq = 0; sq < 64; sq++)
+    MAGICS[sq].bishop.magic = BISHOP_MAGIC_NUMBERS[sq];
 }
 
 static void InitRookMagics(void) {
-  for (int i = 0; i < 64; i++)
-    MAGICS[i].rook.magic = ROOK_MAGIC_NUMBERS[i];
+  for (Square sq = 0; sq < 64; sq++)
+    MAGICS[sq].rook.magic = ROOK_MAGIC_NUMBERS[sq];
 }
 
 static void InitBishopAttacks(void) {
@@ -465,7 +453,7 @@ static BitBoard RayMask(Square sq, int dr, int df) {
   BitBoard mask = 0;
 
   for (int r = Rank(sq) + dr, f = File(sq) + df; r >= 0 && r <= 7 && f >= 0 && f <= 7; r += dr, f += df)
-    mask |= 1ULL << (r * 8 + f);
+    SetBit(mask, MakeSquare(r, f));
 
   return mask;
 }
@@ -473,7 +461,7 @@ static BitBoard RayMask(Square sq, int dr, int df) {
 static void InitDualMagics(void) {
   for (int f = 0; f < 8; f++)
     for (int occ = 0; occ < 64; occ++)
-      RANK_ATTACKS[f][occ] = (uint8_t) GetRookAttacksOTF(f, (BitBoard) occ << 1);
+      RANK_ATTACKS[f][occ] = (uint8_t) GetRookAttacksOTF(MakeSquare(0, f), (BitBoard) occ << 1);
 
   for (Square sq = 0; sq < 64; sq++) {
     DualMagic* m = &DUAL_MAGICS[sq];
@@ -485,8 +473,8 @@ static void InitDualMagics(void) {
 
     // The subtrahends that carry a borrow along the ray, in board order and in
     // the byte reversed order the high lanes see.
-    m->r  = (1ULL << sq) * 2;
-    m->rr = (1ULL << (63 - sq)) * 2;
+    m->r  = Bit(sq) * 2;
+    m->rr = Bit(63 - sq) * 2;
 
     m->rankAttacks = RANK_ATTACKS[File(sq)];
     m->shift       = 8 * Rank(sq);
