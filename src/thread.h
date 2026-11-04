@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,7 +20,61 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
+#include "board.h"
 #include "types.h"
+
+// Tracking the principal variation
+typedef struct {
+  int count;
+  Move moves[MAX_SEARCH_PLY];
+} PV;
+
+typedef struct {
+  Move move;
+  Depth seldepth;
+  Score score, previousScore, avgScore;
+  uint64_t nodes;
+  PV pv;
+} RootMove;
+
+enum {
+  THREAD_SLEEP,
+  THREAD_SEARCH,
+  THREAD_TT_CLEAR,
+  THREAD_SEARCH_CLEAR,
+  THREAD_EXIT,
+  THREAD_RESUME
+};
+
+struct ThreadData {
+  int idx, multiPV;
+  Depth depth, completedDepth, seldepth;
+  atomic_uint_fast64_t nodes, tbhits;
+
+  Ply nmpMinPly;
+  Color npmColor;
+
+  Accumulator* accumulators; // base of the per ply stack; board.accumulators walks it
+
+  Board board;
+
+  Score contempt[2];
+  Score previousScore;
+  int numRootMoves;
+  RootMove rootMoves[MAX_MOVES];
+
+  Move counters[12][64];         // counter move butterfly table
+  int16_t hh[2][2][2][64 * 64];  // history heuristic butterfly table (stm / threatened)
+  int16_t ch[2][12][64][12][64]; // continuation move history table
+  int16_t caph[12][64][2][7];    // capture history (piece - to - defeneded - captured_type)
+
+  int16_t contCorrection[12][64][12][64];
+
+  int action, calls;
+  pthread_t nativeThread;
+  pthread_mutex_t mutex;
+  pthread_cond_t sleep;
+};
 
 typedef struct {
   ThreadData* threads[2048];
@@ -38,18 +92,14 @@ extern ThreadPool Threads;
 void ThreadWaitUntilSleep(ThreadData* thread);
 void ThreadWait(ThreadData* thread, atomic_uchar* cond);
 void ThreadWake(ThreadData* thread, int action);
-void ThreadIdle(ThreadData* thread);
-void* ThreadInit(void* arg);
-void ThreadCreate(int i);
-void ThreadDestroy(ThreadData* thread);
 void ThreadsSetNumber(int n);
-void ThreadsExit();
-void ThreadsInit();
+void ThreadsExit(void);
+void ThreadsInit(void);
 
-void SetupMainThread(Board* board);
-void SetupOtherThreads(Board* board);
-
-uint64_t NodesSearched();
-uint64_t TBHits();
+void ThreadsClearTT(void);
+void ThreadsClearSearch(void);
+void ThreadsResetRefreshTables(void);
+uint64_t NodesSearched(void);
+uint64_t TBHits(void);
 
 #endif

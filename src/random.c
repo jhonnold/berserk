@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,13 +21,13 @@
 // while Thanks to Martin Sedlák (author of Cheng) this one is really cool and
 // works :) http://www.vlasak.biz/cheng/
 
-uint64_t keys[2];
+static uint64_t keys[2];
 
-inline uint64_t rotate(uint64_t v, uint8_t s) {
+static uint64_t rotate(uint64_t v, uint8_t s) {
   return (v >> s) | (v << (64 - s));
 }
 
-inline uint64_t RandomUInt64() {
+uint64_t RandomUInt64(void) {
   uint64_t tmp = keys[0];
   keys[0] += rotate(keys[1] ^ 0xc5462216u ^ ((uint64_t) 0xcf14f4ebu << 32), 1);
   return keys[1] += rotate(tmp ^ 0x75ecfc58u ^ ((uint64_t) 0x9576080cu << 32), 9);
@@ -38,9 +38,4 @@ void SeedRandom(uint64_t seed) {
 
   for (int i = 0; i < 64; i++)
     RandomUInt64();
-}
-
-// Magic's are combined to try and get one with few bits
-uint64_t RandomMagic() {
-  return RandomUInt64() & RandomUInt64() & RandomUInt64();
 }

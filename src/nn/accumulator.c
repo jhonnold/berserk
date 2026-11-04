@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,9 +22,16 @@
 
 #include "../bits.h"
 #include "../board.h"
-#include "../move.h"
 #include "../movegen.h"
-#include "../util.h"
+
+const uint16_t KING_BUCKETS[64] = {15, 15, 14, 14, 14, 14, 15, 15, //
+                                   15, 15, 14, 14, 14, 14, 15, 15, //
+                                   13, 13, 12, 12, 12, 12, 13, 13, //
+                                   13, 13, 12, 12, 12, 12, 13, 13, //
+                                   11, 10, 9,  8,  8,  9,  10, 11, //
+                                   11, 10, 9,  8,  8,  9,  10, 11, //
+                                   7,  6,  5,  4,  4,  5,  6,  7,  //
+                                   3,  2,  1,  0,  0,  1,  2,  3};
 
 void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   for (size_t b = 0; b < 2 * 2 * N_KING_BUCKETS; b++) {
@@ -35,20 +42,17 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
   }
 }
 
-// Refreshes an accumulator using a diff from the last known board state
-// with proper king bucketing
-
 // Resets an accumulator from pieces on the board
-void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
+void ResetAccumulator(Accumulator* dest, Board* board, const Color perspective) {
   Delta delta[1];
   delta->r = delta->a = 0;
 
-  int kingSq = LSB(PieceBB(KING, perspective));
+  Square kingSq = LSB(PieceBB(board, KING, perspective));
 
-  BitBoard occ = OccBB(BOTH);
+  BitBoard occ = OccBB(board, BOTH);
   while (occ) {
-    int sq                 = PopLSB(&occ);
-    int pc                 = board->squares[sq];
+    Square sq              = PopLSB(&occ);
+    Piece pc               = board->squares[sq];
     delta->add[delta->a++] = FeatureIdx(pc, sq, kingSq, perspective);
   }
 

@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,32 +22,30 @@
 #include <string.h>
 
 #include "board.h"
+#include "eval.h"
 #include "move.h"
 #include "search.h"
 #include "thread.h"
 #include "transposition.h"
 #include "types.h"
-#include "uci.h"
 #include "util.h"
 
 // Ethereal's bench set
-const int NUM_BENCH_POSITIONS = 50;
-char* benchmarks[]            = {
+static const char* benchmarks[] = {
 #include "files/bench.csv"
 };
 
-void Bench(int depth) {
+#define NUM_BENCH_POSITIONS ((int) (sizeof(benchmarks) / sizeof(benchmarks[0])))
+
+void Bench(Depth depth) {
   Board board;
 
-  Limits.depth     = depth;
-  Limits.multiPV   = 1;
-  Limits.softNodes = 0;
-  Limits.hitrate   = INT_MAX;
-  Limits.max       = INT_MAX;
-  Limits.timeset   = 0;
+  ResetLimits();
+  Limits.depth   = depth;
+  Limits.hitrate = INT_MAX;
 
   Move bestMoves[NUM_BENCH_POSITIONS];
-  int scores[NUM_BENCH_POSITIONS];
+  Score scores[NUM_BENCH_POSITIONS];
   uint64_t nodes[NUM_BENCH_POSITIONS];
   long times[NUM_BENCH_POSITIONS];
 
@@ -55,8 +53,8 @@ void Bench(int depth) {
   for (int i = 0; i < NUM_BENCH_POSITIONS; i++) {
     ParseFen(benchmarks[i], &board);
 
-    TTClear();
-    SearchClear();
+    ThreadsClearTT();
+    ThreadsClearSearch();
 
     Limits.start = GetTimeMS();
     StartSearch(&board, 0);
@@ -65,7 +63,7 @@ void Bench(int depth) {
 
     bestMoves[i] = Threads.threads[0]->rootMoves[0].move;
     scores[i]    = Threads.threads[0]->rootMoves[0].score;
-    nodes[i]     = Threads.threads[0]->nodes;
+    nodes[i]     = NodesSearched();
   }
   long totalTime = GetTimeMS() - startTime;
 

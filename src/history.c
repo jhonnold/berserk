@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,21 +18,24 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "board.h"
 #include "move.h"
 #include "util.h"
 
+CorrectionHistory Correction;
+
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
-                     int depth,
+                     Depth depth,
                      Move quiets[],
                      int nQ,
                      Move captures[],
                      int nC) {
   Board* board = &thread->board;
-  int stm      = board->stm;
+  Color stm    = board->stm;
 
   int16_t inc = HistoryBonus(depth);
 
@@ -47,29 +50,29 @@ void UpdateHistories(SearchStack* ss,
     // Only increase the best move history when it
     // wasn't trivial. This idea was first thought of
     // by Alayan in Ethereal
-    if (nQ > 1 || depth > 5) {
-      AddHistoryHeuristic(&HH(stm, bestMove, board->threatened), inc);
+    if (nQ > 1 || depth > HIST_UPDATE_DEPTH) {
+      AddHistoryHeuristic(&HH(thread, stm, bestMove, board->threatened), inc);
       UpdateCH(ss, bestMove, inc);
     }
   } else {
-    int piece    = Moving(bestMove);
-    int to       = To(bestMove);
-    int defended = !GetBit(board->threatened, to);
-    int captured = IsEP(bestMove) ? PAWN : PieceType(board->squares[to]);
+    Piece piece        = Moving(bestMove);
+    Square to          = To(bestMove);
+    int defended       = !GetBit(board->threatened, to);
+    PieceType captured = IsEP(bestMove) ? PAWN : TypeOf(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, defended, captured), inc);
+    AddHistoryHeuristic(&TH(thread, piece, to, defended, captured), inc);
   }
 
   // Update quiets
   if (!IsCap(bestMove)) {
-    const int malus = Min(0, -inc + 36 * (nQ - 1));
+    const int malus = Min(0, -inc + HIST_MALUS_SCALE * (nQ - 1));
 
     for (int i = 0; i < nQ; i++) {
       Move m = quiets[i];
       if (m == bestMove)
         continue;
 
-      AddHistoryHeuristic(&HH(stm, m, board->threatened), malus);
+      AddHistoryHeuristic(&HH(thread, stm, m, board->threatened), malus);
       UpdateCH(ss, m, malus);
     }
   }
@@ -80,38 +83,48 @@ void UpdateHistories(SearchStack* ss,
     if (m == bestMove)
       continue;
 
-    int piece    = Moving(m);
-    int to       = To(m);
-    int defended = !GetBit(board->threatened, to);
-    int captured = IsEP(m) ? PAWN : PieceType(board->squares[to]);
+    Piece piece        = Moving(m);
+    Square to          = To(m);
+    int defended       = !GetBit(board->threatened, to);
+    PieceType captured = IsEP(m) ? PAWN : TypeOf(board->squares[to]);
 
-    AddHistoryHeuristic(&TH(piece, to, defended, captured), -inc);
+    AddHistoryHeuristic(&TH(thread, piece, to, defended, captured), -inc);
   }
 }
 
-void UpdateCorrection(int raw, int real, int depth, Board* board, ThreadData* thread) {
-  const int16_t correction = Min(4096, Max(-4096, 3 * (real - raw) * depth));
-  int16_t* pawnCorrection  = &thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
+void UpdateCorrection(Score raw, Score real, Depth depth, Board* board) {
+  const int16_t correction = Min(CORR_MAX, Max(-CORR_MAX, CORR_UPDATE * (real - raw) * depth));
+  int16_t* pawnCorrection  = &Correction.pawn[board->pawnZobrist & CORRECTION_MASK];
   AddHistoryHeuristic(pawnCorrection, correction);
 
-  int16_t* whiteCorrection =
-    &thread->nonPawnCorrection[WHITE][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK];
+  int16_t* whiteCorrection = &Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & CORRECTION_MASK];
   AddHistoryHeuristic(whiteCorrection, correction);
-  int16_t* blackCorrection =
-    &thread->nonPawnCorrection[BLACK][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
+  int16_t* blackCorrection = &Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & CORRECTION_MASK];
   AddHistoryHeuristic(blackCorrection, correction);
 }
 
-void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss) {
-  if ((ss - 1)->move && (ss - 2)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
-    int16_t* contCorrection  = &(*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    AddHistoryHeuristic(contCorrection, correction);
-  }
+void UpdateContCorrection(Score raw, Score real, Depth depth, SearchStack* ss) {
+  if (!(ss - 1)->move)
+    return;
 
-  if ((ss - 1)->move && (ss - 3)->move) {
-    const int16_t correction = Min(4096, Max(-4096, 4 * (real - raw) * depth));
-    int16_t* contCorrection  = &(*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
-    AddHistoryHeuristic(contCorrection, correction);
-  }
+  const int16_t correction = Min(CONT_CORR_MAX, Max(-CONT_CORR_MAX, CONT_CORR_UPDATE * (real - raw) * depth));
+  const Piece moving       = Moving((ss - 1)->move);
+  const Square to          = To((ss - 1)->move);
+
+  if ((ss - 2)->move)
+    AddHistoryHeuristic(&(*(ss - 2)->cont)[moving][to], correction);
+
+  if ((ss - 3)->move)
+    AddHistoryHeuristic(&(*(ss - 3)->cont)[moving][to], correction);
+}
+
+// Zero this thread's slice of the shared tables
+void CorrectionClearPart(int idx, int count) {
+  const uint64_t begin = idx * CORRECTION_SIZE / count;
+  const uint64_t end   = (idx + 1) * CORRECTION_SIZE / count;
+  const uint64_t bytes = (end - begin) * sizeof(int16_t);
+
+  memset(Correction.pawn + begin, 0, bytes);
+  memset(Correction.nonPawn[WHITE] + begin, 0, bytes);
+  memset(Correction.nonPawn[BLACK] + begin, 0, bytes);
 }

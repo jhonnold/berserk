@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,26 +20,41 @@
 #include "bits.h"
 #include "board.h"
 #include "move.h"
+#include "search.h"
+#include "thread.h"
+#include "tune.h"
 #include "types.h"
 #include "util.h"
 
-#define HH(stm, m, threats) (thread->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
-#define TH(p, e, d, c)      (thread->caph[p][e][d][c])
+// correction history entries, shared across all threads
+#define CORRECTION_SIZE 131072
+
+// pawn and non-pawn correction histories, shared by all threads
+typedef struct {
+  int16_t pawn[CORRECTION_SIZE] ALIGN;
+  int16_t nonPawn[2][CORRECTION_SIZE] ALIGN;
+} CorrectionHistory;
+
+#define CORRECTION_MASK (CORRECTION_SIZE - 1)
+
+#define HH(t, stm, m, threats) ((t)->hh[stm][!GetBit(threats, From(m))][!GetBit(threats, To(m))][FromTo(m)])
+#define TH(t, p, e, d, c)      ((t)->caph[p][e][d][c])
 
 INLINE int GetQuietHistory(SearchStack* ss, ThreadData* thread, Move move) {
-  return (int) HH(thread->board.stm, move, thread->board.threatened) + //
-         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +               //
-         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +               //
+  return (int) HH(thread, thread->board.stm, move, thread->board.threatened) + //
+         (int) (*(ss - 1)->ch)[Moving(move)][To(move)] +                       //
+         (int) (*(ss - 2)->ch)[Moving(move)][To(move)] +                       //
          (int) (*(ss - 4)->ch)[Moving(move)][To(move)];
 }
 
 INLINE int GetCaptureHistory(ThreadData* thread, Move move) {
   Board* board = &thread->board;
 
-  return TH(Moving(move),
+  return TH(thread,
+            Moving(move),
             To(move),
             !GetBit(board->threatened, To(move)),
-            IsEP(move) ? PAWN : PieceType(board->squares[To(move)]));
+            IsEP(move) ? PAWN : TypeOf(board->squares[To(move)]));
 }
 
 INLINE int GetHistory(SearchStack* ss, ThreadData* thread, Move move) {
@@ -57,8 +72,8 @@ INLINE void AddCounterMove(ThreadData* thread, Move move, Move parent) {
   thread->counters[Moving(parent)][To(parent)] = move;
 }
 
-INLINE int16_t HistoryBonus(int depth) {
-  return Min(1708, 4 * depth * depth + 191 * depth - 118);
+INLINE int16_t HistoryBonus(Depth depth) {
+  return Min(HIST_BONUS_MAX, HIST_BONUS_QUAD * depth * depth + HIST_BONUS_LINEAR * depth + HIST_BONUS_BASE);
 }
 
 INLINE void AddHistoryHeuristic(int16_t* entry, int16_t inc) {
@@ -76,26 +91,29 @@ INLINE void UpdateCH(SearchStack* ss, Move move, int16_t bonus) {
     AddHistoryHeuristic(&(*(ss - 6)->ch)[Moving(move)][To(move)], bonus);
 }
 
-INLINE int GetCorrectionScore(Board* board, ThreadData* thread, SearchStack* ss) {
-  const int pawn = thread->pawnCorrection[board->pawnZobrist & PAWN_CORRECTION_MASK];
-  const int white = thread->nonPawnCorrection[WHITE][board->nonPawnZobrist[WHITE] & NON_PAWN_CORRECTION_MASK];
-  const int black = thread->nonPawnCorrection[BLACK][board->nonPawnZobrist[BLACK] & NON_PAWN_CORRECTION_MASK];
+extern CorrectionHistory Correction;
+
+INLINE Score GetCorrectionScore(Board* board, SearchStack* ss) {
+  const int pawn  = Correction.pawn[board->pawnZobrist & CORRECTION_MASK];
+  const int white = Correction.nonPawn[WHITE][board->nonPawnZobrist[WHITE] & CORRECTION_MASK];
+  const int black = Correction.nonPawn[BLACK][board->nonPawnZobrist[BLACK] & CORRECTION_MASK];
   const int cont1 = (*(ss - 3)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
   const int cont2 = (*(ss - 2)->cont)[Moving((ss - 1)->move)][To((ss - 1)->move)];
 
-  return (31 * pawn + 26 * (white + black) + 17 * cont1 + 46 * cont2) / 8192;
+  return (CORR_PAWN * pawn + CORR_NON_PAWN * (white + black) + CORR_CONT1 * cont1 + CORR_CONT2 * cont2) / 8192;
 }
 
 void UpdateHistories(SearchStack* ss,
                      ThreadData* thread,
                      Move bestMove,
-                     int depth,
+                     Depth depth,
                      Move quiets[],
                      int nQ,
                      Move captures[],
                      int nC);
 
-void UpdateCorrection(int raw, int real, int depth, Board* board, ThreadData* thread);
-void UpdateContCorrection(int raw, int real, int depth, SearchStack* ss);
+void UpdateCorrection(Score raw, Score real, Depth depth, Board* board);
+void UpdateContCorrection(Score raw, Score real, Depth depth, SearchStack* ss);
+void CorrectionClearPart(int idx, int count);
 
 #endif

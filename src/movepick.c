@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,12 +19,11 @@
 #include <stdio.h>
 
 #include "board.h"
-#include "eval.h"
 #include "history.h"
 #include "move.h"
 #include "movegen.h"
 #include "see.h"
-#include "transposition.h"
+#include "tune.h"
 #include "types.h"
 
 INLINE Move Best(ScoredMove* current, ScoredMove* end) {
@@ -53,31 +52,32 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   const BitBoard threats[3]   = {pawnThreats, minorThreats, rookThreats};
 
   while (current < picker->end) {
-    const Move move    = current->move;
-    const int from     = From(move);
-    const int to       = To(move);
-    const int pc       = Moving(move);
-    const int pt       = PieceType(pc);
-    const int captured = IsEP(move) ? PAWN : PieceType(board->squares[to]);
+    const Move move          = current->move;
+    const Square from        = From(move);
+    const Square to          = To(move);
+    const Piece pc           = Moving(move);
+    const PieceType pt       = TypeOf(pc);
+    const PieceType captured = IsEP(move) ? PAWN : TypeOf(board->squares[to]);
 
     if (type == ST_QUIET || type == ST_EVASION_QT) {
-      current->score = ((int) HH(board->stm, move, board->threatened) * 26 + //
-                        (int) (*(ss - 1)->ch)[pc][to] * 36 +                 //
-                        (int) (*(ss - 2)->ch)[pc][to] * 35 +                 //
-                        (int) (*(ss - 4)->ch)[pc][to] * 19 +                 //
-                        (int) (*(ss - 6)->ch)[pc][to] * 17) /
+      current->score = ((int) HH(thread, board->stm, move, board->threatened) * MO_HH + //
+                        (int) (*(ss - 1)->ch)[pc][to] * MO_CH1 +                        //
+                        (int) (*(ss - 2)->ch)[pc][to] * MO_CH2 +                        //
+                        (int) (*(ss - 4)->ch)[pc][to] * MO_CH4 +                        //
+                        (int) (*(ss - 6)->ch)[pc][to] * MO_CH6) /
                        16;
 
       if (pt != PAWN && pt != KING) {
         const BitBoard danger = threats[Max(0, pt - BISHOP)];
 
         if (GetBit(danger, from))
-          current->score += 16863;
+          current->score += MO_THREAT_FROM;
         if (GetBit(danger, to))
-          current->score -= 13955;
+          current->score -= MO_THREAT_TO;
       }
     } else if (type == ST_CAPTURE)
-      current->score = GetCaptureHistory(picker->thread, move) / 16 + SEE_VALUE[PieceType(board->squares[To(move)])];
+      current->score =
+        MO_CAPHIST * GetCaptureHistory(picker->thread, move) / 256 + SEE_VALUE[TypeOf(board->squares[To(move)])];
 
     else if (type == ST_EVASION_CAP)
       current->score = 1e7 + SEE_VALUE[captured];
@@ -89,7 +89,7 @@ INLINE void ScoreMoves(MovePicker* picker, Board* board, const int type) {
   }
 }
 
-Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
+Move NextMove(MovePicker* picker, Board* board, Bool skipQuiets) {
   switch (picker->phase) {
     case HASH_MOVE:
       picker->phase = GEN_NOISY_MOVES;
@@ -113,7 +113,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
         if (move == picker->hashMove)
           continue;
 
-        else if (SEE(board, move, -score / 2))
+        else if (SEE(board, move, -score * MO_GOOD_CAPTURE / 64))
           return move;
 
         *picker->endBad++ = *(picker->current - 1);
@@ -171,7 +171,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
           return move;
       }
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     // Probcut MP Steps
@@ -191,7 +191,7 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
           return move;
       }
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     // QSearch MP Steps
@@ -204,11 +204,11 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
       picker->phase = QS_PLAY_NOISY_MOVES;
       // fallthrough
     case QS_PLAY_NOISY_MOVES:
-      while (picker->current != picker->end)
+      if (picker->current != picker->end)
         return Best(picker->current++, picker->end);
 
       if (!picker->genChecks) {
-        picker->phase = -1;
+        picker->phase = NO_MORE_MOVES;
         return NULL_MOVE;
       }
 
@@ -223,10 +223,10 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
 
       // fallthrough
     case QS_PLAY_QUIET_CHECKS:
-      while (picker->current != picker->end)
+      if (picker->current != picker->end)
         return (picker->current++)->move;
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     // QSearch Evasion Steps
@@ -274,28 +274,15 @@ Move NextMove(MovePicker* picker, Board* board, int skipQuiets) {
           return move;
       }
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
 
     case PERFT_MOVES:
-      while (picker->current != picker->end)
+      if (picker->current != picker->end)
         return (picker->current++)->move;
 
-      picker->phase = -1;
+      picker->phase = NO_MORE_MOVES;
       return NULL_MOVE;
     default: return NULL_MOVE;
-  }
-}
-
-char* PhaseName(MovePicker* picker) {
-  switch (picker->phase) {
-    case HASH_MOVE: return "HASH_MOVE";
-    case PLAY_GOOD_NOISY: return "PLAY_GOOD_NOISY";
-    case PLAY_KILLER_1: return "PLAY_KILLER_1";
-    case PLAY_KILLER_2: return "PLAY_KILLER_2";
-    case PLAY_COUNTER: return "PLAY_COUNTER";
-    case PLAY_QUIETS: return "PLAY_QUIETS";
-    case PLAY_BAD_NOISY: return "PLAY_BAD_NOISY";
-    default: return "UNKNOWN";
   }
 }

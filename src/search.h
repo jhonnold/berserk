@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,39 @@
 #ifndef SEARCH_H
 #define SEARCH_H
 
+#include "move.h"
 #include "types.h"
+
+typedef int16_t PieceTo[12][64];
+
+typedef struct {
+  Ply ply;
+  Score staticEval;
+  int de;
+  Depth reduction;
+  PieceTo* ch;
+  PieceTo* cont;
+  Move move, skip;
+  Move killers[2];
+} SearchStack;
+
+typedef struct {
+  long start;
+  int alloc;
+  int max;
+
+  uint64_t nodes;
+  uint64_t softNodes;
+  int hitrate;
+
+  Bool timeset;
+  Depth depth;
+  int mate;
+  int multiPV;
+  Bool infinite;
+  Bool searchMoves;
+  SimpleMoveList searchable;
+} SearchParams;
 
 // search specific score evals
 #define UNKNOWN \
@@ -28,21 +60,17 @@
 #define TB_WIN_SCORE MATE_BOUND
 #define TB_WIN_BOUND (TB_WIN_SCORE - MAX_SEARCH_PLY)
 
-void InitPruningAndReductionTables();
+extern SearchParams Limits;
+
+// Untimed, unlimited single PV search starting now; callers then set their limits
+void ResetLimits(void);
+
+void InitPruningAndReductionTables(void);
 
 void StartSearch(Board* board, uint8_t ponder);
-void MainSearch();
+void MainSearch(void);
 void Search(ThreadData* thread);
-int Negamax(int alpha, int beta, int depth, int cutnode, ThreadData* thread, PV* pv, SearchStack* ss);
-int Quiesce(int alpha, int beta, int depth, ThreadData* thread, SearchStack* ss);
-
-void PrintUCI(ThreadData* thread, int depth, int alpha, int beta, Board* board);
-void PrintPV(PV* pv, Board* board);
-
-void SortRootMoves(ThreadData* thread, int offset);
-int ValidRootMove(ThreadData* thread, Move move);
 
 void SearchClearThread(ThreadData* thread);
-void SearchClear();
 
 #endif

@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,12 +20,12 @@
 #include "random.h"
 #include "types.h"
 
-uint64_t ZOBRIST_PIECES[12][64];
-uint64_t ZOBRIST_EP_KEYS[64];
-uint64_t ZOBRIST_CASTLE_KEYS[16];
-uint64_t ZOBRIST_SIDE_KEY;
+Key ZOBRIST_PIECES[12][64];
+Key ZOBRIST_EP_KEYS[64];
+Key ZOBRIST_CASTLE_KEYS[16];
+Key ZOBRIST_SIDE_KEY;
 
-void InitZobristKeys() {
+void InitZobristKeys(void) {
   for (int i = 0; i < 12; i++)
     for (int j = 0; j < 64; j++)
       ZOBRIST_PIECES[i][j] = RandomUInt64();
@@ -40,10 +40,10 @@ void InitZobristKeys() {
 }
 
 // Generate a Zobrist key for the current board state
-uint64_t Zobrist(Board* board) {
-  uint64_t hash = 0ULL;
+Key Zobrist(Board* board) {
+  Key hash = 0ULL;
 
-  for (int piece = WHITE_PAWN; piece <= BLACK_KING; piece++) {
+  for (Piece piece = WHITE_PAWN; piece <= BLACK_KING; piece++) {
     BitBoard pcs = board->pieces[piece];
     while (pcs)
       hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
@@ -61,10 +61,10 @@ uint64_t Zobrist(Board* board) {
 }
 
 // Generate a Pawn Zobrist key for the current board state
-uint64_t PawnZobrist(Board* board) {
-  uint64_t hash = 0ULL;
+Key PawnZobrist(Board* board) {
+  Key hash = 0ULL;
 
-  for (int piece = WHITE_PAWN; piece <= BLACK_PAWN; piece++) {
+  for (Piece piece = WHITE_PAWN; piece <= BLACK_PAWN; piece++) {
     BitBoard pcs = board->pieces[piece];
     while (pcs)
       hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];
@@ -77,10 +77,10 @@ uint64_t PawnZobrist(Board* board) {
 }
 
 // Generate a Non-Pawn Zobrist key for one color's pieces
-uint64_t NonPawnZobrist(Board* board, int color) {
-  uint64_t hash = 0ULL;
+Key NonPawnZobrist(Board* board, Color color) {
+  Key hash = 0ULL;
 
-  for (int piece = WHITE_KNIGHT + color; piece <= BLACK_KING; piece += 2) {
+  for (Piece piece = WHITE_KNIGHT + color; piece <= BLACK_KING; piece += 2) {
     BitBoard pcs = board->pieces[piece];
     while (pcs)
       hash ^= ZOBRIST_PIECES[piece][PopLSB(&pcs)];

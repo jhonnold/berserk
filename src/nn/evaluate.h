@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,11 +21,10 @@
 
 #define SPARSE_CHUNK_SIZE 4
 
-int Predict(Board* board);
 int OutputBucket(Board* board);
-int Propagate(Accumulator* accumulator, const int stm, const int bucket);
+Score Propagate(Accumulator* accumulator, const Color stm, const int bucket);
 
-void LoadDefaultNN();
+void LoadDefaultNN(void);
 int LoadNetwork(char* path);
 
 #endif

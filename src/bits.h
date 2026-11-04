@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -40,45 +40,78 @@
 #define RANK_7 0x000000000000FF00ULL
 #define RANK_8 0x00000000000000FFULL
 
-#define DARK_SQS 0x55AA55AA55AA55AAULL
+INLINE BitBoard Bit(Square sq) {
+  return 1ULL << sq;
+}
 
-#define Bit(sq)                (1ULL << (sq))
-#define BitCount(bb)           (__builtin_popcountll(bb))
+INLINE BitBoard GetBit(BitBoard bb, Square sq) {
+  return bb & Bit(sq);
+}
+
+INLINE int BitCount(BitBoard bb) {
+  return __builtin_popcountll(bb);
+}
+
+INLINE int LSB(BitBoard bb) {
+  return __builtin_ctzll(bb);
+}
+
+INLINE int MSB(BitBoard bb) {
+  return 63 ^ __builtin_clzll(bb);
+}
+
+// These update bb in place, so they stay macros
 #define SetBit(bb, sq)         ((bb) |= Bit(sq))
-#define GetBit(bb, sq)         ((bb) &Bit(sq))
 #define PopBit(bb, sq)         ((bb) &= ~Bit(sq))
 #define FlipBit(bb, sq)        ((bb) ^= Bit(sq))
 #define FlipBits(bb, sq1, sq2) ((bb) ^= Bit(sq1) ^ Bit(sq2))
-#define LSB(bb)                (__builtin_ctzll(bb))
-#define MSB(bb)                (63 ^ __builtin_clzll(bb))
 
-#define ShiftN(bb)  ((bb) >> 8)
-#define ShiftS(bb)  ((bb) << 8)
-#define ShiftNN(bb) ((bb) >> 16)
-#define ShiftSS(bb) ((bb) << 16)
-#define ShiftW(bb)  (((bb) & ~A_FILE) >> 1)
-#define ShiftE(bb)  (((bb) & ~H_FILE) << 1)
-#define ShiftNE(bb) (((bb) & ~H_FILE) >> 7)
-#define ShiftSW(bb) (((bb) & ~A_FILE) << 7)
-#define ShiftNW(bb) (((bb) & ~A_FILE) >> 9)
-#define ShiftSE(bb) (((bb) & ~H_FILE) << 9)
+INLINE int PawnDir(Color c) {
+  return c == WHITE ? N : S;
+}
 
-INLINE BitBoard ShiftPawnDir(BitBoard bb, const int c) {
+INLINE BitBoard ShiftN(BitBoard bb) {
+  return bb >> 8;
+}
+
+INLINE BitBoard ShiftS(BitBoard bb) {
+  return bb << 8;
+}
+
+INLINE BitBoard ShiftW(BitBoard bb) {
+  return (bb & ~A_FILE) >> 1;
+}
+
+INLINE BitBoard ShiftE(BitBoard bb) {
+  return (bb & ~H_FILE) << 1;
+}
+
+INLINE BitBoard ShiftNE(BitBoard bb) {
+  return (bb & ~H_FILE) >> 7;
+}
+
+INLINE BitBoard ShiftSW(BitBoard bb) {
+  return (bb & ~A_FILE) << 7;
+}
+
+INLINE BitBoard ShiftNW(BitBoard bb) {
+  return (bb & ~A_FILE) >> 9;
+}
+
+INLINE BitBoard ShiftSE(BitBoard bb) {
+  return (bb & ~H_FILE) << 9;
+}
+
+INLINE BitBoard ShiftPawnDir(BitBoard bb, const Color c) {
   return c == WHITE ? ShiftN(bb) : ShiftS(bb);
 }
 
-INLINE BitBoard ShiftPawnCapW(BitBoard bb, const int c) {
+INLINE BitBoard ShiftPawnCapW(BitBoard bb, const Color c) {
   return c == WHITE ? ShiftNW(bb) : ShiftSW(bb);
 }
 
-INLINE BitBoard ShiftPawnCapE(BitBoard bb, const int c) {
+INLINE BitBoard ShiftPawnCapE(BitBoard bb, const Color c) {
   return c == WHITE ? ShiftNE(bb) : ShiftSE(bb);
-}
-
-INLINE uint8_t PawnFiles(BitBoard pawns) {
-  pawns |= (pawns >> 8);
-  pawns |= (pawns >> 16);
-  return (uint8_t) ((pawns | (pawns >> 32)) & 0xFF);
 }
 
 INLINE int PopLSB(BitBoard* bb) {

@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,3 +22,27 @@ const int CASTLE_MAP[4][3] = {
   {BLACK_KS, G8, F8},
   {BLACK_QS, C8, D8},
 };
+
+NOINLINE ScoredMove* AddNoisyMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_CAPTURE, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, GT_CAPTURE, BLACK);
+}
+
+NOINLINE ScoredMove* AddQuietMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddPseudoLegalMoves(moves, board, GT_QUIET, WHITE) : //
+                               AddPseudoLegalMoves(moves, board, GT_QUIET, BLACK);
+}
+
+NOINLINE ScoredMove* AddQuietCheckMoves(ScoredMove* moves, Board* board) {
+  return board->stm == WHITE ? AddQuietChecks(moves, board, WHITE) : //
+                               AddQuietChecks(moves, board, BLACK);
+}
+
+void RootMoves(SimpleMoveList* moves, Board* board) {
+  ScoredMove list[MAX_MOVES];
+  ScoredMove* end = AddPerftMoves(list, board);
+
+  moves->count = end - list;
+  for (int i = 0; i < moves->count; i++)
+    moves->moves[i] = list[i].move;
+}

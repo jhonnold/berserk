@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,16 +18,14 @@
 
 #include "attacks.h"
 #include "bench.h"
-#include "bits.h"
 #include "datagen.h"
-#include "eval.h"
 #include "nn/evaluate.h"
 #include "nn/threats.h"
 #include "random.h"
 #include "search.h"
+#include "see.h"
 #include "thread.h"
 #include "transposition.h"
-#include "types.h"
 #include "uci.h"
 #include "util.h"
 #include "zobrist.h"
@@ -38,6 +36,9 @@ int main(int argc, char** argv) {
 
   InitZobristKeys();
   InitPruningAndReductionTables();
+#ifdef SPSA
+  InitSeeValues();
+#endif
   InitAttacks();
   InitThreats();
   InitCuckoo();
@@ -45,10 +46,11 @@ int main(int argc, char** argv) {
   LoadDefaultNN();
   ThreadsInit();
   TTInit(16);
+  ThreadsClearTT();
 
   // Compliance for OpenBench
   if (argc > 1 && !strncmp(argv[1], "bench", 5)) {
-    int depth = DEFAULT_BENCH_DEPTH;
+    Depth depth = DEFAULT_BENCH_DEPTH;
     if (argc > 2)
       depth = Max(1, atoi(argv[2]));
 

@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,13 +20,12 @@
 #include <string.h>
 
 #include "movegen.h"
-#include "movepick.h"
+#include "options.h"
 #include "types.h"
-#include "uci.h"
 
 const char* PIECE_TO_CHAR = "PpNnBbRrQqKk";
 
-const char* PROMOTION_TO_CHAR = "-nbrq-";
+static const char* PROMOTION_TO_CHAR = "-nbrq-";
 
 const int CHAR_TO_PIECE[] = {
   ['P'] = WHITE_PAWN,   //
@@ -89,8 +88,8 @@ Move ParseMove(char* moveStr, Board* board) {
 char* MoveToStr(Move move, Board* board) {
   static char buffer[6];
 
-  int from = From(move);
-  int to   = To(move);
+  Square from = From(move);
+  Square to   = To(move);
 
   if (CHESS_960 && IsCas(move))
     to = board->cr[CASTLING_ROOK[to]];

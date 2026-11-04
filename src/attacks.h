@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 // Hyperbola quintessence computes slider attacks arithmetically instead of
 // reading a magic table, so it needs no lookup memory beyond a per square
 // descriptor. It only pays off with the 256 bit shuffles, so it is limited to
-// AVX2, and PEXT builds keep their existing table lookup.
+// AVX2; other builds use the fancy magic tables.
 #if defined(__AVX2__)
 #define USE_DUAL_HQ
 #endif
@@ -65,8 +65,6 @@ typedef struct {
 
 extern DualMagic DUAL_MAGICS[64];
 
-void InitDualMagics();
-
 #else
 
 // Slider attacks use "fancy" magics: every square owns a slice of a single
@@ -89,36 +87,7 @@ extern SquareMagics MAGICS[64];
 
 #endif
 
-void InitBetweenSquares();
-void InitPinnedMovementSquares();
-void initPawnSpans();
-void InitPawnAttacks();
-void InitKnightAttacks();
-void InitKingAttacks();
-void InitSliderRays();
-#ifndef USE_DUAL_HQ
-void InitBishopMasks();
-void InitBishopMagics();
-void InitBishopAttacks();
-void InitRookMasks();
-void InitRookMagics();
-void InitRookAttacks();
-#endif
-void InitAttacks();
-
-BitBoard GetGeneratedPawnAttacks(int sq, int color);
-BitBoard GetGeneratedKnightAttacks(int sq);
-BitBoard GetBishopAttacksOTF(int sq, BitBoard blockers);
-BitBoard GetRookAttacksOTF(int sq, BitBoard blockers);
-BitBoard GetGeneratedKingAttacks(int sq);
-#ifndef USE_DUAL_HQ
-BitBoard GetBishopMask(int sq);
-BitBoard GetRookMask(int sq);
-BitBoard SetPieceLayoutOccupancy(int idx, int bits, BitBoard attacks);
-
-uint64_t FindMagicNumber(int sq, int n, int bishop);
-#endif
-
+void InitAttacks(void);
 
 #ifdef USE_DUAL_HQ
 
@@ -128,25 +97,27 @@ uint64_t FindMagicNumber(int sq, int n, int bishop);
 INLINE __m128i DualHyperbola(const DualMagic* m, BitBoard occupancy) {
   // Reverses the 16 bytes of each 128 bit half, which both swaps the two
   // quadwords and reverses the bytes within them.
+  // clang-format off
   const __m256i rev8 = _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, //
                                        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+  // clang-format on
 
   const __m256i mask = _mm256_load_si256((const __m256i*) m);
   const __m256i occ  = _mm256_and_si256(mask, _mm256_set1_epi64x((long long) occupancy));
   const __m256i fwd  = _mm256_sub_epi64(occ, _mm256_set1_epi64x((long long) m->r));
-  const __m256i rev  = _mm256_shuffle_epi8(
-    _mm256_sub_epi64(_mm256_shuffle_epi8(occ, rev8), _mm256_set1_epi64x((long long) m->rr)), rev8);
+  const __m256i rev =
+    _mm256_shuffle_epi8(_mm256_sub_epi64(_mm256_shuffle_epi8(occ, rev8), _mm256_set1_epi64x((long long) m->rr)), rev8);
   const __m256i attacks = _mm256_and_si256(_mm256_xor_si256(fwd, rev), mask);
 
   // Low half holds [file, diagonal], high half [0, antidiagonal].
   return _mm_or_si128(_mm256_extracti128_si256(attacks, 1), _mm256_castsi256_si128(attacks));
 }
 
-INLINE BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetBishopAttacks(Square sq, BitBoard occupancy) {
   return (BitBoard) _mm_extract_epi64(DualHyperbola(&DUAL_MAGICS[sq], occupancy), 1);
 }
 
-INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetRookAttacks(Square sq, BitBoard occupancy) {
   const DualMagic* m = &DUAL_MAGICS[sq];
   return (BitBoard) _mm_cvtsi128_si64(DualHyperbola(m, occupancy)) |
          ((BitBoard) m->rankAttacks[(occupancy >> (m->shift + 1)) & 0x3f] << m->shift);
@@ -158,42 +129,41 @@ INLINE BitBoard MagicAttacks(const Magic* m, BitBoard occupancy) {
   return m->attacks[((occupancy & m->mask) * m->magic) >> m->shift];
 }
 
-INLINE BitBoard GetBishopAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetBishopAttacks(Square sq, BitBoard occupancy) {
   return MagicAttacks(&MAGICS[sq].bishop, occupancy);
 }
 
-INLINE BitBoard GetRookAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetRookAttacks(Square sq, BitBoard occupancy) {
   return MagicAttacks(&MAGICS[sq].rook, occupancy);
 }
 
 #endif
 
-
-INLINE BitBoard BetweenSquares(int from, int to) {
+INLINE BitBoard BetweenSquares(Square from, Square to) {
   return BETWEEN_SQS[from][to];
 }
 
-INLINE BitBoard PinnedMoves(int p, int k) {
+INLINE BitBoard PinnedMoves(Square p, Square k) {
   return PINNED_MOVES[p][k];
 }
 
-INLINE BitBoard GetPawnAttacks(int sq, int color) {
+INLINE BitBoard GetPawnAttacks(Square sq, Color color) {
   return PAWN_ATTACKS[color][sq];
 }
 
-INLINE BitBoard GetKnightAttacks(int sq) {
+INLINE BitBoard GetKnightAttacks(Square sq) {
   return KNIGHT_ATTACKS[sq];
 }
 
-INLINE BitBoard GetQueenAttacks(int sq, BitBoard occupancy) {
+INLINE BitBoard GetQueenAttacks(Square sq, BitBoard occupancy) {
   return GetBishopAttacks(sq, occupancy) | GetRookAttacks(sq, occupancy);
 }
 
-INLINE BitBoard GetKingAttacks(int sq) {
+INLINE BitBoard GetKingAttacks(Square sq) {
   return KING_ATTACKS[sq];
 }
 
-INLINE BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
+INLINE BitBoard GetPieceAttacks(Square sq, BitBoard occupancy, const PieceType type) {
   switch (type) {
     case KNIGHT: return GetKnightAttacks(sq);
     case BISHOP: return GetBishopAttacks(sq, occupancy);
@@ -206,15 +176,15 @@ INLINE BitBoard GetPieceAttacks(int sq, BitBoard occupancy, const int type) {
 }
 
 // get a bitboard of ALL pieces attacking a given square
-INLINE BitBoard AttacksToSquare(Board* board, int sq, BitBoard occ) {
-  return (GetPawnAttacks(sq, WHITE) & PieceBB(PAWN, BLACK)) |                            // White and Black Pawn atx
-         (GetPawnAttacks(sq, BLACK) & PieceBB(PAWN, WHITE)) |                            //
-         (GetKnightAttacks(sq) & (PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK))) |    // Knights
-         (GetKingAttacks(sq) & (PieceBB(KING, WHITE) | PieceBB(KING, BLACK))) |          // Kings
-         (GetBishopAttacks(sq, occ) & (PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK) | // Bishop + Queen
-                                       PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK))) | //
-         (GetRookAttacks(sq, occ) & (PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK) |       // Rook + Queen
-                                     PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)));
+INLINE BitBoard AttacksToSquare(Board* board, Square sq, BitBoard occ) {
+  return (GetPawnAttacks(sq, WHITE) & PieceBB(board, PAWN, BLACK)) | // White and Black Pawn atx
+         (GetPawnAttacks(sq, BLACK) & PieceBB(board, PAWN, WHITE)) | //
+         (GetKnightAttacks(sq) & (PieceBB(board, KNIGHT, WHITE) | PieceBB(board, KNIGHT, BLACK))) |    // Knights
+         (GetKingAttacks(sq) & (PieceBB(board, KING, WHITE) | PieceBB(board, KING, BLACK))) |          // Kings
+         (GetBishopAttacks(sq, occ) & (PieceBB(board, BISHOP, WHITE) | PieceBB(board, BISHOP, BLACK) | // Bishop + Queen
+                                       PieceBB(board, QUEEN, WHITE) | PieceBB(board, QUEEN, BLACK))) | //
+         (GetRookAttacks(sq, occ) & (PieceBB(board, ROOK, WHITE) | PieceBB(board, ROOK, BLACK) |       // Rook + Queen
+                                     PieceBB(board, QUEEN, WHITE) | PieceBB(board, QUEEN, BLACK)));
 }
 
 #endif

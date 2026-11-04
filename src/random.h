@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,9 +19,7 @@
 
 #include <inttypes.h>
 
-uint64_t rotate(uint64_t v, uint8_t s);
-uint64_t RandomUInt64();
+uint64_t RandomUInt64(void);
 void SeedRandom(uint64_t seed);
-uint64_t RandomMagic();
 
 #endif

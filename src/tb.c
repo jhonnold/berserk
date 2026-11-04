@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -24,7 +24,47 @@
 #include "movegen.h"
 #include "pyrrhic/tbprobe.h"
 
-#define ByteSwap(bb) __builtin_bswap64((bb))
+INLINE BitBoard ByteSwap(BitBoard bb) {
+  return __builtin_bswap64(bb);
+}
+
+// Pyrrhic's eight board arguments: both colours, then each piece type, in a1 = 0 order
+#define TB_PIECES(board)                                                     \
+  ByteSwap(OccBB(board, WHITE)), ByteSwap(OccBB(board, BLACK)),              \
+    ByteSwap(PieceBB(board, KING, WHITE) | PieceBB(board, KING, BLACK)),     \
+    ByteSwap(PieceBB(board, QUEEN, WHITE) | PieceBB(board, QUEEN, BLACK)),   \
+    ByteSwap(PieceBB(board, ROOK, WHITE) | PieceBB(board, ROOK, BLACK)),     \
+    ByteSwap(PieceBB(board, BISHOP, WHITE) | PieceBB(board, BISHOP, BLACK)), \
+    ByteSwap(PieceBB(board, KNIGHT, WHITE) | PieceBB(board, KNIGHT, BLACK)), \
+    ByteSwap(PieceBB(board, PAWN, WHITE) | PieceBB(board, PAWN, BLACK))
+
+INLINE Move TBMoveFromResult(unsigned res, Board* board) {
+  unsigned from  = TB_GET_FROM(res) ^ 56;
+  unsigned to    = TB_GET_TO(res) ^ 56;
+  unsigned ep    = TB_GET_EP(res);
+  unsigned promo = TB_GET_PROMOTES(res);
+  Piece piece    = board->squares[from];
+  Bool capture   = board->squares[to] != NO_PIECE;
+
+  int flags = QUIET_FLAG;
+  if (ep)
+    flags = EP_FLAG;
+  else if (capture)
+    flags = CAPTURE_FLAG;
+
+  if (promo) {
+    switch (KING - promo) {
+      case KNIGHT: flags |= KNIGHT_PROMO_FLAG; break;
+      case BISHOP: flags |= BISHOP_PROMO_FLAG; break;
+      case ROOK: flags |= ROOK_PROMO_FLAG; break;
+      case QUEEN: flags |= QUEEN_PROMO_FLAG; break;
+    }
+  }
+
+  return BuildMove(from, to, piece, flags);
+}
+
+static unsigned TBRootProbe(Board* board, unsigned* results);
 
 void TBRootMoves(SimpleMoveList* moves, Board* board) {
   moves->count = 0;
@@ -42,18 +82,11 @@ void TBRootMoves(SimpleMoveList* moves, Board* board) {
       moves->moves[moves->count++] = TBMoveFromResult(results[i], board);
 }
 
-unsigned TBRootProbe(Board* board, unsigned* results) {
-  if (board->castling || BitCount(OccBB(BOTH)) > TB_LARGEST)
+static unsigned TBRootProbe(Board* board, unsigned* results) {
+  if (board->castling || BitCount(OccBB(board, BOTH)) > TB_LARGEST)
     return TB_RESULT_FAILED;
 
-  return tb_probe_root(ByteSwap(OccBB(WHITE)),
-                       ByteSwap(OccBB(BLACK)),
-                       ByteSwap(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
-                       ByteSwap(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
-                       ByteSwap(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
-                       ByteSwap(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
-                       ByteSwap(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
-                       ByteSwap(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
+  return tb_probe_root(TB_PIECES(board),
                        board->fmr,
                        board->epSquare ? (board->epSquare ^ 56) : 0,
                        board->stm == WHITE ? 1 : 0,
@@ -61,17 +94,8 @@ unsigned TBRootProbe(Board* board, unsigned* results) {
 }
 
 unsigned TBProbe(Board* board) {
-  if (board->castling || board->fmr || BitCount(OccBB(BOTH)) > TB_LARGEST)
+  if (board->castling || board->fmr || BitCount(OccBB(board, BOTH)) > TB_LARGEST)
     return TB_RESULT_FAILED;
 
-  return tb_probe_wdl(ByteSwap(OccBB(WHITE)),
-                      ByteSwap(OccBB(BLACK)),
-                      ByteSwap(PieceBB(KING, WHITE) | PieceBB(KING, BLACK)),
-                      ByteSwap(PieceBB(QUEEN, WHITE) | PieceBB(QUEEN, BLACK)),
-                      ByteSwap(PieceBB(ROOK, WHITE) | PieceBB(ROOK, BLACK)),
-                      ByteSwap(PieceBB(BISHOP, WHITE) | PieceBB(BISHOP, BLACK)),
-                      ByteSwap(PieceBB(KNIGHT, WHITE) | PieceBB(KNIGHT, BLACK)),
-                      ByteSwap(PieceBB(PAWN, WHITE) | PieceBB(PAWN, BLACK)),
-                      board->epSquare ? (board->epSquare ^ 56) : 0,
-                      board->stm == WHITE ? 1 : 0);
+  return tb_probe_wdl(TB_PIECES(board), board->epSquare ? (board->epSquare ^ 56) : 0, board->stm == WHITE ? 1 : 0);
 }

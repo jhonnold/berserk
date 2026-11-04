@@ -1,5 +1,5 @@
 // Berserk is a UCI compliant chess engine written in C
-// Copyright (C) 2024 Jay Honnold
+// Copyright (C) 2026 Jay Honnold
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,7 +15,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "evaluate.h"
-#include "threats.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,11 +22,10 @@
 
 #include "../bits.h"
 #include "../board.h"
-#include "../move.h"
 #include "../movegen.h"
-#include "../thread.h"
 #include "../util.h"
 #include "accumulator.h"
+#include "threats.h"
 
 #define INCBIN_PREFIX
 #define INCBIN_STYLE INCBIN_STYLE_CAMEL
@@ -48,16 +46,16 @@ INCBIN(Embed, EVALFILE);
 int16_t INPUT_WEIGHTS[N_FEATURES * N_HIDDEN] ALIGN;
 int16_t INPUT_BIASES[N_HIDDEN] ALIGN;
 
-int8_t L1_WEIGHTS[N_OUTPUT_BUCKETS][N_L1 * N_L2] ALIGN;
-int32_t L1_BIASES[N_OUTPUT_BUCKETS][N_L2] ALIGN;
+static int8_t L1_WEIGHTS[N_OUTPUT_BUCKETS][N_L1 * N_L2] ALIGN;
+static int32_t L1_BIASES[N_OUTPUT_BUCKETS][N_L2] ALIGN;
 
-int8_t L2_WEIGHTS[N_OUTPUT_BUCKETS][N_L2_CHUNKS * N_L3 * 4] ALIGN;
-int32_t L2_BIASES[N_OUTPUT_BUCKETS][N_L3] ALIGN;
+static int8_t L2_WEIGHTS[N_OUTPUT_BUCKETS][N_L2_CHUNKS * N_L3 * 4] ALIGN;
+static int32_t L2_BIASES[N_OUTPUT_BUCKETS][N_L3] ALIGN;
 
-int8_t L3_WEIGHTS[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
-int32_t L3_BIASES[N_OUTPUT_BUCKETS];
+static int8_t L3_WEIGHTS[N_OUTPUT_BUCKETS][N_L3_IN] ALIGN;
+static int32_t L3_BIASES[N_OUTPUT_BUCKETS];
 
-uint16_t LOOKUP_INDICES[256][8] ALIGN;
+static uint16_t LOOKUP_INDICES[256][8] ALIGN;
 
 #if defined(SIMD) && !(defined(__AVX512F__) && defined(__AVX512BW__))
 INLINE size_t StoreNNZ(uint16_t* dest, size_t count, nnz_t* base, const nnz_t increment, const uint32_t lookup) {
@@ -82,16 +80,18 @@ INLINE vu8_t Pairwise(vi16_t a0, vi16_t a1, vi16_t b0, vi16_t b1) {
 }
 #endif
 
-INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const int stm) {
+INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, const Color stm) {
 #if defined(SIMD)
-  const size_t WIDTH = sizeof(vi16_t) / sizeof(acc_t);
-  const size_t HALF  = N_HIDDEN / 2 / WIDTH;
-  const int views[2] = {stm, !stm};
+  const size_t WIDTH   = sizeof(vi16_t) / sizeof(acc_t);
+  const size_t HALF    = N_HIDDEN / 2 / WIDTH;
+  const Color views[2] = {stm, !stm};
 
 #if defined(__AVX512F__) && defined(__AVX512BW__) && defined(__AVX512VBMI2__)
   const __m512i increment = _mm512_set1_epi16(32);
+  // clang-format off
   __m512i base            = _mm512_set_epi16(31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, //
                                              15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+  // clang-format on
 #elif defined(__AVX512F__) && defined(__AVX512BW__)
   const __m512i increment = _mm512_set1_epi32(16);
   __m512i base            = _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
@@ -103,7 +103,7 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   for (int v = 0; v < 2; v++) {
     const vi16_t* in = (vi16_t*) acc->values[views[v]];
-    vu8_t* out      = (vu8_t*) &outputs[(N_HIDDEN / 2) * v];
+    vu8_t* out       = (vu8_t*) &outputs[(N_HIDDEN / 2) * v];
 
     for (size_t i = 0; i < HALF; i += 4) {
       const vu8_t o0 = Pairwise(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
@@ -141,7 +141,7 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
 
   return count;
 #else
-  const int views[2] = {stm, !stm};
+  const Color views[2] = {stm, !stm};
 
   (void) nnz;
 
@@ -166,21 +166,27 @@ INLINE void L1Chunk(vi32_t* regs, const int32_t* in32, const uint16_t i0, const 
   const size_t OUT_CC = N_L2 / (sizeof(vi32_t) / sizeof(int32_t));
 
   const vi8_t f0  = vi8_bcast32(&in32[i0]);
-  const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+  const vi8_t* c0 = (const vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
 
   for (size_t j = 0; j < OUT_CC; j++)
     vi32_dpbusd(regs + j, f0, c0[j]);
 }
 #endif
 
-INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const size_t count, const int8_t* weights,
+INLINE void L1Affine(int32_t* dest,
+                     uint8_t* src,
+                     const uint16_t* nnz,
+                     const size_t count,
+                     const int8_t* weights,
                      const int32_t* biases) {
 #if defined(SIMD)
-  const size_t OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t);
-  const size_t OUT_CC    = N_L2 / OUT_WIDTH;
+  enum {
+    OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t),
+    OUT_CC    = N_L2 / OUT_WIDTH
+  };
 
   const int32_t* in32 = (int32_t*) src;
-  vi32_t* out        = (vi32_t*) dest;
+  vi32_t* out         = (vi32_t*) dest;
 
   size_t i = 0;
 #if L1_UNROLL == 4
@@ -202,10 +208,10 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
     const vi8_t f2 = vi8_bcast32(&in32[i2]);
     const vi8_t f3 = vi8_bcast32(&in32[i3]);
 
-    const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vi8_t* c1 = (vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vi8_t* c2 = (vi8_t*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vi8_t* c3 = (vi8_t*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c0 = (const vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c1 = (const vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c2 = (const vi8_t*) &weights[i2 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c3 = (const vi8_t*) &weights[i3 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++) {
       vi32_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
@@ -230,8 +236,8 @@ INLINE void L1Affine(int32_t* dest, uint8_t* src, const uint16_t* nnz, const siz
     const vi8_t f0 = vi8_bcast32(&in32[i0]);
     const vi8_t f1 = vi8_bcast32(&in32[i1]);
 
-    const vi8_t* c0 = (vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
-    const vi8_t* c1 = (vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c0 = (const vi8_t*) &weights[i0 * N_L2 * SPARSE_CHUNK_SIZE];
+    const vi8_t* c1 = (const vi8_t*) &weights[i1 * N_L2 * SPARSE_CHUNK_SIZE];
 
     for (size_t j = 0; j < OUT_CC; j++)
       vi32_dpbusd_x2(regs + j, f0, c0[j], f1, c1[j]);
@@ -296,12 +302,14 @@ INLINE void L1Activate(uint8_t* clamped, uint8_t* squared, int32_t* src) {
 
 INLINE void L2Affine(int32_t* dest, uint8_t* src, const int8_t* weights, const int32_t* biases) {
 #if defined(SIMD)
-  const size_t OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t);
-  const size_t OUT_CC    = N_L3 / OUT_WIDTH;
+  enum {
+    OUT_WIDTH = sizeof(vi32_t) / sizeof(int32_t),
+    OUT_CC    = N_L3 / OUT_WIDTH
+  };
 
   const int32_t* in32 = (int32_t*) src;
-  const vi8_t* w     = (vi8_t*) weights;
-  vi32_t* out        = (vi32_t*) dest;
+  const vi8_t* w      = (const vi8_t*) weights;
+  vi32_t* out         = (vi32_t*) dest;
 
   vi32_t regs[OUT_CC];
   for (size_t i = 0; i < OUT_CC; i++)
@@ -355,13 +363,13 @@ INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
 #if defined(__AVX512F__) && defined(__AVX512BW__)
   // the 32 inputs fill half a register
   const __m512i in = _mm512_zextsi256_si512(*(__m256i*) src);
-  const __m512i w  = _mm512_zextsi256_si512(*(__m256i*) weights);
+  const __m512i w  = _mm512_zextsi256_si512(*(const __m256i*) weights);
   vi32_dpbusd(&a0, in, w);
 #elif defined(__AVX2__)
-  vi32_dpbusd(&a0, *(vi8_t*) src, *(vi8_t*) weights);
+  vi32_dpbusd(&a0, *(const vi8_t*) src, *(const vi8_t*) weights);
 #else
   const vi8_t* in = (vi8_t*) src;
-  const vi8_t* w  = (vi8_t*) weights;
+  const vi8_t* w  = (const vi8_t*) weights;
   vi32_dpbusd_x2(&a0, in[0], w[0], in[1], w[1]);
 #endif
 
@@ -376,7 +384,7 @@ INLINE int32_t L3Transform(uint8_t* src, const int8_t* weights) {
 #endif
 }
 
-INLINE int PropagateView(Accumulator* accumulator, const int stm, const int bucket) {
+INLINE Score PropagateView(Accumulator* accumulator, const Color stm, const int bucket) {
   uint8_t x0[N_L1] ALIGN;
   // The index list is written in whole groups of up to 32, so leave room for the tail.
   uint16_t nnz[N_L1 / SPARSE_CHUNK_SIZE + 32] ALIGN;
@@ -395,31 +403,24 @@ INLINE int PropagateView(Accumulator* accumulator, const int stm, const int buck
 }
 
 int OutputBucket(Board* board) {
-  return (BitCount(OccBB(BOTH)) - 2) / 4;
+  return (BitCount(OccBB(board, BOTH)) - 2) / 4;
 }
 
 // Both call sites pass a literal side, so specialising on it lets the pair of
 // perspective indices fold away instead of being read back from a local array.
-int Propagate(Accumulator* accumulator, const int stm, const int bucket) {
+Score Propagate(Accumulator* accumulator, const Color stm, const int bucket) {
   return stm == WHITE ? PropagateView(accumulator, WHITE, bucket) : PropagateView(accumulator, BLACK, bucket);
 }
 
-int Predict(Board* board) {
-  ResetAccumulator(board->accumulators, board, WHITE);
-  ResetAccumulator(board->accumulators, board, BLACK);
-
-  return Propagate(board->accumulators, board->stm, OutputBucket(board));
-}
-
-const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +            // input weights
-                            sizeof(int16_t) * N_HIDDEN +                         // input biases
-                            sizeof(int8_t) * N_THREATS * N_HIDDEN +              // threat weights
-                            sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L1 * N_L2 +    // L1 weights
-                            sizeof(int32_t) * N_OUTPUT_BUCKETS * N_L2 +          // L1 biases
-                            sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L3 * N_L1_ACT +  // L2 weights
-                            sizeof(int32_t) * N_OUTPUT_BUCKETS * N_L3 +          // L2 biases
-                            sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L3_IN +          // L3 weights
-                            sizeof(int32_t) * N_OUTPUT_BUCKETS;                  // L3 biases
+static const size_t NETWORK_SIZE = sizeof(int16_t) * N_FEATURES * N_HIDDEN +             // input weights
+                                   sizeof(int16_t) * N_HIDDEN +                          // input biases
+                                   sizeof(int8_t) * N_THREATS * N_HIDDEN +               // threat weights
+                                   sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L1 * N_L2 +     // L1 weights
+                                   sizeof(int32_t) * N_OUTPUT_BUCKETS * N_L2 +           // L1 biases
+                                   sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L3 * N_L1_ACT + // L2 weights
+                                   sizeof(int32_t) * N_OUTPUT_BUCKETS * N_L3 +           // L2 biases
+                                   sizeof(int8_t) * N_OUTPUT_BUCKETS * N_L3_IN +         // L3 weights
+                                   sizeof(int32_t) * N_OUTPUT_BUCKETS;                   // L3 biases
 
 #if defined(__SSE4_1__) || defined(__ARM_NEON__) || defined(__ARM_NEON)
 INLINE int WeightIdxScrambled(int idx) {
@@ -487,7 +488,7 @@ INLINE int PairedLane(int p) {
 #endif
 }
 
-INLINE void CopyData(const unsigned char* in) {
+static void CopyData(const unsigned char* in) {
   size_t offset = 0;
 
   // Alloc a chunk of memory for the L1 weights which we
@@ -543,7 +544,7 @@ INLINE void CopyData(const unsigned char* in) {
       THREAT_WEIGHTS[f * N_HIDDEN + i] = threats[f * N_HIDDEN + order[PairedLane(i)]];
 }
 
-INLINE void InitLookupIndices() {
+INLINE void InitLookupIndices(void) {
   for (size_t i = 0; i < 256; i++) {
     uint64_t j = i;
     uint64_t k = 0;
@@ -552,13 +553,15 @@ INLINE void InitLookupIndices() {
   }
 }
 
-void LoadDefaultNN() {
+void LoadDefaultNN(void) {
   InitLookupIndices();
 
   // bullet pads a network to 64 bytes; anything else is another format.
   if ((size_t) EmbedSize < NETWORK_SIZE || (size_t) EmbedSize >= NETWORK_SIZE + 64) {
-    fprintf(stderr, "embedded network is %u bytes, this engine reads %zu: build with EVALFILE=<network>\n",
-            (unsigned) EmbedSize, NETWORK_SIZE);
+    fprintf(stderr,
+            "embedded network is %u bytes, this engine reads %zu: build with EVALFILE=<network>\n",
+            (unsigned) EmbedSize,
+            NETWORK_SIZE);
     exit(1);
   }
 
@@ -572,19 +575,17 @@ int LoadNetwork(char* path) {
     return 0;
   }
 
-  uint8_t* data = malloc(NETWORK_SIZE + 64);
+  uint8_t* data     = malloc(NETWORK_SIZE + 64);
   const size_t read = fread(data, sizeof(uint8_t), NETWORK_SIZE + 64, fin);
+  fclose(fin);
+
   if (read < NETWORK_SIZE || read >= NETWORK_SIZE + 64) {
     printf("info string Error reading file at %s\n", path);
+    free(data);
     return 0;
   }
 
   CopyData(data);
-
-  for (int i = 0; i < Threads.count; i++)
-    ResetRefreshTable(Threads.threads[i]->refreshTable);
-
-  fclose(fin);
   free(data);
 
   return 1;
