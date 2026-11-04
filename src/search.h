@@ -25,6 +25,7 @@ typedef int16_t PieceTo[12][64];
 typedef struct {
   Ply ply;
   Score staticEval;
+  Score corr; // |corrected - raw| static eval
   int de;
   Depth reduction;
   PieceTo* ch;

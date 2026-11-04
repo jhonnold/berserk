@@ -130,6 +130,7 @@ INLINE Score StaticEval(ThreadData* thread,
 
   *rawEval       = ttHit && ttEval != EVAL_UNKNOWN ? ttEval : Evaluate(board, thread);
   ss->staticEval = ClampEval(*rawEval + GetCorrectionScore(board, ss));
+  ss->corr       = abs(ss->staticEval - *rawEval);
 
   Score eval = AdjustEvalOnFMR(board, ss->staticEval);
 
@@ -605,6 +606,7 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
 
   if (inCheck) {
     rawEval = eval = ss->staticEval = EVAL_UNKNOWN;
+    ss->corr = 0;
   } else {
     // a singular search (ss->skip) has no TT entry and keeps the eval of the node it re-searches
     if (ttHit || !ss->skip)
@@ -862,6 +864,9 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
 
       if (ttDepth >= depth)
         R -= LMR_TT_DEPTH;
+
+      // reduce less when the eval needed a large correction
+      R -= LMR_CORR * ss->corr / 1024;
 
       // prevent dropping into QS, extending, or reducing all extensions
       R             = Min(newDepth, Max(ReductionPlies(R), 1));
