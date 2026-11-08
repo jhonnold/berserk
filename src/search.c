@@ -752,7 +752,7 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
 
     // reduction in 1/1024 plies
     int R = LMR[Min(depth, 63)][Min(legalMoves, 63)];
-    R -= 1024 * (LMR_HISTORY * history / 65536);                  // adjust reduction based on historical score
+    R -= LMR_HISTORY * history / 65536;                           // adjust reduction based on historical score
     R += LMR_NOISY_HASH * (IsCap(hashMove) || IsPromo(hashMove)); // increase reduction if hash move is noisy
 
     if (bestScore > -TB_WIN_BOUND) {
