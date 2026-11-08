@@ -73,6 +73,7 @@
   INT(LMR_HISTORY, 6144, 0, 12288)               \
   INT(LMR_NOISY_HASH, 1024, 0, 2048)             \
   INT(LMR_NOT_PV, 2048, 0, 4096)                 \
+  INT(LMR_TTPV_FAIL_LOW, 1024, 0, 2048)          \
   INT(LMR_NOT_IMPROVING, 1024, 0, 2048)          \
   INT(LMR_KILLER, 2048, 0, 4096)                 \
   INT(LMR_CHECK, 1024, 0, 2048)                  \

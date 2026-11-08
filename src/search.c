@@ -841,6 +841,10 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
       if (!ttPv)
         R += LMR_NOT_PV;
 
+      // increase reduction if the tt expects this pv node to fail low
+      if (ttPv && ttHit && ttScore <= alpha)
+        R += LMR_TTPV_FAIL_LOW;
+
       // increase reduction if our eval is declining
       if (!improving)
         R += LMR_NOT_IMPROVING;
