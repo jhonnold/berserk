@@ -24,7 +24,7 @@
 // a value must stay inside a bound (divisors > 0, time fractions < 1).
 #define TUNABLES(INT, FLOAT)                     \
   /* reduction and pruning tables */             \
-  FLOAT(LMR_BASE, 0.1694, 0.0, 0.3388)           \
+  FLOAT(LMR_BASE, -0.1500, -0.3000, 0.3000)      \
   FLOAT(LMR_DIV, 2.1350, 1.0, 4.2700)            \
   FLOAT(LMP_BASE, 1.4309, 0.0, 2.8618)           \
   FLOAT(LMP_SCALE, 0.3339, 0.0, 0.6678)          \

@@ -66,7 +66,7 @@ void ResetLimits(void) {
 void InitPruningAndReductionTables(void) {
   for (Depth depth = 1; depth < MAX_SEARCH_PLY; depth++)
     for (int moves = 1; moves < 64; moves++)
-      LMR[depth][moves] = (log(depth) * log(moves) / LMR_DIV + LMR_BASE) * 1024; // in 1/1024 plies
+      LMR[depth][moves] = Max(0, (log(depth) * log(moves) / LMR_DIV + LMR_BASE) * 1024); // in 1/1024 plies
 
   LMR[0][0] = LMR[0][1] = LMR[1][0] = 0;
 
