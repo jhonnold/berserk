@@ -10,7 +10,7 @@ NETWORK_BASE = https://github.com/jhonnold/berserk-networks/releases/download/ne
 DEFS     = -DVERSION=\"$(VERSION)\" -DEVALFILE=\"$(EVALFILE)\" -DNDEBUG
 
 # SPSA=1 turns the tunables in tune.h into UCI options (set the default to 1 on a tuning branch)
-SPSA     ?= 0
+SPSA     ?= 1
 ifeq ($(SPSA), 1)
 	DEFS += -DSPSA
 endif
