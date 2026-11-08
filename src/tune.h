@@ -24,7 +24,7 @@
 // a value must stay inside a bound (divisors > 0, time fractions < 1).
 #define TUNABLES(INT, FLOAT)                     \
   /* reduction and pruning tables */             \
-  FLOAT(LMR_BASE, 0.2319, 0.0, 0.4638)           \
+  FLOAT(LMR_BASE, 0.1694, 0.0, 0.3388)           \
   FLOAT(LMR_DIV, 2.1350, 1.0, 4.2700)            \
   FLOAT(LMP_BASE, 1.4309, 0.0, 2.8618)           \
   FLOAT(LMP_SCALE, 0.3339, 0.0, 0.6678)          \
@@ -70,7 +70,7 @@
   INT(NMP_VERIFY_DEPTH, 14, 0, 28)               \
   INT(PROBCUT_DEPTH, 6, 0, 12)                   \
   INT(PROBCUT_MARGIN, 168, 0, 336)               \
-  INT(LMR_HISTORY, 8, 0, 16)                     \
+  INT(LMR_HISTORY, 6144, 0, 12288)               \
   INT(LMR_NOISY_HASH, 1024, 0, 2048)             \
   INT(LMR_NOT_PV, 2048, 0, 4096)                 \
   INT(LMR_NOT_IMPROVING, 1024, 0, 2048)          \
