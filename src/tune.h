@@ -79,6 +79,7 @@
   INT(LMR_CUTNODE, 1024, 0, 2048)                \
   INT(LMR_CUTNODE_QUIET, 1024, 0, 2048)          \
   INT(LMR_TT_DEPTH, 1024, 0, 2048)               \
+  INT(LMR_CAPTURE, 1024, 0, 2048)                \
   INT(HP_DEPTH, 4, 0, 8)                         \
   INT(HP_MARGIN, 2850, 0, 5700)                  \
   INT(FP_DEPTH, 10, 0, 20)                       \

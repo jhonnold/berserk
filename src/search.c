@@ -863,6 +863,10 @@ static Score Negamax(Score alpha, Score beta, Depth depth, Bool cutnode, ThreadD
       if (ttDepth >= depth)
         R -= LMR_TT_DEPTH;
 
+      // reduce captures less
+      if (IsCap(move))
+        R -= LMR_CAPTURE;
+
       // prevent dropping into QS, extending, or reducing all extensions
       R             = Min(newDepth, Max(ReductionPlies(R), 1));
       ss->reduction = R;
