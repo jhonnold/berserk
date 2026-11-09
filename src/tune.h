@@ -24,8 +24,8 @@
 // a value must stay inside a bound (divisors > 0, time fractions < 1).
 #define TUNABLES(INT, FLOAT)                     \
   /* reduction and pruning tables */             \
-  FLOAT(LMR_BASE, 0.1694, 0.0, 0.3388)           \
-  FLOAT(LMR_DIV, 2.1350, 1.0, 4.2700)            \
+  FLOAT(LMR_BASE, 0.1502, 0.0, 0.3004)           \
+  FLOAT(LMR_DIV, 2.3156, 1.0, 4.6312)            \
   FLOAT(LMP_BASE, 1.4309, 0.0, 2.8618)           \
   FLOAT(LMP_SCALE, 0.3339, 0.0, 0.6678)          \
   FLOAT(LMP_IMP_BASE, 1.7721, 0.0, 3.5442)       \
@@ -70,15 +70,15 @@
   INT(NMP_VERIFY_DEPTH, 14, 0, 28)               \
   INT(PROBCUT_DEPTH, 6, 0, 12)                   \
   INT(PROBCUT_MARGIN, 168, 0, 336)               \
-  INT(LMR_HISTORY, 6144, 0, 12288)               \
-  INT(LMR_NOISY_HASH, 1024, 0, 2048)             \
-  INT(LMR_NOT_PV, 2048, 0, 4096)                 \
-  INT(LMR_NOT_IMPROVING, 1024, 0, 2048)          \
-  INT(LMR_KILLER, 2048, 0, 4096)                 \
-  INT(LMR_CHECK, 1024, 0, 2048)                  \
-  INT(LMR_CUTNODE, 1024, 0, 2048)                \
-  INT(LMR_CUTNODE_QUIET, 1024, 0, 2048)          \
-  INT(LMR_TT_DEPTH, 1024, 0, 2048)               \
+  INT(LMR_HISTORY, 4807, 0, 9614)                \
+  INT(LMR_NOISY_HASH, 857, 0, 1714)              \
+  INT(LMR_NOT_PV, 2263, 0, 4526)                 \
+  INT(LMR_NOT_IMPROVING, 1118, 0, 2236)          \
+  INT(LMR_KILLER, 2011, 0, 4022)                 \
+  INT(LMR_CHECK, 965, 0, 1930)                   \
+  INT(LMR_CUTNODE, 833, 0, 1666)                 \
+  INT(LMR_CUTNODE_QUIET, 851, 0, 1702)           \
+  INT(LMR_TT_DEPTH, 1108, 0, 2216)               \
   INT(HP_DEPTH, 4, 0, 8)                         \
   INT(HP_MARGIN, 2850, 0, 5700)                  \
   INT(FP_DEPTH, 10, 0, 20)                       \
