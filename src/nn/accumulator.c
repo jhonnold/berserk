@@ -40,6 +40,8 @@ void ResetRefreshTable(AccumulatorKingState* refreshTable) {
 
 // Resets an accumulator from pieces on the board
 void ResetAccumulator(Accumulator* dest, Board* board, const int perspective) {
+  dest->nXrays = -1;
+
   Delta delta[1];
   delta->r = delta->a = 0;
 

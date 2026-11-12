@@ -184,9 +184,15 @@ int Xrays(Board* board, uint32_t* out) {
   return n;
 }
 
-void XrayDiff(Board* board, DirtyThreatList* list, uint32_t* before, int nb) {
+void XrayDiff(Board* board, DirtyThreatList* list, const uint32_t* before, int nb, Accumulator* next) {
   uint32_t after[MAX_XRAYS];
   const int na = Xrays(board, after);
+
+  if (next) {
+    next->nXrays = na <= MAX_STORED_XRAYS ? na : -1;
+    if (na <= MAX_STORED_XRAYS)
+      memcpy(next->xrays, after, na * sizeof(uint32_t));
+  }
 
   for (int i = 0; i < nb; i++) {
     int j = 0;

@@ -90,8 +90,8 @@ INLINE int NextPast(int a, int s, BitBoard occ) {
 int Xrays(Board* board, uint32_t* out);
 
 // Pushes the x-rays in before (nb of them) that the board no longer has as SUB, and
-// those it has that before does not as ADD
-void XrayDiff(Board* board, DirtyThreatList* list, uint32_t* before, int nb);
+// those it has that before does not as ADD. Stores the board's x-rays in next, if given.
+void XrayDiff(Board* board, DirtyThreatList* list, const uint32_t* before, int nb, Accumulator* next);
 
 // GetPieceAttacks plus pawns; never called for a king
 INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {

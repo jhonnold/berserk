@@ -57,6 +57,7 @@ enum {
 typedef int16_t acc_t;
 
 #define MAX_DIRTY_THREATS 96
+#define MAX_STORED_XRAYS  24
 
 typedef struct {
   uint8_t correct[2];
@@ -64,6 +65,8 @@ typedef struct {
   uint16_t nDirty;
   Move move;
   uint32_t dirty[MAX_DIRTY_THREATS];
+  int16_t nXrays; // the x-rays of this ply's board; -1 when not known
+  uint32_t xrays[MAX_STORED_XRAYS];
   acc_t values[2][N_HIDDEN] ALIGN;
 } Accumulator;
 
