@@ -72,13 +72,9 @@ INLINE void Push(DirtyThreatList* list, int attacker, int from, int victim, int 
   list->dirty[list->n++] = from | (to << 8) | (attacker << 16) | (victim << 20) | ((uint32_t) add << 31);
 }
 
-INLINE void PushXray(DirtyThreatList* list, int attacker, int from, int victim, int to, int add) {
-  list->dirty[list->n++] = from | (to << 8) | (attacker << 16) | (victim << 20) | (1 << 24) | ((uint32_t) add << 31);
-}
-
-// Whether piece f, in front of slider a on a diagonal or orthogonal line, lets a x-ray
-INLINE int Fronts(int a, int f, int diag) {
-  return !((a ^ f) & 1) && (PieceType(f) == QUEEN || PieceType(f) == (diag ? BISHOP : ROOK));
+// An x-ray as a dirty entry without its add bit; never 0
+INLINE uint32_t XrayEntry(int attacker, int from, int victim, int to) {
+  return from | (to << 8) | (attacker << 16) | (victim << 20) | (1 << 24);
 }
 
 // The first piece past s on the line from a through s, or -1
@@ -86,6 +82,16 @@ INLINE int NextPast(int a, int s, BitBoard occ) {
   const BitBoard past = RAY_PASS[a][s] & occ;
   return !past ? -1 : a < s ? LSB(past) : MSB(past);
 }
+
+// Each x-ray takes one (slider, direction), and there are at most 26 sliders
+#define MAX_XRAYS 256
+
+// Every x-ray on the board: a slider through an own slider on its line to the next piece
+int Xrays(Board* board, uint32_t* out);
+
+// Pushes the x-rays in before (nb of them) that the board no longer has as SUB, and
+// those it has that before does not as ADD
+void XrayDiff(Board* board, DirtyThreatList* list, uint32_t* before, int nb);
 
 // GetPieceAttacks plus pawns; never called for a king
 INLINE BitBoard PieceAttacks(int pc, int sq, BitBoard occ) {
@@ -116,13 +122,7 @@ INLINE BitBoard FeatureAttackers(Board* board, int pt) {
 // gcc specialises the function on it and runs ~1% slower without it.
 void PieceThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int rays);
 
-// The x-rays that involve pc on s, pushed as add: its own, those landing on it and
-// those passing through it. With open, also those its lines carry with s empty, as !add.
-// s is occupied on the board either way; pc need not be what stands there.
-void XrayThreats(Board* board, DirtyThreatList* list, int pc, int s, int add, int open);
-
-// A capture: occupancy is unchanged, so no lines open or close, but x-rays through s
-// can start or stop
+// A capture: occupancy is unchanged, so no lines open or close
 INLINE void SwapThreats(Board* board, DirtyThreatList* list, int old, int new, int s) {
   const BitBoard occ   = OccBB(BOTH);
   const BitBoard kings = board->pieces[WHITE_KING] | board->pieces[BLACK_KING];
@@ -154,10 +154,6 @@ INLINE void SwapThreats(Board* board, DirtyThreatList* list, int old, int new, i
       Push(list, new, s, board->squares[to], to, ADD);
     }
   }
-
-  // with s occupied either way, the x-rays it carries with s empty cancel
-  XrayThreats(board, list, old, s, SUB, 0);
-  XrayThreats(board, list, new, s, ADD, 0);
 }
 
 #endif

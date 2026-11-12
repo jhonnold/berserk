@@ -350,6 +350,10 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
   DirtyThreatList list = {update ? board->accumulators->dirty : scratch, 0};
   const int stm        = piece & 1;
 
+  // x-rays are few: find them before and after, and push the difference
+  uint32_t xrays[MAX_XRAYS];
+  const int nXrays = Xrays(board, xrays);
+
   board->fmr++;
   board->nullply++;
 
@@ -404,6 +408,8 @@ void MakeMoveUpdate(Move move, Board* board, int update) {
       PieceThreats(board, &list, placed, to, ADD, 1);
     }
   }
+
+  XrayDiff(board, &list, xrays, nXrays);
 
   if (board->epSquare)
     board->zobrist ^= ZOBRIST_EP_KEYS[board->epSquare];
