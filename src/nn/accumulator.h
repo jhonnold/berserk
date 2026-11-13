@@ -37,35 +37,139 @@ typedef struct {
   int add[32];
 } Delta;
 
-INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
+// Accumulator updates run in tiles of NUM_REGS registers (THREAT_TILE for the
+// fused update). A width the tile does not divide ends with one shorter tile
+// over the remaining registers, e.g. 640 lanes on avx2 are 256 + 256 + 128.
+#define LANES (sizeof(vi16_t) / sizeof(acc_t))
+
+_Static_assert(N_HIDDEN % (2 * LANES) == 0, "the accumulator must be a whole number of register pairs");
+_Static_assert(THREAT_TILE % 2 == 0, "paired int8 threat rows widen into two registers at a time");
+
+INLINE void ApplyDeltaTile(acc_t* dest, acc_t* src, Delta* delta, const size_t offset, const size_t n) {
   vi16_t regs[NUM_REGS];
 
-  for (size_t c = 0; c < N_HIDDEN / UNROLL; ++c) {
-    const size_t unrollOffset = c * UNROLL;
+  const vi16_t* inputs = (vi16_t*) &src[offset];
+  vi16_t* outputs      = (vi16_t*) &dest[offset];
 
-    const vi16_t* inputs = (vi16_t*) &src[unrollOffset];
-    vi16_t* outputs      = (vi16_t*) &dest[unrollOffset];
+  for (size_t i = 0; i < n; i++)
+    regs[i] = vi16_load(&inputs[i]);
 
-    for (size_t i = 0; i < NUM_REGS; i++)
-      regs[i] = vi16_load(&inputs[i]);
-
-    for (size_t r = 0; r < delta->r; r++) {
-      const size_t offset   = delta->rem[r] * N_HIDDEN + unrollOffset;
-      const vi16_t* weights = (vi16_t*) &INPUT_WEIGHTS[offset];
-      for (size_t i = 0; i < NUM_REGS; i++)
-        regs[i] = vi16_sub(regs[i], weights[i]);
-    }
-
-    for (size_t a = 0; a < delta->a; a++) {
-      const size_t offset   = delta->add[a] * N_HIDDEN + unrollOffset;
-      const vi16_t* weights = (vi16_t*) &INPUT_WEIGHTS[offset];
-      for (size_t i = 0; i < NUM_REGS; i++)
-        regs[i] = vi16_add(regs[i], weights[i]);
-    }
-
-    for (size_t i = 0; i < NUM_REGS; i++)
-      vi16_store(&outputs[i], regs[i]);
+  for (size_t r = 0; r < delta->r; r++) {
+    const vi16_t* weights = (vi16_t*) &INPUT_WEIGHTS[delta->rem[r] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i++)
+      regs[i] = vi16_sub(regs[i], weights[i]);
   }
+
+  for (size_t a = 0; a < delta->a; a++) {
+    const vi16_t* weights = (vi16_t*) &INPUT_WEIGHTS[delta->add[a] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i++)
+      regs[i] = vi16_add(regs[i], weights[i]);
+  }
+
+  for (size_t i = 0; i < n; i++)
+    vi16_store(&outputs[i], regs[i]);
+}
+
+INLINE void ApplyDelta(acc_t* dest, acc_t* src, Delta* delta) {
+  const size_t TILE = NUM_REGS * LANES;
+  const size_t FULL = N_HIDDEN / TILE * TILE;
+
+  for (size_t offset = 0; offset < FULL; offset += TILE)
+    ApplyDeltaTile(dest, src, delta, offset, NUM_REGS);
+
+  if (FULL < N_HIDDEN)
+    ApplyDeltaTile(dest, src, delta, FULL, (N_HIDDEN - FULL) / LANES);
+}
+
+INLINE void ApplyFusedTile(acc_t* dest,
+                           const acc_t* src,
+                           const int* pRem,
+                           const int pr,
+                           const int* pAdd,
+                           const int pa,
+                           const int* tRem,
+                           const int tr,
+                           const int* tAdd,
+                           const int ta,
+                           const size_t offset,
+                           const size_t n) {
+  const vi16_t* in = (const vi16_t*) &src[offset];
+  vi16_t* out      = (vi16_t*) &dest[offset];
+
+  vi16_t regs[THREAT_TILE];
+  for (size_t i = 0; i < n; i++)
+    regs[i] = vi16_load(&in[i]);
+
+  for (int k = 0; k < pr; k++) {
+    const vi16_t* w = (const vi16_t*) &INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i++)
+      regs[i] = vi16_sub(regs[i], vi16_load(&w[i]));
+  }
+
+  for (int k = 0; k < pa; k++) {
+    const vi16_t* w = (const vi16_t*) &INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i++)
+      regs[i] = vi16_add(regs[i], vi16_load(&w[i]));
+  }
+
+#if defined(PAIRED_I8)
+  int k = 0;
+  for (; k + 1 < tr; k += 2) {
+    const int8_t* wa = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
+    const int8_t* wb = &THREAT_WEIGHTS[(size_t) tRem[k + 1] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i += 2) {
+      vi16_t lo, hi;
+      vi16_widen2(vi8_load(&wa[i * LANES]), vi8_load(&wb[i * LANES]), &lo, &hi);
+      regs[i]     = vi16_sub(regs[i], lo);
+      regs[i + 1] = vi16_sub(regs[i + 1], hi);
+    }
+  }
+  if (k < tr) {
+    const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i += 2) {
+      vi16_t lo, hi;
+      vi16_widen1(vi8_load(&w[i * LANES]), &lo, &hi);
+      regs[i]     = vi16_sub(regs[i], lo);
+      regs[i + 1] = vi16_sub(regs[i + 1], hi);
+    }
+  }
+
+  k = 0;
+  for (; k + 1 < ta; k += 2) {
+    const int8_t* wa = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
+    const int8_t* wb = &THREAT_WEIGHTS[(size_t) tAdd[k + 1] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i += 2) {
+      vi16_t lo, hi;
+      vi16_widen2(vi8_load(&wa[i * LANES]), vi8_load(&wb[i * LANES]), &lo, &hi);
+      regs[i]     = vi16_add(regs[i], lo);
+      regs[i + 1] = vi16_add(regs[i + 1], hi);
+    }
+  }
+  if (k < ta) {
+    const int8_t* w = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i += 2) {
+      vi16_t lo, hi;
+      vi16_widen1(vi8_load(&w[i * LANES]), &lo, &hi);
+      regs[i]     = vi16_add(regs[i], lo);
+      regs[i + 1] = vi16_add(regs[i + 1], hi);
+    }
+  }
+#else
+  for (int k = 0; k < tr; k++) {
+    const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i++)
+      regs[i] = vi16_sub(regs[i], vi16_load8(&w[i * LANES]));
+  }
+
+  for (int k = 0; k < ta; k++) {
+    const int8_t* w = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
+    for (size_t i = 0; i < n; i++)
+      regs[i] = vi16_add(regs[i], vi16_load8(&w[i * LANES]));
+  }
+#endif
+
+  for (size_t i = 0; i < n; i++)
+    vi16_store(&out[i], regs[i]);
 }
 
 INLINE void ApplyFusedDelta(acc_t* dest,
@@ -78,88 +182,14 @@ INLINE void ApplyFusedDelta(acc_t* dest,
                             const int tr,
                             const int* tAdd,
                             const int ta) {
-  const size_t LANES = sizeof(vi16_t) / sizeof(acc_t);
+  const size_t TILE = THREAT_TILE * LANES;
+  const size_t FULL = N_HIDDEN / TILE * TILE;
 
-  for (size_t c = 0; c < N_HIDDEN / (LANES * THREAT_TILE); c++) {
-    const size_t offset = c * LANES * THREAT_TILE;
-    const vi16_t* in    = (const vi16_t*) &src[offset];
-    vi16_t* out         = (vi16_t*) &dest[offset];
+  for (size_t offset = 0; offset < FULL; offset += TILE)
+    ApplyFusedTile(dest, src, pRem, pr, pAdd, pa, tRem, tr, tAdd, ta, offset, THREAT_TILE);
 
-    vi16_t regs[THREAT_TILE];
-    for (size_t i = 0; i < THREAT_TILE; i++)
-      regs[i] = vi16_load(&in[i]);
-
-    for (int k = 0; k < pr; k++) {
-      const vi16_t* w = (const vi16_t*) &INPUT_WEIGHTS[(size_t) pRem[k] * N_HIDDEN + offset];
-      for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = vi16_sub(regs[i], vi16_load(&w[i]));
-    }
-
-    for (int k = 0; k < pa; k++) {
-      const vi16_t* w = (const vi16_t*) &INPUT_WEIGHTS[(size_t) pAdd[k] * N_HIDDEN + offset];
-      for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = vi16_add(regs[i], vi16_load(&w[i]));
-    }
-
-#if defined(PAIRED_I8)
-    int k = 0;
-    for (; k + 1 < tr; k += 2) {
-      const int8_t* wa = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
-      const int8_t* wb = &THREAT_WEIGHTS[(size_t) tRem[k + 1] * N_HIDDEN + offset];
-      for (size_t i = 0; i < THREAT_TILE; i += 2) {
-        vi16_t lo, hi;
-        vi16_widen2(vi8_load(&wa[i * LANES]), vi8_load(&wb[i * LANES]), &lo, &hi);
-        regs[i]     = vi16_sub(regs[i], lo);
-        regs[i + 1] = vi16_sub(regs[i + 1], hi);
-      }
-    }
-    if (k < tr) {
-      const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
-      for (size_t i = 0; i < THREAT_TILE; i += 2) {
-        vi16_t lo, hi;
-        vi16_widen1(vi8_load(&w[i * LANES]), &lo, &hi);
-        regs[i]     = vi16_sub(regs[i], lo);
-        regs[i + 1] = vi16_sub(regs[i + 1], hi);
-      }
-    }
-
-    k = 0;
-    for (; k + 1 < ta; k += 2) {
-      const int8_t* wa = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
-      const int8_t* wb = &THREAT_WEIGHTS[(size_t) tAdd[k + 1] * N_HIDDEN + offset];
-      for (size_t i = 0; i < THREAT_TILE; i += 2) {
-        vi16_t lo, hi;
-        vi16_widen2(vi8_load(&wa[i * LANES]), vi8_load(&wb[i * LANES]), &lo, &hi);
-        regs[i]     = vi16_add(regs[i], lo);
-        regs[i + 1] = vi16_add(regs[i + 1], hi);
-      }
-    }
-    if (k < ta) {
-      const int8_t* w = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
-      for (size_t i = 0; i < THREAT_TILE; i += 2) {
-        vi16_t lo, hi;
-        vi16_widen1(vi8_load(&w[i * LANES]), &lo, &hi);
-        regs[i]     = vi16_add(regs[i], lo);
-        regs[i + 1] = vi16_add(regs[i + 1], hi);
-      }
-    }
-#else
-    for (int k = 0; k < tr; k++) {
-      const int8_t* w = &THREAT_WEIGHTS[(size_t) tRem[k] * N_HIDDEN + offset];
-      for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = vi16_sub(regs[i], vi16_load8(&w[i * LANES]));
-    }
-
-    for (int k = 0; k < ta; k++) {
-      const int8_t* w = &THREAT_WEIGHTS[(size_t) tAdd[k] * N_HIDDEN + offset];
-      for (size_t i = 0; i < THREAT_TILE; i++)
-        regs[i] = vi16_add(regs[i], vi16_load8(&w[i * LANES]));
-    }
-#endif
-
-    for (size_t i = 0; i < THREAT_TILE; i++)
-      vi16_store(&out[i], regs[i]);
-  }
+  if (FULL < N_HIDDEN)
+    ApplyFusedTile(dest, src, pRem, pr, pAdd, pa, tRem, tr, tAdd, ta, FULL, (N_HIDDEN - FULL) / LANES);
 }
 
 INLINE void AddAllThreats(acc_t* dest, const acc_t* src, Board* board, const Color view) {

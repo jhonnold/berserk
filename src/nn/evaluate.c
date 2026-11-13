@@ -105,7 +105,7 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
     const vi16_t* in = (vi16_t*) acc->values[views[v]];
     vu8_t* out       = (vu8_t*) &outputs[(N_HIDDEN / 2) * v];
 
-    for (size_t i = 0; i < HALF; i += 4) {
+    for (size_t i = 0; i + 4 <= HALF; i += 4) {
       const vu8_t o0 = Pairwise(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
       const vu8_t o1 = Pairwise(in[i + 2], in[i + 3], in[i + 2 + HALF], in[i + 3 + HALF]);
 
@@ -137,6 +137,29 @@ INLINE size_t InputPairwise8(uint8_t* outputs, uint16_t* nnz, Accumulator* acc, 
       count = StoreNNZ(nnz, count, &base, increment, vi32_nnz_mask2(o0, o1));
 #endif
     }
+
+#if defined(__AVX512F__) && defined(__AVX512BW__)
+    // A half of 10 registers (N_HIDDEN 640) leaves one pair after the loop above.
+    if (HALF % 4) {
+      const size_t i    = HALF - 2;
+      const vu8_t o0    = Pairwise(in[i + 0], in[i + 1], in[i + 0 + HALF], in[i + 1 + HALF]);
+      const uint32_t m0 = vi32_nnz_mask(o0);
+
+      out[i / 2] = o0;
+
+#if defined(__AVX512VBMI2__)
+      _mm512_storeu_si512((__m512i*) (nnz + count), _mm512_maskz_compress_epi16(m0, base));
+      count += BitCount(m0);
+      base = _mm512_add_epi16(base, _mm512_set1_epi16(16));
+#else
+      _mm256_storeu_si256((__m256i*) (nnz + count), _mm512_cvtepi32_epi16(_mm512_maskz_compress_epi32(m0, base)));
+      count += BitCount(m0);
+      base = _mm512_add_epi32(base, increment);
+#endif
+    }
+#else
+    _Static_assert(N_HIDDEN / 2 % (4 * (sizeof(vi16_t) / sizeof(acc_t))) == 0, "the pairwise loop would skip a tail");
+#endif
   }
 
   return count;
