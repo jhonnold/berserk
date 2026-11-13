@@ -28,7 +28,9 @@
 #include <immintrin.h>
 #define SIMD
 #define NUM_REGS    16
-#define THREAT_TILE 16
+// 4 registers (128 lanes): the fused threat update measured 7.8% faster in
+// bench nps than 16 at N_HIDDEN 640, and 1.3% faster than 2.
+#define THREAT_TILE 4
 
 #define vi16_t        __m512i
 #define vu8_t         __m512i
