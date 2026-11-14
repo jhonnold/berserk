@@ -27,9 +27,11 @@
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
 #define SIMD
-#define UNROLL      512
-#define NUM_REGS    16
-#define THREAT_TILE 16
+#define UNROLL   512
+#define NUM_REGS 16
+// 4 registers (128 lanes): the fused threat update measured 8.6% faster in
+// bench nps than 16 at N_HIDDEN 512 on Zen 4.
+#define THREAT_TILE 4
 
 #define vi16_t        __m512i
 #define vu8_t         __m512i
