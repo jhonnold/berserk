@@ -22,14 +22,15 @@
 
 // One register of each lane type: vi16_t holds the accumulator's int16 lanes,
 // vu8_t the activations, vi8_t the int8 weights and vi32_t the int32 sums.
-// Only NEON tells them apart. NUM_REGS and THREAT_TILE tile the accumulator
-// updates; see nn/accumulator.h.
+// Only NEON tells them apart. UNROLL, NUM_REGS and THREAT_TILE tile the
+// accumulator updates.
 #if defined(__AVX512F__) && defined(__AVX512BW__)
 #include <immintrin.h>
 #define SIMD
-#define NUM_REGS    16
-// 4 registers (128 lanes): the fused threat update measured 7.8% faster in
-// bench nps than 16 at N_HIDDEN 640, and 1.3% faster than 2.
+// 128-lane tiles divide N_HIDDEN 640. At 640 on Zen 4 they measured as fast as
+// 512 + 128 for ApplyDelta and 7.8% faster than 512 + 128 for the fused update.
+#define UNROLL      128
+#define NUM_REGS    4
 #define THREAT_TILE 4
 
 #define vi16_t        __m512i
@@ -83,7 +84,9 @@ INLINE void vi32_dpbusd_x2(__m512i* acc, __m512i a0, __m512i b0, __m512i a1, __m
 #elif defined(__AVX2__)
 #include <immintrin.h>
 #define SIMD
-#define NUM_REGS    16
+// 128-lane tiles divide N_HIDDEN 640; see the avx512 note above.
+#define UNROLL      128
+#define NUM_REGS    8
 #define THREAT_TILE 8
 
 #define vi16_t        __m256i
@@ -144,6 +147,7 @@ INLINE int32_t vi32_reduce(__m256i a) {
 #elif defined(__SSE4_1__)
 #include <immintrin.h>
 #define SIMD
+#define UNROLL      128
 #define NUM_REGS    16
 #define THREAT_TILE 8
 
@@ -198,6 +202,7 @@ INLINE int32_t vi32_reduce(__m128i a) {
 #elif defined(__ARM_NEON__) || defined(__ARM_NEON)
 #include <arm_neon.h>
 #define SIMD
+#define UNROLL      128
 #define NUM_REGS    16
 #define THREAT_TILE 16
 
@@ -262,6 +267,7 @@ INLINE void vi32_dpbusd_x2(int32x4_t* acc, int8x16_t a0, int8x16_t b0, int8x16_t
 #else
 // No SIMD: the accumulator updates run one lane at a time, the network layers
 // take the scalar branch of each method.
+#define UNROLL      16
 #define NUM_REGS    16
 #define THREAT_TILE 16
 
