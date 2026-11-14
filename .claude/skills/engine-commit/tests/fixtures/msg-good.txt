@@ -1,0 +1,7 @@
+commit 4bc3a0e
+Author: x <x@x>
+Date:   Fri Nov 13 2026
+
+    perf(nn): avx512 fused threat update in 4-register tiles (#613)
+
+    Bench: 2674956
