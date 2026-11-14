@@ -1,0 +1,2 @@
+#!/bin/sh
+[ "$1" = bench ] && cat "$(dirname "$0")/bench-2674956.txt"

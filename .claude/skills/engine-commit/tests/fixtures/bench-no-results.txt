@@ -1,0 +1,1 @@
+Bench [#50]: bestmove  h1h8 score   184        53264 nodes   819446 nps |   2r2b2/5p2/5k2/p1r1pP2/P2pB3/1P3P2/K1P3R1/7R w - - 23 93
